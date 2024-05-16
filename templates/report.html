@@ -1,0 +1,56 @@
+{% extends "index.html" %}
+
+{% block container %}
+{{ super() }}
+
+<div class="container">
+     
+    <div class="container container__top">
+        <!-- File Selection -->
+       <p> file section now doesn't work </p>
+    </div>
+    <div class="container_row">
+
+        <div class="box">
+            <!-- Dynamic Dropdown Lists -->
+            {% if columns and data %}
+            <form method="post" action="/report">
+                <!-- Hidden fields to pass column names and data -->
+                {% for col in columns %}
+                    <input type="hidden" name="columns" value="{{ col }}">
+                    {% for value in data[col] %}
+                        <input type="hidden" name="data_{{ col }}" value="{{ value }}">
+                    {% endfor %}
+                {% endfor %}
+    
+                <div class="report__list">
+                {% for col in columns %}
+                    <label for="{{ col }}">{{ col }}:</label>
+                    <select class="selects" name="{{ col }}" id="{{ col }}">
+                        {% for value in data[col] %}
+                            <option value="{{ value }}" {% if selections and selections[col] == value %}selected{% endif %}>{{ value }}</option>
+                        {% endfor %}
+                    </select><br>
+                {% endfor %}
+                <input type="submit" value="Submit">
+                </div>
+            </form>
+            
+            {% endif %}
+        </div>
+    
+        <div class="box">
+            <!-- Display Selected Values -->
+            <div class="report__list">
+                {% if selections %}
+                    <h2>Your report</h2>
+                    {% for value in selections.items() %}
+                        <p class="text"> {{ value[1] }} </p>
+                    {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+</div>
+{% endblock container %}

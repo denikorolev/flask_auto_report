@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="icon" href="{{ url_for("static", filename="pic/favi2.png")}}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for("static", filename="css/normalize.css")}}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for("static", filename='css/style.css') }}">
+    
+    <title> {{ title }} </title>
+</head>
+<body>
+    
+{% block menu %}
+<div class="header">
+    <img class="header__logo" src="{{ url_for("static", filename="pic/favi.webp")}}" alt="logo ">
+    <ul class = "header__menu">
+        {% for m in menu %}
+            <li class="header__menu_item">
+                <a href= "{{ m.url }}"> {{ m.name }}</a>
+            </li>
+        {% endfor %}
+        
+    </ul>
+</div>
+
+{% endblock menu %}
+
+<div class="section">
+    <h1 class="title1"> {{ title }} </h1>
+    {% if db_conection_showing %}
+    {% block dbconnect_checking %}
+    {% if db_connection_ok %}
+        <p>The database connection is up and running.</p>
+    {% else %}
+        <p>Failed to connect to the database. Please check the system.</p>
+    {% endif %}
+    {% endblock dbconnect_checking %}
+    {% endif %}
+
+    <div class="upload_messages">
+        {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            {% for message in messages %}
+                <p class="text">{{ message }}</p>
+            {% endfor %}
+        {% endif %}
+        {% endwith %}
+    </div>
+</div>
+
+<div class="section">
+    {% block container %}
+    {% endblock container %}
+</div>
+
+
+    
+    
+</body>
+</html>

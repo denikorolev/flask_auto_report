@@ -1,0 +1,879 @@
+
+  @media(max-width: 1100px) {
+
+    .container {
+      max-width: 854px;
+    }
+
+    .section_header {
+      padding: 0;
+    }
+
+    .header__logo {
+      margin-right: auto;
+    }
+    
+    .header__magnifier-wraper {
+      order: 0;
+  }
+
+    .header {
+        flex-wrap: wrap;
+        row-gap: var(--gap);
+        padding-top: 25px;
+    }
+
+    .header__logo {
+        height: 14px;
+    }
+
+    .nav {
+        width: 100%;
+    }
+
+    .nav::before {
+      display: block;
+    }
+
+    .nav::after {
+      display: block;
+    }
+
+    .header__list {
+        justify-content: space-between;
+    }
+
+    .section_hero {
+      padding: 67px 0;
+    }
+
+    .hero__descr {
+      margin-bottom: 20px;
+    }
+
+    .hero__mic {
+    padding: 0 0 21px 36px;
+}
+
+    .shows {
+      --offsets: 1;
+    }
+
+    .shows__list {
+      padding-top: 15px;
+    }
+
+    .guests__text {
+        max-width: 570px;
+        margin-bottom: 45px;
+     }
+
+     .guests__photo {
+      max-width: 427px;
+      min-width: 426px;
+    }
+
+    .guests__name {
+      margin-bottom: 5px;
+    }
+
+    .playlists {
+      flex-direction: column;
+      gap: 19px;
+    }
+
+    .playlists__flag {
+        left: 0px;
+    }
+
+    .playlists__item {
+        flex-direction: row;
+        max-height: 116px;
+        width: calc((100% - (var(--offsets) * var(--gap))) / var(--cardscount));
+    }
+
+    .playlists__img {
+      max-width: 116px;
+    }
+
+    .playlists__descr-wraper {
+      padding: 10px 6px;
+    }
+
+    .playlists__list {
+      row-gap: 25px;
+    }
+
+    .section_shop {
+      padding-top: 72px;
+      padding-bottom: 98px;
+    }
+
+    .shop__left-box::after {
+      top: -12px;
+      left: 0;
+    }
+    
+
+    .shop__right-box {
+      width: 77%;
+      padding-top: 13px;
+    }
+
+    .shop__title {
+      padding-bottom: 28px;
+    }
+
+    .aboutus {
+      --offsets: 1;
+    }
+
+    .aboutus__descr-wraper {
+      width: 70%;
+    }
+
+    .aboutus__subtitle {
+      line-height: 152%;
+    }
+
+    .aboutus__spiral {
+      display: none;
+  } 
+
+    .aboutus__picture {
+      height: 69%;
+    }
+
+    .aboutus__img {
+      transform: scale(1.1);
+    }
+
+    .aboutus__item {
+      margin-bottom: -4px;
+    }
+
+    .aboutus__img_gutenberg {
+      transform-origin: 8% 97%;
+      transform: scale(1.2);
+    }
+    
+    .aboutus__img_vasileva {
+      transform-origin: 77% 144%;
+      transform: scale(1.2);
+    }
+    
+    .aboutus__img_dmitrievsky {
+      transform-origin: 60% 199%;
+    }
+    
+    .aboutus__img_fleganova {
+      transform: scale(1.1);
+      transform-origin: 48% 35%;
+    }
+
+    .aboutus__author-description {
+      padding-bottom: 34px;
+    }
+
+    .section_footer {
+      padding-top: 76px;
+    }
+
+    .footer__top-box {
+      padding-bottom: 49px;
+    }
+
+    .footer__left-box {
+      padding: 19px 0;
+    }
+
+    .footer__logo {
+      margin-bottom: 14px;
+    }
+
+    .footer__nav {
+      padding: 17px 0;
+      border: none;
+    }
+    
+
+  }
+
+   /* 800 !!!!!!!!!!!!!!!!!!!!!!!! */
+
+  @media(max-width: 800px) {
+
+
+      .container {
+        max-width: 570px;
+      }
+
+      .header__list {
+        gap: 50px;
+      }
+    
+      .header__link {
+        font-size: 16px;
+      }
+
+      .section_hero {
+        padding: 92px 0;
+      }
+
+      .hero__mic-wraper {
+        display: none;
+      }
+
+      .hero__title {
+        margin-bottom: 18px;
+      }
+
+      .hero__descr {
+        margin-bottom: 18px;
+      }
+
+      .podcasts {
+        --offsets: 0;
+      }
+
+      .section_shows {
+        padding-bottom: 29px;
+      }
+
+      .shows {
+        flex-direction: column;
+      }
+
+      .shows__title-hidden {
+        display: block;
+        margin-bottom: 79px;
+      }
+
+      .shows__title {
+        display: none;
+      }
+
+      .shows__left-box {
+        order: 1;
+        align-self: center;
+        max-width: 266px;
+      }
+
+      .shows__list {
+        margin-bottom: -119px;
+      }
+
+
+      .shows__list::after {
+        content: '';
+        position: relative;
+        display: block;
+        bottom: 30px;
+        left: 0;
+        width: 160%;
+        margin: 61px -50% 30px -50%;
+        height: 1px;
+        background-color: var(--gray-medium);
+      }
+
+      .shows__btn-wraper {
+        margin-top: -54px;
+        padding-left: 50px;
+      }
+
+      .shows__btn-wraper::before {
+        content: '';
+        position: relative;
+        left: -88px;
+        bottom: -113px;
+        width: 65px;
+        height: 89px;
+      }
+
+      .shows__archive-link {
+        margin-bottom: 7px;
+      }
+
+      .guests__item {
+        flex-direction: column;
+        gap: 24px;
+      }
+
+      .guests__photo {
+        max-width: 545px;
+      }
+
+      .guests__name {
+        margin-bottom: 7px;
+      }
+      
+      .guests__descr {
+        max-width: 365px;
+        margin-bottom: var(--gap);
+      }
+
+      .playlists {
+        --offsets: 1;
+      }
+
+      .section_shop {
+        padding-top: 64px;
+        padding-bottom: 98px;
+      }
+
+      .shop {
+        flex-direction: column;
+      }
+
+      .shop__left-box::after {
+        top: 5px;
+        left: 5px;
+        width: 29%;
+        height: 32%;
+      }
+
+      .shop__right-box {
+        width: 100%;
+      }
+
+      .shop__title {
+        padding-right: 50px;
+        padding-bottom: 32px;
+      }
+
+      .shop__descr {
+        min-width: 535px;
+      }
+
+      .shop__descr:not(:last-of-type) {
+        margin-bottom: 11px;
+      }
+
+      .aboutus__top-box {
+        flex-direction: column;
+      }
+
+      .aboutus__descr {
+        margin-bottom: 2px;
+      }
+
+      .aboutus__image-wraper {
+        width: 120%;
+        margin-bottom: var(--gap);
+        transform: translateX(-100px);
+      }
+
+      .aboutus__spiral {
+        width: 490px;
+        display: block;
+        height: 112px;
+        margin-top: 0;
+        margin-right: 0;
+        margin-left: 0;
+        background-position-x: -7px;
+        transform: none;
+      }
+
+      .aboutus__star {
+        width: 112px;
+        height: 112px;
+      }
+
+      .aboutus__item {
+        margin-bottom: -75px;
+      }
+
+      .aboutus__img {
+        min-height: 252px;
+        transform: scale(1.3);
+      }
+      
+      .aboutus__img_gutenberg {
+        transform-origin: 76% 75%;
+      }
+      
+      .aboutus__img_vasileva {
+        transform-origin: 4% 96%;
+      }
+      
+      .aboutus__img_dmitrievsky {
+        transform-origin: 48% 65%;
+        transform: scale(1.4);
+      }
+      
+      .aboutus__img_fleganova {
+        transform-origin: 62% 4%;
+      }
+
+      .aboutus__descr-wraper {
+        width: 100%;
+    }
+
+      .aboutus__author-description {
+        max-width: 317px;
+        padding-bottom: 104px;
+      }
+
+      .aboutus__inputs-wraper {
+        flex-direction: column;
+      }
+
+      .section_footer {
+        padding-top: 4px;
+      }
+
+      .footer__socialicon-wraper {
+        justify-content: center;
+      }
+
+      .footer__sociallink, .footer__sociallink svg {
+        width: 36px;
+        height: 36px;
+      }
+
+      .footer__top-box {
+        flex-direction: column;
+        align-items: center;
+        padding-top: 76px;
+        padding-bottom: 38px;
+      }
+
+      .footer__list {
+        max-width: 539px;
+        column-gap: 172px;
+        -moz-column-gap: 172px;
+        -webkit-column-gap: 172px;
+      }
+
+      .footer__socialicon-wraper {
+        margin-bottom: 46px;
+      }
+
+      .footer__item {
+        margin-bottom: 26px;
+      }
+
+      .footer__nav {
+        padding: 16px 114px;
+      }
+
+    }
+
+      /* 550 !!!!!!!!!!!!!!!!!!!!!!!! */
+
+  @media(max-width: 550px) {
+
+    .section {
+      padding: 54px 0;
+    }
+
+    .container {
+      padding: 0 32px;
+    }
+
+    .btn-purple {
+      padding: 17px 45px;
+      font-size: 16px;
+    }
+
+    .section-title {
+      font-size: 24px;
+    }
+
+    .section_header {
+      padding: 14px 0 16px 0;
+    }
+
+    .header {
+      gap: 10px;
+    }
+
+    .header__logo {
+      height: 11px;
+    }
+
+    .header__list {
+      overflow: auto;
+      scrollbar-width: none;
+      gap: 27px;
+    }
+
+    .header__list::-webkit-scrollbar {
+      display: none;
+    }
+
+    .section_hero {
+      padding-top: 22px;
+      padding-bottom: 42px;
+    }
+
+    .hero__title {
+      margin-bottom: 6px;
+      font-size: 32px;
+    }
+
+    .hero__radio {
+      margin-right: 7px;
+    }
+
+    .hero__descr {
+      margin-bottom: 20px;
+      font-size: 14px;
+    }
+
+    .podcasts__item {
+      flex-direction: column;
+      min-width: 256px;
+      padding: 39% 17px 33px;
+      background-position: top;
+      background-size: 100%;
+    }
+
+    .podcasts__item_1 {
+      background-image: url("../pic/mobile-podcasts-red-roof-buidings.jpg");
+    }
+    .podcasts__item_2 {
+      background-image: url("../pic/mobile-podcasts-man-with-violin.jpg");
+    }
+    .podcasts__item_3 {
+      background-image: url("../pic/mobile-podcasts-crowd.jpg");
+    }
+    .podcasts__item_4 {
+      background-image: url("../pic/mobile-podcasts-woman-with-basket-on-the-head.jpg");
+    }
+    .podcasts__item_5 {
+      background-image: url("../pic/mobile-podcasts-rodin-thinker.jpg");
+    }
+    .podcasts__item_6 {
+      background-image: url("../pic/mobile-podcasts-rainbow-weel.jpg");
+    }
+    .podcasts__item_7 {
+      background-image: url("../pic/mobile-podcasts-wave.jpg");
+    }
+    .podcasts__item_8 {
+      background-image: url("../pic/mobile-podcasts-man-and-woman.jpg");
+    }
+
+    .podcasts__title {
+      margin-bottom: 20px;
+    }
+
+    .podcasts__date {
+      top: 0;
+      bottom: auto;
+    }
+
+    .podcasts__name {
+      margin-bottom: 4px;
+      font-size: 16px;
+    }
+
+    .podcasts__author {
+      font-size: 12px;
+    }
+    
+    .shows__title-hidden {
+      margin-bottom: -14px;
+    }
+
+    .shows__list {
+      padding-top: 12px;
+    }
+
+    .shows__list::after {
+      left: 60px;
+    }
+
+    .shows__btn-wraper {
+      padding-left: 70px;
+    }
+
+    .shows__btn-wraper::before {
+      content: '';
+      margin-top: -35px;
+      top: 120px;
+      width: 71px;
+      height: 99px;
+      margin-bottom: 20px;
+    }
+
+    .shows__item {
+      max-width: 123px;
+      min-height: 149px;
+    }
+
+    .shows__img {
+      height: 33%;
+    }
+
+    .shows__descr-wraper {
+      padding: 10px 9px;
+    }
+
+    .shows__descr {
+      margin: 0 0 5px 0;
+      width: auto;
+      font-size: 14px;
+    }
+
+    .shows__cards-title {
+      font-size: 11.5px;
+    }
+
+    .shows__scheldure {
+      margin-top: -10px;
+      margin-bottom: 18px;
+      font-size: 9px;
+    }
+
+    .shows__link {
+      color: var(--purple-medium);
+      font-size: 12px;
+    }
+
+    .shows__link path {
+      fill: var(--purple-medium)
+    }
+
+    .shows__archive-link {
+      order: 1;
+      max-width: 110px;
+      padding: 6px 31px;
+      margin-bottom: 0;
+    }
+
+    .shows__mic-image {
+      margin-left: -41px;
+    }
+
+    .guests__bold-descr {
+      margin-bottom: 5px;
+      font-size: 14px;
+    }
+
+    .guests__text {
+      margin-bottom: 32px;
+      font-size: 14px;
+      line-height: 150%;
+    }
+
+    .guests__item {
+      gap: 22px;
+    }
+    
+    .guests__photo {
+      margin-bottom: -18px;
+      min-width: 255px;
+    }
+
+    .guests__name {
+      margin-bottom: 11px;
+    }
+
+    .guests__list {
+      gap: var(--gap);
+    }
+
+    .guests__descr {
+      margin-bottom: 28px;
+    }
+
+    .guests__brodcast-link {
+      max-width: 150px;
+      padding: 8px 9px;
+    }
+
+    .playlists__text {
+      font-size: 12px;
+      line-height: 16px;
+    }
+
+    .playlists__copyright {
+      font-size: 12px;
+    }
+
+    .playlists__list {
+      row-gap: var(--gap);
+      justify-content: center;
+    }
+
+    .playlists__item {
+      flex-direction: column;
+      max-width: 116px;
+      max-height: 176px;
+    }
+
+    .playlists__flag {
+      right: 0px;
+      left: auto;
+    }
+
+    .playlists__descr-wraper {
+      padding: 9px;
+    }
+
+    .playlists__subtitle {
+      font-size: 12px;
+    }
+
+    .playlists__descr {
+      font-size: 9px;
+    }
+
+    .section_shop {
+      padding: 47px 0 52px 0;
+    }
+
+    .shop__title {
+      padding-bottom: 23px;
+      padding-right: 0;
+    }
+
+    .shop__left-box::after {
+      top: 0;
+      left: 0;
+      width: 24%;
+      height: 27%;
+    }
+
+    .shop__right-box {
+      padding-top: 0;
+    }
+
+    .shop__descr {
+      min-width: auto;
+      font-size: 14px;
+      line-height: 158%;
+    }
+
+    .shop__descr:last-of-type {
+      margin-bottom: 11px;
+    }
+
+    .shop__price {
+      margin-bottom: 16px;
+      font-size: 24px;
+    }
+
+    .shop__link {
+      column-gap: 8px;
+      max-width: 255px;
+      padding: 11px 11px;
+      font-size: 16px;
+    }
+
+    .aboutus__title {
+      margin-bottom: 12px;
+    }
+
+    .aboutus__subtitle {
+      margin-bottom: 4px;
+      font-size: 14px;
+    }
+    .aboutus__descr {
+      padding-right: 11px;
+      margin-bottom: 27px;
+      font-size: 14px;
+    }
+
+    .aboutus__image-wraper {
+      display: none;
+    }
+
+    .aboutus__picture {
+      margin-bottom: 27px;
+    }
+
+    .aboutus__img {
+      min-height: 109px;
+      transform: scale(1.5);
+    }
+
+    .aboutus__img_gutenberg {
+      transform-origin: 78% 57%;
+    }
+    
+    .aboutus__img_vasileva {
+      transform-origin: 36% 72%;
+    }
+    
+    .aboutus__img_dmitrievsky {
+      transform-origin: 34% 57%;
+    }
+    
+    .aboutus__img_fleganova {
+      transform-origin: 62% 18%;
+    }
+    
+
+    .aboutus__name {
+      max-width: 100px;
+      margin-top: -13px;
+      margin-bottom: 7px;
+      font-size: 14px;
+    }
+
+    .aboutus__author-description {
+      max-width: 113px;
+      font-size: 12px;
+      line-height: 140%;
+    }
+
+    .aboutus__input::placeholder {
+      font-size: 16px;
+    }
+
+    .aboutus__input {
+      padding: 18px 10px 17px 24px;
+      font-size: 16px;
+    }
+
+    .aboutus__input_textarea {
+      padding: 13px 10px 10px 20px;
+    }
+
+    .aboutus__btn {
+      max-width: 170px;
+    }
+
+    .aboutus__checkbox-label {
+      margin-top: -9px;
+      font-size: 9px;
+    }
+
+    .section_footer {
+      padding-top: 0;
+      padding-bottom: 30px;
+    }
+    
+    .footer__top-box {
+      padding-top: 30px;
+      padding-bottom: 0;
+    }
+
+    .footer__nav {
+      padding: 15px 300px 39px 300px;
+      background-color: var(--dark);
+    }
+
+    .footer__list {
+      max-width: 445px;
+      columns: 2 auto;
+      column-gap: 78px;
+      -moz-column-gap: 78px;
+      -webkit-column-gap: 78px;
+      margin-left: -45px;
+    }
+
+    .footer__item {
+      margin-bottom: 17px;
+    }
+
+    .footer__link {
+      font-size: 12px;
+    }
+
+    .footer__copyright {
+      font-size: 12px;
+    }
+  }

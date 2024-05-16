@@ -1,0 +1,141 @@
+/* static/style.css */
+
+html {
+    box-sizing: border-box;
+  }
+  
+  *,
+  *::before,
+  *::after {
+    box-sizing: inherit;
+  }
+  
+  a {
+    color: inherit;
+    text-decoration: none;
+    font-style: inherit;
+  }
+  
+  img {
+    max-width: 100%;
+  }
+  
+  body {
+    min-width: 320px;
+    width: 100%;
+    background-color: azure;
+  }
+
+.section {
+    display: flex;
+    flex-direction: column;
+    margin: 0 50px 0 50px;
+}
+
+.container {
+    display: flex;
+    flex-direction: column;
+    width: auto;
+}
+
+.container__top {
+    font: 16px;
+}
+
+
+.container_row {
+    display: flex;
+    flex-direction: row;
+    gap: 30px;
+}
+
+.box {
+    width: auto;
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    margin: 0 50px 0 50px;
+}
+
+.header__logo {
+    width: 50px;
+    height: 50px;
+}
+
+.header__menu {
+    display: flex;
+    align-content: center;
+    width: 100%;
+    list-style-type: none;
+}
+
+.header__menu_item {
+    margin: 0 20px 0 0;
+}
+
+.report__list {
+    display: flex;
+    flex-direction: column;
+}
+
+.text {
+    margin: 0;
+    padding: 5px;
+    margin-top: 5px;
+}
+
+
+
+
+
+
+
+
+
+
+
+.title {
+    color: #333;
+}
+
+.forms {
+    margin-bottom: 20px;
+}
+
+.labels {
+    display: block;
+    margin-top: 10px;
+    font-weight: bold;
+}
+
+
+.input_file,
+input_submit {
+    display: block;
+    margin-top: 5px;
+    padding: 5px;
+    font-size: 16px;
+}
+
+.selects {
+    display: block;
+    margin-top: 5px;
+    max-width: 600px;
+    padding: 5px;
+    font-size: 16px;
+}
+
+.input_submit {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+.input_submit:hover {
+    background-color: #0b8311;
+}
+
+
