@@ -1,0 +1,57 @@
+{% extends "index.html" %}
+
+{% block container %}
+{{ super() }}
+
+<div class="container">
+    <h1 class="mb-4">View and Add Data</h1>
+
+    <!-- Display existing data -->
+    <h2>Existing Data</h2>
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Type</th>
+                <th>Subtype</th>
+                <th>Subsubtype</th>
+                <th>Sentences</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in rows %}
+            <tr>
+                <td>{{ row[0] }}</td>
+                <td>{{ row[1] }}</td>
+                <td>{{ row[2] }}</td>
+                <td>{{ row[3] }}</td>
+                <td>{{ row[4] }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Form to add new data -->
+    <h2>Add New Data</h2>
+    <form method="POST" action="{{ url_for('edit_db') }}">
+        <div class="form-group">
+            <label for="type">Type</label>
+            <input type="text" class="form-control" id="type" name="type" required>
+        </div>
+        <div class="form-group">
+            <label for="subtype">Subtype</label>
+            <input type="text" class="form-control" id="subtype" name="subtype" required>
+        </div>
+        <div class="form-group">
+            <label for="subsubtype">Subsubtype</label>
+            <input type="text" class="form-control" id="subsubtype" name="subsubtype" required>
+        </div>
+        <div class="form-group">
+            <label for="sentences">Sentences (JSON format)</label>
+            <textarea class="form-control" id="sentences" name="sentences" rows="5" required></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Add Data</button>
+    </form>
+</div>
+
+{% endblock container %}

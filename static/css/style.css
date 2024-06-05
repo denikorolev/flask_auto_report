@@ -1,5 +1,8 @@
 /* static/style.css */
 
+
+/* default settings reset */
+
 html {
     box-sizing: border-box;
   }
@@ -15,6 +18,14 @@ html {
     text-decoration: none;
     font-style: inherit;
   }
+
+  p {
+    margin: 0;
+  }
+
+  ul {
+    list-style-type: none;
+  }
   
   img {
     max-width: 100%;
@@ -25,6 +36,23 @@ html {
     width: 100%;
     background-color: azure;
   }
+
+  /* end of default settings reset */
+
+
+
+
+.btn {
+        color: #fff;
+        background-color: #007bff;
+        border-color: #007bff;
+}
+
+.flex-row {
+    display: flex;
+    flex-direction: row;
+}
+
 
 .section {
     display: flex;
@@ -68,7 +96,6 @@ html {
     display: flex;
     align-content: center;
     width: 100%;
-    list-style-type: none;
 }
 
 .header__menu_item {
