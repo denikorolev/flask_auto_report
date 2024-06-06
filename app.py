@@ -1,4 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, g
+from werkzeug.security import generate_password_hash, check_password_hash
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 import psycopg2
 import json
 
@@ -11,11 +13,28 @@ app.config['DB_NAME'] = 'radiologary'
 app.config['DB_USER'] = 'deniskorolev'
 app.config['DB_PASS'] = ''
 app.config['SECRET_KEY'] = 'your_secret_key'
-menu = [{"name" : "main", "url" : "/"}, 
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = "login"
+
+menu = [{"name" : "main", "url" : "main"}, 
         {"name" : "report", "url" : "report"}, 
         {"name" : "edit tab", "url" : "edit_tab"},
         {"name" : "edit db", "url" : "edit_db"}
         ]
+
+users = {}
+class User(UserMixin):
+    def __init__(self, id, username, password):
+        self.id = id
+        self.username = username
+        self.password_hash = generate_password_hash(password)
+        
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+
+
 
 def get_db():
     if 'db' not in g:
@@ -55,6 +74,44 @@ def test_db_connection():
         print(f"Database connection failed: {e}")
         return False
 
+# Route for redirect users on main page
+@app.route("/")
+def index():
+    return redirect(url_for("main"))
+
+@login_manager.user_loader
+def load_user(user_id):
+    return users.get(int(user_id))
+
+@app.route("/login", methods = ["GET", "POST"])
+def login():
+    if request.method == "POST":
+        username = request.form["username"]
+        password = request.form["password"]
+        user = next((u for u in users.values() if u.username == username), None)
+        if user and user.check_password(password):
+            login_user(user)
+            return redirect(url_for("main"))
+        flash(f"Invalid credentials")
+    return render_template("login.html", title = "LogIn")
+
+@app.route("/logout")
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for("login"))
+
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
+    if request.method == 'POST':
+        username = request.form["username"]
+        password = request.form["password"]
+        user_id = len(users) + 1
+        user = User(user_id, username, password)
+        users[user_id] = user
+        return redirect(url_for("login"))
+    return render_template("signup.html", title = "SignUp")
+
 
 @app.teardown_appcontext
 def close_db(error):
@@ -63,8 +120,9 @@ def close_db(error):
         db.close()
 
 # Main page
-@app.route('/', methods=['POST', 'GET'])
-def index():
+@app.route('/main', methods=['POST', 'GET'])
+@login_required
+def main():
     # Test the database connection at start-up
     db_connection_ok = test_db_connection()
     return render_template('index.html',
@@ -77,6 +135,7 @@ def index():
 
 # Edit table
 @app.route('/edit_tab', methods=['POST', 'GET'])
+@login_required
 def edit_tab():
     if request.method == "POST" and "new_tab_name" in request.form:
         tab_name = str(request.form.get("new_tab_name"))

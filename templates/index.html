@@ -21,6 +21,8 @@
         {% endfor %}
         
     </ul>
+    <p>Hello, {{ current_user.username }}!</p>
+    <a href="{{ url_for('logout') }}">Logout</a>
 </div>
 
 {% endblock menu %}
