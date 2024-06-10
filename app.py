@@ -1,19 +1,26 @@
+# app.py
+
 from flask import Flask, render_template, request, redirect, url_for, flash
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import inspect
 from sqlalchemy.sql import text
-import json
+import os
+from dotenv import load_dotenv
+from sqlalchemy.orm import joinedload
 
+
+load_dotenv()
 app = Flask(__name__)
 
-# Configuration
-app.config["DB_HOST"] = "localhost"
-app.config["PORT"] = "5432"
-app.config['DB_NAME'] = 'radiologary'
-app.config['DB_USER'] = 'deniskorolev'
-app.config['DB_PASS'] = ''
-app.config['SECRET_KEY'] = 'your_secret_key'
+# Configuration all in the file .env
+app.config["DB_HOST"] = os.getenv("DB_HOST")
+app.config["PORT"] = os.getenv("PORT")
+app.config['DB_NAME'] = os.getenv("DB_NAME")
+app.config['DB_USER'] = os.getenv("DB_USER")
+app.config['DB_PASS'] = os.getenv("DB_PASS", "")
+app.config['SECRET_KEY'] = os.getenv("SECRET_KEY", "my_secret_key")
 
 # Construct the database URI
 app.config['SQLALCHEMY_DATABASE_URI'] = f"postgresql://{app.config['DB_USER']}:{app.config['DB_PASS']}@{app.config['DB_HOST']}:{app.config['PORT']}/{app.config['DB_NAME']}"
@@ -30,8 +37,7 @@ login_manager.login_view = "login"
 menu = [
     {"name": "main", "url": "main"},
     {"name": "report", "url": "report"},
-    {"name": "edit tab", "url": "edit_tab"},
-    {"name": "edit db", "url": "edit_db"}
+    {"name": "edit tab", "url": "edit_tab"}
 ]
 
 # User model
@@ -51,13 +57,46 @@ class User(db.Model, UserMixin):
     def check_password(self, password):
         return check_password_hash(self.user_pass, password)
 
-# UserTable model
-class UserTable(db.Model):
+class Report(db.Model):
+    __tablename__ = 'reports'
+    id = db.Column(db.BigInteger, primary_key=True)
+    userid = db.Column(db.BigInteger, db.ForeignKey('users.id'), nullable=False)
+    comment = db.Column(db.String(255), nullable=True)
+    report_name = db.Column(db.String(255), nullable=False)
+    report_type = db.Column(db.Integer, db.ForeignKey('report_type.id'), nullable=False)
+    report_subtype = db.Column(db.Integer, db.ForeignKey('report_subtype.id'), nullable=False)
+    report_paragraphs = db.Column(db.String(255), nullable=True)
+
+    user = db.relationship('User', backref=db.backref('reports', lazy=True))
+    report_type_rel = db.relationship('ReportType', backref=db.backref('reports', lazy=True))
+    report_subtype_rel = db.relationship('ReportSubtype', backref=db.backref('reports', lazy=True))
+
+
+class ReportType(db.Model):
+    __tablename__ = 'report_type'
+    id = db.Column(db.SmallInteger, primary_key=True)
+    type = db.Column(db.String(50), nullable=False)
+
+class ReportSubtype(db.Model):
+    __tablename__ = 'report_subtype'
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    username = db.Column(db.String, nullable=False)
-    data = db.Column(db.String, nullable=False)
-    user = db.relationship('User', backref=db.backref('tables', lazy=True))
+    type = db.Column(db.SmallInteger, db.ForeignKey('report_type.id'), nullable=False)
+    subtype = db.Column(db.String(250), nullable=False)
+
+class ReportParagraph(db.Model):
+    __tablename__ = "report_paragraphs"
+    
+    id = db.Column(db.BigInteger, primary_key=True)
+    paragraph_index = db.Column(db.Integer, nullable=False)
+    userid = db.Column(db.BigInteger, db.ForeignKey("users.id"), nullable=False)
+    report_type = db.Column(db.Integer, db.ForeignKey("report_type.id"), nullable=False)
+    report = db.Column(db.BigInteger, db.ForeignKey("reports.id"), nullable=False)
+    paragraph = db.Column(db.String(255), nullable=False)
+
+    user = db.relationship("User", backref=db.backref("report_paragraphs", lazy=True))
+    report_type_rel = db.relationship("ReportType", backref=db.backref("report_paragraphs", lazy=True))
+    report_rel = db.relationship("Report", backref=db.backref("report_paragraphs", lazy=True))
+
 
 # Load user callback
 @login_manager.user_loader
@@ -77,7 +116,7 @@ def login():
         if user and user.check_password(password):
             login_user(user)
             return redirect(url_for("main"))
-        flash("Invalid credentials")
+        flash("Invalid credentials", "error")
     return render_template("login.html", title="LogIn")
 
 @app.route("/logout")
@@ -89,150 +128,153 @@ def logout():
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     if request.method == 'POST':
-        user_role = request.form["role"]
+        user_role = "user"
         user_email = request.form["email"]
         user_name = request.form["username"]
         password = request.form["password"]
-        user_bio = request.form.get("bio", "")
-        user_avatar = request.files.get("avatar").read() if request.files.get("avatar") else None
-        
-        user = User(user_role=user_role, user_email=user_email, user_name=user_name, user_bio=user_bio, user_avatar=user_avatar)
+        if User.query.filter_by(user_email=user_email).first():
+            flash("Email already exists", "error")
+            return redirect(url_for("signup"))
+        # Create object of class user and then create pass-hash
+        user = User(user_email=user_email, user_name=user_name, user_role=user_role)
         user.set_password(password)
         db.session.add(user)
         db.session.commit()
+        flash("Account created successfully", "success")
         return redirect(url_for("login"))
     return render_template("signup.html", title="SignUp")
 
 @app.route('/main', methods=['POST', 'GET'])
 @login_required
 def main():
-    db_connection_ok = test_db_connection()
-    return render_template('index.html', title="Main page Radiologary", menu=menu, db_connection_ok=db_connection_ok, db_conection_showing=True)
+    test_db_connection()
+    return render_template('index.html', title="Main page Radiologary", menu=menu)
+
 
 @app.route('/edit_tab', methods=['POST', 'GET'])
 @login_required
-def edit_tab():
-    if request.method == "POST" and "new_tab_name" in request.form:
-        tab_name = str(request.form.get("new_tab_name"))
-        tab_add_query = text(f"CREATE TABLE {tab_name} (id SERIAL PRIMARY KEY, tab_type VARCHAR(10) DEFAULT NULL, report_name VARCHAR(50) DEFAULT NULL, name_section VARCHAR(255) DEFAULT NULL, position_number SMALLINT DEFAULT NULL, report_text VARCHAR(1000) DEFAULT NULL);")
-        db.session.execute(tab_add_query)
-        db.session.commit()
-        flash('New table added successfully.')
+def edit_tab(): 
 
-    tabs_list_query = text("""
-                        SELECT table_name 
-                        FROM information_schema.tables 
-                        WHERE table_schema = 'public' 
-                        AND table_type = 'BASE TABLE';
-                    """)
-    tabs_list = db.session.execute(tabs_list_query).fetchall()
-    tabs_list = [name[0] for name in tabs_list]  # Clean names from tuple syntax
+    new_report_query = request.args.get("new_report_query")   # The line for check if user want to create new report
+    report_types = ReportType.query.all()
+    report_subtypes = ReportSubtype.query.all()
+    # Convert objects to dictionary
+    report_subtypes_dict = [
+        {'id': rst.id, 'type_id': rst.type, 'subtype': rst.subtype}
+        for rst in report_subtypes
+    ]
+    # All reports of current user with load of linked records (types and subtypes)
+    user_reports = Report.query.filter_by(userid=current_user.id).options(
+        joinedload(Report.report_type_rel),
+        joinedload(Report.report_subtype_rel)
+    ).all()
     
-    # Delete table from db
-    if request.method == "POST" and "tab_delete" in request.form:
-        tab_del_name = request.form.get("tab_del_edit_name")
-        tab_del_query = f"DROP TABLE {tab_del_name};"
-        try:
-            db.session.execute(tab_del_query)
-            db.session.commit()
-            flash(f"Table {tab_del_name} deleted successfully.")
-        except Exception as e:
-            flash(f"Something went wrong: {e}")
-            return render_template("edit_tab.html", title="Edit table", menu=menu, tabs_list=tabs_list)
-
-    # Edit form
-    if request.method == "POST" and "tab_edit" in request.form:
-        tab_edit_name = request.form.get("tab_del_edit_name")
-        print(tab_edit_name)
+    # If user want to make new report show them form for report creation
+    if request.method == "POST":
+        if "report_creation_form_view" in request.form:
+            return redirect(url_for('edit_tab', new_report_query=True))
         
-    return render_template("edit_tab.html", title="Edit table", menu=menu, tabs_list=tabs_list)
+    # If user press button "create new report we created new report and redirect to page for editing new report"
+        if "report_creation" in request.form:
+            report_name = request.form["report_name"]
+            report_type_id = request.form["report_type"]
+            report_subtype_id = request.form["report_subtype"]
+            comment = request.form["comment"]
+
+            # New string in the tab reports
+            new_report = Report(
+                userid=current_user.id,
+                report_name=report_name,
+                report_type=report_type_id,
+                report_subtype=report_subtype_id,
+                comment=comment
+            )
+            db.session.add(new_report)
+            db.session.commit()
+            flash("Report created successfully", "success")
+            return redirect(url_for("edit_report", report_id=new_report.id))
+            
+
+        if "report_delete" in request.form:
+            report_id = request.form["report_id"]
+            report_to_delete = Report.query.get(report_id)
+            if report_to_delete:
+                db.session.delete(report_to_delete)
+                db.session.commit()
+                flash("Report deleted successfully", "success")
+            else:
+                flash("Report not found", "error")
+            return redirect(url_for("edit_tab"))
+                
+        
+    return render_template("edit_tab.html", 
+                           title="Edit table", 
+                           menu=menu,
+                           new_report_query=new_report_query, 
+                           report_types=report_types, 
+                           report_subtypes=report_subtypes_dict, 
+                           user_reports=user_reports)
 
 @app.route('/report', methods=['POST', 'GET'])
-def report():
-    column_query = text("SELECT column_name FROM information_schema.columns WHERE table_name = 'mri_lumbar_spine'")
-    column_data = db.session.execute(column_query).fetchall()
-    columns = [col[0] for col in column_data]
-
-    # Fetch distinct values for each column for populating dropdowns
-    column_values = {}
-    for column in columns:
-        value_query = text(f"SELECT DISTINCT {column} FROM mri_lumbar_spine")
-        values = db.session.execute(value_query).fetchall()
-        column_values[column] = [val[0] for val in values]
-
-    data = {}
-    selections = request.form
-
-    if request.method == "POST" and selections:
-        selected_values = {key: value for key, value in selections.items() if value}
-        if selected_values:
-            where_clauses = ' AND '.join([f"{key} = :{key}" for key in selected_values.keys()])
-            sql_query = text(f"SELECT * FROM mri_lumbar_spine WHERE {where_clauses}")
-            data_rows = db.session.execute(sql_query, selected_values).fetchall()
-            if data_rows:
-                data = {col: [row[idx] for row in data_rows] for idx, col in enumerate(columns)}
-    else:
-        # Fetch the first row to display initially
-        initial_query = text("SELECT * FROM mri_lumbar_spine LIMIT 1")
-        initial_data = db.session.execute(initial_query).fetchone()
-        if initial_data:
-            data = {col: [initial_data[idx]] for idx, col in enumerate(columns)}
-                
+@login_required
+def report(): 
     return render_template(
         'report.html',
         title="Report",
-        menu=menu,
-        columns=columns,
-        column_values=column_values,
-        data=data,
-        selections=selections
+        menu=menu
     )
 
-@app.route('/edit_db', methods=['GET', 'POST'])
-def edit_db():
-    if request.method == 'POST':
-        # Handle the form submission to add new data
-        type = request.form.get('type')
-        subtype = request.form.get('subtype')
-        subsubtype = request.form.get('subsubtype')
-        sentences = request.form.get('sentences')
-
-        # Convert sentences to JSON
-        try:
-            sentences_json = json.loads(sentences)
-        except json.JSONDecodeError as er:
-            flash(f'Invalid JSON format for sentences.{er}')
-            return redirect(url_for('edit_db'))
-
-        # Insert new data into the database
-        new_entry = Test(type=type, subtype=subtype, subsubtype=subsubtype, sentences=sentences_json)
-        db.session.add(new_entry)
-        db.session.commit()
-        flash('New data added successfully.')
-        return redirect(url_for('edit_db'))
-
-    # Fetch existing data from the database
-    rows = Test.query.all()
-
-    return render_template('edit_db.html', title="Edit page", menu=menu, rows=rows)
-
-class Test(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    type = db.Column(db.String(255), nullable=False)
-    subtype = db.Column(db.String(255), nullable=False)
-    subsubtype = db.Column(db.String(255), nullable=False)
-    sentences = db.Column(db.JSON, nullable=False)
-
+@app.route('/edit_report', methods=['GET', 'POST'])
+@login_required
+def edit_report():
+    report_id = request.args.get('report_id')
+    report = None
+    
+    if report_id:
+        report = Report.query.get(report_id)
+        if not report or report.userid != current_user.id:
+            flash("Report not found or you don't have permission to edit it", "error")
+            return redirect(url_for('edit_report'))
+    
+    report_types = ReportType.query.all()
+    report_subtypes = ReportSubtype.query.all()
+    # Convert objects to dictionary
+    report_subtypes_dict = [
+        {"id": rst.id, "type": rst.type, "subtype": rst.subtype} for rst in report_subtypes
+    ]
+    # Refresh report in table
+    if request.method == "POST": 
+        if "report_update" in request.form:
+            report.report_name = request.form['report_name']
+            report.comment = request.form['comment']
+            try:
+                db.session.commit()
+                flash("Report updated successfully", "success")
+                return redirect(url_for('edit_tab'))
+            except Exception as e:
+                flash(f"Can't update report. Error code: {e}")
+                return redirect(url_for('edit_report'))
+    
+    
+    return render_template('edit_report.html', 
+                           title="Edit report", 
+                           menu=menu, 
+                           report=report,
+                           report_types=report_types, 
+                           report_subtypes=report_subtypes_dict)
+    
+    
 @app.teardown_appcontext
 def close_db(error):
     db.session.remove()
 
 def test_db_connection():
     try:
-        db.session.execute('SELECT 1')
+        db.engine.connect()
+        flash("Database connection successful", "success")
         return True
     except Exception as e:
-        print(f"Database connection failed: {e}")
+        flash(f"Database connection failed: {e}", "error")
         return False
 
 if __name__ == "__main__":
