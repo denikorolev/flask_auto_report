@@ -10,38 +10,11 @@
     </div>
     <div class="container_row">
         <div class="box">
-            <!-- Dynamic Dropdown Lists -->
-            {% if columns and column_values %}
-            <form method="POST" action="/report">
-                <div class="report__list">
-                    {% for col in columns %}
-                        <label for="{{ col }}">{{ col }}:</label>
-                        <select class="selects" name="{{ col }}" id="{{ col }}">
-                            <option value="">Select {{ col }}</option>
-                            {% for value in column_values[col] %}
-                                <option value="{{ value }}" {% if selections[col] == value %}selected{% endif %}>{{ value }}</option>
-                            {% endfor %}
-                        </select><br>
-                    {% endfor %}
-                    <button type="submit" class="btn btn-primary">Filter</button>
-                </div>
-            </form>
-            {% endif %}
+           <p> waiting for new content</p>
         </div>
     
         <div class="box">
-            <!-- Display filtered data -->
-        <h2 class="mt-4">Report Data</h2>
-        <div class="data-list">
-            {% if data %}
-                    {% for column in columns %}
-                        <p>
-                            {{ data[column][0] }}
-                        </p>
-                    {% endfor %}
-            {% else %}
-                <p>No data available</p>
-            {% endif %}
+            <p> waiting for new content</p>
         </div>
     </div>
 </div>

@@ -1,3 +1,5 @@
+ <!-- edit_tab.html -->
+
 {% extends "index.html" %}
 
 {% block container %}
@@ -6,52 +8,126 @@
 <div class="container">
     <h1 class="mb-4">Edit tab</h1>
 
-    <!-- Form to add new table -->
-    <h3>Add new table</h3>
-    <form class="form-group" method="POST" action="{{ url_for('edit_tab') }}">
-        <div class="form-group">
-            <label for="new_tab_name">Name for new table</label>
-            <input type="text" class="form-control" id="new_tab_name" name="new_tab_name" required>
-            <button type="submit" class="btn btn-primary">Add table</button>
-        </div>
-
+    <!-- Ask about to add new table -->
+    {% if not new_report_query %}
+    <h4>Do you want to add new report?</h4>
+    <form class="flex-row" method="POST">
+        <button type="submit" name="report_creation_form_view">Yes i do</button>
     </form>
 
-    <!-- Filters for list below -->
-    <h3>Filter</h3>
-    <form method="POST" action="{{ url_for('edit_tab') }}">
-       
-        <div class="flex-row form-group">
-            <input type="radio" id="mri" name="tab_type" value="MRI">
-            <label for="mri">MRI</label><br>
-            <input type="radio" id="ct" name="tab_type" value="CT">
-            <label for="ct">CT</label><br>
-            <input type="radio" id="xray" name="tab_type" value="XRAY">
-            <label for="xray">X-Ray</label><br><br>
-          
-        </div>
-        <div class="form-group">
-            <label for="report_name">Section name</label>
-            <input type="text" class="form-control" id="report_name" name="report_name">
-        </div>
-        <button type="submit" class="btn btn-primary">Apply filter</button>
-    </form>
-
-     <!-- List of tables and buttons for removing -->
-    {% if tabs_list %}
-    <h3>List of tables</h3>
-            {% for tab in tabs_list %}
-                <form class="flex-row" method="POST" action="{{  url_for('edit_tab') }}">
-                    <p><input value="{{ tab }}" name="tab_del_edit_name"></p>
-                    <button class="btn" type="submit" name="tab_delete">Delete</button>
-                    <button class="btn" type="submit" name="tab_edit">Edit</button>
-                </form>
-            {% endfor %}
     {% else %}
-        <p>No table available</p>
+    <!-- Form to add new table -->
+    <div class="form-group">
+        <form class="flex-row" method="POST">
+            <div>
+                <label for="report_name">Report Name:</label>
+                <input type="text" id="report_name" name="report_name" required>
+            </div>
+            <div>
+                <label for="report_type">Report Type:</label>
+                <select id="report_type" name="report_type" required>
+                    {% for rt in report_types %}
+                        <option value="{{ rt.id }}" {% if rt.id == 1 %}selected{% endif %}>{{ rt.type }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="report_subtype">Report Subtype:</label>
+                <select id="report_subtype" name="report_subtype" required>
+                    <!-- Пустой, будет заполняться динамически -->
+                </select>
+            </div>
+            <div>
+                <label for="comment">Comment:</label>
+                <input type="text" id="comment" name="comment" required>
+            </div>
+            <button type="submit" name="report_creation">Create Report</button>
+        </form>
+    </div>
     {% endif %}
-
     
+
+    <!-- Форма для фильтрации по типу отчета -->
+    {% if user_reports %}
+    
+    <div class="form-group">
+        <label for="filter_type">Filter by Type:</label>
+        <select id="filter_type" name="filter_type">
+            <option value="">All</option>
+            {% for rt in report_types %}
+                <option value="{{ rt.id }}">{{ rt.type }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <h3>List of reports</h3>
+    <div id="report_list">
+        {% for report in user_reports %}
+            <form class="flex-row report-item" data-type-id="{{ report.report_type }}" method="POST" action="{{ url_for("edit_tab") }}">
+                <input type="hidden" name="report_id" value="{{ report.id }}">
+                <p><input value="{{ report.report_name }}" name="report_name" readonly></p>
+                <p><input value="{{ report.comment }}" name="comment" readonly></p>
+                <p><input value="{{ report.report_type_rel.type }}" name="type" readonly></p>
+                <p><input value="{{ report.report_subtype_rel.subtype }}" name="subtype" readonly></p>
+                <button class="btn" type="submit" name="report_delete">Delete</button>
+                <a class="btn" href="{{ url_for("edit_report", report_id=report.id) }}">Edit</a>
+            </form>
+        {% endfor %}
+    </div>
+    {% else %}
+        <p>No reports available</p>
+    {% endif %}
 </div>
 
+<!-- Скрытый элемент для передачи данных подтипов -->
+<script id="allSubtypesData" type="application/json">{{ report_subtypes|tojson }}</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var reportTypeSelect = document.getElementById('report_type');
+    var reportSubtypeSelect = document.getElementById('report_subtype');
+    var filterTypeSelect = document.getElementById('filter_type');
+
+    // Преобразование подтипов из Jinja в JavaScript объект
+    var allSubtypes = JSON.parse(document.getElementById('allSubtypesData').textContent);
+
+    // Функция обновления подтипов в зависимости от выбранного типа отчета
+    function updateSubtypes(type_id) {
+        // Очистка текущих опций
+        reportSubtypeSelect.innerHTML = '';
+
+        // Добавление новых опций, соответствующих выбранному типу отчета
+        allSubtypes.forEach(function(subtype) {
+            if (subtype.type_id == type_id) {
+                var option = document.createElement('option');
+                option.value = subtype.id;
+                option.textContent = subtype.subtype;
+                reportSubtypeSelect.appendChild(option);
+            }
+        });
+    }
+
+    // Инициализация: Устанавливаем id=1 как выбранный тип отчета
+    var initialTypeId = parseInt(reportTypeSelect.value, 10);
+    updateSubtypes(initialTypeId);
+
+    // Обновление подтипов при изменении значения типа отчета
+    reportTypeSelect.addEventListener('change', function() {
+        updateSubtypes(parseInt(this.value, 10));
+    });
+
+    // Фильтрация отчетов по типу
+    filterTypeSelect.addEventListener('change', function() {
+        var selectedTypeId = this.value;
+        var reportItems = document.querySelectorAll('.report-item');
+        reportItems.forEach(function(item) {
+            if (selectedTypeId === "" || item.getAttribute('data-type-id') === selectedTypeId) {
+                item.style.display = 'flex';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    });
+});
+</script>
 {% endblock container %}

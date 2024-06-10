@@ -1,0 +1,69 @@
+ <!-- edit_report.html -->
+{% extends "index.html" %}
+
+{% block container %}
+{{ super() }}
+
+<div class="container">
+   <h1 class="mb-4">Edit Report</h1>
+
+   {% if report %}
+   <h3>Editing Report</h3>
+   <div class="form-group">
+        <form class="flex-row" method="POST">
+            <div>
+                <label for="report_name">Report Name:</label>
+                <input type="text" id="report_name" name="report_name" value="{{ report.report_name }}" required>
+            </div>
+            <div>
+                <label for="report_type">Report Type:</label>
+                <input id="report_type" name="report_type" value=" {{ report.report_type_rel.type }}" readonly>
+                    
+            </div>
+            <div>
+                <label for="report_subtype">Report Subtype:</label>
+                <input id="report_subtype" name="report_subtype" value=" {{ report.report_subtype_rel.subtype }}" readonly>
+                  
+            </div>
+            <div>
+                <label for="comment">Comment:</label>
+                <input type="text" id="comment" name="comment" value="{{ report.comment }}" required>
+            </div>
+            <button type="submit" name="report_update">Update Report</button>
+
+        </form>
+   </div>
+
+   <div class="container">
+    {% if paragraphs %}
+        {% for paragraph in paragraphs %}
+        <div class="flex">
+            <input type="text" id=" {{ paragraph.id }} " value=" {{ paragraph.id }} " name=" {{ paragraph_id }}">
+            <input type="text" id=" {{ paragraph.paragraph_index }} " value=" {{ paragraph.paragraph_index }} " name=" {{ paragraph_paragraph_index }}">
+            <input type="text" id=" {{ paragraph.paragraph }} " value=" {{ paragraph.paragraph }} " name=" {{ paragraph_paragraph }}">
+            
+            <label for="new_paragraph">Create new paragraph</label>
+            <input type="submit" id="new_paragraph" value="new paragraph" name="new_paragraph">
+        </div>
+           
+        {% endfor %}
+    {% else %}
+        <form class="form" method="POST" action="">
+            <div class="block">
+                <label for="new_paragraph">Create new paragraph</label>
+                <input type="submit" id="new_paragraph" value="new paragraph" name="new_paragraph">
+            </div>
+        </form>
+    {% endif %}
+   </div>
+
+   {% else %}
+   <p>Report not found or you don't have permission to edit it.</p>
+   <!-- List of tables and buttons for editing -->
+   {% endif %}
+</div>
+
+<script>
+  
+   </script>
+{% endblock container %}
