@@ -8,7 +8,7 @@
 </head>
 <body>
     <h1>Login</h1>
-    <form method="POST" action="{{ url_for("login") }}">
+    <form method="POST" action="{{ url_for("auth.login") }}">
         
         <div class="container">
             <label for="email">E-mail:</label>
@@ -21,7 +21,7 @@
         <button type="submit">Login</button>
     </form>
 
-    <p>Don't have an account? <a href="{{ url_for('signup') }}">Sign up</a></p>
+    <p>Don't have an account? <a href="{{ url_for("auth.signup") }}">Sign up</a></p>
         
     <div class="upload_messages">
         {% with messages = get_flashed_messages() %}

@@ -9,52 +9,52 @@
 
    {% if report %}
    <h3>Editing Report</h3>
-   <div class="form-group">
-        <form class="flex-row" method="POST">
-            <div>
-                <label for="report_name">Report Name:</label>
-                <input type="text" id="report_name" name="report_name" value="{{ report.report_name }}" required>
+   <div class="">
+        <form class="" method="POST" action=" {{ url_for("edit_report", report_id=report.id) }} ">
+            <div class="flex-row">
+                <div>
+                    <label for="report_name">Report Name:</label>
+                    <input type="text" id="report_name" name="report_name" value="{{ report.report_name }}" required>
+                </div>
+                <div>
+                    <label for="report_type">Report Type:</label>
+                    <input id="report_type" name="report_type" value=" {{ report.report_type_rel.type }}" readonly>
+                        
+                </div>
+                <div>
+                    <label for="report_subtype">Report Subtype:</label>
+                    <input id="report_subtype" name="report_subtype" value=" {{ report.report_subtype_rel.subtype }}" readonly>
+                      
+                </div>
+                <div>
+                    <label for="comment">Comment:</label>
+                    <input type="text" id="comment" name="comment" value="{{ report.comment }}" required>
+                </div>
             </div>
-            <div>
-                <label for="report_type">Report Type:</label>
-                <input id="report_type" name="report_type" value=" {{ report.report_type_rel.type }}" readonly>
-                    
-            </div>
-            <div>
-                <label for="report_subtype">Report Subtype:</label>
-                <input id="report_subtype" name="report_subtype" value=" {{ report.report_subtype_rel.subtype }}" readonly>
-                  
-            </div>
-            <div>
-                <label for="comment">Comment:</label>
-                <input type="text" id="comment" name="comment" value="{{ report.comment }}" required>
-            </div>
-            <button type="submit" name="report_update">Update Report</button>
-
-        </form>
-   </div>
-
-   <div class="container">
-    {% if paragraphs %}
-        {% for paragraph in paragraphs %}
-        <div class="flex">
-            <input type="text" id=" {{ paragraph.id }} " value=" {{ paragraph.id }} " name=" {{ paragraph_id }}">
-            <input type="text" id=" {{ paragraph.paragraph_index }} " value=" {{ paragraph.paragraph_index }} " name=" {{ paragraph_paragraph_index }}">
-            <input type="text" id=" {{ paragraph.paragraph }} " value=" {{ paragraph.paragraph }} " name=" {{ paragraph_paragraph }}">
             
-            <label for="new_paragraph">Create new paragraph</label>
-            <input type="submit" id="new_paragraph" value="new paragraph" name="new_paragraph">
-        </div>
-           
-        {% endfor %}
-    {% else %}
-        <form class="form" method="POST" action="">
-            <div class="block">
+            <button type="submit" name="report_update">Update Report</button>
+            <div class="flex">
+                {% for paragraph in report_paragraphs %}
+                    <div>
+                        <div class="flex-row">
+                            <input type="hidden" id="paragraph_id" name="paragraph_id" value="{{paragraph.id}}">
+                            <input type="text" id="paragraph_index" name="paragraph_index" value="{{paragraph.paragraph_index}}">
+                            <input type="text" id="paragraph" name="paragraph" value="{{paragraph.paragraph}}">
+                            <input type="submit" id="delete_paragraph" value="delete_paragraph" name="delete_paragraph">
+                            <input type="submit" id="edit_paragraph" value="edit_paragraph" name="edit_paragraph">
+                        </div>
+                        <div class="container">
+                            <p class=""> Sentence for this paragraph</p>
+                            <p class=""> Sentence for this paragraph</p>
+                            <p class=""> Sentence for this paragraph</p>
+                        </div>
+                    </div>
+                {% endfor %}
                 <label for="new_paragraph">Create new paragraph</label>
                 <input type="submit" id="new_paragraph" value="new paragraph" name="new_paragraph">
             </div>
+
         </form>
-    {% endif %}
    </div>
 
    {% else %}
