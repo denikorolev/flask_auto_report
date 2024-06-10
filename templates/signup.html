@@ -8,7 +8,7 @@
 <body>
     <div class="container">
         <h1>Signup</h1>
-        <form method="POST" action="{{ url_for("signup") }}" enctype="multipart/form-data">
+        <form method="POST" action="{{ url_for("auth.signup") }}" enctype="multipart/form-data">
 
             <div class="form-group">
                 <label for="email">Email:</label>
@@ -26,7 +26,7 @@
             <button type="submit">Signup</button>
         </form>
 
-        <p>Already have an account? <a href="{{ url_for('login') }}">Login</a></p>
+        <p>Already have an account? <a href="{{ url_for('auth.login') }}">Login</a></p>
     </div>
 </body>
 </html>
