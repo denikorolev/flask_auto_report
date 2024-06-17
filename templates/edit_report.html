@@ -1,5 +1,6 @@
  <!-- edit_report.html -->
 {% extends "index.html" %}
+{% from "macros.html" import render_sentence %}
 
 {% block container %}
 {{ super() }}
@@ -33,28 +34,49 @@
             </div>
             
             <button type="submit" name="report_update">Update Report</button>
+        </form>
+
             <div class="flex">
-                {% for paragraph in report_paragraphs %}
-                    <div>
-                        <div class="flex-row">
-                            <input type="hidden" id="paragraph_id" name="paragraph_id" value="{{paragraph.id}}">
-                            <input type="text" id="paragraph_index" name="paragraph_index" value="{{paragraph.paragraph_index}}">
-                            <input type="text" id="paragraph" name="paragraph" value="{{paragraph.paragraph}}">
-                            <input type="submit" id="delete_paragraph" value="delete_paragraph" name="delete_paragraph">
-                            <input type="submit" id="edit_paragraph" value="edit_paragraph" name="edit_paragraph">
+                {% if report_paragraphs %}
+                    {% for paragraph in report_paragraphs %}
+                        <div class="flex">
+                            <form class="" method="POST" action=" {{ url_for("edit_report", report_id=report.id) }} ">
+                            <div class="flex-row">
+                                <input type="hidden" id="paragraph_id" name="paragraph_id" value="{{paragraph.id}}">
+                                <input type="text" id="paragraph_index" name="paragraph_index" value="{{paragraph.paragraph_index}}">
+                                <input type="text" id="paragraph" name="paragraph" value="{{paragraph.paragraph}}">
+                                <input type="submit" id="delete_paragraph" value="delete_paragraph" name="delete_paragraph">
+                                <input type="submit" id="edit_paragraph" value="edit_paragraph" name="edit_paragraph">
+                            </form>
+                            </div>
+                            
+                            {% if report_sentences %} 
+                                {% for sentence in report_sentences %}
+                                    {% if sentence.paragraph_id == paragraph.id %}
+                                        <form class="" method="POST" action=" {{ url_for("edit_report", report_id=report.id) }} ">
+                                            {{ render_sentence(sentence) }}
+                                        </form>
+                                    {% endif %}
+                                {% endfor %}
+                            {% endif %}
+
+                            <form method="POST" action="{{ url_for("edit_report", report_id=report.id) }}">
+                                <input type="hidden" id="sentence_paragraph" name="add_sentence_paragraph" value="{{ paragraph.id }}">
+                                <input type="submit" id="add_sentence" value="Add Sentence" name="add_sentence">
+                            </form>
                         </div>
-                        <div class="container">
-                            <p class=""> Sentence for this paragraph</p>
-                            <p class=""> Sentence for this paragraph</p>
-                            <p class=""> Sentence for this paragraph</p>
-                        </div>
-                    </div>
-                {% endfor %}
+                            
+                    {% endfor %}
+                {% endif %}
+
+
+            <form class="" method="POST" action=" {{ url_for("edit_report", report_id=report.id) }} ">
                 <label for="new_paragraph">Create new paragraph</label>
                 <input type="submit" id="new_paragraph" value="new paragraph" name="new_paragraph">
+            </form>
             </div>
 
-        </form>
+            
    </div>
 
    {% else %}

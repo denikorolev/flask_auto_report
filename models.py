@@ -23,9 +23,30 @@ class User(db.Model, UserMixin):
     def check_password(self, password):
         return check_password_hash(self.user_pass, password)
 
-class Report(db.Model):
-    __tablename__ = 'reports'
-    id = db.Column(db.BigInteger, primary_key=True)
+
+class BaseModel(db.Model):
+    __abstract__ = True
+    id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
+
+    def save(self):
+        db.session.add(self)
+        db.session.commit()
+
+    def delete(self):
+        db.session.delete(self)
+        db.session.commit()
+
+    @classmethod
+    def delete_by_id(cls, object_id):
+        obj = cls.query.get(object_id)
+        if obj:
+            db.session.delete(obj)
+            db.session.commit()
+            return True
+        return False
+
+class Report(BaseModel):
+    __tablename__ = "reports"
     userid = db.Column(db.BigInteger, db.ForeignKey('users.id'), nullable=False)
     comment = db.Column(db.String(255), nullable=True)
     report_name = db.Column(db.String(255), nullable=False)
@@ -36,6 +57,7 @@ class Report(db.Model):
     user = db.relationship('User', backref=db.backref('reports', lazy=True))
     report_type_rel = db.relationship('ReportType', backref=db.backref('reports', lazy=True))
     report_subtype_rel = db.relationship('ReportSubtype', backref=db.backref('reports', lazy=True))
+    paragraphs = db.relationship('ReportParagraph', backref='report', cascade="all, delete-orphan")
 
     @classmethod
     def create(cls, userid, report_name, report_type, report_subtype, comment=None, public=False):
@@ -52,86 +74,57 @@ class Report(db.Model):
         return new_report
 
     @classmethod
-    def delete(cls, report_id):
-        report_to_delete = cls.query.get(report_id)
-        if report_to_delete:
-            db.session.delete(report_to_delete)
-            db.session.commit()
-            return True
-        return False
-
-    def save(self):
-        db.session.commit()
-        
-    @classmethod
     def get_reports_with_relations(cls, user_id):
         return cls.query.filter_by(userid=user_id).options(
             joinedload(cls.report_type_rel),
             joinedload(cls.report_subtype_rel)
         ).all()
 
-class ReportType(db.Model):
+class ReportType(BaseModel):
     __tablename__ = 'report_type'
-    id = db.Column(db.SmallInteger, primary_key=True)
     type = db.Column(db.String(50), nullable=False)
     
     subtypes_rel = db.relationship('ReportSubtype', backref='report_type', lazy=True)
 
-class ReportSubtype(db.Model):
+class ReportSubtype(BaseModel):
     __tablename__ = 'report_subtype'
-    id = db.Column(db.Integer, primary_key=True)
     type = db.Column(db.SmallInteger, db.ForeignKey('report_type.id'), nullable=False)
     subtype = db.Column(db.String(250), nullable=False)
 
-class ReportParagraph(db.Model):
+class ReportParagraph(BaseModel):
     __tablename__ = "report_paragraphs"
-    
-    id = db.Column(db.BigInteger, primary_key=True)
     paragraph_index = db.Column(db.Integer, nullable=False)
-    report = db.Column(db.BigInteger, db.ForeignKey("reports.id"), nullable=False)
+    report_id = db.Column(db.BigInteger, db.ForeignKey("reports.id"), nullable=False)
     paragraph = db.Column(db.String(255), nullable=False)
 
     report_rel = db.relationship("Report", backref=db.backref("report_paragraphs_list", lazy=True))
+    sentences = db.relationship('Sentence', backref='paragraph', cascade="all, delete-orphan")
 
     @classmethod
-    def create(cls, paragraph_index, report, paragraph):
+    def create(cls, paragraph_index, report_id, paragraph):
         new_paragraph = cls(
             paragraph_index=paragraph_index,
-            report=report,
+            report_id=report_id,
             paragraph=paragraph
         )
         db.session.add(new_paragraph)
         db.session.commit()
         return new_paragraph
 
-    @classmethod
-    def delete(cls, paragraph_id):
-        paragraph_to_delete = cls.query.get(paragraph_id)
-        if paragraph_to_delete:
-            db.session.delete(paragraph_to_delete)
-            db.session.commit()
-            return True
-        return False
-
-    def save(self):
-        db.session.commit()
-
-class Sentence(db.Model):
+class Sentence(BaseModel):
     __tablename__ = "sentences"
-    
-    id = db.Column(db.BigInteger, primary_key=True)
-    paragraph = db.Column(db.BigInteger, db.ForeignKey("report_paragraphs.id"), nullable=False)
+    paragraph_id = db.Column(db.BigInteger, db.ForeignKey("report_paragraphs.id"), nullable=False)
     index = db.Column(db.SmallInteger, nullable=False)
     weight = db.Column(db.SmallInteger, nullable=False)
     comment = db.Column(db.String(100), nullable=False)
     sentence = db.Column(db.String(400), nullable=False)
 
-    report_paragraph_rel = db.relationship("ReportParagraph", backref=db.backref("sentences", lazy=True))
+    report_paragraph_rel = db.relationship("ReportParagraph", backref=db.backref("sentences_list", lazy=True))
 
     @classmethod
-    def create(cls, paragraph, index, weight, comment, sentence):
+    def create(cls, paragraph_id, index, weight, comment, sentence):
         new_sentence = cls(
-            paragraph=paragraph,
+            paragraph_id=paragraph_id,
             index=index,
             weight=weight,
             comment=comment,
@@ -140,15 +133,8 @@ class Sentence(db.Model):
         db.session.add(new_sentence)
         db.session.commit()
         return new_sentence
-
+    
     @classmethod
-    def delete(cls, sentence_id):
-        sentence_to_delete = cls.query.get(sentence_id)
-        if sentence_to_delete:
-            db.session.delete(sentence_to_delete)
-            db.session.commit()
-            return True
-        return False
+    def find_by_paragraph_id(cls, paragraph_id):
+        return cls.query.filter_by(paragraph_id=paragraph_id).all()
 
-    def save(self):
-        db.session.commit()

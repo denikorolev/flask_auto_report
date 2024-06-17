@@ -1,17 +1,21 @@
 # app.py
 
+
 from flask import Flask, redirect, url_for, flash, render_template, request
 from flask_login import LoginManager, current_user, login_required
-from flask_sqlalchemy import SQLAlchemy
 from config import Config
-from auth import auth_bp  # Абсолютный импорт
-from models import db, User, Report, ReportType, ReportSubtype, ReportParagraph  
+from flask_migrate import Migrate
+from auth import auth_bp  
+from models import db, User, Report, ReportType, ReportSubtype, ReportParagraph, Sentence  
 
 app = Flask(__name__)
 app.config.from_object(Config) # Load configuration from file config.py
 
 # Initialize SQLAlchemy
 db.init_app(app)
+
+# Initialize Flask-Migrate
+migrate = Migrate(app, db)
 
 # Initialize LoginManager
 login_manager = LoginManager()
@@ -57,8 +61,8 @@ def report():
 @login_required
 def edit_tab(): 
     new_report_query = request.args.get("new_report_query")   # The line for check if user want to create new report
-    report_types = ReportType.query.all()
-    report_subtypes = ReportSubtype.query.all()
+    report_types = ReportType.query.all()  # Need to check if i can remove this line
+    report_subtypes = ReportSubtype.query.all() # Need to check if i can remove this line
     # Convert objects to dictionary
     report_subtypes_dict = [
         {'id': rst.id, 'type_id': rst.type, 'subtype': rst.subtype}
@@ -87,7 +91,7 @@ def edit_tab():
             
         if "report_delete" in request.form:
             try:
-                Report.delete(request.form["report_id"])
+                Report.delete_by_id(request.form["report_id"])
                 flash("Report deleted successfully", "success")
             except Exception as e:
                 flash(f"Report not found. error code: {e}", "error")
@@ -121,7 +125,9 @@ def edit_report():
         {"id": rst.id, "type": rst.type, "subtype": rst.subtype} for rst in report_subtypes
     ]
     # load all paragraphs for this report
-    report_paragraphs = ReportParagraph.query.filter_by(report=report.id).all()
+    report_paragraphs = report.report_paragraphs_list if report else []
+    report_sentences = [sentence for paragraph in report_paragraphs for sentence in paragraph.sentences]
+
     # Refresh report in table
     if request.method == "POST": 
         if "report_update" in request.form:
@@ -143,7 +149,7 @@ def edit_report():
             try:
                 ReportParagraph.create(
                     paragraph_index=paragraph_index,
-                    report=report.id,
+                    report_id=report.id,
                     paragraph="insert your text"
                 )
                 flash("Paragraph added successfully", "success")
@@ -153,21 +159,61 @@ def edit_report():
         
         if "delete_paragraph" in request.form:
             try:
-                ReportParagraph.delete(request.form["paragraph_id"])
+                ReportParagraph.delete_by_id(request.form["paragraph_id"])
                 flash("Paragraph deleted successfully", "success")
             except Exception as e:
                  flash("Paragraph not found", "error")
             return redirect(url_for("edit_report", report_id=report.id))
         
         if "edit_paragraph" in request.form:
-            paragraph = ReportParagraph.query.get(request.form["paragraph_id"])
-            paragraph.paragraph_index = request.form["paragraph_index"]
-            paragraph.paragraph = request.form["paragraph"]
+            paragraph_for_edit = ReportParagraph.query.get(request.form["paragraph_id"])
+            paragraph_for_edit.paragraph_index = request.form["paragraph_index"]
+            paragraph_for_edit.paragraph = request.form["paragraph"]
             try:
-                paragraph.save()
+                paragraph_for_edit.save()
                 flash("Paragraph changed successfully", "success")
             except Exception as e:
                 flash("Something went wrong. error code {e}", "error")
+            return redirect(url_for("edit_report", report_id=report.id))
+        
+        if "add_sentence" in request.form:
+            sentence_index = 1
+            sentence_paragraph_id = request.form["add_sentence_paragraph"]
+            sentences = Sentence.find_by_paragraph_id(sentence_paragraph_id)
+            if sentences:
+                sentence_lenght = len(sentences)
+                sentence_index += sentence_lenght
+            try:
+                Sentence.create(
+                paragraph_id= sentence_paragraph_id,
+                index= sentence_index,
+                weight= "1",
+                comment= "norma",
+                sentence= "add your sentence")
+                flash("sentence created successfully", "success")
+            except Exception as e:
+                flash(f"sentence can't be created, error code: {e}", "error")
+            return redirect(url_for("edit_report", report_id=report.id))
+        
+        if "delete_sentence" in request.form:
+            try:
+                Sentence.delete_by_id(request.form["sentence_id"])
+                flash("sentence deleted successfully", "success")
+            except Exception as e:
+                flash(f"can't delete sentence. error code: {e}", "error")
+            return redirect(url_for("edit_report", report_id=report.id))
+        
+        if "edit_sentence" in request.form:
+            sentence_for_edit = Sentence.query.get(request.form["sentence_id"])
+            sentence_for_edit.index = request.form["sentence_index"]
+            sentence_for_edit.weight = request.form["sentence_weight"]
+            sentence_for_edit.comment = request.form["sentence_comment"]
+            sentence_for_edit.sentence = request.form["sentence_sentence"]
+            try:
+                sentence_for_edit.save()
+                flash("changes saved successfully", "success")
+            except Exception as e:
+                flash(f"something went wrong. error code: {e}")
             return redirect(url_for("edit_report", report_id=report.id))
                 
     return render_template('edit_report.html', 
@@ -176,7 +222,9 @@ def edit_report():
                            report=report,
                            report_types=report_types, 
                            report_subtypes=report_subtypes_dict,
-                           report_paragraphs=report_paragraphs)
+                           report_paragraphs=report_paragraphs,
+                           report_sentences=report_sentences
+                           )
 
 @app.teardown_appcontext
 def close_db(error):
