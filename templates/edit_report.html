@@ -41,14 +41,14 @@
                     {% for paragraph in report_paragraphs %}
                         <div class="flex">
                             <form class="" method="POST" action=" {{ url_for("edit_report", report_id=report.id) }} ">
-                            <div class="flex-row">
                                 <input type="hidden" id="paragraph_id" name="paragraph_id" value="{{paragraph.id}}">
                                 <input type="text" id="paragraph_index" name="paragraph_index" value="{{paragraph.paragraph_index}}">
                                 <input type="text" id="paragraph" name="paragraph" value="{{paragraph.paragraph}}">
-                                <input type="submit" id="delete_paragraph" value="delete_paragraph" name="delete_paragraph">
-                                <input type="submit" id="edit_paragraph" value="edit_paragraph" name="edit_paragraph">
+                                <label for="paragraph_visible">Visible:</label>
+                                <input type="checkbox" id="paragraph_visible" name="paragraph_visible" value="True" {% if paragraph.paragraph_visible %} checked {% endif %}>
+                                <button class="" type="submit" id="delete_paragraph" value="delete_paragraph" name="delete_paragraph">delete_paragraph</button>
+                                <button class="" type="submit" id="edit_paragraph" value="edit_paragraph" name="edit_paragraph">edit_paragraph</button>
                             </form>
-                            </div>
                             
                             {% if report_sentences %} 
                                 {% for sentence in report_sentences %}
@@ -62,7 +62,7 @@
 
                             <form method="POST" action="{{ url_for("edit_report", report_id=report.id) }}">
                                 <input type="hidden" id="sentence_paragraph" name="add_sentence_paragraph" value="{{ paragraph.id }}">
-                                <input type="submit" id="add_sentence" value="Add Sentence" name="add_sentence">
+                                <button class="" type="submit" id="add_sentence" value="Add Sentence" name="add_sentence">Add Sentence</button>
                             </form>
                         </div>
                             
@@ -72,7 +72,7 @@
 
             <form class="" method="POST" action=" {{ url_for("edit_report", report_id=report.id) }} ">
                 <label for="new_paragraph">Create new paragraph</label>
-                <input type="submit" id="new_paragraph" value="new paragraph" name="new_paragraph">
+                <button class="" type="submit" id="new_paragraph" value="new paragraph" name="new_paragraph">new paragraph</button>
             </form>
             </div>
 
