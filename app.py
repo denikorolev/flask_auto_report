@@ -48,19 +48,12 @@ def main():
     test_db_connection()
     return render_template('index.html', title="Main page Radiologary", menu=menu)
 
-@app.route('/report', methods=['POST', 'GET'])
-@login_required
-def report(): 
-    return render_template(
-        'report.html',
-        title="Report",
-        menu=menu
-    )
 
 @app.route('/edit_tab', methods=['POST', 'GET'])
 @login_required
 def edit_tab(): 
     new_report_query = request.args.get("new_report_query")   # The line for check if user want to create new report
+    type_subtype_editing_query = request.args.get("type_subtype_editing_query") 
     report_types = ReportType.query.all()  # Need to check if i can remove this line
     report_subtypes = ReportSubtype.query.all() # Need to check if i can remove this line
     # Convert objects to dictionary
@@ -74,7 +67,7 @@ def edit_tab():
     # If user want to make new report show them form for report creation
     if request.method == "POST":
         if "report_creation_form_view" in request.form:
-            return redirect(url_for('edit_tab', new_report_query=True))
+            return redirect(url_for("edit_tab", new_report_query=True))
         
     # If user press button "create new report we created new report and redirect to page for editing new report"
         if "report_creation" in request.form:
@@ -88,7 +81,49 @@ def edit_tab():
             )
             flash("Report created successfully", "success")
             return redirect(url_for("edit_report", report_id=new_report.id))
-            
+        
+        # If user press button "add new type or subtype we show them form for editing types and subtypes"
+        if "type_subtype_edit_form_view" in request.form:
+            return redirect(url_for("edit_tab", type_subtype_editing_query=True))
+        
+        # Processing type
+        if "add_new_type_button" in request.form:
+            ReportType.create(type=request.form["new_type"])
+            flash("New type was created successfully")
+            return redirect(url_for("edit_tab", type_subtype_editing_query=True))
+        if "delete_type_button" in request.form:
+            try:
+                ReportType.delete_by_id(request.form["type_id"])
+                flash("Type was deleted successfully")
+            except:
+                flash("It's impossible to delele the type because of existing of the reports with this type")
+            return redirect(url_for("edit_tab", type_subtype_editing_query=True))
+        if "edit_type_button" in request.form:
+            type_for_editing = ReportType.query.get(request.form["type_id"])
+            type_for_editing.type = request.form["type_type"]
+            type_for_editing.save()
+            flash("Type edited successfully")
+            return redirect(url_for("edit_tab", type_subtype_editing_query=True))
+        
+        # Processing subtype
+        if "add_new_subtype_button" in request.form:
+            ReportSubtype.create(type=request.form["report_subtype_type"], subtype=request.form["new_subtype"])
+            flash("New subtype was created successfully")
+            return redirect(url_for("edit_tab", type_subtype_editing_query=True))
+        if "delete_subtype_button" in request.form:
+            try:
+                ReportSubtype.delete_by_id(request.form["subtype_id"])
+                flash("Subtype was deleted successfully")
+            except:
+                flash("It's impossible to delele the subtype because of existing of the reports with this type")
+            return redirect(url_for("edit_tab", type_subtype_editing_query=True))
+        if "edit_subtype_button" in request.form:
+            subtype_for_editing = ReportSubtype.query.get(request.form["subtype_id"])
+            subtype_for_editing.subtype = request.form["subtype_subtype"]
+            subtype_for_editing.save()
+            flash("Subtype edited successfully")
+            return redirect(url_for("edit_tab", type_subtype_editing_query=True))
+        
         if "report_delete" in request.form:
             try:
                 Report.delete_by_id(request.form["report_id"])
@@ -103,7 +138,9 @@ def edit_tab():
                            new_report_query=new_report_query, 
                            report_types=report_types, 
                            report_subtypes=report_subtypes_dict, 
-                           user_reports=user_reports)
+                           user_reports=user_reports,
+                           type_subtype_editing_query=type_subtype_editing_query
+                           )
 
 
 @app.route('/edit_report', methods=['GET', 'POST'])
@@ -145,12 +182,14 @@ def edit_report():
             if report_paragraphs:
                 paragraph_length = len(report_paragraphs)
                 paragraph_index += paragraph_length
+                paragraph_visible = request.form.get("paragraph_visible") == "True"
             # Make new string in the tab paragraph via class
             try:
                 ReportParagraph.create(
                     paragraph_index=paragraph_index,
                     report_id=report.id,
-                    paragraph="insert your text"
+                    paragraph="insert your text",
+                    paragraph_visible=paragraph_visible
                 )
                 flash("Paragraph added successfully", "success")
             except Exception as e:
@@ -169,6 +208,7 @@ def edit_report():
             paragraph_for_edit = ReportParagraph.query.get(request.form["paragraph_id"])
             paragraph_for_edit.paragraph_index = request.form["paragraph_index"]
             paragraph_for_edit.paragraph = request.form["paragraph"]
+            paragraph_for_edit.paragraph_visible = request.form.get("paragraph_visible") == "True" # Direct boolean assignment
             try:
                 paragraph_for_edit.save()
                 flash("Paragraph changed successfully", "success")
@@ -225,6 +265,15 @@ def edit_report():
                            report_paragraphs=report_paragraphs,
                            report_sentences=report_sentences
                            )
+
+@app.route("/report", methods=['POST', 'GET'])
+@login_required
+def report(): 
+    return render_template(
+        "report.html",
+        title="Report",
+        menu=menu
+    )
 
 @app.teardown_appcontext
 def close_db(error):

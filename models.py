@@ -85,27 +85,48 @@ class ReportType(BaseModel):
     type = db.Column(db.String(50), nullable=False)
     
     subtypes_rel = db.relationship('ReportSubtype', backref='report_type', lazy=True)
+    
+    @classmethod
+    def create(cls, type):
+        new_type = cls(
+            type=type
+        )
+        db.session.add(new_type)
+        db.session.commit()
+        return new_type
 
 class ReportSubtype(BaseModel):
-    __tablename__ = 'report_subtype'
-    type = db.Column(db.SmallInteger, db.ForeignKey('report_type.id'), nullable=False)
+    __tablename__ = "report_subtype"
+    type = db.Column(db.SmallInteger, db.ForeignKey("report_type.id"), nullable=False)
     subtype = db.Column(db.String(250), nullable=False)
+    
+    @classmethod
+    def create(cls, type, subtype):
+        new_subtype = cls(
+            type=type,
+            subtype=subtype
+        )
+        db.session.add(new_subtype)
+        db.session.commit()
+        return new_subtype
 
 class ReportParagraph(BaseModel):
     __tablename__ = "report_paragraphs"
     paragraph_index = db.Column(db.Integer, nullable=False)
     report_id = db.Column(db.BigInteger, db.ForeignKey("reports.id"), nullable=False)
     paragraph = db.Column(db.String(255), nullable=False)
+    paragraph_visible = db.Column(db.Boolean, default=False, nullable=False)
 
     report_rel = db.relationship("Report", backref=db.backref("report_paragraphs_list", lazy=True))
     sentences = db.relationship('Sentence', backref='paragraph', cascade="all, delete-orphan")
 
     @classmethod
-    def create(cls, paragraph_index, report_id, paragraph):
+    def create(cls, paragraph_index, report_id, paragraph, paragraph_visible=False):
         new_paragraph = cls(
             paragraph_index=paragraph_index,
             report_id=report_id,
-            paragraph=paragraph
+            paragraph=paragraph,
+            paragraph_visible = paragraph_visible
         )
         db.session.add(new_paragraph)
         db.session.commit()

@@ -8,15 +8,15 @@
 <div class="container">
     <h1 class="mb-4">Edit tab</h1>
 
-    <!-- Ask about to add new table -->
+    <!-- Ask about to add new report -->
     {% if not new_report_query %}
     <h4>Do you want to add new report?</h4>
     <form class="flex-row" method="POST">
-        <button type="submit" name="report_creation_form_view">Yes i do</button>
+        <button class="btn" type="submit" name="report_creation_form_view">Yes i do</button>
     </form>
 
     {% else %}
-    <!-- Form to add new table -->
+    <!-- Form to add new report -->
     <div class="form-group">
         <form class="flex-row" method="POST">
             <div>
@@ -34,22 +34,76 @@
             <div>
                 <label for="report_subtype">Report Subtype:</label>
                 <select id="report_subtype" name="report_subtype" required>
-                    <!-- Пустой, будет заполняться динамически -->
+                   <!-- Empty, will be filled dynamically -->
                 </select>
             </div>
             <div>
                 <label for="comment">Comment:</label>
                 <input type="text" id="comment" name="comment" required>
             </div>
-            <button type="submit" name="report_creation">Create Report</button>
+            <button class="btn" type="submit" name="report_creation">Create Report</button>
         </form>
     </div>
     {% endif %}
     
+    <!-- Ask about to add types and subtypes -->
+    {% if not type_subtype_editing_query %}
+    <h4>Do you want to set up types and subtypes?</h4>
+    <form class="flex-row" method="POST">
+        <button class="btn" type="submit" name="type_subtype_edit_form_view">Yes i do</button>
+    </form>
+    {% else %}
 
-    <!-- Форма для фильтрации по типу отчета -->
-    {% if user_reports %}
-    
+        <!-- Types -->
+        <div class="types">
+            <form class="" method = "POST">
+                <div class="flex-row">
+                    <input type="text" id="new_type" name="new_type">
+                    <button class="btn" type="submit" name="add_new_type_button">add type</button>
+                </div>
+            </form>
+                <div class="">
+                    {% for type in report_types %}
+                        <form class="" method = "POST">
+                            <input type="text" id="type_id" name="type_id" value=" {{ type.id }} " readonly>
+                            <input type="text" id="type_type" name="type_type" value="{{ type.type }}">
+                            <button class="btn" type="submit" name="delete_type_button">delete type</button>
+                            <button class="btn" type="submit" name="edit_type_button">Edit type</button>
+                        </form>
+                    {% endfor %}
+                </div>
+            
+        </div>
+
+        <!-- Subtypes -->
+        <div class="subtypes">
+            
+                <form class="flex-row" method = "POST">
+                    <select id="report_subtype_type" name="report_subtype_type" required>
+                        {% for type in report_types %}
+                            <option value="{{ type.id }}">{{ type.type }}</option>
+                        {% endfor %}
+                    </select>
+                    <input type="text" id="new_subtype" name="new_subtype">
+                    <button class="btn" type="submit" name="add_new_subtype_button">add subtype</button>
+                </form>
+            
+                <div class="">
+                    {% for subtype in report_subtypes %}
+                        <form class="" method = "POST">
+                            <input type="text" id="subtype_id" name="subtype_id" value=" {{ subtype.id }} " readonly>
+                            <input type="text" id="subtype_type" name="subtype_type" value="{{ subtype.type_id }}" readonly>
+                            <input type="text" id="subtype_subtype" name="subtype_subtype" value="{{ subtype.subtype }}">
+                            <button class="btn" type="submit" name="delete_subtype_button">delete subtype</button>
+                            <button class="btn" type="submit" name="edit_subtype_button">Edit subtype</button>
+                        </form>
+                    {% endfor %}
+                </div>
+        </div>
+
+    {% endif %}
+
+    <!-- Form for filtering by report type -->
     <div class="form-group">
         <label for="filter_type">Filter by Type:</label>
         <select id="filter_type" name="filter_type">
@@ -60,6 +114,8 @@
         </select>
     </div>
 
+
+    {% if user_reports and not type_subtype_editing_query %}
     <h3>List of reports</h3>
     <div id="report_list">
         {% for report in user_reports %}
@@ -79,7 +135,7 @@
     {% endif %}
 </div>
 
-<!-- Скрытый элемент для передачи данных подтипов -->
+<!-- Hidden element to pass subtype data -->
 <script id="allSubtypesData" type="application/json">{{ report_subtypes|tojson }}</script>
 
 <script>
@@ -88,15 +144,15 @@ document.addEventListener('DOMContentLoaded', function() {
     var reportSubtypeSelect = document.getElementById('report_subtype');
     var filterTypeSelect = document.getElementById('filter_type');
 
-    // Преобразование подтипов из Jinja в JavaScript объект
+    // Convert subtypes from Jinja to JavaScript object
     var allSubtypes = JSON.parse(document.getElementById('allSubtypesData').textContent);
 
-    // Функция обновления подтипов в зависимости от выбранного типа отчета
+    // Function to update subtypes based on the selected report type
     function updateSubtypes(type_id) {
-        // Очистка текущих опций
+        // Clear current options
         reportSubtypeSelect.innerHTML = '';
 
-        // Добавление новых опций, соответствующих выбранному типу отчета
+        // Add new options corresponding to the selected report type
         allSubtypes.forEach(function(subtype) {
             if (subtype.type_id == type_id) {
                 var option = document.createElement('option');
@@ -107,16 +163,17 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Инициализация: Устанавливаем id=1 как выбранный тип отчета
-    var initialTypeId = parseInt(reportTypeSelect.value, 10);
-    updateSubtypes(initialTypeId);
+    // Initialize: Set id=1 as the selected report type
+    if (reportTypeSelect) {
+        var initialTypeId = parseInt(reportTypeSelect.value, 10);
+        updateSubtypes(initialTypeId);
 
-    // Обновление подтипов при изменении значения типа отчета
-    reportTypeSelect.addEventListener('change', function() {
-        updateSubtypes(parseInt(this.value, 10));
-    });
-
-    // Фильтрация отчетов по типу
+        // Update subtypes when the report type value changes
+        reportTypeSelect.addEventListener('change', function() {
+            updateSubtypes(parseInt(this.value, 10));
+        });
+    }
+     // Filter reports by type
     filterTypeSelect.addEventListener('change', function() {
         var selectedTypeId = this.value;
         var reportItems = document.querySelectorAll('.report-item');
