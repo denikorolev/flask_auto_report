@@ -3,19 +3,64 @@
 {% block container %}
 {{ super() }}
 
-<div class="container">
-    <div class="container container__top">
-        <!-- File Selection -->
-        <p> this is the place for possible header or navigation </p>
-    </div>
-    <div class="container_row">
-        <div class="box">
-           <p> waiting for new content</p>
-        </div>
+        <!-- report type\subtype choosing -->
+        <h2>What report will we use for now?</h2>
+        <form class="flex-row" method="POST">
+            <div id="reports-container">
+                <label for="report_type">Choose report type:</label>
+                <select id="report_type" name="report_type" required>
+                    {% for rt in report_types %}
+                        <option value="{{ rt.id }}">{{ rt.type }}</option>
+                    {% endfor %}
+                </select>
+            </div>
     
-        <div class="box">
-            <p> waiting for new content</p>
-        </div>
-    </div>
-</div>
+            <div id="reports-container">
+                <label for="report_subtype">Choose report subtype:</label>
+                <select id="report_subtype" name="report_subtype" required>
+                    {% for rst in report_subtypes %}
+                        <option value="{{ rst.id }}" data-type-id="{{ rst.type }}">{{ rst.subtype }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button class="btn" type="submit" id="select_report_type_subtype" name="select_report_type_subtype">Show reports</button>
+        </form>
+
+        {% if reports %}
+            <div class="">
+                {% for report in reports %}
+                    <a class="flex-row" href="{{ url_for("report_work", report_id=report.id) }}"> 
+                        <p class="">{{ report.report_name }}</p>
+                        <p class="">{{ report.comment }}</p>  
+                    </a>
+                {% endfor %}
+            </div>
+        {% endif %}
+        
+        
+      
+
+        <script>
+            document.addEventListener("DOMContentLoaded", function() {
+                const reportTypeSelect = document.getElementById("report_type");
+                const reportSubtypeSelect = document.getElementById("report_subtype");
+                const allSubtypes = Array.from(reportSubtypeSelect.options); // Сохраняем все подтипы
+        
+                reportTypeSelect.addEventListener("change", function() {
+                    const selectedTypeId = this.value;
+                    reportSubtypeSelect.innerHTML = ''; // Очищаем опции подтипов
+        
+                    allSubtypes.forEach(subtypeOption => {
+                        if (subtypeOption.getAttribute('data-type-id').trim() === selectedTypeId) {
+                            reportSubtypeSelect.appendChild(subtypeOption);
+                        }
+                    });
+                });
+        
+                // Trigger change event on page load to set the initial state
+                reportTypeSelect.dispatchEvent(new Event("change"));
+            });
+        </script>
+
 {% endblock container %}
+
