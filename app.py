@@ -7,6 +7,7 @@ from config import Config
 from flask_migrate import Migrate
 from auth import auth_bp  
 from models import db, User, Report, ReportType, ReportSubtype, ReportParagraph, Sentence  
+import pprint
 
 app = Flask(__name__)
 app.config.from_object(Config) # Load configuration from file config.py
@@ -330,6 +331,7 @@ def report_work():
             "paragraph": paragraph,
             "grouped_sentences": grouped_sentences
         })
+    pprint.pprint(paragraph_data)
                 
     return render_template(
         "report_work.html", 

@@ -75,6 +75,7 @@ html {
     display: flex;
     flex-direction: row;
     gap: 30px;
+    width: 45%;
 }
 
 .box {
@@ -113,9 +114,13 @@ html {
     margin-top: 5px;
 }
 
+.paragraph-list {
+    width: 45%;
+}
 
-
-
+.sentence-select{
+    max-width: 100%;
+}
 
 
 
