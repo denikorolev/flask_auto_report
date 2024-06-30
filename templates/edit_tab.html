@@ -27,7 +27,7 @@
                 <label for="report_type">Report Type:</label>
                 <select id="report_type" name="report_type" required>
                     {% for rt in report_types %}
-                        <option value="{{ rt.id }}" {% if rt.id == 1 %}selected{% endif %}>{{ rt.type }}</option>
+                        <option value="{{ rt.id }}">{{ rt.type }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -115,10 +115,10 @@
     </div>
 
 
-    {% if user_reports and not type_subtype_editing_query %}
+    {% if user_reports_rel and not type_subtype_editing_query %}
     <h3>List of reports</h3>
     <div id="report_list">
-        {% for report in user_reports %}
+        {% for report in user_reports_rel %}
             <form class="flex-row report-item" data-type-id="{{ report.report_type }}" method="POST" action="{{ url_for("edit_tab") }}">
                 <input type="hidden" name="report_id" value="{{ report.id }}">
                 <p><input value="{{ report.report_name }}" name="report_name" readonly></p>

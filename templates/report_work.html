@@ -1,0 +1,34 @@
+{% extends "index.html" %}
+
+{% block container %}
+{{ super() }}
+
+<ul class="paragraph-list">
+    {% for item in paragraph_data %}
+            <li class="paragraph-item">
+                    <p {% if item.paragraph.paragraph_visible %}class="paragraph-text--visible" 
+                    {% else %} class="paragraph-text--invisible" 
+                    {% endif %}> 
+                    {{ item.paragraph.paragraph }} 
+                    </p>
+
+                    {% if item.grouped_sentences %}
+                        
+                            {% for index, sentences in item.grouped_sentences.items() %}
+                                {% if sentences|length == 1 %}
+                                    <p class="sentence-text"> {{ sentences[0].sentence }} </p>
+                                {% else %}
+                                    <select class="sentence-select">
+                                        {% for sentence in sentences %}
+                                            <option value="{{ sentence.id }}">{{ sentence.sentence }}</option>
+                                        {% endfor %}
+                                    </select>
+                                {% endif %}
+                            {% endfor %}
+                    {% endif %}
+            </li>
+    {% endfor %}
+</ul>
+
+
+{% endblock container %}

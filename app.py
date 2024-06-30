@@ -30,6 +30,23 @@ app.register_blueprint(auth_bp, url_prefix="/auth")
 def load_user(user_id):
     return User.query.get(int(user_id))
 
+# Functions 
+
+def test_db_connection():
+    try:
+        db.engine.connect()
+        flash("Database connection successful", "success")
+        return True
+    except Exception as e:
+        flash(f"Database connection failed: {e}", "error")
+        return False
+
+def get_user_reports():
+    user_reports = Report.query.filter_by(userid=current_user.id).all()
+    return user_reports
+
+
+
 # This is only for redirection to the main page
 @app.route("/")
 def index():
@@ -54,15 +71,15 @@ def main():
 def edit_tab(): 
     new_report_query = request.args.get("new_report_query")   # The line for check if user want to create new report
     type_subtype_editing_query = request.args.get("type_subtype_editing_query") 
-    report_types = ReportType.query.all()  # Need to check if i can remove this line
-    report_subtypes = ReportSubtype.query.all() # Need to check if i can remove this line
+    report_types = ReportType.query.all()  
+    report_subtypes = ReportSubtype.query.all() 
     # Convert objects to dictionary
     report_subtypes_dict = [
         {'id': rst.id, 'type_id': rst.type, 'subtype': rst.subtype}
         for rst in report_subtypes
     ]
     # All reports of current user with load of linked records (types and subtypes) by method in class
-    user_reports = Report.get_reports_with_relations(current_user.id)
+    user_reports_rel = get_user_reports()
     
     # If user want to make new report show them form for report creation
     if request.method == "POST":
@@ -138,7 +155,7 @@ def edit_tab():
                            new_report_query=new_report_query, 
                            report_types=report_types, 
                            report_subtypes=report_subtypes_dict, 
-                           user_reports=user_reports,
+                           user_reports_rel=user_reports_rel,
                            type_subtype_editing_query=type_subtype_editing_query
                            )
 
@@ -146,7 +163,7 @@ def edit_tab():
 @app.route('/edit_report', methods=['GET', 'POST'])
 @login_required
 def edit_report():
-    report_id = request.args.get('report_id')
+    report_id = request.args.get("report_id")
     report = None
     
     if report_id:
@@ -155,12 +172,6 @@ def edit_report():
             flash("Report not found or you don't have permission to edit it", "error")
             return redirect(url_for('edit_report'))
     
-    report_types = ReportType.query.all()
-    report_subtypes = ReportSubtype.query.all()
-    # Convert objects to dictionary
-    report_subtypes_dict = [
-        {"id": rst.id, "type": rst.type, "subtype": rst.subtype} for rst in report_subtypes
-    ]
     # load all paragraphs for this report
     report_paragraphs = report.report_paragraphs_list if report else []
     report_sentences = [sentence for paragraph in report_paragraphs for sentence in paragraph.sentences]
@@ -182,7 +193,9 @@ def edit_report():
             if report_paragraphs:
                 paragraph_length = len(report_paragraphs)
                 paragraph_index += paragraph_length
-                paragraph_visible = request.form.get("paragraph_visible") == "True"
+                
+            paragraph_visible = request.form.get("paragraph_visible") == "True"
+                
             # Make new string in the tab paragraph via class
             try:
                 ReportParagraph.create(
@@ -260,8 +273,6 @@ def edit_report():
                            title="Edit report", 
                            menu=menu, 
                            report=report,
-                           report_types=report_types, 
-                           report_subtypes=report_subtypes_dict,
                            report_paragraphs=report_paragraphs,
                            report_sentences=report_sentences
                            )
@@ -269,24 +280,70 @@ def edit_report():
 @app.route("/report", methods=['POST', 'GET'])
 @login_required
 def report(): 
+    report_types = ReportType.query.all()  
+    report_subtypes = ReportSubtype.query.all() 
+    user_reports = get_user_reports()
+    if request.method == "POST":
+        if "select_report_type_subtype" in request.form:
+            rep_type = request.form["report_type"]
+            rep_subtype = request.form["report_subtype"]
+            reports = Report.query.filter_by(userid = current_user.id, 
+                                             report_type = rep_type, 
+                                             report_subtype = rep_subtype
+                                             ).all()
+            return render_template(
+                "report.html",
+                title="Report",
+                menu=menu,
+                user_reports = user_reports,
+                report_types = report_types,
+                report_subtypes = report_subtypes,
+                reports = reports
+            )
+        
     return render_template(
         "report.html",
         title="Report",
-        menu=menu
+        menu=menu,
+        user_reports = user_reports,
+        report_types = report_types,
+        report_subtypes = report_subtypes
+    )
+
+@app.route("/report_work", methods=['POST', 'GET'])
+@login_required
+def report_work(): 
+    report = Report.query.get(request.args.get("report_id")) # Get report_id from url
+    paragraphs = ReportParagraph.query.filter_by(report_id = report.id).order_by(ReportParagraph.paragraph_index).all()
+    paragraph_data = []
+    for paragraph in paragraphs:
+        sentences = Sentence.query.filter_by(paragraph_id = paragraph.id).order_by(Sentence.index).all()
+        
+        grouped_sentences = {}
+        for sentence in sentences:
+            index = sentence.index
+            if index not in grouped_sentences:
+                grouped_sentences[index] = []
+            grouped_sentences[index].append(sentence)
+            
+        paragraph_data.append({
+            "paragraph": paragraph,
+            "grouped_sentences": grouped_sentences
+        })
+                
+    return render_template(
+        "report_work.html", 
+        title=report.report_name,
+        menu=menu,
+        report = report,
+        paragraph_data = paragraph_data                   
     )
 
 @app.teardown_appcontext
 def close_db(error):
     db.session.remove()
 
-def test_db_connection():
-    try:
-        db.engine.connect()
-        flash("Database connection successful", "success")
-        return True
-    except Exception as e:
-        flash(f"Database connection failed: {e}", "error")
-        return False
+
 
 if __name__ == "__main__":
     app.run(debug=True, port=5001)

@@ -55,9 +55,9 @@ class Report(BaseModel):
     public = db.Column(db.Boolean, default=False, nullable=False)
     
     user = db.relationship('User', backref=db.backref('reports', lazy=True))
-    report_type_rel = db.relationship('ReportType', backref=db.backref('reports', lazy=True))
-    report_subtype_rel = db.relationship('ReportSubtype', backref=db.backref('reports', lazy=True))
-    paragraphs = db.relationship('ReportParagraph', backref='report', cascade="all, delete-orphan")
+    report_type_rel = db.relationship('ReportType', backref=db.backref('reports', lazy=True), overlaps="report_type")
+    report_subtype_rel = db.relationship('ReportSubtype', backref=db.backref('reports', lazy=True), overlaps="report_subtype")
+    report_paragraphs = db.relationship('ReportParagraph', backref='report', cascade="all, delete-orphan", overlaps="paragraphs,report")
 
     @classmethod
     def create(cls, userid, report_name, report_type, report_subtype, comment=None, public=False):
@@ -73,12 +73,6 @@ class Report(BaseModel):
         db.session.commit()
         return new_report
 
-    @classmethod
-    def get_reports_with_relations(cls, user_id):
-        return cls.query.filter_by(userid=user_id).options(
-            joinedload(cls.report_type_rel),
-            joinedload(cls.report_subtype_rel)
-        ).all()
 
 class ReportType(BaseModel):
     __tablename__ = 'report_type'
@@ -117,8 +111,8 @@ class ReportParagraph(BaseModel):
     paragraph = db.Column(db.String(255), nullable=False)
     paragraph_visible = db.Column(db.Boolean, default=False, nullable=False)
 
-    report_rel = db.relationship("Report", backref=db.backref("report_paragraphs_list", lazy=True))
-    sentences = db.relationship('Sentence', backref='paragraph', cascade="all, delete-orphan")
+    report_rel = db.relationship("Report", backref=db.backref("report_paragraphs_list", lazy=True), overlaps="paragraphs,report")
+    sentences = db.relationship('Sentence', backref='paragraph', cascade="all, delete-orphan", overlaps="paragraph,sentences")
 
     @classmethod
     def create(cls, paragraph_index, report_id, paragraph, paragraph_visible=False):
@@ -140,7 +134,7 @@ class Sentence(BaseModel):
     comment = db.Column(db.String(100), nullable=False)
     sentence = db.Column(db.String(400), nullable=False)
 
-    report_paragraph_rel = db.relationship("ReportParagraph", backref=db.backref("sentences_list", lazy=True))
+    report_paragraph_rel = db.relationship("ReportParagraph", backref=db.backref("sentences_list", lazy=True), overlaps="paragraph,sentences")
 
     @classmethod
     def create(cls, paragraph_id, index, weight, comment, sentence):
