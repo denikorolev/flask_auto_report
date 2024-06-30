@@ -2,33 +2,79 @@
 
 {% block container %}
 {{ super() }}
-
-<ul class="paragraph-list">
-    {% for item in paragraph_data %}
+<div class="flex-row">
+    <!-- Left side -->
+    <ul class="paragraph-list" id="left-paragraph-list">
+        {% for item in paragraph_data %}
             <li class="paragraph-item">
-                    <p {% if item.paragraph.paragraph_visible %}class="paragraph-text--visible" 
-                    {% else %} class="paragraph-text--invisible" 
-                    {% endif %}> 
-                    {{ item.paragraph.paragraph }} 
-                    </p>
+                <p {% if item.paragraph.paragraph_visible %}class="paragraph-text--visible" {% else %}class="paragraph-text--invisible"{% endif %}>
+                    {{ item.paragraph.paragraph }}
+                </p>
 
-                    {% if item.grouped_sentences %}
-                        
-                            {% for index, sentences in item.grouped_sentences.items() %}
-                                {% if sentences|length == 1 %}
-                                    <p class="sentence-text"> {{ sentences[0].sentence }} </p>
-                                {% else %}
-                                    <select class="sentence-select">
-                                        {% for sentence in sentences %}
-                                            <option value="{{ sentence.id }}">{{ sentence.sentence }}</option>
-                                        {% endfor %}
-                                    </select>
-                                {% endif %}
-                            {% endfor %}
-                    {% endif %}
+                {% if item.grouped_sentences %}
+                    {% for index, sentences in item.grouped_sentences.items() %}
+                        {% if sentences|length == 1 %}
+                            <p class="sentence-text"> {{ sentences[0].sentence }} </p>
+                        {% else %}
+                            <select class="sentence-select" data-index="left-side-{{ item.paragraph.id }}-{{ index }}">
+                                {% for sentence in sentences %}
+                                    <option value="{{ sentence.id }}" data-sentence="{{ sentence.sentence }}">{{ sentence.sentence }}</option>
+                                {% endfor %}
+                            </select>
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
             </li>
-    {% endfor %}
-</ul>
+        {% endfor %}
+    </ul>
 
+    <!-- Right side -->
+    <ul class="paragraph-list" id="right-paragraph-list">
+        {% for item in paragraph_data %}
+            <li class="paragraph-item">
+                <p {% if item.paragraph.paragraph_visible %}class="paragraph-text--visible" {% else %}class="paragraph-text--invisible"{% endif %}>
+                    {{ item.paragraph.paragraph }}
+                </p>
+
+                {% if item.grouped_sentences %}
+                    {% for index, sentences in item.grouped_sentences.items() %}
+                        <p class="sentence-text" data-index="right-side-{{ item.paragraph.id }}-{{ index }}"> {{ sentences[0].sentence }} </p>
+                    {% endfor %}
+                {% endif %}
+            </li>
+        {% endfor %}
+    </ul>
+</div>
+
+<!-- Button to copy text -->
+<button id="copyButton">Copy Text</button>
+
+<script>
+    document.getElementById("left-paragraph-list").addEventListener("change", function(event) {
+        if (event.target.tagName === "SELECT") {
+            var index = event.target.getAttribute("data-index");
+            var selectedOption = event.target.selectedOptions[0];
+            var selectedSentence = selectedOption.getAttribute("data-sentence");
+            var correspondingIndex = index.replace("left-side", "right-side");
+            var correspondingParagraph = document.querySelector('[data-index="' + correspondingIndex + '"]');
+            correspondingParagraph.innerText = selectedSentence;
+        }
+    });
+
+    document.getElementById("copyButton").addEventListener("click", function() {
+        var rightParagraphList = document.getElementById("right-paragraph-list");
+        var textToCopy = "";
+        rightParagraphList.querySelectorAll("p").forEach(function(paragraph) {
+            textToCopy += paragraph.innerText + "\n";
+        });
+        navigator.clipboard.writeText(textToCopy).then(function() {
+            alert("Text copied to clipboard");
+        }).catch(function(err) {
+            console.error("Failed to copy text: ", err);
+        });
+    });
+</script>
+
+</script>
 
 {% endblock container %}

@@ -3,31 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <link rel="stylesheet" type="text/css" href="/static/css/style.css">
+
+    <title>Test Select Example</title>
 </head>
-<body>
-    
+<body class="flex-row">
+    <!-- left side -->
+    <div id="selectContainer" style="margin: 0 50px 50px 0;">
+        <select style="margin-bottom: 20px;" id="testSelect1">
+            <option value="Option 1">Option 1</option>
+            <option value="Option 2">Option 2</option>
+            <option value="Option 3">Option 3</option>
+        </select>
+        <select style="margin-bottom: 20px;" id="testSelect2">
+            <option value="Option 1">Option 1</option>
+            <option value="Option 2">Option 2</option>
+            <option value="Option 3">Option 3</option>
+        </select>
+        <select style="margin-bottom: 20px;" id="testSelect3">
+            <option value="Option 1">Option 1</option>
+            <option value="Option 2">Option 2</option>
+            <option value="Option 3">Option 3</option>
+        </select>
+        <!-- Add more selects as needed -->
+        <p id="additionalText">More text</p>
+    </div>
+    <!-- right side -->
+    <div style="margin-right: 50px;">
+        <p id="displayText1">Option 1</p>
+        <p id="displayText2">Option 1</p>
+        <p id="displayText3">Option 1</p>
+        <!-- Add more paragraphs as needed -->
+    </div>
 
-<input type="checkbox">
+    <script>
+        document.getElementById("selectContainer").addEventListener("change", function(event) {
+            if (event.target.tagName === "SELECT") {
+                var selectId = event.target.id;
+                var selectedValue = event.target.value;
+                var displayTextId = "displayText" + selectId.replace("testSelect", "");
+                document.getElementById(displayTextId).innerText = selectedValue;
+            }
+        });
 
-<button class="btn" type="submit" id="edit_sentence" value="edit_sentence" name="edit_sentence">edit_sentence</button>
-
-<div class="container"></div>
-
-<form class="form" method="POST" action=""></form>
-
-<label for="new_paragraph"></label>
-<input type="submit" id="new_paragraph" name="new_paragraph">
-
-<p class=""></p>
-
-<ul class="">
-    <li class=""></li>
-    <li class=""></li>
-    <li class=""></li>
-</ul>
-
-<a href=""></a>
-
+        
+    </script>
 </body>
 </html>
