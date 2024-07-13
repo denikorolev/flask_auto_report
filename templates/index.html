@@ -3,9 +3,7 @@
 <head>
     <link rel="icon" href="{{ url_for("static", filename="pic/favi2.png")}}">
     <link rel="stylesheet" type="text/css" href="{{ url_for("static", filename="css/normalize.css")}}">
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <link rel="stylesheet" type="text/css" href="{{ url_for("static", filename='css/style.css') }}">
-    
     <title> {{ title }} </title>
 </head>
 <body>
@@ -45,6 +43,15 @@
     {% block container %}
     {% endblock container %}
 </div>
+
+
+<div class="section">
+    {% block tips %}
+        <p>1. Нужно настроить фильтр для подтипов в окне создания и редактирования подтипа</p>
+        <p>2. Также нужно сделать labels в report editing</p>
+    {% endblock tips %}
+</div>
+
 
 <footer>
     <p>&copy; 2023 Radiologary</p>

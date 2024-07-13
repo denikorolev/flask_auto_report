@@ -2,52 +2,67 @@
 
 {% block container %}
 {{ super() }}
-<div class="flex-row">
+<div class="flex">
     <!-- Left side -->
-    <ul class="paragraph-list" id="left-paragraph-list">
-        {% for item in paragraph_data %}
-            <li class="paragraph-item">
-                <p {% if item.paragraph.paragraph_visible %}class="paragraph-text--visible" {% else %}class="paragraph-text--invisible"{% endif %}>
-                    {{ item.paragraph.paragraph }}
-                </p>
-
-                {% if item.grouped_sentences %}
-                    {% for index, sentences in item.grouped_sentences.items() %}
-                        {% if sentences|length == 1 %}
-                            <p class="sentence-text"> {{ sentences[0].sentence }} </p>
-                        {% else %}
-                            <select class="sentence-select" data-index="left-side-{{ item.paragraph.id }}-{{ index }}">
-                                {% for sentence in sentences %}
-                                    <option value="{{ sentence.id }}" data-sentence="{{ sentence.sentence }}">{{ sentence.sentence }}</option>
+    <div class="report_side__list">
+        <ul class="report_paragraph__list" id="left-paragraph-list">
+            {% for item in paragraph_data %}
+                <li class="report__paragraph">
+                    <p {% if item.paragraph.paragraph_visible %}class="report__paragraph--visible" {% else %}class="report__paragraph--invisible"{% endif %}>
+                        {{ item.paragraph.paragraph }}
+                    </p>
+                    <ul class="">
+                        <li class="">
+                            {% if item.grouped_sentences %}
+                                {% for index, sentences in item.grouped_sentences.items() %}
+                                    {% if sentences|length == 1 %}
+                                        <p class="report__sentence"> {{ sentences[0].sentence }} </p>
+                                    {% else %}
+                                        <select class="report__select" data-index="left-side-{{ item.paragraph.id }}-{{ index }}">
+                                        {% for sentence in sentences %}
+                                            <option value="{{ sentence.id }}" data-sentence="{{ sentence.sentence }}">{{ sentence.sentence }}</option>
+                                        {% endfor %}
+                                        </select>
+                                    {% endif %}
                                 {% endfor %}
-                            </select>
-                        {% endif %}
-                    {% endfor %}
-                {% endif %}
-            </li>
-        {% endfor %}
-    </ul>
+                            {% endif %}
+                        </li>
+                    </ul>
+                    
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
+    
 
     <!-- Right side -->
-    <ul class="paragraph-list" id="right-paragraph-list">
-        {% for item in paragraph_data %}
-            <li class="paragraph-item">
-                <p {% if item.paragraph.paragraph_visible %}class="paragraph-text--visible" {% else %}class="paragraph-text--invisible"{% endif %}>
-                    {{ item.paragraph.paragraph }}
-                </p>
-
-                {% if item.grouped_sentences %}
-                    {% for index, sentences in item.grouped_sentences.items() %}
-                        <p class="sentence-text" data-index="right-side-{{ item.paragraph.id }}-{{ index }}"> {{ sentences[0].sentence }} </p>
-                    {% endfor %}
-                {% endif %}
-            </li>
-        {% endfor %}
-    </ul>
+    <div class="report_side__list report_side--right">
+        <ul class="" id="right-paragraph-list">
+            {% for item in paragraph_data %}
+                <li class="report__paragraph">
+                    <p {% if item.paragraph.paragraph_visible %}class="report__paragraph--visible" {% else %}class="report__paragraph--invisible"{% endif %}>
+                        {{ item.paragraph.paragraph }}
+                    </p>
+                    <ul class="">
+                        <li class="">
+                            {% if item.grouped_sentences %}
+                                {% for index, sentences in item.grouped_sentences.items() %}
+                                    <span class="report__sentence" data-index="right-side-{{ item.paragraph.id }}-{{ index }}"> {{ sentences[0].sentence }} </span>
+                                {% endfor %}
+                            {% endif %}
+                        </li>
+                    </ul>
+                    
+                </li>
+            {% endfor %}
+        </ul>
+        <!-- Button to copy text -->
+        <button class="btn report__btn" id="copyButton">Copy Text</button>
+    </div>
+    
 </div>
 
-<!-- Button to copy text -->
-<button id="copyButton">Copy Text</button>
+
 
 <script>
     document.getElementById("left-paragraph-list").addEventListener("change", function(event) {

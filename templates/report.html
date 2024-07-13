@@ -5,33 +5,33 @@
 
         <!-- report type\subtype choosing -->
         <h2>What report will we use for now?</h2>
-        <form class="flex-row" method="POST">
-            <div id="reports-container">
-                <label for="report_type">Choose report type:</label>
-                <select id="report_type" name="report_type" required>
+        <form class="flex" method="POST">
+            <div class="flex_column" id="reports-container">
+                <label class="report_label__item" for="report_type">Choose report type:</label>
+                <select class="report__select" id="report_type" name="report_type" required>
                     {% for rt in report_types %}
                         <option value="{{ rt.id }}">{{ rt.type }}</option>
                     {% endfor %}
                 </select>
             </div>
     
-            <div id="reports-container">
-                <label for="report_subtype">Choose report subtype:</label>
-                <select id="report_subtype" name="report_subtype" required>
+            <div class="flex_column" id="reports-container">
+                <label class="report_label__item" for="report_subtype">Choose report subtype:</label>
+                <select class="report__select" id="report_subtype" name="report_subtype" required>
                     {% for rst in report_subtypes %}
                         <option value="{{ rst.id }}" data-type-id="{{ rst.type }}">{{ rst.subtype }}</option>
                     {% endfor %}
                 </select>
             </div>
-            <button class="btn" type="submit" id="select_report_type_subtype" name="select_report_type_subtype">Show reports</button>
+            <button class="btn report__btn" type="submit" id="select_report_type_subtype" name="select_report_type_subtype">Show reports</button>
         </form>
 
         {% if reports %}
             <div class="">
                 {% for report in reports %}
-                    <a class="flex-row" href="{{ url_for("report_work", report_id=report.id) }}"> 
-                        <p class="">{{ report.report_name }}</p>
-                        <p class="">{{ report.comment }}</p>  
+                    <a class="flex" href="{{ url_for("report_work", report_id=report.id) }}"> 
+                        <p class="report__sentence">{{ report.report_name }}</p>
+                        <p class="report__sentence">{{ report.comment }}</p>  
                     </a>
                 {% endfor %}
             </div>
