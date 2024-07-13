@@ -1,5 +1,12 @@
 /* static/style.css */
 
+/* variables */
+:root {
+    --main-bg-color: rgb(15, 30, 60);
+    --main-text-color: #000000;
+    --main-btn-color: #5db4ae;
+    --main-border-color: #1f1f73;
+  }
 
 /* default settings reset */
 
@@ -39,25 +46,32 @@ html {
 
   /* end of default settings reset */
 
-
+  
 
 
 .btn {
-        color: #fff;
-        background-color: #007bff;
-        border-color: #007bff;
+    max-height: 25px;
+    color: #fff;
+    background-color: var(--main-btn-color);
+    border-radius: 6px;
+    border-color: #007bff;
 }
 
-.flex-row {
+.flex_column {
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
+}
+
+.flex {
+    display: flex;
+    
 }
 
 
 .section {
     display: flex;
     flex-direction: column;
-    margin: 0 50px 0 50px;
+    margin: 0 50px 50px 50px;
 }
 
 .container {
@@ -114,18 +128,87 @@ html {
     margin-top: 5px;
 }
 
-.paragraph-list {
+.report_side__list {
     width: 45%;
+}
+
+.report_side--right {
+    border-radius: 6px;
+    background-color: #fff;
 }
 
 .sentence-select{
     max-width: 100%;
 }
 
+.report_input__item {
+    max-height: 25px;
+    margin-right: 10px;
+    margin-bottom: 10px;
+    border-radius: 6px;
+    border-width: 1px;
+    border-style: solid;
+}
+
+.report__btn {
+    margin-right: 10px;
+    margin-bottom: 10px;
+    min-width: 50px;
+    border-style: solid;
+    border-color: var(--main-border-color);
+    border-width: 1px;
+}
+
+.report__select {
+    width: 90%;
+    max-height: 25px;
+    margin-right: 10px;
+    margin-bottom: 10px;
+    border-radius: 6px;
+    border-color: var(--main-border-color);
+}
+
+.report__select--type {
+    width: auto;
+
+}
 
 
+.report__sentence {
+    max-height: 25px;
+    margin-right: 10px;
+    margin-bottom: 5px;
+}
 
+.report_label__list {
+    margin-bottom: 10px;
+}
 
+.report_label__item {
+    margin-bottom: 10px;
+    margin-right: 90px;
+    font-weight: bold;
+}
+
+.report_borderline {
+    min-height: 2px;
+    width: 50%;
+    margin-bottom: 10px;
+    background-color: var(--main-bg-color);
+}
+
+.report__paragraph {
+    margin-bottom: 5px;
+}
+
+.report__paragraph--visible {
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.report__paragraph--invisible {
+    display: none;
+}
 
 
 .title {
@@ -136,13 +219,6 @@ html {
     margin-bottom: 20px;
 }
 
-.labels {
-    display: block;
-    margin-top: 10px;
-    font-weight: bold;
-}
-
-
 .input_file,
 input_submit {
     display: block;
@@ -151,13 +227,7 @@ input_submit {
     font-size: 16px;
 }
 
-.selects {
-    display: block;
-    margin-top: 5px;
-    max-width: 600px;
-    padding: 5px;
-    font-size: 16px;
-}
+
 
 .input_submit {
     background-color: #4CAF50;

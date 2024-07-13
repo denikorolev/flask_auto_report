@@ -74,9 +74,10 @@ def edit_tab():
     type_subtype_editing_query = request.args.get("type_subtype_editing_query") 
     report_types = ReportType.query.all()  
     report_subtypes = ReportSubtype.query.all() 
+    
     # Convert objects to dictionary
     report_subtypes_dict = [
-        {'id': rst.id, 'type_id': rst.type, 'subtype': rst.subtype}
+        {'id': rst.id, 'type_id': rst.type, 'subtype': rst.subtype, "subtype_type_name": rst.report_type_rel.type}
         for rst in report_subtypes
     ]
     # All reports of current user with load of linked records (types and subtypes) by method in class

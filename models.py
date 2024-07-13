@@ -94,6 +94,8 @@ class ReportSubtype(BaseModel):
     type = db.Column(db.SmallInteger, db.ForeignKey("report_type.id"), nullable=False)
     subtype = db.Column(db.String(250), nullable=False)
     
+    report_type_rel = db.relationship('ReportType', backref='subtypes', lazy=True)
+    
     @classmethod
     def create(cls, type, subtype):
         new_subtype = cls(

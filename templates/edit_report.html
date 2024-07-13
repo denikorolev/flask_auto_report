@@ -6,76 +6,88 @@
 {{ super() }}
 
 <div class="container">
-   <h1 class="mb-4">Edit Report</h1>
 
    {% if report %}
    <h3>Editing Report</h3>
    <div class="">
-        <form class="" method="POST" action=" {{ url_for("edit_report", report_id=report.id) }} ">
-            <div class="flex-row">
-                <div>
-                    <label for="report_name">Report Name:</label>
-                    <input type="text" id="report_name" name="report_name" value="{{ report.report_name }}" required>
+        <form class="edit-report" method="POST" action=" {{ url_for("edit_report", report_id=report.id) }} ">
+            <div class="flex">
+                <div class="flex_column">
+                    <label class="report_label__item" for="report_type">Report Type:</label>
+                    <input class="report_input__item" id="report_type" name="report_type" value=" {{ report.report_type_rel.type }}" readonly>
+                    
                 </div>
-                <div>
-                    <label for="report_type">Report Type:</label>
-                    <input id="report_type" name="report_type" value=" {{ report.report_type_rel.type }}" readonly>
-                        
+                <div class="flex_column">
+                    <label class="report_label__item" for="report_subtype">Report Subtype:</label>
+                    <input class="report_input__item" id="report_subtype" name="report_subtype" value=" {{ report.report_subtype_rel.subtype }}" readonly>
+                    
                 </div>
-                <div>
-                    <label for="report_subtype">Report Subtype:</label>
-                    <input id="report_subtype" name="report_subtype" value=" {{ report.report_subtype_rel.subtype }}" readonly>
-                      
+                <div class="flex_column">
+                    <label class="report_label__item" for="report_name">Report Name:</label>
+                    <input class="report_input__item" type="text" id="report_name" name="report_name" value="{{ report.report_name }}" required>
                 </div>
-                <div>
-                    <label for="comment">Comment:</label>
-                    <input type="text" id="comment" name="comment" value="{{ report.comment }}" required>
+                <div class="flex_column">
+                    <label class="report_label__item" for="comment">Comment:</label>
+                    <input class="report_input__item" type="text" id="comment" name="comment" value="{{ report.comment }}" required>
                 </div>
+                <button class="btn report__btn" type="submit" name="report_update">Update Report</button>
             </div>
             
-            <button type="submit" name="report_update">Update Report</button>
+            
         </form>
-
-            <div class="flex">
+        <div class="report_borderline"></div>
+        <ul class="">
+            <li class="flex_column">
                 {% if report_paragraphs %}
                     {% for paragraph in report_paragraphs %}
-                        <div class="flex">
+                        <div class="flex_column">
                             <form class="" method="POST" action=" {{ url_for("edit_report", report_id=report.id) }} ">
                                 <input type="hidden" id="paragraph_id" name="paragraph_id" value="{{paragraph.id}}">
-                                <input type="text" id="paragraph_index" name="paragraph_index" value="{{paragraph.paragraph_index}}">
-                                <input type="text" id="paragraph" name="paragraph" value="{{paragraph.paragraph}}">
+                                <input class="report_input__item" type="text" id="paragraph_index" name="paragraph_index" value="{{paragraph.paragraph_index}}">
+                                <input class="report_input__item" type="text" id="paragraph" name="paragraph" value="{{paragraph.paragraph}}">
                                 <label for="paragraph_visible">Visible:</label>
                                 <input type="checkbox" id="paragraph_visible" name="paragraph_visible" value="True" {% if paragraph.paragraph_visible %} checked {% endif %}>
-                                <button class="" type="submit" id="delete_paragraph" value="delete_paragraph" name="delete_paragraph">delete_paragraph</button>
-                                <button class="" type="submit" id="edit_paragraph" value="edit_paragraph" name="edit_paragraph">edit_paragraph</button>
+                                <button class="btn report__btn" type="submit" id="delete_paragraph" value="delete_paragraph" name="delete_paragraph">delete_paragraph</button>
+                                <button class="btn report__btn" type="submit" id="edit_paragraph" value="edit_paragraph" name="edit_paragraph">edit_paragraph</button>
                             </form>
-                            
-                            {% if report_sentences %} 
-                                {% for sentence in report_sentences %}
-                                    {% if sentence.paragraph_id == paragraph.id %}
-                                        <form class="" method="POST" action=" {{ url_for("edit_report", report_id=report.id) }} ">
-                                            {{ render_sentence(sentence) }}
-                                        </form>
+                            <div class="report_borderline"></div>
+                            <ul class="">
+                                <li class="">
+                                    {% if report_sentences %} 
+                                        {% for sentence in report_sentences %}
+                                            {% if sentence.paragraph_id == paragraph.id %}
+                                            <form class="" method="POST" action=" {{ url_for("edit_report", report_id=report.id) }} ">
+                                                {{ render_sentence(sentence) }}
+                                            </form>
+                                            {% endif %}
+                                        {% endfor %}
+                                            
                                     {% endif %}
-                                {% endfor %}
-                            {% endif %}
+                                    <form method="POST" action="{{ url_for("edit_report", report_id=report.id) }}">
+                                        <input type="hidden" id="sentence_paragraph" name="add_sentence_paragraph" value="{{ paragraph.id }}">
+                                        <button class="btn report__btn" type="submit" id="add_sentence" value="Add Sentence" name="add_sentence">Add Sentence</button>
+                                    </form>
+                                    <div class="report_borderline"></div>
+                                </li>
+                            </ul>
+                            
 
-                            <form method="POST" action="{{ url_for("edit_report", report_id=report.id) }}">
-                                <input type="hidden" id="sentence_paragraph" name="add_sentence_paragraph" value="{{ paragraph.id }}">
-                                <button class="" type="submit" id="add_sentence" value="Add Sentence" name="add_sentence">Add Sentence</button>
-                            </form>
+                            
                         </div>
                             
                     {% endfor %}
                 {% endif %}
-
-
-            <form class="" method="POST" action=" {{ url_for("edit_report", report_id=report.id) }} ">
-                <label for="new_paragraph">Create new paragraph</label>
-                <button class="" type="submit" id="new_paragraph" value="new paragraph" name="new_paragraph">new paragraph</button>
-            </form>
+            </li>
+            <div class="">
+                <form class="" method="POST" action=" {{ url_for("edit_report", report_id=report.id) }} ">
+                    <label class="report_label__item" for="new_paragraph">Create new paragraph</label>
+                    <button class="btn report__btn" type="submit" id="new_paragraph" value="new paragraph" name="new_paragraph">new paragraph</button>
+                </form>
             </div>
-
+        </ul>
+            
+            
+            
             
    </div>
 
