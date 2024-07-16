@@ -8,6 +8,10 @@ from flask_migrate import Migrate
 from auth import auth_bp  
 from models import db, User, Report, ReportType, ReportSubtype, ReportParagraph, Sentence  
 import pprint
+from file_processing import extract_paragraphs_and_sentences
+from werkzeug.utils import secure_filename
+import os
+from reports import reports_bp  # Import logic of create and editing of reports
 
 app = Flask(__name__)
 app.config.from_object(Config) # Load configuration from file config.py
@@ -25,6 +29,7 @@ login_manager.login_view = "auth.login"
 
 # Register Blueprints
 app.register_blueprint(auth_bp, url_prefix="/auth")
+app.register_blueprint(reports_bp, url_prefix="/reports")
 
 # Load user callback
 @login_manager.user_loader
@@ -32,6 +37,9 @@ def load_user(user_id):
     return User.query.get(int(user_id))
 
 # Functions 
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'doc', 'docx'}
 
 def test_db_connection():
     try:
@@ -57,7 +65,9 @@ def index():
 menu = [
     {"name": "main", "url": "main"},
     {"name": "report", "url": "report"},
-    {"name": "edit tab", "url": "edit_tab"}
+    {"name": "my reports", "url": "edit_tab"},
+    {"name": "new report", "url": "create_report"},
+    {"name": "settings", "url": "settings"}
 ]
 
 @app.route('/main', methods=['POST', 'GET'])
@@ -87,6 +97,52 @@ def edit_tab():
     if request.method == "POST":
         if "report_creation_form_view" in request.form:
             return redirect(url_for("edit_tab", new_report_query=True))
+        
+        # Create new report from file
+        if "report_creation_from_file" in request.form:
+            if 'report_file' not in request.files:
+                flash('No file part', 'error')
+                return redirect(request.url)
+            file = request.files['report_file']
+            if file.filename == '':
+                flash('No selected file', 'error')
+                return redirect(request.url)
+            if file and allowed_file(file.filename):
+                filename = secure_filename(file.filename)
+                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                file.save(filepath)
+
+                # Extract content from the file
+                paragraphs_from_file = extract_paragraphs_and_sentences(filepath)
+
+                # Create new report
+                new_report = Report.create(
+                    userid=current_user.id,
+                    report_name=request.form["report_name"],
+                    report_type=request.form["report_type"],
+                    report_subtype=request.form["report_subtype"],
+                    comment=request.form["comment"]
+                )
+
+                # Add paragraphs and sentences to the report
+                for idx, paragraph in enumerate(paragraphs_from_file, start=1):
+                    new_paragraph = ReportParagraph.create(
+                        paragraph_index=idx,
+                        report_id=new_report.id,
+                        paragraph=paragraph['title'],
+                        paragraph_visible=True
+                    )
+                    for sidx, sentence in enumerate(paragraph['sentences'], start=1):
+                        Sentence.create(
+                            paragraph_id=new_paragraph.id,
+                            index=sidx,
+                            weight=1,
+                            comment='',
+                            sentence=sentence
+                        )
+
+                flash("Report created from file successfully", "success")
+                return redirect(url_for("edit_report", report_id=new_report.id))
         
     # If user press button "create new report we created new report and redirect to page for editing new report"
         if "report_creation" in request.form:
@@ -341,6 +397,21 @@ def report_work():
         report = report,
         paragraph_data = paragraph_data                   
     )
+
+@app.route('/create_report', methods=['GET', 'POST'])
+@login_required
+def create_report():
+    if request.method == 'POST':
+        method = request.form.get('method')
+        if method == 'manual':
+            return redirect(url_for('create_report_manual'))
+        elif method == 'file':
+            return redirect(url_for('create_report_file'))
+        elif method == 'existing':
+            return redirect(url_for('create_report_existing'))
+    
+    return render_template('create_report.html')
+
 
 @app.teardown_appcontext
 def close_db(error):

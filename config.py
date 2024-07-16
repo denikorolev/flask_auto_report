@@ -15,3 +15,5 @@ class Config:
 
     SQLALCHEMY_DATABASE_URI = f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{PORT}/{DB_NAME}"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    
+    UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')
