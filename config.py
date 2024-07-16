@@ -17,3 +17,12 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
     UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')
+    
+    # Menu configuration
+    MENU = [
+        {"name": "main", "url": "main"},
+        {"name": "report", "url": "report"},
+        {"name": "my reports", "url": "my_reports.reports_list"},
+        {"name": "new report", "url": "create_report"},
+        {"name": "settings", "url": "report_settings.report_settings"}
+    ]
