@@ -1,6 +1,5 @@
 # app.py
 
-
 from flask import Flask, redirect, url_for, flash, render_template, request
 from flask_login import LoginManager, current_user, login_required
 from config import Config
@@ -10,8 +9,9 @@ from models import db, User, Report, ReportType, ReportSubtype, ReportParagraph,
 import pprint
 from file_processing import extract_paragraphs_and_sentences
 from werkzeug.utils import secure_filename
-import os
-from reports import reports_bp  # Import logic of create and editing of reports
+from working_with_reports import working_with_reports_bp  # Import logic of create and editing of reports
+from my_reports import my_reports_bp  # Import new edit blueprint
+from report_settings import report_settings_bp  # Import new settings blueprint
 
 app = Flask(__name__)
 app.config.from_object(Config) # Load configuration from file config.py
@@ -29,12 +29,17 @@ login_manager.login_view = "auth.login"
 
 # Register Blueprints
 app.register_blueprint(auth_bp, url_prefix="/auth")
-app.register_blueprint(reports_bp, url_prefix="/reports")
+app.register_blueprint(working_with_reports_bp, url_prefix="/working_with_reports")
+app.register_blueprint(my_reports_bp, url_prefix="/my_reports")
+app.register_blueprint(report_settings_bp, url_prefix="/report_settings")
 
 # Load user callback
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
+
+# Use menu from config
+menu = app.config['MENU']
 
 # Functions 
 
@@ -61,161 +66,13 @@ def get_user_reports():
 def index():
     return redirect(url_for("main"))
 
-# List for menu
-menu = [
-    {"name": "main", "url": "main"},
-    {"name": "report", "url": "report"},
-    {"name": "my reports", "url": "edit_tab"},
-    {"name": "new report", "url": "create_report"},
-    {"name": "settings", "url": "settings"}
-]
+
 
 @app.route('/main', methods=['POST', 'GET'])
 @login_required
 def main():
     test_db_connection()
     return render_template('index.html', title="Main page Radiologary", menu=menu)
-
-
-@app.route('/edit_tab', methods=['POST', 'GET'])
-@login_required
-def edit_tab(): 
-    new_report_query = request.args.get("new_report_query")   # The line for check if user want to create new report
-    type_subtype_editing_query = request.args.get("type_subtype_editing_query") 
-    report_types = ReportType.query.all()  
-    report_subtypes = ReportSubtype.query.all() 
-    
-    # Convert objects to dictionary
-    report_subtypes_dict = [
-        {'id': rst.id, 'type_id': rst.type, 'subtype': rst.subtype, "subtype_type_name": rst.report_type_rel.type}
-        for rst in report_subtypes
-    ]
-    # All reports of current user with load of linked records (types and subtypes) by method in class
-    user_reports_rel = get_user_reports()
-    
-    # If user want to make new report show them form for report creation
-    if request.method == "POST":
-        if "report_creation_form_view" in request.form:
-            return redirect(url_for("edit_tab", new_report_query=True))
-        
-        # Create new report from file
-        if "report_creation_from_file" in request.form:
-            if 'report_file' not in request.files:
-                flash('No file part', 'error')
-                return redirect(request.url)
-            file = request.files['report_file']
-            if file.filename == '':
-                flash('No selected file', 'error')
-                return redirect(request.url)
-            if file and allowed_file(file.filename):
-                filename = secure_filename(file.filename)
-                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                file.save(filepath)
-
-                # Extract content from the file
-                paragraphs_from_file = extract_paragraphs_and_sentences(filepath)
-
-                # Create new report
-                new_report = Report.create(
-                    userid=current_user.id,
-                    report_name=request.form["report_name"],
-                    report_type=request.form["report_type"],
-                    report_subtype=request.form["report_subtype"],
-                    comment=request.form["comment"]
-                )
-
-                # Add paragraphs and sentences to the report
-                for idx, paragraph in enumerate(paragraphs_from_file, start=1):
-                    new_paragraph = ReportParagraph.create(
-                        paragraph_index=idx,
-                        report_id=new_report.id,
-                        paragraph=paragraph['title'],
-                        paragraph_visible=True
-                    )
-                    for sidx, sentence in enumerate(paragraph['sentences'], start=1):
-                        Sentence.create(
-                            paragraph_id=new_paragraph.id,
-                            index=sidx,
-                            weight=1,
-                            comment='',
-                            sentence=sentence
-                        )
-
-                flash("Report created from file successfully", "success")
-                return redirect(url_for("edit_report", report_id=new_report.id))
-        
-    # If user press button "create new report we created new report and redirect to page for editing new report"
-        if "report_creation" in request.form:
-            # New string in the tab reports
-            new_report = Report.create(
-                userid=current_user.id,
-                report_name=request.form["report_name"],
-                report_type=request.form["report_type"],
-                report_subtype=request.form["report_subtype"],
-                comment=request.form["comment"]
-            )
-            flash("Report created successfully", "success")
-            return redirect(url_for("edit_report", report_id=new_report.id))
-        
-        # If user press button "add new type or subtype we show them form for editing types and subtypes"
-        if "type_subtype_edit_form_view" in request.form:
-            return redirect(url_for("edit_tab", type_subtype_editing_query=True))
-        
-        # Processing type
-        if "add_new_type_button" in request.form:
-            ReportType.create(type=request.form["new_type"])
-            flash("New type was created successfully")
-            return redirect(url_for("edit_tab", type_subtype_editing_query=True))
-        if "delete_type_button" in request.form:
-            try:
-                ReportType.delete_by_id(request.form["type_id"])
-                flash("Type was deleted successfully")
-            except:
-                flash("It's impossible to delele the type because of existing of the reports with this type")
-            return redirect(url_for("edit_tab", type_subtype_editing_query=True))
-        if "edit_type_button" in request.form:
-            type_for_editing = ReportType.query.get(request.form["type_id"])
-            type_for_editing.type = request.form["type_type"]
-            type_for_editing.save()
-            flash("Type edited successfully")
-            return redirect(url_for("edit_tab", type_subtype_editing_query=True))
-        
-        # Processing subtype
-        if "add_new_subtype_button" in request.form:
-            ReportSubtype.create(type=request.form["report_subtype_type"], subtype=request.form["new_subtype"])
-            flash("New subtype was created successfully")
-            return redirect(url_for("edit_tab", type_subtype_editing_query=True))
-        if "delete_subtype_button" in request.form:
-            try:
-                ReportSubtype.delete_by_id(request.form["subtype_id"])
-                flash("Subtype was deleted successfully")
-            except:
-                flash("It's impossible to delele the subtype because of existing of the reports with this type")
-            return redirect(url_for("edit_tab", type_subtype_editing_query=True))
-        if "edit_subtype_button" in request.form:
-            subtype_for_editing = ReportSubtype.query.get(request.form["subtype_id"])
-            subtype_for_editing.subtype = request.form["subtype_subtype"]
-            subtype_for_editing.save()
-            flash("Subtype edited successfully")
-            return redirect(url_for("edit_tab", type_subtype_editing_query=True))
-        
-        if "report_delete" in request.form:
-            try:
-                Report.delete_by_id(request.form["report_id"])
-                flash("Report deleted successfully", "success")
-            except Exception as e:
-                flash(f"Report not found. error code: {e}", "error")
-            return redirect(url_for("edit_tab"))
-                
-    return render_template("edit_tab.html", 
-                           title="Edit table", 
-                           menu=menu,
-                           new_report_query=new_report_query, 
-                           report_types=report_types, 
-                           report_subtypes=report_subtypes_dict, 
-                           user_reports_rel=user_reports_rel,
-                           type_subtype_editing_query=type_subtype_editing_query
-                           )
 
 
 @app.route('/edit_report', methods=['GET', 'POST'])
