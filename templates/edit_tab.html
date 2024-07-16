@@ -6,6 +6,7 @@
 {{ super() }}
 
 <div class="container">
+    
 
     <!-- Ask about to add new report -->
     {% if not new_report_query %}
@@ -18,7 +19,7 @@
     {% else %}
     <!-- Form to add new report -->
     <div class="form-group">
-        <form class="flex" method="POST">
+        <form class="flex" method="POST" enctype="multipart/form-data">
             <div class="flex_column">
                 <label class="report_label__item" for="report_name">Report Name:</label>
                 <input class="report_input__item" type="text" id="report_name" name="report_name" required>
@@ -42,6 +43,13 @@
                 <input class="report_input__item" type="text" id="comment" name="comment" required>
             </div>
             <button class="btn report__btn" type="submit" name="report_creation">Create Report</button>
+            
+            <!-- file downloading -->
+            <div class="flex_column">
+                <label class="report_label__item" for="report_file">Upload Report File:</label>
+                <input class="report_input__item" type="file" id="report_file" name="report_file" accept=".doc, .docx">
+            </div>
+            <button class="btn report__btn" type="submit" name="report_creation_from_file">Create Report from file</button>
         </form>
     </div>
     {% endif %}

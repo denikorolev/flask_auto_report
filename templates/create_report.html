@@ -1,0 +1,24 @@
+<!-- create_report.html -->
+
+{% extends "index.html" %}
+
+{% block container %}
+{{ super() }}
+
+<!-- New report master -->
+<div class="container">
+    <h2>Create a New Report</h2>
+    <form method="POST">
+        <div class="form-group">
+            <label for="method">Select the method to create a report:</label>
+            <select id="method" name="method" class="form-control" required>
+                <option value="manual">Manually</option>
+                <option value="file">From File</option>
+                <option value="existing">From Existing Report</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Next</button>
+    </form>
+</div>
+
+{% endblock container %}
