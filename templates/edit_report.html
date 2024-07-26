@@ -1,4 +1,3 @@
- <!-- edit_report.html -->
 {% extends "index.html" %}
 {% from "macros.html" import render_sentence %}
 
@@ -6,21 +5,18 @@
 {{ super() }}
 
 <div class="container">
-
-   {% if report %}
-   <h3>Editing Report</h3>
-   <div class="">
-        <form class="edit-report" method="POST" action=" {{ url_for("edit_report", report_id=report.id) }} ">
+    {% if report %}
+    <h3>Editing Report</h3>
+    <div>
+        <form class="edit-report" method="POST" action="{{ url_for('editing_report.edit_report', report_id=report.id) }}" id="edit-report-form">
             <div class="flex">
                 <div class="flex_column">
                     <label class="report_label__item" for="report_type">Report Type:</label>
-                    <input class="report_input__item" id="report_type" name="report_type" value=" {{ report.report_type_rel.type }}" readonly>
-                    
+                    <input class="report_input__item report_input__item--type" id="report_type" name="report_type" value="{{ report.report_type_rel.type }}" readonly>
                 </div>
                 <div class="flex_column">
                     <label class="report_label__item" for="report_subtype">Report Subtype:</label>
-                    <input class="report_input__item" id="report_subtype" name="report_subtype" value=" {{ report.report_subtype_rel.subtype }}" readonly>
-                    
+                    <input class="report_input__item" id="report_subtype" name="report_subtype" value="{{ report.report_subtype_rel.subtype }}" readonly>
                 </div>
                 <div class="flex_column">
                     <label class="report_label__item" for="report_name">Report Name:</label>
@@ -30,74 +26,201 @@
                     <label class="report_label__item" for="comment">Comment:</label>
                     <input class="report_input__item" type="text" id="comment" name="comment" value="{{ report.comment }}" required>
                 </div>
-                <button class="btn report__btn" type="submit" name="report_update">Update Report</button>
+                <button class="btn report__btn" type="submit" id="update-report-btn">Update Report</button>
             </div>
-            
-            
         </form>
         <div class="report_borderline"></div>
-        <ul class="">
+        <ul>
             <li class="flex_column">
                 {% if report_paragraphs %}
                     {% for paragraph in report_paragraphs %}
                         <div class="flex_column">
-                            <form class="" method="POST" action=" {{ url_for("edit_report", report_id=report.id) }} ">
-                                <input type="hidden" id="paragraph_id" name="paragraph_id" value="{{paragraph.id}}">
-                                <input class="report_input__item" type="text" id="paragraph_index" name="paragraph_index" value="{{paragraph.paragraph_index}}">
-                                <input class="report_input__item" type="text" id="paragraph" name="paragraph" value="{{paragraph.paragraph}}">
+                            <form class="edit-paragraph-form" method="POST" action="{{ url_for('editing_report.edit_report', report_id=report.id) }}">
+                                <input type="hidden" id="paragraph_id" name="paragraph_id" value="{{ paragraph.id }}">
+                                <input class="report_input__item report_input__item--index" type="text" id="paragraph_index" name="paragraph_index" value="{{ paragraph.paragraph_index }}">
+                                <input class="report_input__item report_input__item--name" type="text" id="paragraph" name="paragraph" value="{{ paragraph.paragraph }}">
                                 <label for="paragraph_visible">Visible:</label>
                                 <input type="checkbox" id="paragraph_visible" name="paragraph_visible" value="True" {% if paragraph.paragraph_visible %} checked {% endif %}>
-                                <button class="btn report__btn" type="submit" id="delete_paragraph" value="delete_paragraph" name="delete_paragraph">delete_paragraph</button>
-                                <button class="btn report__btn" type="submit" id="edit_paragraph" value="edit_paragraph" name="edit_paragraph">edit_paragraph</button>
+                                <button class="btn report__btn" type="submit" id="delete_paragraph" value="delete_paragraph" name="delete_paragraph">Delete Paragraph</button>
+                                <button class="btn report__btn" type="submit" id="edit_paragraph" value="edit_paragraph" name="edit_paragraph">Edit Paragraph</button>
+                                <button type="button" class="btn report__btn toggle-sentences" data-paragraph-id="{{ paragraph.id }}">
+                                    Expand ({{ paragraph.sentences|length }})
+                                </button>
                             </form>
                             <div class="report_borderline"></div>
-                            <ul class="">
-                                <li class="">
-                                    {% if report_sentences %} 
-                                        {% for sentence in report_sentences %}
-                                            {% if sentence.paragraph_id == paragraph.id %}
-                                            <form class="" method="POST" action=" {{ url_for("edit_report", report_id=report.id) }} ">
-                                                {{ render_sentence(sentence) }}
+                            <ul id="sentences-{{ paragraph.id }}" class="sentence-list" style="display: none;">
+                                {% if paragraph.sentences %}
+                                    {% for sentence in paragraph.sentences %}
+                                        <li>
+                                            <form method="POST" action="{{ url_for('editing_report.edit_report', report_id=report.id) }}" class="edit-sentence-form">
+                                                {{ render_sentence(sentence, loop.index == 1) }}
                                             </form>
-                                            {% endif %}
-                                        {% endfor %}
-                                            
-                                    {% endif %}
-                                    <form method="POST" action="{{ url_for("edit_report", report_id=report.id) }}">
+                                        </li>
+                                    {% endfor %}
+                                {% endif %}
+                                <li>
+                                    <form method="POST" action="{{ url_for('editing_report.edit_report', report_id=report.id) }}" class="add-sentence-form">
                                         <input type="hidden" id="sentence_paragraph" name="add_sentence_paragraph" value="{{ paragraph.id }}">
                                         <button class="btn report__btn" type="submit" id="add_sentence" value="Add Sentence" name="add_sentence">Add Sentence</button>
                                     </form>
-                                    <div class="report_borderline"></div>
                                 </li>
                             </ul>
-                            
-
-                            
                         </div>
-                            
                     {% endfor %}
                 {% endif %}
             </li>
-            <div class="">
-                <form class="" method="POST" action=" {{ url_for("edit_report", report_id=report.id) }} ">
+            <div>
+                <form method="POST" action="{{ url_for('editing_report.edit_report', report_id=report.id) }}" class="new-paragraph-form">
                     <label class="report_label__item" for="new_paragraph">Create new paragraph</label>
-                    <button class="btn report__btn" type="submit" id="new_paragraph" value="new paragraph" name="new_paragraph">new paragraph</button>
+                    <button class="btn report__btn" type="submit" id="new_paragraph" value="new paragraph" name="new_paragraph">New Paragraph</button>
                 </form>
             </div>
         </ul>
-            
-            
-            
-            
-   </div>
-
-   {% else %}
-   <p>Report not found or you don't have permission to edit it.</p>
-   <!-- List of tables and buttons for editing -->
-   {% endif %}
+    </div>
+    {% else %}
+    <p>Report not found or you don't have permission to edit it.</p>
+    <!-- List of tables and buttons for editing -->
+    {% endif %}
 </div>
 
 <script>
-  
-   </script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Toggle sentences
+        const toggleButtons = document.querySelectorAll(".toggle-sentences");
+        toggleButtons.forEach(button => {
+            button.addEventListener("click", function() {
+                const paragraphId = this.getAttribute("data-paragraph-id");
+                const sentenceList = document.getElementById(`sentences-${paragraphId}`);
+                if (sentenceList.style.display === "none") {
+                    sentenceList.style.display = "block";
+                    this.textContent = `Collapse (${sentenceList.children.length - 1})`; // Minus 1 to exclude "Add Sentence" button
+                } else {
+                    sentenceList.style.display = "none";
+                    this.textContent = `Expand (${sentenceList.children.length - 1})`; // Minus 1 to exclude "Add Sentence" button
+                }
+            });
+        });
+    
+        function handleResponse(response) {
+            return response.json().then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    location.reload(); // Reload the page to show changes
+                } else {
+                    alert(data.message);
+                }
+            });
+        }
+    
+        // Update report
+        document.getElementById("update-report-btn").addEventListener("click", function(event) {
+            event.preventDefault();
+            const form = document.getElementById("edit-report-form");
+            const formData = new FormData(form);
+            const jsonData = Object.fromEntries(formData.entries());
+            fetch("{{ url_for('editing_report.edit_report', report_id=report.id) }}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({report_update: true, ...jsonData})
+            }).then(handleResponse);
+        });
+    
+        // Edit paragraph
+        document.querySelectorAll(".edit-paragraph-form").forEach(form => {
+            form.addEventListener("submit", function(event) {
+                event.preventDefault();
+                const formData = new FormData(this);
+                const jsonData = Object.fromEntries(formData.entries());
+                jsonData.paragraph_visible = form.querySelector('input[name="paragraph_visible"]').checked; // Добавлено извлечение значения чекбокса
+                fetch("{{ url_for('editing_report.edit_report', report_id=report.id) }}", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({edit_paragraph: true, ...jsonData})
+                }).then(handleResponse);
+            });
+        });
+    
+        // Add sentence
+        document.querySelectorAll(".add-sentence-form").forEach(form => {
+            form.addEventListener("submit", function(event) {
+                event.preventDefault();
+                const formData = new FormData(this);
+                const jsonData = Object.fromEntries(formData.entries());
+                fetch("{{ url_for('editing_report.edit_report', report_id=report.id) }}", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({add_sentence: true, ...jsonData})
+                }).then(handleResponse);
+            });
+        });
+    
+        // New paragraph
+        document.querySelectorAll(".new-paragraph-form").forEach(form => {
+            form.addEventListener("submit", function(event) {
+                event.preventDefault();
+                const formData = new FormData(this);
+                const jsonData = Object.fromEntries(formData.entries());
+                fetch("{{ url_for('editing_report.edit_report', report_id=report.id) }}", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({new_paragraph: true, ...jsonData})
+                }).then(handleResponse);
+            });
+        });
+    
+        // Edit sentence
+        document.querySelectorAll(".edit-sentence-btn").forEach(button => {
+            button.addEventListener("click", function() {
+                const sentenceId = this.getAttribute("data-sentence-id");
+                const sentenceElement = document.querySelector(`input[name="sentence_sentence"][data-sentence-id="${sentenceId}"]`);
+                const indexElement = document.querySelector(`input[name="sentence_index"][data-sentence-id="${sentenceId}"]`);
+                const weightElement = document.querySelector(`input[name="sentence_weight"][data-sentence-id="${sentenceId}"]`);
+                const commentElement = document.querySelector(`input[name="sentence_comment"][data-sentence-id="${sentenceId}"]`);
+    
+                fetch("{{ url_for('editing_report.edit_report', report_id=report.id) }}", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        edit_sentence: true,
+                        sentence_id: sentenceId,
+                        sentence_sentence: sentenceElement.value,
+                        sentence_index: indexElement.value,
+                        sentence_weight: weightElement.value,
+                        sentence_comment: commentElement.value
+                    })
+                }).then(handleResponse);
+            });
+        });
+    
+        // Delete sentence
+        document.querySelectorAll(".delete-sentence-btn").forEach(button => {
+            button.addEventListener("click", function() {
+                const sentenceId = this.getAttribute("data-sentence-id");
+    
+                fetch("{{ url_for('editing_report.edit_report', report_id=report.id) }}", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        delete_sentence: true,
+                        sentence_id: sentenceId
+                    })
+                }).then(handleResponse);
+            });
+        });
+    });
+    </script>
+    
+    
 {% endblock container %}

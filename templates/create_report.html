@@ -5,20 +5,108 @@
 {% block container %}
 {{ super() }}
 
+{% if user_reports_list %}
+    <div class="container">
+        <h2>Select an Existing Report</h2>
+        <form method="POST" action="{{ url_for('new_report_creation.select_existing_report') }}">
+            <ul class="report__list">
+                {% for report in user_reports_list %}
+                    <li class="report__item">
+                        <span>{{ report.report_name }}</span>
+                        <button class="btn report__btn" type="submit" name="existing_report_id" value="{{ report.id }}">Take it</button>
+                    </li>
+                {% endfor %}
+            </ul>
+        </form>
+    </div>
+
+{% else %}
+
 <!-- New report master -->
 <div class="container">
     <h2>Create a New Report</h2>
-    <form method="POST">
-        <div class="form-group">
-            <label for="method">Select the method to create a report:</label>
-            <select id="method" name="method" class="form-control" required>
+    <form method="POST" class="flex" enctype="multipart/form-data">
+        <!-- Fields for creating report -->
+        <div class="flex_column">
+            <label class="report_label__item" for="report_name">Report Name:</label>
+            <input class="report_input__item form-control" type="text" id="report_name" name="report_name" required>
+        </div>
+        <div class="flex_column">
+            <label class="report_label__item" for="report_type">Report Type:</label>
+            <select class="report__select report__select--type form-control" id="report_type" name="report_type" required>
+                {% for rt in report_types %}
+                    <option value="{{ rt.id }}">{{ rt.type }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="flex_column">
+            <label class="report_label__item" for="report_subtype">Report Subtype:</label>
+            <select class="report__select report__select--type form-control" id="report_subtype" name="report_subtype" required>
+               <!-- Empty, will be filled dynamically -->
+            </select>
+        </div>
+        <div class="flex_column">
+            <label class="report_label__item" for="comment">Comment:</label>
+            <input class="report_input__item form-control" type="text" id="comment" name="comment" required>
+        </div>
+        
+        <div class="flex_column">
+            <label class="report_label__item" for="action" >Select the method to create a report:</label>
+            <select class="report__select form-control" id="action" name="action" required>
                 <option value="manual">Manually</option>
                 <option value="file">From File</option>
                 <option value="existing">From Existing Report</option>
             </select>
         </div>
-        <button type="submit" class="btn btn-primary">Next</button>
+
+        <div class="flex_column" id="file-upload-container" style="display: none;">
+            <label class="report_label__item" for="report_file">Upload Report File:</label>
+            <input class="report_input__item form-control" type="file" id="report_file" name="report_file" accept=".doc, .docx">
+        </div>
+        
+        <button class="btn report__btn" type="submit" name="report_creation">Create Report</button>
     </form>
 </div>
+{% endif %}
+<!-- Hidden element to pass subtype data -->
+<script id="allSubtypesData" type="application/json">{{ report_subtypes|tojson }}</script>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const reportTypeSelect = document.getElementById("report_type");
+        const reportSubtypeSelect = document.getElementById("report_subtype");
+        const actionSelect = document.getElementById("action");
+        const fileUploadContainer = document.getElementById("file-upload-container");
+        const allSubtypes = JSON.parse(document.getElementById("allSubtypesData").textContent);
+    
+        // Update subtypes based on report type selection
+        reportTypeSelect.addEventListener("change", function() {
+            const selectedTypeId = this.value;
+            reportSubtypeSelect.innerHTML = '';
+    
+            allSubtypes.forEach(subtype => {
+                if (subtype.type_id == selectedTypeId) {
+                    const option = document.createElement("option");
+                    option.value = subtype.id;
+                    option.textContent = subtype.subtype;
+                    reportSubtypeSelect.appendChild(option);
+                }
+            });
+        });
+    
+        reportTypeSelect.dispatchEvent(new Event("change"));
+    
+        // Show or hide file upload field based on action selection
+        actionSelect.addEventListener("change", function() {
+            if (this.value === "file") {
+                fileUploadContainer.style.display = "flex";
+            } else {
+                fileUploadContainer.style.display = "none";
+            }
+        });
+    
+        actionSelect.dispatchEvent(new Event("change"));
+    });
+    </script>
 
 {% endblock container %}

@@ -1,0 +1,100 @@
+ <!-- my_reports.html -->
+
+{% extends "index.html" %}
+
+{% block container %}
+{{ super() }}
+
+<div class="container">
+
+    {% if user_reports_rel %}
+    <h3>List of reports</h3>
+    <!-- Form for filtering by report type -->
+    <div class="form-group">
+        <label for="filter_type">Filter by Type:</label>
+        <select class="report__select report__select--type" id="filter_type" name="filter_type">
+            <option value="">All</option>
+            {% for rt in report_types %}
+                <option value="{{ rt.id }}">{{ rt.type }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <!-- Reports list -->
+    <div id="">
+        <div class="report_label__list">
+            <label class="report_label__item" for="type">Modalities:</label>
+            <label class="report_label__item" for="subtype">Subtypes:</label>
+            <label class="report_label__item" for="report_name">Report names:</label>
+            <label class="report_label__item" for="comment">Comments:</label>
+        </div>
+        
+        {% for report in user_reports_rel %}
+            <form class="flex report_form__item" data-type-id="{{ report.report_type }}" method="POST" action="{{ url_for("my_reports.reports_list") }}">
+                <input  type="hidden" name="report_id" value="{{ report.id }}">
+                <input class="report_input__item" value="{{ report.report_type_rel.type }}" name="type" id="type" readonly>
+                <input class="report_input__item" value="{{ report.report_subtype_rel.subtype }}" name="subtype" id="subtype" readonly>
+                <input class="report_input__item" class="report-list" value="{{ report.report_name }}" name="report_name" id="report_name" readonly>
+                <input class="report_input__item" value="{{ report.comment }}" name="comment" id="comment" readonly>
+                <button class="btn report__btn" type="submit" name="report_delete">Delete</button>
+                <a class="btn report__btn" href="{{ url_for("editing_report.edit_report", report_id=report.id) }}">Edit</a>
+            </form>
+        {% endfor %}
+    </div>
+    {% else %}
+        <p>No reports available</p>
+    {% endif %}
+</div>
+
+<!-- Hidden element to pass subtype data -->
+<script id="allSubtypesData" type="application/json">{{ report_subtypes|tojson }}</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var reportTypeSelect = document.getElementById('report_type');
+    var reportSubtypeSelect = document.getElementById('report_subtype');
+    var filterTypeSelect = document.getElementById('filter_type');
+
+    // Convert subtypes from Jinja to JavaScript object
+    var allSubtypes = JSON.parse(document.getElementById('allSubtypesData').textContent);
+
+    // Function to update subtypes based on the selected report type
+    function updateSubtypes(type_id) {
+        // Clear current options
+        reportSubtypeSelect.innerHTML = '';
+
+        // Add new options corresponding to the selected report type
+        allSubtypes.forEach(function(subtype) {
+            if (subtype.type_id == type_id) {
+                var option = document.createElement('option');
+                option.value = subtype.id;
+                option.textContent = subtype.subtype;
+                reportSubtypeSelect.appendChild(option);
+            }
+        });
+    }
+
+    // Initialize: Set id=1 as the selected report type
+    if (reportTypeSelect) {
+        var initialTypeId = parseInt(reportTypeSelect.value, 10);
+        updateSubtypes(initialTypeId);
+
+        // Update subtypes when the report type value changes
+        reportTypeSelect.addEventListener('change', function() {
+            updateSubtypes(parseInt(this.value, 10));
+        });
+    }
+     // Filter reports by type
+    filterTypeSelect.addEventListener('change', function() {
+        var selectedTypeId = this.value;
+        var reportItems = document.querySelectorAll(".report_form__item");
+        reportItems.forEach(function(item) {
+            if (selectedTypeId === "" || item.getAttribute('data-type-id') === selectedTypeId) {
+                item.style.display = 'flex';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    });
+});
+</script>
+{% endblock container %}

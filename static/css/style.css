@@ -19,7 +19,7 @@ html {
   *::after {
     box-sizing: inherit;
   }
-  
+
   a {
     color: inherit;
     text-decoration: none;
@@ -100,6 +100,18 @@ html {
     display: flex;
     align-items: center;
     margin: 0 50px 0 50px;
+    z-index: 1000;
+}
+
+.header__flash_massages {
+    height: 20px;
+    overflow: hidden;
+    text-align: center;
+    background-color: #f8d7da;
+    color: #721c24;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 .header__logo {
@@ -148,6 +160,20 @@ html {
     border-radius: 6px;
     border-width: 1px;
     border-style: solid;
+    font-size: 14px;
+}
+
+.report_input__item--type {
+    max-width: 50px;
+}
+
+.report_input__item--index {
+    max-width: 50px;
+}
+
+.report_input__item--name {
+    min-width: 20%;
+    max-width: 50%;
 }
 
 .report__btn {
@@ -186,8 +212,9 @@ html {
 
 .report_label__item {
     margin-bottom: 10px;
-    margin-right: 90px;
+    margin-right: 10px;
     font-weight: bold;
+    font-size: 14px;
 }
 
 .report_borderline {
@@ -212,6 +239,7 @@ html {
 
 
 .title {
+    margin: 0;
     color: #333;
 }
 
@@ -228,16 +256,5 @@ input_submit {
 }
 
 
-
-.input_submit {
-    background-color: #4CAF50;
-    color: white;
-    border: none;
-    cursor: pointer;
-}
-
-.input_submit:hover {
-    background-color: #0b8311;
-}
 
 

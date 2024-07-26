@@ -23,20 +23,22 @@
     <a href="{{ url_for("auth.logout") }}">Logout</a>
 </div>
 
+<div class="header__flash_massages">
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+        {% for message in messages %}
+            <p class="text">{{ message }}</p>
+        {% endfor %}
+    {% endif %}
+    {% endwith %}
+</div>
+
 {% endblock menu %}
 
 <div class="section">
-    <h1 class="title1"> {{ title }} </h1>
+    <h1 class="title"> {{ title }} </h1>
 
-    <div class="upload_messages">
-        {% with messages = get_flashed_messages() %}
-        {% if messages %}
-            {% for message in messages %}
-                <p class="text">{{ message }}</p>
-            {% endfor %}
-        {% endif %}
-        {% endwith %}
-    </div>
+    
 </div>
 
 <div class="section">
@@ -47,8 +49,13 @@
 
 <div class="section">
     {% block tips %}
-        <p>1. Нужно настроить фильтр для подтипов в окне создания и редактирования подтипа</p>
+        <p>1. Нужно настроить фильтр для подтипов в окне создания и редактирования подтипа и сделать имеющиеся типы и подтипы видимыми только по запросу</p>
         <p>2. Также нужно сделать labels в report editing</p>
+        <p>3. нужно постараться в случае с типом и подтипом уйти от словарей и лишних переменных и решить это через type_subtype_rel </p>
+        <p>4. добавить проверки try\exept в код при обработки типов и подтипов </p>
+        <p>6. Добавить возможность переключения языка интерфейса</p>
+        <p>7. Добавить возможность переключения темы оформления сайта</p>
+        <p>8. Пункт меню report и всю его логику перенести на главную страницу</p>
     {% endblock tips %}
 </div>
 
