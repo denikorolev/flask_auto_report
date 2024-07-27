@@ -1,7 +1,10 @@
 # config.py
+# Все переменные настроек пользователя сохранены в базе данных в 
+# таблице app_config их можно добавлять через AppConfig класс в models.py
 
 import os
 from dotenv import load_dotenv
+from models import AppConfig
 
 load_dotenv()
 
@@ -16,7 +19,7 @@ class Config:
     SQLALCHEMY_DATABASE_URI = f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{PORT}/{DB_NAME}"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
-    UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')
+    UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads') # It seems to me i don't use it anywhere
     
     # Menu configuration
     MENU = [
@@ -26,3 +29,15 @@ class Config:
         {"name": "new report", "url": "new_report_creation.create_report"},
         {"name": "settings", "url": "report_settings.report_settings"}
     ]
+
+    @staticmethod
+    def load_user_config(user_id):
+        """
+        Load user-specific configuration from the database.
+        """
+        upload_folder_path = AppConfig.get_config_value("UPLOAD_FOLDER_PATH", user_id)
+        upload_folder_name = AppConfig.get_config_value("UPLOAD_FOLDER_NAME", user_id)
+        return {
+            "UPLOAD_FOLDER_PATH": upload_folder_path,
+            "UPLOAD_FOLDER_NAME": upload_folder_name
+        }

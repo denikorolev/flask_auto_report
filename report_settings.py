@@ -1,17 +1,12 @@
 # report_settings.py
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
-from flask_login import login_required
-from models import Report, ReportType, ReportSubtype, ReportParagraph, Sentence
+from flask import Blueprint, render_template, request, redirect, flash, current_app
+from flask_login import login_required, current_user
+from models import ReportType, ReportSubtype, AppConfig 
 
 report_settings_bp = Blueprint('report_settings', __name__)
 
 # Functions
-
-# Access configuration parameters
-def init_app(app):
-    menu = app.config['MENU']
-    return menu
 
 # Routs
 
@@ -19,7 +14,12 @@ def init_app(app):
 @login_required
 def report_settings():
     page_title = "Report settings"
-    menu = init_app(current_app)
+    # Get data from the config
+    menu = current_app.config["MENU"]
+    upload_folder_path = current_app.config.get("UPLOAD_FOLDER_PATH")
+    upload_folder_name = current_app.config.get("UPLOAD_FOLDER_NAME")
+    
+    
     # Geting report types and subtypes 
     report_types = ReportType.query.all()  
     report_subtypes = ReportSubtype.query.all() 
@@ -71,9 +71,24 @@ def report_settings():
             flash("Subtype edited successfully")
             return redirect(request.url)
         
+        # Directory and folder name settings
+        if "save_directory_button" in request.form:
+            directory_path = request.form["directory_path"]
+            AppConfig.set_config_value("UPLOAD_FOLDER_PATH", directory_path, current_user.id)
+            flash("Directory path saved successfully", "success")
+            return redirect(request.url)
+        
+        if "save_folder_name_button" in request.form:
+            folder_name = request.form["folder_name"]
+            AppConfig.set_config_value("UPLOAD_FOLDER_NAME", folder_name, current_user.id)
+            flash("Folder name saved successfully", "success")
+            return redirect(request.url)
+        
     return render_template('report_settings.html', 
                            title = page_title,
                            menu = menu,
                            report_types=report_types, 
-                           report_subtypes=report_subtypes_dict 
+                           report_subtypes=report_subtypes_dict,
+                           upload_folder_path=upload_folder_path,
+                           upload_folder_name=upload_folder_name 
                            )

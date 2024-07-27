@@ -1,13 +1,13 @@
 # app.py
 
 from flask import Flask, redirect, url_for, flash, render_template, request
-from flask_login import LoginManager, current_user, login_required
+from flask_login import LoginManager, current_user, login_required, user_logged_in
 from config import Config
 from flask_migrate import Migrate
 from auth import auth_bp  
-from models import db, User
-
-
+from models import db, User, AppConfig, Report, ReportType, ReportSubtype, ReportParagraph, Sentence
+import os
+import signal
 from werkzeug.utils import secure_filename
 from working_with_reports import working_with_reports_bp  # Import logic of create and editing of reports
 from my_reports import my_reports_bp  # Import new edit blueprint
@@ -42,6 +42,15 @@ app.register_blueprint(new_report_creation_bp, url_prefix="/new_report_creation"
 def load_user(user_id):
     return User.query.get(int(user_id))
 
+# Handle user logged in event
+@user_logged_in.connect_via(app)
+def on_user_logged_in(sender, user):
+    user_config = Config.load_user_config(user.id)
+    for key, value in user_config.items():
+        if value:
+            app.config[key] = value
+            
+
 # Use menu from config
 menu = app.config['MENU']
 
@@ -70,6 +79,15 @@ def index():
 def main():
     test_db_connection()
     return render_template('index.html', title="Main page Radiologary", menu=menu)
+
+
+# Route for restarting the application
+@app.route('/restart', methods=['POST'])
+@login_required
+def restart():
+    os.kill(os.getpid(), signal.SIGINT)
+    return "Application Restarting..."
+
 
 
 @app.teardown_appcontext # I need to figure out how it works

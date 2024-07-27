@@ -24,6 +24,30 @@ class User(db.Model, UserMixin):
         return check_password_hash(self.user_pass, password)
 
 
+class AppConfig(db.Model):
+    __tablename__ = 'app_config'
+    id = db.Column(db.Integer, primary_key=True)
+    config_key = db.Column(db.String(50), unique=True, nullable=False)
+    config_value = db.Column(db.String(200), nullable=False)
+    config_user = db.Column(db.BigInteger, db.ForeignKey('users.id'), nullable=False)
+
+    user = db.relationship('User', backref=db.backref('configs', lazy=True))
+
+    @staticmethod
+    def get_config_value(key, user_id):
+        config = AppConfig.query.filter_by(config_key=key, config_user=user_id).first()
+        return config.config_value if config else None
+
+    @staticmethod
+    def set_config_value(key, value, user_id):
+        config = AppConfig.query.filter_by(config_key=key, config_user=user_id).first()
+        if config:
+            config.config_value = value
+        else:
+            config = AppConfig(config_key=key, config_value=value, config_user=user_id)
+        db.session.add(config)
+        db.session.commit()
+
 class BaseModel(db.Model):
     __abstract__ = True
     id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
