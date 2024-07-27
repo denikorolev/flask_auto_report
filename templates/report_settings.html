@@ -67,6 +67,31 @@
             </li>
         </ul>
     </div>
+
+    <!-- Directory and name Picker -->
+    <div class="directory-picker">
+        <form method="POST" id="directory-form">
+            <label for="directory-path" class="report_label__item">Select Directory:</label>
+            <input type="text" id="directory-path" name="directory_path" value="{{ upload_folder_path }}" readonly>
+            <button type="button" class="btn report__btn" onclick="document.getElementById('file-input').click()">Choose Directory</button>
+            <input type="file" id="file-input" webkitdirectory directory style="display:none;" onchange="updateDirectoryPath()">
+            <button type="submit" class="btn report__btn" name="save_directory_button">Save Directory</button>
+        </form>
+        <form method="POST" id="folder-name-form">
+            <label for="folder-name" class="report_label__item">Folder Name:</label>
+            <input type="text" id="folder-name" name="folder_name" value="{{ upload_folder_name }}">
+            <button type="submit" class="btn report__btn" name="save_folder_name_button">Save Folder Name</button>
+        </form>
+    </div>
+
 </div>
+
+<script>
+    function updateDirectoryPath() {
+        var input = document.getElementById('file-input');
+        var path = input.files[0].webkitRelativePath;
+        document.getElementById('directory-path').value = path.split('/')[0];
+    }
+</script>
 
 {% endblock container %}

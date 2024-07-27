@@ -47,6 +47,14 @@
 </div>
 
 
+
+<div class="section">
+    <form action="{{ url_for('restart') }}" method="POST">
+        <button type="submit" class="btn">Restart Application</button>
+    </form>
+</div>
+
+
 <div class="section">
     {% block tips %}
         <p>1. Нужно настроить фильтр для подтипов в окне создания и редактирования подтипа и сделать имеющиеся типы и подтипы видимыми только по запросу</p>
