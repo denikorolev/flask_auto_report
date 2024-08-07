@@ -3,6 +3,7 @@
 from flask import Blueprint, render_template, request, redirect, flash, current_app
 from flask_login import login_required, current_user
 from models import ReportType, ReportSubtype, AppConfig 
+from file_processing import file_uploader
 
 report_settings_bp = Blueprint('report_settings', __name__)
 
@@ -84,6 +85,16 @@ def report_settings():
             flash("Folder name saved successfully", "success")
             return redirect(request.url)
         
+        # Handling file upload
+        if 'file' in request.files:
+            file = request.files['file']
+            result = file_uploader(file, "doc")
+            if "successfully" in result:
+                flash(result, 'success')
+            else:
+                flash(result, 'error')
+            return redirect(request.url)
+        
     return render_template('report_settings.html', 
                            title = page_title,
                            menu = menu,
@@ -92,3 +103,5 @@ def report_settings():
                            upload_folder_path=upload_folder_path,
                            upload_folder_name=upload_folder_name 
                            )
+
+

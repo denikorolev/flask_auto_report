@@ -1,35 +1,58 @@
+<!-- working_with_report.html -->
 {% extends "index.html" %}
 
 {% block container %}
 {{ super() }}
+
+<!-- Name and birthdate -->
+<form id="exportForm">
+    <div>
+        <label for="patient-name">Name:</label>
+        <input type="text" id="patient-name" name="patient_name" required>
+    </div>
+    <div>
+        <label for="patient-birthdate">Birthdate:</label>
+        <input type="date" id="patient-birthdate" name="patient_birthdate" required>
+    </div>
+    <div>
+        <label for="report-number">Report Number:</label>
+        <input type="number" id="report-number" name="report_number" required>
+    </div>
+</form>
+
 <div class="flex">
     <!-- Left side -->
     <div class="report_side__list">
         <ul class="report_paragraph__list" id="left-paragraph-list">
             {% for item in paragraph_data %}
-                <li class="report__paragraph">
-                    <p contenteditable="true" data-paragraph-id="{{ item.paragraph.id }}" {% if item.paragraph.paragraph_visible %}class="report__paragraph--visible" {% else %}class="report__paragraph--invisible"{% endif %}>
+                <li class="flex report__paragraph">
+                    <p contenteditable="true" data-paragraph-id="{{ item.paragraph.id }}">
                         {{ item.paragraph.paragraph }}
                     </p>
-                    <ul class="">
+                    <button class="btn report__btn expand-btn" type="button">Expand</button>
+                    <ul class="sentence-list" style="display: none;">
                         <li class="">
                             {% if item.grouped_sentences %}
                                 {% for index, sentences in item.grouped_sentences.items() %}
                                     {% if sentences|length == 1 %}
-                                        <div class="flex edit-container">
+                                        <div class="flex edit-container" sentence-index = "{{ sentences[0].index}}">
                                             <p class="report__sentence" data-sentence-id="{{ sentences[0].id }}">{{ sentences[0].sentence }}</p>
                                             <button class="btn report__btn edit-btn" type="button">Edit</button>
                                             <button class="btn report__btn add-sentence-btn" type="button">Add s in p</button>
+                                            <button class="btn report__btn add-sentence-to-s-btn" type="button">Add s to s</button>
+                                            <button class="btn report__btn delete-sentence-btn" type="button">Delete</button> 
                                         </div>
                                     {% else %}
                                         <div class="flex edit-container">
-                                            <select class="report__select" data-index="left-side-{{ item.paragraph.id }}-{{ index }}">
+                                            <select class="report__select" sentence-index = "{{ sentences[0].index}}" data-index="left-side-{{ item.paragraph.id }}-{{ index }}">
                                                 {% for sentence in sentences %}
                                                     <option value="{{ sentence.id }}" data-sentence="{{ sentence.sentence }}">{{ sentence.sentence }}</option>
                                                 {% endfor %}
                                             </select>
                                             <button class="btn report__btn edit-btn" type="button">Edit</button>
                                             <button class="btn report__btn add-sentence-btn" type="button">Add s in p</button>
+                                            <button class="btn report__btn add-sentence-to-s-btn" type="button">Add s to s</button> 
+                                            <button class="btn report__btn delete-sentence-btn" type="button">Delete</button> 
                                         </div>
                                     {% endif %}
                                 {% endfor %}
@@ -65,10 +88,27 @@
         </ul>
         <!-- Button to copy text -->
         <button class="btn report__btn" id="copyButton">Copy Text</button>
+        <button class="btn report__btn" id="exportButton">Export to Word</button>
     </div>
 </div>
 
 <script>
+    // Button "expand" logic
+    document.querySelectorAll(".expand-btn").forEach(button => {
+        button.addEventListener("click", function() {
+            const sentenceList = this.closest(".report__paragraph").querySelector(".sentence-list");
+            if (sentenceList.style.display === "none") {
+                sentenceList.style.display = "block";
+                this.innerText = "Collapse"; // Меняем текст кнопки
+            } else {
+                sentenceList.style.display = "none";
+                this.innerText = "Expand"; // Возвращаем текст кнопки
+            }
+        });
+    });
+    
+
+    // Button "Edit" logic
     document.querySelectorAll(".edit-btn").forEach(button => {
         button.addEventListener("click", function() {
             const container = this.closest(".edit-container");
@@ -125,22 +165,27 @@
         });
     });
 
+   // Button "Add s in p" logic
     document.querySelectorAll(".add-sentence-btn").forEach(button => {
         button.addEventListener("click", function() {
             const container = this.closest(".edit-container");
             const sentenceElement = container.querySelector(".report__sentence");
             const selectElement = container.querySelector(".report__select");
-    
+        
             let paragraphId;
+            let currentIndex;
+
             if (selectElement) {
+                // Если предложения сгруппированы в select, получаем ID параграфа и индекс
                 paragraphId = selectElement.getAttribute("data-index").split("-")[2];
+                currentIndex = parseInt(selectElement.getAttribute("sentence-index")); // Извлекаем индекс из атрибута sentence-index
             } else {
+                // Для одиночных предложений
                 paragraphId = container.closest(".report__paragraph").querySelector("p").getAttribute("data-paragraph-id");
+                currentIndex = parseInt(sentenceElement.closest(".edit-container").getAttribute("sentence-index")); // Извлекаем индекс из атрибута sentence-index
             }
-    
-            const currentIndex = selectElement ? parseInt(selectElement.selectedOptions[0].value) : parseInt(sentenceElement.getAttribute("data-sentence-id"));
-            const newIndex = currentIndex + 1;
-    
+
+            // Отправляем запрос на сервер для добавления нового предложения
             fetch("{{ url_for('working_with_reports.add_sentence') }}", {
                 method: "POST",
                 headers: {
@@ -148,22 +193,106 @@
                 },
                 body: JSON.stringify({
                     paragraph_id: paragraphId,
-                    index: newIndex,
-                    new_sentence: "New sentence"
+                    index: currentIndex, 
+                    add_to_list_flag: false
                 })
             }).then(response => {
                 if (response.ok) {
                     alert("Sentence added successfully!");
-                    location.reload(); // Reload the page to show the new sentence
+                    location.reload(); // Перезагрузка страницы для отображения нового предложения
                 } else {
                     alert("Failed to add sentence.");
                 }
             });
         });
     });
+
+
+    // Button "Add s to s" logic
+    document.querySelectorAll(".add-sentence-to-s-btn").forEach(button => {
+        button.addEventListener("click", function() {
+            const container = this.closest(".edit-container");
+            const sentenceElement = container.querySelector(".report__sentence");
+            const selectElement = container.querySelector(".report__select");
+            
+            let paragraphId;
+            let currentIndex;
+            if (selectElement) {
+                paragraphId = selectElement.getAttribute("data-index").split("-")[2];
+                currentIndex = parseInt(selectElement.getAttribute("sentence-index")); 
+
+            } else {
+                paragraphId = container.closest(".report__paragraph").querySelector("p").getAttribute("data-paragraph-id");
+                currentIndex = parseInt(sentenceElement.closest(".edit-container").getAttribute("sentence-index"));
+            }
+            
+            fetch("{{ url_for('working_with_reports.add_sentence') }}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    paragraph_id: paragraphId,
+                    index: currentIndex, 
+                    add_to_list_flag: true
+                })
+            }).then(response => {
+                if (response.ok) {
+                    alert("Sentence added successfully!");
+                    location.reload(); // Перезагрузка страницы для отображения нового предложения
+                } else {
+                    alert("Failed to add sentence.");
+                }
+            });
+        });
+    });
+
+
+    // Button "Delete" logic
+    document.querySelectorAll(".delete-sentence-btn").forEach(button => {
+        button.addEventListener("click", function() {
+            const container = this.closest(".edit-container");
+            const selectElement = container.querySelector(".report__select");
+            let sentenceId;
+
+            if (selectElement) {
+                // Если предложения сгруппированы в select
+                const selectedOption = selectElement.selectedOptions[0];
+                sentenceId = selectedOption.value; // Получаем sentence-id из value выбранной опции
+            } else {
+                // Для одиночных предложений
+                const sentenceElement = container.querySelector(".report__sentence");
+                sentenceId = sentenceElement.getAttribute("data-sentence-id");
+            }
+
+            const paragraphId = container.closest(".report__paragraph").querySelector("p").getAttribute("data-paragraph-id");
+
+            if (confirm("Are you sure you want to delete this sentence?")) {
+                fetch("{{ url_for('working_with_reports.delete_sentence') }}", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        sentence_id: sentenceId,
+                        paragraph_id: paragraphId
+                    })
+                }).then(response => {
+                    if (response.ok) {
+                        alert("Sentence deleted successfully!");
+                        location.reload(); // Перезагрузка страницы для отображения обновленного списка предложений
+                    } else {
+                        alert("Failed to delete sentence.");
+                    }
+                });
+            }
+        });
+    });
+
     
     
     
+    // Logic for renewing data on the right container then data on the left one was changed
     document.getElementById("left-paragraph-list").addEventListener("change", function(event) {
         if (event.target.tagName === "SELECT") {
             const index = event.target.getAttribute("data-index");
@@ -175,6 +304,7 @@
         }
     });
     
+    // Button "Copy to clipboard" logic
     document.getElementById("copyButton").addEventListener("click", function() {
         const rightParagraphList = document.getElementById("right-paragraph-list");
         let textToCopy = "";
@@ -189,6 +319,53 @@
             console.error("Failed to copy text: ", err);
         });
     });
+
+    // "Export to word" button logic
+    document.getElementById("exportButton").addEventListener("click", function() {
+        const rightParagraphList = document.getElementById("right-paragraph-list");
+        let textToExport = "";
+        rightParagraphList.querySelectorAll("p").forEach(function(paragraph) {
+            if (window.getComputedStyle(paragraph).display !== "none") {
+                textToExport += paragraph.innerText + "\n";
+            }
+        });
+        
+        const name = document.getElementById("patient-name").value;
+        const birthdate = document.getElementById("patient-birthdate").value;
+        const reportnumber = document.getElementById("report-number").value;
+        const subtype = "{{ subtype }}";
+    
+        fetch("{{ url_for('working_with_reports.export_to_word') }}", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                text: textToExport,
+                name: name,
+                birthdate: birthdate,
+                subtype: subtype,
+                reportnumber: reportnumber
+            })
+        }).then(response => {
+            if (response.ok) {
+                response.blob().then(blob => {
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.style.display = "none";
+                    a.href = url;
+                    a.download = `${name}_${subtype}.docx`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                });
+            } else {
+                alert("Failed to export to Word.");
+            }
+        });
+    });
+    
+    
 </script>
 
 {% endblock container %}

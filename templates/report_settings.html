@@ -69,7 +69,7 @@
     </div>
 
     <!-- Directory and name Picker -->
-    <div class="directory-picker">
+    <div class="container">
         <form method="POST" id="directory-form">
             <label for="directory-path" class="report_label__item">Select Directory:</label>
             <input type="text" id="directory-path" name="directory_path" value="{{ upload_folder_path }}" readonly>
@@ -83,6 +83,15 @@
             <button type="submit" class="btn report__btn" name="save_folder_name_button">Save Folder Name</button>
         </form>
     </div>
+
+    <div class="container">
+        <h3>Upload File</h3>
+        <form method="POST" enctype="multipart/form-data">
+            <input type="file" name="file">
+            <button type="submit">Upload</button>
+        </form>
+    </div>
+    
 
 </div>
 

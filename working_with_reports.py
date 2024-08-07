@@ -1,6 +1,9 @@
-from flask import Blueprint, render_template, request, current_app, jsonify
+from flask import Blueprint, render_template, request, current_app, jsonify, send_file, flash
 from flask_login import login_required, current_user
 from models import db, Report, ReportType, ReportSubtype, ReportParagraph, Sentence
+from file_processing import file_saver
+import os
+import platform
 
 working_with_reports_bp = Blueprint('working_with_reports', __name__)
 
@@ -53,6 +56,7 @@ def working_with_reports():
     menu = init_app(current_app)
     report = Report.query.get(request.args.get("report_id"))  # Get report_id from url
     paragraphs = ReportParagraph.query.filter_by(report_id=report.id).order_by(ReportParagraph.paragraph_index).all()
+    subtype = report.report_subtype_rel.subtype
     paragraph_data = []
     for paragraph in paragraphs:
         sentences = Sentence.query.filter_by(paragraph_id=paragraph.id).order_by(Sentence.index).all()
@@ -74,7 +78,8 @@ def working_with_reports():
         title=report.report_name,
         menu=menu,
         report=report,
-        paragraph_data=paragraph_data                   
+        paragraph_data=paragraph_data,
+        subtype=subtype                   
     )
 
 @working_with_reports_bp.route("/update_sentence", methods=['POST'])
@@ -97,17 +102,72 @@ def add_sentence():
     data = request.get_json()
     paragraph_id = data.get('paragraph_id')
     index = data.get('index')
-    sentence_text = data.get('new_sentence')
+    sentence_text = "new_sentence"
+    add_to_list_flag = data.get("add_to_list_flag")
 
-    # Increment the index of all subsequent sentences
-    sentences_to_update = Sentence.query.filter(Sentence.paragraph_id == paragraph_id, Sentence.index >= index).all()
-    for sentence in sentences_to_update:
-        sentence.index += 1
+    if add_to_list_flag:
+         # Create new sentence
+        new_sentence = Sentence(paragraph_id=paragraph_id, index=index, weight = 1, comment = "", sentence=sentence_text)
+        db.session.add(new_sentence)
         db.session.commit()
+            
+    else:
+        index += 1
+        # Increment the index of all subsequent sentences
+        sentences_to_update = Sentence.query.filter(Sentence.paragraph_id == paragraph_id, Sentence.index >= index).all()
+        for sentence in sentences_to_update:
+            sentence.index += 1
+            db.session.commit()
 
-    # Create new sentence
-    new_sentence = Sentence(paragraph_id=paragraph_id, index=index, weight = 1, comment = "", sentence=sentence_text)
-    db.session.add(new_sentence)
-    db.session.commit()
+        # Create new sentence
+        new_sentence = Sentence(paragraph_id=paragraph_id, index=index, weight = 1, comment = "", sentence=sentence_text)
+        db.session.add(new_sentence)
+        db.session.commit()
     
     return jsonify({"message": "Sentence added successfully!"}), 200
+
+@working_with_reports_bp.route("/delete_sentence", methods=['POST'])
+@login_required
+def delete_sentence():
+    data = request.get_json()
+    sentence_id = data.get('sentence_id')
+    paragraph_id = data.get('paragraph_id')
+
+    sentence = Sentence.query.get(sentence_id)
+    if sentence:
+        index = sentence.index
+        db.session.delete(sentence)
+        db.session.commit()
+
+        # Обновляем индексы оставшихся предложений только если это не часть группы
+        sentences_with_same_index = Sentence.query.filter(Sentence.paragraph_id == paragraph_id, Sentence.index == index).all()
+        if len(sentences_with_same_index) == 0:
+            # Обновляем индексы только если больше нет предложений с таким же индексом
+            sentences_to_update = Sentence.query.filter(Sentence.paragraph_id == paragraph_id, Sentence.index > index).all()
+            for sentence in sentences_to_update:
+                sentence.index -= 1
+                db.session.commit()
+
+        return jsonify({"message": "Sentence deleted successfully!"}), 200
+    return jsonify({"message": "Failed to delete sentence."}), 400
+
+
+
+@working_with_reports_bp.route("/export_to_word", methods=["POST"])
+@login_required
+def export_to_word():
+    data = request.get_json()
+    text = data.get("text")
+    name = data.get("name")
+    subtype = data.get("subtype")
+    birthdate = data.get("birthdate")
+    reportnumber = data.get("reportnumber") 
+
+    if not text or not name or not subtype:
+        return jsonify({"message": "Missing required information."}), 400
+
+    try:
+        file_path = file_saver(text, name, subtype, birthdate, reportnumber)
+        return send_file(file_path, as_attachment=True)
+    except Exception as e:
+        return jsonify({"message": f"Failed to export to Word: {e}"}), 500
