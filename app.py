@@ -40,7 +40,8 @@ app.register_blueprint(new_report_creation_bp, url_prefix="/new_report_creation"
 # Load user callback
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    with db.session() as session:
+        return session.get(User, int(user_id))
 
 # Handle user logged in event
 @user_logged_in.connect_via(app)

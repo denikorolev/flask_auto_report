@@ -1,9 +1,8 @@
 # editing_report.py
 
-from flask import Flask, Blueprint, render_template, request, redirect, url_for, flash, current_app, jsonify
-from flask_login import LoginManager, current_user, login_required
-from config import Config # I need to figure out, if i should use it
-from models import db, User, Report, ReportType, ReportSubtype, ReportParagraph, Sentence  
+from flask import Blueprint, render_template, request, flash, current_app, jsonify
+from flask_login import current_user, login_required
+from models import db, Report, ReportParagraph, Sentence  
 
 
 editing_report_bp = Blueprint('editing_report', __name__)
