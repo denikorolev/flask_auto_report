@@ -71,7 +71,7 @@ html {
 .section {
     display: flex;
     flex-direction: column;
-    margin: 0 50px 50px 50px;
+    margin: 0 25px 25px 25px;
 }
 
 .container {
@@ -88,7 +88,7 @@ html {
 .container_row {
     display: flex;
     flex-direction: row;
-    gap: 30px;
+    gap: 20px;
     width: 45%;
 }
 
@@ -99,7 +99,7 @@ html {
 .header {
     display: flex;
     align-items: center;
-    margin: 0 50px 0 50px;
+    margin: 0 25px 0 25px;
     z-index: 1000;
 }
 
@@ -141,7 +141,7 @@ html {
 }
 
 .report_side__list {
-    width: 45%;
+    width: 50%;
 }
 
 .report_side--right {
@@ -206,6 +206,11 @@ html {
     margin-bottom: 5px;
 }
 
+.report__sentence.editing {
+    color: darkred;
+}
+
+
 .report_label__list {
     margin-bottom: 10px;
 }
@@ -237,23 +242,36 @@ html {
     display: none;
 }
 
+.bold-paragraph {
+    font-weight: bold;
+}
+
+.indented-paragraph {
+    padding-left: 20px; /* Indent using padding or margin */
+}
+
+
+.icon-btn {
+    width: 18px; 
+    height: 18px; 
+    margin-right: 5px;
+    background-size: contain; 
+    border: none; 
+    cursor: pointer; 
+    transition: transform 0.3s ease; 
+}
+
+.icon-btn.expanded {
+    transform: rotate(180deg); 
+}
+
+
 
 .title {
     margin: 0;
     color: #333;
 }
 
-.forms {
-    margin-bottom: 20px;
-}
-
-.input_file,
-input_submit {
-    display: block;
-    margin-top: 5px;
-    padding: 5px;
-    font-size: 16px;
-}
 
 
 

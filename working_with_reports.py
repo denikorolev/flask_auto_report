@@ -1,9 +1,7 @@
-from flask import Blueprint, render_template, request, current_app, jsonify, send_file, flash
+from flask import Blueprint, render_template, request, current_app, jsonify, send_file, flash, url_for
 from flask_login import login_required, current_user
 from models import db, Report, ReportType, ReportSubtype, ReportParagraph, Sentence
 from file_processing import file_saver
-import os
-import platform
 
 working_with_reports_bp = Blueprint('working_with_reports', __name__)
 
@@ -54,7 +52,26 @@ def choosing_report():
 @login_required
 def working_with_reports(): 
     menu = init_app(current_app)
+    
+    if request.method == "POST":
+        data = request.get_json()
+        full_name = data.get("fullname", "")
+        birthdate = data.get("birthdate", "")
+        report_number = data.get("reportNumber", "")
+        report_id = data.get("reportId")
+        
+        if report_id:
+            # Обрабатываем данные, затем перенаправляем на GET для рендеринга
+            return jsonify({"redirect_url": url_for('working_with_reports.working_with_reports', report_id=report_id, full_name=full_name, birthdate=birthdate, reportNumber=report_number)})
+        else:
+            return jsonify({"message": "Invalid report ID."}), 400
+        
     report = Report.query.get(request.args.get("report_id"))  # Get report_id from url
+    full_name = request.args.get("fullName", "")
+    for i in range(10):
+        print(full_name)
+    birthdate = request.args.get("birthdate", "")
+    report_number = request.args.get("reportNumber", "")
     paragraphs = ReportParagraph.query.filter_by(report_id=report.id).order_by(ReportParagraph.paragraph_index).all()
     subtype = report.report_subtype_rel.subtype
     paragraph_data = []
@@ -79,7 +96,10 @@ def working_with_reports():
         menu=menu,
         report=report,
         paragraph_data=paragraph_data,
-        subtype=subtype                   
+        subtype=subtype,
+        full_name=full_name,
+        birthdate=birthdate,
+        report_number=report_number                   
     )
 
 @working_with_reports_bp.route("/update_sentence", methods=['POST'])
@@ -150,6 +170,33 @@ def delete_sentence():
 
         return jsonify({"message": "Sentence deleted successfully!"}), 200
     return jsonify({"message": "Failed to delete sentence."}), 400
+
+@working_with_reports_bp.route("/update_paragraph", methods=["POST"])
+@login_required
+def update_paragraph():
+    data = request.get_json()
+    paragraph_id = data.get("paragraph_id")
+    new_value = data.get("new_value")
+
+    paragraph = ReportParagraph.query.get(paragraph_id)
+    if paragraph:
+        paragraph.paragraph = new_value
+        db.session.commit()
+        return jsonify({"message": "Paragraph updated successfully!"}), 200
+    return jsonify({"message": "Failed to update paragraph."}), 400
+
+@working_with_reports_bp.route("/delete_paragraph", methods=["POST"])
+@login_required
+def delete_paragraph():
+    data = request.get_json()
+    paragraph_id = data.get("paragraph_id")
+
+    paragraph = ReportParagraph.query.get(paragraph_id)
+    if paragraph:
+        db.session.delete(paragraph)
+        db.session.commit()
+        return jsonify({"message": "Paragraph deleted successfully!"}), 200
+    return jsonify({"message": "Failed to delete paragraph."}), 400
 
 
 

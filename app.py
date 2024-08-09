@@ -82,14 +82,6 @@ def main():
     return render_template('index.html', title="Main page Radiologary", menu=menu)
 
 
-# Route for restarting the application
-@app.route('/restart', methods=['POST'])
-@login_required
-def restart():
-    os.kill(os.getpid(), signal.SIGINT)
-    return "Application Restarting..."
-
-
 
 @app.teardown_appcontext # I need to figure out how it works
 def close_db(error):
