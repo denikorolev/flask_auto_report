@@ -5,6 +5,32 @@
 
         <!-- report type\subtype choosing -->
         <h2>What report will we use for now?</h2>
+
+        <!-- fields group with name, date of birth etc -->
+        <form class="flex" id="exportForm" style="margin-bottom: 30px;">
+            <div class="flex_column">
+                <label for="patient-surname">Surname:</label>
+                <input style="margin-right: 10px;" type="text" id="patient-surname" name="patient_surname" value="{{ request.form.get('patient_surname', '') }}" required>
+            </div>
+            <div class="flex_column">
+                <label for="patient-name">Name:</label>
+                <input style="margin-right: 10px;" type="text" id="patient-name" name="patient_name" value="{{ request.form.get('patient_name', '') }}" required>
+            </div>
+            <div class="flex_column">
+                <label for="patient-patronymicname">Patronymic name:</label>
+                <input style="margin-right: 10px;" type="text" id="patient-patronymicname" name="patient_patronymicname" value="{{ request.form.get('patient_patronymicname', '') }}" required>
+            </div>
+            <div class="flex_column">
+                <label for="patient-birthdate">Birthdate:</label>
+                <input style="margin-right: 10px;" type="date" id="patient-birthdate" name="patient_birthdate" value="{{ request.form.get('patient_birthdate', '') }}" required>
+            </div>
+            <div class="flex_column">
+                <label for="report-number">Report Number:</label>
+                <input style="margin-right: 10px;" type="number" id="report-number" name="report_number" value="{{ request.form.get('report_number', '') }}" required>
+            </div>
+        </form>
+
+        <!-- choosing report group -->
         <form class="flex" method="POST">
             <div class="flex_column" id="reports-container">
                 <label class="report_label__item" for="report_type">Choose report type:</label>
@@ -29,7 +55,7 @@
         {% if reports %}
             <div class="">
                 {% for report in reports %}
-                    <a class="flex" href="{{ url_for("working_with_reports.working_with_reports", report_id=report.id) }}"> 
+                    <a class="flex report-link" href="#" data-report-id="{{ report.id }}"> 
                         <p class="report__sentence">{{ report.report_name }}</p>
                         <p class="report__sentence">{{ report.comment }}</p>  
                     </a>
@@ -40,27 +66,153 @@
         
       
 
-        <script>
-            document.addEventListener("DOMContentLoaded", function() {
-                const reportTypeSelect = document.getElementById("report_type");
-                const reportSubtypeSelect = document.getElementById("report_subtype");
-                const allSubtypes = Array.from(reportSubtypeSelect.options); // Сохраняем все подтипы
-        
-                reportTypeSelect.addEventListener("change", function() {
-                    const selectedTypeId = this.value;
-                    reportSubtypeSelect.innerHTML = ''; // Очищаем опции подтипов
-        
-                    allSubtypes.forEach(subtypeOption => {
-                        if (subtypeOption.getAttribute('data-type-id').trim() === selectedTypeId) {
-                            reportSubtypeSelect.appendChild(subtypeOption);
-                        }
-                    });
-                });
-        
-                // Trigger change event on page load to set the initial state
-                reportTypeSelect.dispatchEvent(new Event("change"));
+<script>
+// Button check report logic with handling field above safety
+document.addEventListener("DOMContentLoaded", function () {
+    const reportTypeSelect = document.getElementById("report_type");
+    const reportSubtypeSelect = document.getElementById("report_subtype");
+    const allSubtypes = Array.from(reportSubtypeSelect.options);
+
+    // Restore saved form data if exists
+    if (localStorage.getItem("exportFormData")) {
+        const formData = JSON.parse(localStorage.getItem("exportFormData"));
+        document.getElementById("patient-surname").value = formData.patient_surname || "";
+        document.getElementById("patient-name").value = formData.patient_name || "";
+        document.getElementById("patient-patronymicname").value = formData.patient_patronymicname || "";
+        document.getElementById("patient-birthdate").value = formData.patient_birthdate || "";
+        document.getElementById("report-number").value = formData.report_number || "";
+    }
+
+    // Save form data to localStorage
+    function saveFormData() {
+        const formData = {
+            patient_surname: document.getElementById("patient-surname").value,
+            patient_name: document.getElementById("patient-name").value,
+            patient_patronymicname: document.getElementById("patient-patronymicname").value,
+            patient_birthdate: document.getElementById("patient-birthdate").value,
+            report_number: document.getElementById("report-number").value,
+        };
+        localStorage.setItem("exportFormData", JSON.stringify(formData));
+    }
+
+    document.getElementById("exportForm").addEventListener("input", saveFormData);
+
+    // Update subtypes based on type
+    reportTypeSelect.addEventListener("change", function () {
+        const selectedTypeId = this.value;
+        reportSubtypeSelect.innerHTML = '';
+        allSubtypes.forEach(subtypeOption => {
+            if (subtypeOption.getAttribute('data-type-id').trim() === selectedTypeId) {
+                reportSubtypeSelect.appendChild(subtypeOption);
+            }
+        });
+    });
+
+    // Trigger change event on page load to set the initial state
+    reportTypeSelect.dispatchEvent(new Event("change"));
+
+    // Handle form submission with AJAX
+    document.getElementById("reportForm").addEventListener("submit", function (event) {
+        event.preventDefault(); // Prevent default form submission
+
+        // Send form data via AJAX
+        const formData = new FormData(this);
+        fetch("{{ url_for('working_with_reports.choosing_report') }}", {
+            method: "POST",
+            body: formData
+        })
+            .then(response => response.text())
+            .then(html => {
+                // Replace current document with new content
+                document.documentElement.innerHTML = html;
+            })
+            .catch(error => console.error("Error:", error));
+    });
+});
+
+
+
+// Logic for collect and sending data to the working_with_reports route
+document.addEventListener("DOMContentLoaded", function() {
+    const reportTypeSelect = document.getElementById("report_type");
+    const reportSubtypeSelect = document.getElementById("report_subtype");
+    const allSubtypes = Array.from(reportSubtypeSelect.options); // Сохраняем все подтипы
+
+    reportTypeSelect.addEventListener("change", function() {
+        const selectedTypeId = this.value;
+        reportSubtypeSelect.innerHTML = ''; // Очищаем опции подтипов
+
+        allSubtypes.forEach(subtypeOption => {
+            if (subtypeOption.getAttribute('data-type-id').trim() === selectedTypeId) {
+                reportSubtypeSelect.appendChild(subtypeOption);
+            }
+        });
+    });
+
+    // Trigger change event on page load to set the initial state
+    reportTypeSelect.dispatchEvent(new Event("change"));
+
+    // Обработка клика по ссылке на отчет
+    document.querySelectorAll(".report-link").forEach(link => {
+        link.addEventListener("click", function(event) {
+            event.preventDefault(); // Останавливаем стандартное поведение ссылки
+
+            // Собираем данные формы
+            let surname = document.getElementById("patient-surname").value.trim();
+            let name = document.getElementById("patient-name").value.trim();
+            let patronymic = document.getElementById("patient-patronymicname").value.trim();
+            const birthdate = document.getElementById("patient-birthdate").value;
+            const reportNumber = document.getElementById("report-number").value;
+
+            // Форматируем фамилию, имя и отчество
+            surname = surname.charAt(0).toUpperCase() + surname.slice(1).toLowerCase();
+            if (name.length === 1) {
+                name = name.toUpperCase() + ".";
+            } else {
+                name = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+            }
+
+            if (patronymic.length === 1) {
+                patronymic = patronymic.toUpperCase() + ".";
+            } else {
+                patronymic = patronymic.charAt(0).toUpperCase() + patronymic.slice(1).toLowerCase();
+            }
+
+            // Формируем полное имя
+            const fullname = `${surname} ${name} ${patronymic}`;
+
+            // Получаем ID отчета из атрибута data
+            const reportId = this.getAttribute("data-report-id");
+
+            // Отправляем данные на сервер через fetch
+            fetch("{{ url_for('working_with_reports.working_with_reports') }}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    fullname,
+                    birthdate,
+                    reportNumber,
+                    reportId
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.redirect_url) {
+                    window.location.href = data.redirect_url;
+                } else {
+                    alert("Failed to prepare report.");
+                }
+            })
+            .catch(error => {
+                console.error("Error:", error);
             });
-        </script>
+        });
+    });
+});
+    
+</script>
 
 {% endblock container %}
 

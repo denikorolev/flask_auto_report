@@ -102,7 +102,7 @@ class ReportType(BaseModel):
     __tablename__ = 'report_type'
     type = db.Column(db.String(50), nullable=False)
     
-    subtypes_rel = db.relationship('ReportSubtype', backref='report_type', lazy=True)
+    subtypes_rel = db.relationship('ReportSubtype', back_populates='report_type_rel', lazy=True)
     
     @classmethod
     def create(cls, type):
@@ -118,7 +118,7 @@ class ReportSubtype(BaseModel):
     type = db.Column(db.SmallInteger, db.ForeignKey("report_type.id"), nullable=False)
     subtype = db.Column(db.String(250), nullable=False)
     
-    report_type_rel = db.relationship('ReportType', backref='subtypes', lazy=True)
+    report_type_rel = db.relationship('ReportType', back_populates='subtypes_rel', lazy=True)
     
     @classmethod
     def create(cls, type, subtype):
