@@ -10,6 +10,29 @@ from docx.shared import Pt, Inches
 from docx.enum.table import WD_ALIGN_VERTICAL
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 
+# Function for debugging. Using it you can show that is in the Alchemy object
+def print_sqlalchemy_object(obj, indent=0):
+    """ Recursively prints the attributes and relationships of a SQLAlchemy object """
+    indent_str = ' ' * indent
+    if isinstance(obj, list):
+        for item in obj:
+            print_sqlalchemy_object(item, indent)
+    elif isinstance(obj, dict):
+        for key, value in obj.items():
+            print(f"{indent_str}{key}:")
+            print_sqlalchemy_object(value, indent + 2)
+    elif hasattr(obj, '__dict__'):
+        print(f"{indent_str}{obj.__class__.__name__} object:")
+        for key, value in vars(obj).items():
+            if key.startswith('_'):
+                continue  # Skip internal attributes
+            if isinstance(value, list) or hasattr(value, '__dict__'):
+                print(f"{indent_str}  {key}:")
+                print_sqlalchemy_object(value, indent + 4)
+            else:
+                print(f"{indent_str}  {key}: {value}")
+    else:
+        print(f"{indent_str}{obj}")
 
 # Проверка допустимости расширения загружаемого файла
 def allowed_file(file_name, file_type):
@@ -60,11 +83,12 @@ def file_uploader (file, file_type):
         return "The file name or extension is not allowed"
     
 # Function for file saving in the docx format 
-def file_saver(text, name, subtype, birthdate, reportnumber):
+def file_saver(text, name, subtype, report_type, birthdate, reportnumber, scanParam):
     date_str = datetime.now().strftime("%d_%m_%y")
     upload_folder_path = current_app.config['UPLOAD_FOLDER']
     upload_folder_name = str(current_user.id)
     modified_date_str = date_str.replace("_", ".")
+    modified_birthdate = birthdate.replace("-", ".")
     upload_folder = current_app.config['UPLOAD_FOLDER']
     image_path = os.path.join(upload_folder, "Sugnatura.jpg")
 
@@ -89,16 +113,30 @@ def file_saver(text, name, subtype, birthdate, reportnumber):
     p = document.add_paragraph()
     p.add_run("ФИО пациента: ").bold = True
     p.add_run(name)
+    p.paragraph_format.space_before = Pt(0)  
+    p.paragraph_format.space_after = Pt(0)
 
     p = document.add_paragraph()
-    p.add_run("Вид исследования: МРТ, ").bold = True
+    p.add_run("Вид исследования: ").bold = True
+    p.add_run(report_type)
+    p.add_run(" ")
     p.add_run(subtype)
-
+    p.paragraph_format.space_before = Pt(0)  
+    p.paragraph_format.space_after = Pt(0)
+    
     p = document.add_paragraph()
     p.add_run("Дата рождения: ").bold = True
-    p.add_run(birthdate)
+    p.add_run(modified_birthdate)
     p.add_run(" г.р.")
-
+    p.paragraph_format.space_before = Pt(0)  
+    p.paragraph_format.space_after = Pt(0)
+    
+    p = document.add_paragraph()
+    p.add_run("Техника сканирования: ").bold = True
+    p.add_run(scanParam)
+    p.paragraph_format.space_before = Pt(0)  
+    p.paragraph_format.space_after = Pt(0)
+    
     document.add_paragraph(text)
 
 # Create a table with one row and three columns
@@ -123,15 +161,15 @@ def file_saver(text, name, subtype, birthdate, reportnumber):
     cell2 = table.cell(0, 1)
     paragraph = cell2.paragraphs[0]
     run = paragraph.add_run()
-    run.add_picture(image_path, width=Pt(65))  # Set the width as needed
+    run.add_picture(image_path, width=Pt(70))  # Set the width as needed
 
     cell3 = table.cell(0, 2)
     cell3.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
     paragraph = cell3.paragraphs[0]
-    run = paragraph.add_run("Дата: ")
+    run = paragraph.add_run("Дата:  ")
     run.bold = True
     run.font.size = Pt(12)
-    run = paragraph.add_run(date_str)
+    run = paragraph.add_run(modified_date_str)
     run.font.size = Pt(12)
 
     # Set font size for the rest of the document
