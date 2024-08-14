@@ -273,6 +273,9 @@ html {
 }
 
 
-
+.temporary_wide {
+    width: 500pt;
+    max-width: 100%;
+}
 
 

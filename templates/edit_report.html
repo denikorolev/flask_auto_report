@@ -42,7 +42,7 @@
                                 <label for="paragraph_visible">Visible:</label>
                                 <input type="checkbox" id="paragraph_visible" name="paragraph_visible" value="True" {% if paragraph.paragraph_visible %} checked {% endif %}>
                                 <button class="btn report__btn delete-paragraph-btn" type="button" id="delete_paragraph" data-paragraph-id="{{ paragraph.id }}" value="delete_paragraph" name="delete_paragraph">Delete Paragraph</button>
-                                <button class="btn report__btn" type="button" id="edit_paragraph" value="edit_paragraph" name="edit_paragraph">Edit Paragraph</button>
+                                <button class="btn report__btn" type="submit" id="edit_paragraph" value="edit_paragraph" name="edit_paragraph">Edit Paragraph</button>
                                 <button type="button" class="btn report__btn toggle-sentences" data-paragraph-id="{{ paragraph.id }}">
                                     Expand ({{ paragraph.sentences|length }})
                                 </button>
