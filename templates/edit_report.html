@@ -41,8 +41,8 @@
                                 <input class="report_input__item report_input__item--name" type="text" id="paragraph" name="paragraph" value="{{ paragraph.paragraph }}">
                                 <label for="paragraph_visible">Visible:</label>
                                 <input type="checkbox" id="paragraph_visible" name="paragraph_visible" value="True" {% if paragraph.paragraph_visible %} checked {% endif %}>
-                                <button class="btn report__btn" type="submit" id="delete_paragraph" value="delete_paragraph" name="delete_paragraph">Delete Paragraph</button>
-                                <button class="btn report__btn" type="submit" id="edit_paragraph" value="edit_paragraph" name="edit_paragraph">Edit Paragraph</button>
+                                <button class="btn report__btn delete-paragraph-btn" type="button" id="delete_paragraph" data-paragraph-id="{{ paragraph.id }}" value="delete_paragraph" name="delete_paragraph">Delete Paragraph</button>
+                                <button class="btn report__btn" type="button" id="edit_paragraph" value="edit_paragraph" name="edit_paragraph">Edit Paragraph</button>
                                 <button type="button" class="btn report__btn toggle-sentences" data-paragraph-id="{{ paragraph.id }}">
                                     Expand ({{ paragraph.sentences|length }})
                                 </button>
@@ -218,6 +218,24 @@
                     })
                 }).then(handleResponse);
             });
+        });
+    });
+
+    // Delete paragraph
+    document.querySelectorAll(".delete-paragraph-btn").forEach(button => {
+        button.addEventListener("click", function() {
+            const paragraphId = this.getAttribute("data-paragraph-id");
+
+            fetch("{{ url_for('editing_report.edit_report', report_id=report.id) }}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    delete_paragraph: true,
+                    paragraph_id: paragraphId
+                })
+            }).then(handleResponse);
         });
     });
     </script>

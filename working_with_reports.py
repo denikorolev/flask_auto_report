@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, current_app, jsonify, send_file, flash, url_for
 from flask_login import login_required, current_user
 from models import db, Report, ReportType, ReportSubtype, ReportParagraph, Sentence
-from file_processing import file_saver
+from file_processing import file_saver, print_sqlalchemy_object
 
 working_with_reports_bp = Blueprint('working_with_reports', __name__)
 
@@ -59,24 +59,22 @@ def working_with_reports():
         birthdate = data.get("birthdate", "")
         report_number = data.get("reportNumber", "")
         report_id = data.get("reportId")
-        
         if report_id:
-            # Обрабатываем данные, затем перенаправляем на GET для рендеринга
             return jsonify({"redirect_url": url_for('working_with_reports.working_with_reports', report_id=report_id, full_name=full_name, birthdate=birthdate, reportNumber=report_number)})
         else:
             return jsonify({"message": "Invalid report ID."}), 400
         
     report = Report.query.get(request.args.get("report_id"))  # Get report_id from url
-    full_name = request.args.get("fullName", "")
-    for i in range(10):
-        print(full_name)
+    full_name = request.args.get("full_name", "")
     birthdate = request.args.get("birthdate", "")
     report_number = request.args.get("reportNumber", "")
     paragraphs = ReportParagraph.query.filter_by(report_id=report.id).order_by(ReportParagraph.paragraph_index).all()
     subtype = report.report_subtype_rel.subtype
+    report_type = report.report_type_rel.type
+    print_sqlalchemy_object(report) # this is debugger
     paragraph_data = []
     for paragraph in paragraphs:
-        sentences = Sentence.query.filter_by(paragraph_id=paragraph.id).order_by(Sentence.index).all()
+        sentences = Sentence.query.filter_by(paragraph_id=paragraph.id).order_by(Sentence.index, Sentence.weight).all()
         
         grouped_sentences = {}
         for sentence in sentences:
@@ -97,6 +95,7 @@ def working_with_reports():
         report=report,
         paragraph_data=paragraph_data,
         subtype=subtype,
+        report_type=report_type,
         full_name=full_name,
         birthdate=birthdate,
         report_number=report_number                   
@@ -207,14 +206,16 @@ def export_to_word():
     text = data.get("text")
     name = data.get("name")
     subtype = data.get("subtype")
+    report_type = data.get("report_type")
     birthdate = data.get("birthdate")
-    reportnumber = data.get("reportnumber") 
+    reportnumber = data.get("reportnumber")
+    scanParam = data.get("scanParam")
 
     if not text or not name or not subtype:
         return jsonify({"message": "Missing required information."}), 400
 
     try:
-        file_path = file_saver(text, name, subtype, birthdate, reportnumber)
+        file_path = file_saver(text, name, subtype, report_type, birthdate, reportnumber, scanParam)
         return send_file(file_path, as_attachment=True)
     except Exception as e:
         return jsonify({"message": f"Failed to export to Word: {e}"}), 500

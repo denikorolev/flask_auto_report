@@ -526,6 +526,8 @@
         const birthdate = document.getElementById("patient-birthdate").value;
         const reportnumber = document.getElementById("report-number").value;
         const subtype = "{{ subtype }}";
+        const reportType = "{{ report_type }}"
+        const scanParam = "{{ report.comment }}"
     
         fetch("{{ url_for('working_with_reports.export_to_word') }}", {
             method: "POST",
@@ -537,7 +539,9 @@
                 name: name,
                 birthdate: birthdate,
                 subtype: subtype,
-                reportnumber: reportnumber
+                report_type: reportType,
+                reportnumber: reportnumber,
+                scanParam: scanParam
             })
         }).then(response => {
             if (response.ok) {
