@@ -51,6 +51,9 @@
                             <ul id="sentences-{{ paragraph.id }}" class="sentence-list" style="display: none;">
                                 {% if paragraph.sentences %}
                                     {% for sentence in paragraph.sentences %}
+                                        {% if sentence.show_separator %}
+                                            <hr class="sentence-separator">
+                                        {% endif %}  <!-- check the separator marker -->
                                         <li>
                                             <form method="POST" action="{{ url_for('editing_report.edit_report', report_id=report.id) }}" class="edit-sentence-form">
                                                 {{ render_sentence(sentence, loop.index == 1) }}
@@ -85,32 +88,39 @@
 
 <script>
     document.addEventListener("DOMContentLoaded", function() {
-        // Toggle sentences
+        // Toggle sentences and handle saving
         const toggleButtons = document.querySelectorAll(".toggle-sentences");
         toggleButtons.forEach(button => {
             button.addEventListener("click", function() {
                 const paragraphId = this.getAttribute("data-paragraph-id");
                 const sentenceList = document.getElementById(`sentences-${paragraphId}`);
-                if (sentenceList.style.display === "none") {
+                if (this.textContent.includes("Expand")) {
                     sentenceList.style.display = "block";
-                    this.textContent = `Collapse (${sentenceList.children.length - 1})`; // Minus 1 to exclude "Add Sentence" button
-                } else {
+                    this.textContent = "Save";
+                } else if (this.textContent.includes("Save")) {
+                    this.textContent = `Expand (${sentenceList.children.length - 1})`; // Update text back to Expand
                     sentenceList.style.display = "none";
-                    this.textContent = `Expand (${sentenceList.children.length - 1})`; // Minus 1 to exclude "Add Sentence" button
+
+                    // Collect all sentence data and send to the server
+                    const sentenceForms = sentenceList.querySelectorAll(".edit-sentence-form");
+                    const sentenceData = [];
+                    
+                    sentenceForms.forEach(form => {
+                        const formData = new FormData(form);
+                        const jsonData = Object.fromEntries(formData.entries());
+                        sentenceData.push(jsonData);
+                    });
+
+                    fetch("{{ url_for('editing_report.edit_report', report_id=report.id) }}", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({edit_sentences_bulk: true, sentences: sentenceData})
+                    }).then(handleResponse);
                 }
             });
         });
-    
-        function handleResponse(response) {
-            return response.json().then(data => {
-                if (data.success) {
-                    alert(data.message);
-                    location.reload(); // Reload the page to show changes
-                } else {
-                    alert(data.message);
-                }
-            });
-        }
     
         // Update report
         document.getElementById("update-report-btn").addEventListener("click", function(event) {

@@ -30,8 +30,13 @@ def edit_report():
 
     report_paragraphs = sorted(report.report_paragraphs_list, key=lambda p: p.paragraph_index) if report else []
     for paragraph in report_paragraphs:
-        paragraph.sentences = sorted(paragraph.sentences, key=lambda s: s.index)
-
+        paragraph.sentences = sorted(paragraph.sentences, key=lambda s: (s.index, s.weight))
+        # Добавляем маркер для разделения предложений
+        previous_index = None
+        for sentence in paragraph.sentences:
+            sentence.show_separator = previous_index is not None and previous_index != sentence.index
+            previous_index = sentence.index
+            
     if request.method == "POST":
         if request.is_json:  # Проверка, если данные запроса в формате JSON
             data = request.get_json()  # Получение данных JSON из запроса
@@ -118,6 +123,19 @@ def edit_report():
                 except Exception as e:
                     return jsonify(success=False, message=f"Sentence can't be created, error code: {e}")
                 
+            if "edit_sentences_bulk" in data:
+                try:
+                    for sentence_data in data["sentences"]:
+                        sentence_for_edit = Sentence.query.get(sentence_data["sentence_id"])
+                        sentence_for_edit.index = sentence_data["sentence_index"]
+                        sentence_for_edit.weight = sentence_data["sentence_weight"]
+                        sentence_for_edit.comment = sentence_data["sentence_comment"]
+                        sentence_for_edit.sentence = sentence_data["sentence_sentence"]
+                        sentence_for_edit.save()
+                    return jsonify(success=True, message="All sentences updated successfully")
+                except Exception as e:
+                    return jsonify(success=False, message=f"Something went wrong. error code: {e}")
+
     return render_template('edit_report.html', 
                            title=page_title, 
                            menu=menu, 
