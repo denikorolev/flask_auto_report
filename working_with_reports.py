@@ -170,6 +170,21 @@ def delete_sentence():
         return jsonify({"message": "Sentence deleted successfully!"}), 200
     return jsonify({"message": "Failed to delete sentence."}), 400
 
+@working_with_reports_bp.route("/update_sentence_weight", methods=["POST"])
+@login_required
+def update_sentence_weight():
+    data = request.get_json()
+    sentence_id = data.get("sentence_id")
+    new_weight = data.get("new_weight")
+
+    sentence = Sentence.query.get(sentence_id)
+    if sentence:
+        sentence.weight = new_weight
+        db.session.commit()
+        return jsonify({"message": "Weight updated successfully!"}), 200
+    return jsonify({"message": "Failed to update weight."}), 400
+
+
 @working_with_reports_bp.route("/update_paragraph", methods=["POST"])
 @login_required
 def update_paragraph():

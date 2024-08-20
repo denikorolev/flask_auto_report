@@ -82,14 +82,16 @@
                                                 </button> 
                                             </div>
                                             
+                                            
                                         </div>
                                     {% else %}
                                         <div class="flex edit-container">
-                                            <select class="report__select" sentence-index = "{{ sentences[0].index}}" data-index="left-side-{{ item.paragraph.id }}-{{ index }}">
+                                            <select class="report__select sentences_select" sentence-index = "{{ sentences[0].index}}" data-index="left-side-{{ item.paragraph.id }}-{{ index }}">
                                                 {% for sentence in sentences %}
-                                                    <option value="{{ sentence.id }}" data-sentence="{{ sentence.sentence }}">{{ sentence.sentence }}</option>
+                                                    <option value="{{ sentence.id }}" data-weigh = "{{ sentence.weight}}" data-sentence="{{ sentence.sentence }}">{{ sentence.sentence }}</option>
                                                 {% endfor %}
                                             </select>
+                                            
                                             <!-- button group -->
                                             <div class="flex edit-group" style="display: none;">
                                                 <button class="icon-btn icon-btn--edit" type="button"
@@ -108,6 +110,10 @@
                                                 style="background: url('{{ url_for('static', filename='pic/delete_sentence_button.svg') }}') no-repeat center center;"
                                                 title="delete the sentence">
                                                 </button> 
+                                                <button class="icon-btn icon-btn--increase-weight" type="button" title="Increase weight">+</button>
+                                                <button class="icon-btn icon-btn--set-weight" type="button" title="Set weight">*</button>
+                                                <button class="icon-btn icon-btn--decrease-weight" type="button" title="Decrease weight">-</button>
+                                                <button class="icon-btn icon-btn--save-weight" type="button" title="Save weight">s</button>
                                             </div>
                                             
                                         </div>
@@ -152,21 +158,91 @@
 
 <script>
 
-    // Button Toggle Edit
-    document.getElementById("toggleEditButton").addEventListener("click", function() {
-        // Получаем все элементы с классом edit-group
+     // Toggle Edit Mode
+     document.getElementById("toggleEditButton").addEventListener("click", function() {
         const editGroups = document.querySelectorAll(".edit-group");
-        
+        const isEditing = this.classList.toggle("editing-mode");
+
         editGroups.forEach(group => {
-            // Проверяем текущую видимость и переключаем её
-            if (group.style.display === "none") {
-                group.style.display = "flex"; // Делаем видимым
-            } else {
-                group.style.display = "none"; // Скрываем
-            }
+            group.style.display = isEditing ? "flex" : "none";
+        });
+    });
+    
+    // Set Weigh button logic
+    document.querySelectorAll(".report__select").forEach(selectElement => {
+        // Инициализация кнопки при загрузке
+        updateWeightButton(selectElement);
+    
+        // Обновление кнопки при изменении выбора
+        selectElement.addEventListener("change", function() {
+            updateWeightButton(selectElement);
+        });
+    });
+    
+    function updateWeightButton(selectElement) {
+        const selectedOption = selectElement.selectedOptions[0];
+        const weight = selectedOption.getAttribute("data-weigh");
+        const container = selectElement.closest(".edit-container");
+        const setWeightButton = container.querySelector(".icon-btn--set-weight");
+    
+        if (setWeightButton) {
+            setWeightButton.textContent = weight;
+        }
+    }
+
+    // Decrise and increase button logic
+    document.querySelectorAll(".icon-btn--increase-weight").forEach(button => {
+        button.addEventListener("click", function() {
+            const container = this.closest(".edit-container");
+            const setWeightButton = container.querySelector(".icon-btn--set-weight");
+            let currentWeight = parseInt(setWeightButton.textContent, 10);
+            currentWeight += 1;
+            setWeightButton.textContent = currentWeight;
+        });
+    });
+    
+    document.querySelectorAll(".icon-btn--decrease-weight").forEach(button => {
+        button.addEventListener("click", function() {
+            const container = this.closest(".edit-container");
+            const setWeightButton = container.querySelector(".icon-btn--set-weight");
+            let currentWeight = parseInt(setWeightButton.textContent, 10);
+            currentWeight -= 1;
+            setWeightButton.textContent = currentWeight;
         });
     });
 
+    // "s" button logic for save sentence's weight to the bd
+    document.querySelectorAll(".icon-btn--save-weight").forEach(button => {
+        button.addEventListener("click", function() {
+            const container = this.closest(".edit-container");
+            const setWeightButton = container.querySelector(".icon-btn--set-weight");
+            const selectElement = container.querySelector(".report__select");
+            const selectedOption = selectElement.selectedOptions[0];
+            const sentenceId = selectedOption.value;
+            const newWeight = parseInt(setWeightButton.textContent, 3);
+    
+            fetch("{{ url_for('working_with_reports.update_sentence_weight') }}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    sentence_id: sentenceId,
+                    new_weight: newWeight
+                })
+            }).then(response => {
+                if (response.ok) {
+                    alert("Weight updated successfully!");
+                    selectedOption.setAttribute("data-weigh", newWeight);
+                } else {
+                    alert("Failed to update weight.");
+                }
+            });
+        });
+    });
+    
+    
+       
     // Button "expand" logic
     document.querySelectorAll(".icon-btn--expand").forEach(button => {
         button.addEventListener("click", function() {
