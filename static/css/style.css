@@ -168,7 +168,9 @@ html {
 }
 
 .report_input__item--index {
-    max-width: 50px;
+    width: auto;
+    min-width: 5px;
+    max-width: 40px;
 }
 
 .report_input__item--name {
@@ -278,4 +280,12 @@ html {
     max-width: 100%;
 }
 
+
+.sentence-separator {
+    border: 0;
+    height: 1px;
+    width: 50%;
+    background-color: #0c0606;
+    margin: 10px 0;
+}
 
