@@ -77,6 +77,7 @@ class Report(BaseModel):
     report_type = db.Column(db.Integer, db.ForeignKey('report_type.id'), nullable=False)
     report_subtype = db.Column(db.Integer, db.ForeignKey('report_subtype.id'), nullable=False)
     public = db.Column(db.Boolean, default=False, nullable=False)
+    report_side = db.Column(db.Boolean, nullable=True, default=None)
     
     user = db.relationship('User', backref=db.backref('reports', lazy=True))
     report_type_rel = db.relationship('ReportType', backref=db.backref('reports', lazy=True), overlaps="report_type")
@@ -84,14 +85,15 @@ class Report(BaseModel):
     report_paragraphs = db.relationship('ReportParagraph', backref='report', cascade="all, delete-orphan", overlaps="paragraphs,report")
 
     @classmethod
-    def create(cls, userid, report_name, report_type, report_subtype, comment=None, public=False):
+    def create(cls, userid, report_name, report_type, report_subtype, comment=None, public=False, report_side=None):
         new_report = cls(
             userid=userid,
             report_name=report_name,
             report_type=report_type,
             report_subtype=report_subtype,
             comment=comment,
-            public=public
+            public=public,
+            report_side=report_side
         )
         db.session.add(new_report)
         db.session.commit()

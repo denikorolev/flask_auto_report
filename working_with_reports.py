@@ -225,12 +225,13 @@ def export_to_word():
     birthdate = data.get("birthdate")
     reportnumber = data.get("reportnumber")
     scanParam = data.get("scanParam")
+    side = data.get("side")
 
     if not text or not name or not subtype:
         return jsonify({"message": "Missing required information."}), 400
 
     try:
-        file_path = file_saver(text, name, subtype, report_type, birthdate, reportnumber, scanParam)
+        file_path = file_saver(text, name, subtype, report_type, birthdate, reportnumber, scanParam, side=side)
         return send_file(file_path, as_attachment=True)
     except Exception as e:
         return jsonify({"message": f"Failed to export to Word: {e}"}), 500

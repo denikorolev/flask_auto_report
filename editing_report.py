@@ -62,6 +62,8 @@ def edit_report():
             if "report_update" in data:
                 report.report_name = data["report_name"]
                 report.comment = data["comment"]
+                report_side_value = data.get("report_side")
+                report.report_side = True if report_side_value == "true" else False if report_side_value == "false" else None
                 try:
                     report.save()
                     return jsonify(success=True, message="Report updated successfully")

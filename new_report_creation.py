@@ -45,6 +45,7 @@ def create_report():
         report_type = request.form.get('report_type')
         report_subtype = request.form.get('report_subtype')
         comment = request.form.get('comment')
+        report_side = request.form.get('report_side') == 'true'
         
         if action == 'manual':
             # If user press button "create new report we created new report and redirect to page for editing new report"
@@ -53,7 +54,8 @@ def create_report():
                 report_name=report_name,
                 report_type=report_type,
                 report_subtype=report_subtype,
-                comment=comment
+                comment=comment,
+                report_side=report_side
             )
             flash("Report created successfully", "success")
             return redirect(url_for("editing_report.edit_report", report_id=new_report.id))
@@ -64,6 +66,7 @@ def create_report():
             session['report_type'] = report_type
             session['report_subtype'] = report_subtype
             session['comment'] = comment
+            session['report_side'] = report_side
             # Geting all user's reports which have the same type with form
             user_reports = Report.query.filter_by(userid=current_user.id, report_type=report_type).all()
             return render_template("create_report.html",
@@ -92,10 +95,11 @@ def create_report():
                 # Create new report
                 new_report = Report.create(
                     userid=current_user.id,
-                    report_name=request.form["report_name"],
-                    report_type=request.form["report_type"],
-                    report_subtype=request.form["report_subtype"],
-                    comment=request.form["comment"]
+                    report_name=report_name,  
+                    report_type=report_type,  
+                    report_subtype=report_subtype,  
+                    comment=comment,  
+                    report_side=report_side  
                 )
 
                 # Add paragraphs and sentences to the report
@@ -138,6 +142,7 @@ def select_existing_report():
     report_type = session.get('report_type')
     report_subtype = session.get('report_subtype')
     comment = session.get('comment')
+    report_side = session.get('report_side')
 
     # Create a new report
     new_report = Report.create(
@@ -145,7 +150,8 @@ def select_existing_report():
         report_name=report_name,
         report_type=report_type,
         report_subtype=report_subtype,
-        comment=comment
+        comment=comment,
+        report_side=report_side
     )
     # Copy paragraphs and sentences from the existing report
     existing_report = Report.query.get(existing_report_id)

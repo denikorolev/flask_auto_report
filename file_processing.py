@@ -83,7 +83,7 @@ def file_uploader (file, file_type):
         return "The file name or extension is not allowed"
     
 # Function for file saving in the docx format 
-def file_saver(text, name, subtype, report_type, birthdate, reportnumber, scanParam):
+def file_saver(text, name, subtype, report_type, birthdate, reportnumber, scanParam, side=""):
     date_str = datetime.now().strftime("%d_%m_%y")
     upload_folder_path = current_app.config['UPLOAD_FOLDER']
     upload_folder_name = str(current_user.id)
@@ -119,6 +119,13 @@ def file_saver(text, name, subtype, report_type, birthdate, reportnumber, scanPa
     p = document.add_paragraph()
     p.add_run("Вид исследования: ").bold = True
     p.add_run(report_type)
+    
+    # Добавляем сторону, если она указана
+    if side == "right":
+        p.add_run(" правого")
+    elif side == "left":
+        p.add_run(" левого")
+        
     p.add_run(" ")
     p.add_run(subtype)
     p.paragraph_format.space_before = Pt(0)  
