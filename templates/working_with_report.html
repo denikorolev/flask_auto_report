@@ -19,6 +19,17 @@
         <label for="report-number">Report Number:</label>
         <input style="margin-right: 10px;" type="number" id="report-number" name="report_number" value="{{ report_number }}"readonly>
     </div>
+    <!-- Контейнер для поля выбора стороны, скрыт по умолчанию -->
+    {% if report.report_side == True %}
+    <div>
+        <label for="report-side">Side:</label>
+        <select id="report-side" name="report_side">
+            <option value=""></option>
+            <option value="right">Right</option>
+            <option value="left">Left</option>
+        </select>
+    </div>
+    {% endif %}
     <button class="icon-btn icon-btn--edit-form" type="button"
         style="background: url('{{ url_for('static', filename='pic/edit_button.svg') }}') no-repeat center center;"
         title="Edit Form">
@@ -604,6 +615,7 @@
         const subtype = "{{ subtype }}";
         const reportType = "{{ report_type }}"
         const scanParam = "{{ report.comment }}"
+        const reportSide = document.getElementById("report-side").value;
     
         fetch("{{ url_for('working_with_reports.export_to_word') }}", {
             method: "POST",
@@ -617,7 +629,8 @@
                 subtype: subtype,
                 report_type: reportType,
                 reportnumber: reportnumber,
-                scanParam: scanParam
+                scanParam: scanParam,
+                side: reportSide
             })
         }).then(response => {
             if (response.ok) {

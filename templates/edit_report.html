@@ -26,6 +26,17 @@
                     <label class="report_label__item" for="comment">Comment:</label>
                     <input class="report_input__item" type="text" id="comment" name="comment" value="{{ report.comment }}" required>
                 </div>
+                <!-- side boolean changer -->
+                <div class="flex_column">
+                    <label class="report_label__item">Учитывать сторону:</label> <!-- Подпись для радиокнопок -->
+                    <div class="flex_row">
+                        <input type="radio" id="report_side_yes" name="report_side" value="true" class="form-check-input" {% if report.report_side == True %}checked{% endif %}> 
+                        <label for="report_side_yes" class="form-check-label">Да</label>
+                        <input type="radio" id="report_side_no" name="report_side" value="false" class="form-check-input" {% if report.report_side == False %}checked{% endif %}> 
+                        <label for="report_side_no" class="form-check-label">Нет</label>
+                    </div>
+                </div>
+                
                 <button class="btn report__btn" type="submit" id="update-report-btn">Update Report</button>
             </div>
         </form>
