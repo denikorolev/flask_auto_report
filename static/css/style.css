@@ -305,3 +305,9 @@ html {
     text-indent: 0;
 }
 
+.footer {
+    display: flex;
+    align-items: center;
+    margin: 0 25px 0 25px;
+    z-index: 1000;
+}
