@@ -181,3 +181,39 @@ class Sentence(BaseModel):
     def find_by_paragraph_id(cls, paragraph_id):
         return cls.query.filter_by(paragraph_id=paragraph_id).all()
 
+class KeyWordsGroup(BaseModel):
+    __tablename__ = 'key_words_group'
+
+    group_index = db.Column(db.Integer, nullable=False)
+    index = db.Column(db.Integer, nullable=False)
+    key_word = db.Column(db.String(50), nullable=False)
+    key_word_comment = db.Column(db.String(100), nullable=True)
+    public = db.Column(db.Boolean, default=False, nullable=False)
+    user_id = db.Column(db.BigInteger, db.ForeignKey('users.id'), nullable=False)
+
+    user = db.relationship('User', backref=db.backref('key_words_groups', lazy=True))
+
+    @classmethod
+    def create(cls, group_index, index, key_word, user_id, key_word_comment=None, public=False):
+        """Creates a new keyword group entry."""
+        new_key_word_group = cls(
+            group_index=group_index,
+            index=index,
+            key_word=key_word,
+            key_word_comment=key_word_comment,
+            public=public,
+            user_id=user_id
+        )
+        db.session.add(new_key_word_group)
+        db.session.commit()
+        return new_key_word_group
+
+    @classmethod
+    def find_by_user_id(cls, user_id):
+        """Finds all keyword groups for a specific user."""
+        return cls.query.filter_by(user_id=user_id).order_by(cls.group_index, cls.index).all()
+
+    @classmethod
+    def find_public(cls):
+        """Finds all public keyword groups."""
+        return cls.query.filter_by(public=True).all()

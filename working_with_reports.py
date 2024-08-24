@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, current_app, jsonify, send_file, flash, url_for
 from flask_login import login_required, current_user
-from models import db, Report, ReportType, ReportSubtype, ReportParagraph, Sentence
+from models import db, Report, ReportType, ReportSubtype, ReportParagraph, Sentence, KeyWordsGroup
 from file_processing import file_saver, print_sqlalchemy_object
 
 working_with_reports_bp = Blueprint('working_with_reports', __name__)
@@ -24,6 +24,7 @@ def choosing_report():
     report_types = ReportType.query.all()  
     report_subtypes = ReportSubtype.query.all() 
     user_reports = get_user_reports()
+    
     if request.method == "POST":
         if "select_report_type_subtype" in request.form:
             rep_type = request.form["report_type"]
@@ -52,7 +53,21 @@ def choosing_report():
 @login_required
 def working_with_reports(): 
     menu = init_app(current_app)
-    
+    # Получаем ключевые слова для текущего пользователя
+    user_key_words = KeyWordsGroup.find_by_user_id(current_user.id)
+
+    # Группируем ключевые слова по group_index
+    words_for_fast_changing = []
+    current_group = []
+    current_index = user_key_words[0].group_index if user_key_words else None
+
+    for key_word in user_key_words:
+        if key_word.group_index != current_index:
+            words_for_fast_changing.append(current_group)
+            current_group = []
+            current_index = key_word.group_index
+        current_group.append(key_word.key_word)
+        
     if request.method == "POST":
         data = request.get_json()
         full_name = data.get("fullname", "")
@@ -98,7 +113,8 @@ def working_with_reports():
         report_type=report_type,
         full_name=full_name,
         birthdate=birthdate,
-        report_number=report_number                   
+        report_number=report_number,
+        key_words=words_for_fast_changing                   
     )
 
 @working_with_reports_bp.route("/update_sentence", methods=['POST'])

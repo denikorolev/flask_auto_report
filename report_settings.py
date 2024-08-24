@@ -2,7 +2,7 @@
 
 from flask import Blueprint, render_template, request, redirect, flash, current_app
 from flask_login import login_required, current_user
-from models import ReportType, ReportSubtype, AppConfig 
+from models import db, ReportType, ReportSubtype, AppConfig, KeyWordsGroup 
 from file_processing import file_uploader
 
 report_settings_bp = Blueprint('report_settings', __name__)
@@ -29,6 +29,17 @@ def report_settings():
         {'id': rst.id, 'type_id': rst.type, 'subtype': rst.subtype, "subtype_type_name": rst.report_type_rel.type}
         for rst in report_subtypes
     ]
+    
+    # Load key words using the method from the KeyWordsGroup class
+    key_words = KeyWordsGroup.find_by_user_id(current_user.id)
+    key_words_group = {}
+    for key_word in key_words:
+        if key_word.group_index not in key_words_group:
+            key_words_group[key_word.group_index] = []
+        key_words_group[key_word.group_index].append(key_word.key_word)
+    
+    key_words_group = list(key_words_group.values())
+    
     # Processing type
     if request.method == "POST":
         if "add_new_type_button" in request.form:
@@ -101,7 +112,50 @@ def report_settings():
                            report_types=report_types, 
                            report_subtypes=report_subtypes_dict,
                            upload_folder_path=upload_folder_path,
-                           upload_folder_name=upload_folder_name 
+                           upload_folder_name=upload_folder_name,
+                           key_words_group=key_words_group 
                            )
 
 
+# Adding key words
+@report_settings_bp.route('/add_keywords', methods=['POST'])
+@login_required
+def add_keywords():
+    key_word_input = request.json.get("key_word_input", "").strip()
+    
+    if not key_word_input:
+        return {"status": "error", "message": "No keywords provided."}, 400
+
+    key_words = [word.strip() for word in key_word_input.split(',') if word.strip()]
+    
+    if not key_words:
+        return {"status": "error", "message": "Invalid keywords format."}, 400
+    
+    # Получаем все ключевые слова пользователя
+    user_key_words = KeyWordsGroup.find_by_user_id(current_user.id)
+
+    # Определяем максимальный group_index
+    max_group_index = max([kw.group_index for kw in user_key_words], default=0)
+    new_group_index = max_group_index + 1
+    
+    for i, key_word in enumerate(key_words, start=1):
+        KeyWordsGroup.create(
+            group_index=new_group_index,
+            index=i,
+            key_word=key_word,
+            user_id=current_user.id
+        )
+
+    # Используем find_by_user_id для получения обновленного списка ключевых слов
+    updated_key_words = KeyWordsGroup.find_by_user_id(current_user.id)
+    
+    # Группируем ключевые слова по group_index для возврата в ответе
+    key_words_group = {}
+    for key_word in updated_key_words:
+        if key_word.group_index not in key_words_group:
+            key_words_group[key_word.group_index] = []
+        key_words_group[key_word.group_index].append(key_word.key_word)
+    
+    key_words_group = list(key_words_group.values())
+    
+    return {"status": "success", "message": "New key words group added successfully.", "key_words_group": key_words_group[-1]}, 200

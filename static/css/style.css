@@ -289,3 +289,19 @@ html {
     margin: 10px 0;
 }
 
+/* Скрываем стандартный вид select */
+.report__select_dynamic {
+    display: inline;
+    appearance: none; /* Убираем стандартный стиль select */
+    -webkit-appearance: none; /* Для Safari */
+    -moz-appearance: none; /* Для Firefox */
+    background: white; 
+    border: none; 
+    color: red; 
+    font-weight: bold; 
+    cursor: pointer;
+    padding: 0; 
+    margin: 0; 
+    text-indent: 0;
+}
+
