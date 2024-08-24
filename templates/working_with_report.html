@@ -169,6 +169,67 @@
 
 <script>
 
+    // Key words changer
+    function highlightKeyWords(text, keyWordsGroups) {
+        const matchIndexes = {};
+    
+        keyWordsGroups.forEach(group => {
+            group.forEach(word => {
+                if (!matchIndexes[word]) {
+                    matchIndexes[word] = 0;
+                }
+    
+                // Регулярное выражение для поиска слов
+                const regex = new RegExp(`(?<!<select[^>]*>|<option[^>]*>)(${word})(?![^<]*>|[^>]*</select>|[^>]*</option>)`, 'gi');
+    
+                text = text.replace(regex, (matchedWord) => {
+                    matchIndexes[word] += 1;
+    
+                    // Создаем select с опциями из той же группы слов
+                    const options = group.map(optionWord => {
+                        const isSelected = optionWord.toLowerCase() === matchedWord.toLowerCase() ? "selected" : "";
+                        return `<option value="${optionWord}" ${isSelected}>${optionWord}</option>`;
+                    }).join('');
+    
+                    return `<select class="report__select_dynamic" data-match-index="${word}-${matchIndexes[word]}">${options}</select>`;
+                });
+            });
+        });
+    
+        return text;
+    }
+    
+    
+    // Logic for finding key_words
+    function updateRightSideText() {
+        const keyWordsGroups = {{ key_words|tojson }};
+        const rightParagraphList = document.getElementById("right-paragraph-list");
+
+        rightParagraphList.querySelectorAll("p, span").forEach(paragraph => {
+            const currentIndex = paragraph.getAttribute("data-index");
+
+            if (!currentIndex) {
+                return;
+            }
+
+            let plainText = paragraph.innerText || paragraph.textContent;
+
+            if (!paragraph.querySelector('select')) {
+                const highlightedText = highlightKeyWords(plainText, keyWordsGroups);
+                paragraph.innerHTML = highlightedText;
+            }
+
+            paragraph.setAttribute("data-index", currentIndex);
+        });
+    }
+    
+    
+
+    // Renewing of the right side text for key_words logic working
+    document.addEventListener("DOMContentLoaded", function() {
+        updateRightSideText(); 
+    });
+
      // Toggle Edit Mode
      document.getElementById("toggleEditButton").addEventListener("click", function() {
         const editGroups = document.querySelectorAll(".edit-group");
@@ -579,43 +640,79 @@
             const selectedSentence = selectedOption.getAttribute("data-sentence");
             const correspondingIndex = index.replace("left-side", "right-side");
             const correspondingParagraph = document.querySelector('[data-index="' + correspondingIndex + '"]');
-            correspondingParagraph.innerText = selectedSentence;
+
+            // Проверяем, найден ли соответствующий параграф на правой стороне
+            if (correspondingParagraph) {
+                correspondingParagraph.innerText = selectedSentence;
+                // После обновления текста выделяем ключевые слова
+                updateRightSideText();
+            } else {
+                console.error("Corresponding paragraph not found for index: " + correspondingIndex);
+            }
         }
     });
+
+    // Clean and format text befor using it in the copy-to-clipboard and export-to-word function
+    function cleanAndFormatText(element) {
+        let formattedText = element.innerHTML;
+    
+        // Проходим по каждому select и заменяем его на выбранный текст
+        element.querySelectorAll("select").forEach(function(select) {
+            const selectedOption = select.options[select.selectedIndex].textContent;
+            formattedText = formattedText.replace(select.outerHTML, selectedOption);
+        });
+    
+        // Убираем все теги <span> и оставляем только текст внутри них
+        formattedText = formattedText.replace(/<span[^>]*>(.*?)<\/span>/gi, function(match, p1) {
+            return p1.trim(); // Возвращаем текст внутри span, удаляя лишние пробелы
+        });
+    
+        // Удаляем лишние пробелы, табуляции и новые строки
+        formattedText = formattedText.replace(/\s+/g, " ").trim();
+    
+        // Убираем лишние пробелы и пустые строки между абзацами
+        formattedText = formattedText.replace(/\s*\n\s*/g, "\n").trim();
+    
+        return formattedText;
+    }
     
     // Button "Copy to clipboard" logic
     document.getElementById("copyButton").addEventListener("click", function() {
         const rightParagraphList = document.getElementById("right-paragraph-list");
         let textToCopy = "";
+    
         rightParagraphList.querySelectorAll("p").forEach(function(paragraph) {
             if (window.getComputedStyle(paragraph).display !== "none") {
-                textToCopy += paragraph.innerText + "\n";
+                textToCopy += cleanAndFormatText(paragraph) + "\n";
             }
         });
-        navigator.clipboard.writeText(textToCopy).then(function() {
+    
+        navigator.clipboard.writeText(textToCopy.trim()).then(function() {
             alert("Text copied to clipboard");
         }).catch(function(err) {
             console.error("Failed to copy text: ", err);
         });
     });
-
+    
     // "Export to word" button logic
     document.getElementById("exportButton").addEventListener("click", function() {
         const rightParagraphList = document.getElementById("right-paragraph-list");
         let textToExport = "";
+    
         rightParagraphList.querySelectorAll("p").forEach(function(paragraph) {
             if (window.getComputedStyle(paragraph).display !== "none") {
-                textToExport += paragraph.innerText + "\n";
+                textToExport += cleanAndFormatText(paragraph) + "\n";
             }
         });
-        
+    
         const name = document.getElementById("patient-name").value;
         const birthdate = document.getElementById("patient-birthdate").value;
         const reportnumber = document.getElementById("report-number").value;
         const subtype = "{{ subtype }}";
-        const reportType = "{{ report_type }}"
-        const scanParam = "{{ report.comment }}"
-        const reportSide = document.getElementById("report-side").value;
+        const reportType = "{{ report_type }}";
+        const scanParam = "{{ report.comment }}";
+        const reportSideElement = document.getElementById("report-side");
+        const reportSide = reportSideElement ? reportSideElement.value : "";
     
         fetch("{{ url_for('working_with_reports.export_to_word') }}", {
             method: "POST",
@@ -623,7 +720,7 @@
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({
-                text: textToExport,
+                text: textToExport.trim(),
                 name: name,
                 birthdate: birthdate,
                 subtype: subtype,
@@ -649,7 +746,6 @@
             }
         });
     });
-    
     
 </script>
 

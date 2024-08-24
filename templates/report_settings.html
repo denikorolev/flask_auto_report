@@ -92,15 +92,72 @@
         </form>
     </div>
     
+   <!-- Key words processing -->
+   <div class="container">
+    <h3>Key Words</h3>
+    <div id="key-words-list">
+        {% if key_words_group %}
+            {% for key_words in key_words_group %}
+                <p>
+                    {% for key_word in key_words %}
+                        <span>{{ key_word }}{% if not loop.last %}, {% endif %}</span>
+                    {% endfor %}
+                </p>
+            {% endfor %}
+        {% else %}
+            <p>No key words found.</p>
+        {% endif %}
+    </div>
+
+    <form id="keywords-form">
+        <label for="key_word_input" class="report_label__item">New Key Words (comma-separated):</label>
+        <input type="text" id="key_word_input" name="key_word_input" required>
+        <button type="submit" class="btn report__btn">Add Key Words Group</button>
+    </form>
+</div>
 
 </div>
 
 <script>
+    // File directory logic
     function updateDirectoryPath() {
         var input = document.getElementById('file-input');
         var path = input.files[0].webkitRelativePath;
         document.getElementById('directory-path').value = path.split('/')[0];
     }
+
+    // Adding new key word logic
+    document.getElementById("keywords-form").addEventListener("submit", function(event) {
+        event.preventDefault();
+
+        const keyWordInput = document.getElementById("key_word_input").value;
+
+        fetch("{{ url_for('report_settings.add_keywords') }}", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ key_word_input: keyWordInput })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === "success") {
+                const keyWordsList = document.getElementById("key-words-list");
+
+                const newGroup = document.createElement("p");
+                newGroup.textContent = data.key_words_group.join(", ");
+
+                keyWordsList.appendChild(newGroup);
+
+                document.getElementById("key_word_input").value = ""; // Clear input
+            } else {
+                alert(data.message);
+            }
+        })
+        .catch(error => {
+            console.error("Error:", error);
+        });
+    });
 </script>
 
 {% endblock container %}
