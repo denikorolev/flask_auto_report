@@ -21,6 +21,10 @@ class Config:
     
     UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads') 
     
+    # OpenAI API configuration
+    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+    OPENAI_MODEL = os.getenv("OPENAI_MODEL")
+    
     # Menu configuration
     MENU = [
         {"name": "main", "url": "main"},
