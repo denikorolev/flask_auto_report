@@ -177,29 +177,44 @@
 </div>
 
 <script>
+
+    // Функция для проверки, виден ли элемент на экране
+    function isElementVisible(element) {
+        const style = window.getComputedStyle(element);
+        return style.display !== "none" && style.visibility !== "hidden";
+    }
+
+    // Функция для очистки текста от <select> элементов, оставляя только выбранный текст
+    function cleanSelectText(element) {
+        let text = element.innerHTML;
+
+        // Заменяем все <select> на выбранный текст
+        element.querySelectorAll("select").forEach(select => {
+            const selectedOption = select.options[select.selectedIndex].textContent;
+            text = text.replace(select.outerHTML, selectedOption);
+        });
+
+        // Убираем все HTML теги, кроме текста
+        text = text.replace(/<[^>]*>?/gm, '').trim();
+
+        return text;
+    }
+    
     // Собираем текст из правой части экрана для дальнейшей его обработки
     function collectTextFromRightSide() {
         const rightParagraphList = document.getElementById("right-paragraph-list");
         let collectedText = "";
     
         rightParagraphList.querySelectorAll(".report__paragraph").forEach(paragraphElement => {
+            const paragraph = paragraphElement.querySelector("p");
+    
             // Проверяем, виден ли параграф на экране
-            const paragraphStyle = window.getComputedStyle(paragraphElement.querySelector("p"));
-            if (paragraphStyle.display !== "none" && paragraphStyle.visibility !== "hidden") {
-                const paragraphText = paragraphElement.querySelector("p").innerText.trim();
+            if (isElementVisible(paragraph)) {
+                const paragraphText = paragraph.innerText.trim();
                 collectedText += paragraphText + "\n";  // Добавляем текст параграфа
     
                 paragraphElement.querySelectorAll(".report__sentence").forEach(sentenceElement => {
-                    let sentenceText = sentenceElement.innerHTML;
-    
-                    // Заменяем все <select> на выбранный текст
-                    sentenceElement.querySelectorAll("select").forEach(select => {
-                        const selectedOption = select.options[select.selectedIndex].textContent;
-                        sentenceText = sentenceText.replace(select.outerHTML, selectedOption);
-                    });
-    
-                    sentenceText = sentenceText.replace(/<[^>]*>?/gm, '').trim();  // Убираем все HTML теги, кроме текста
-    
+                    const sentenceText = cleanSelectText(sentenceElement);
                     if (sentenceText) {
                         collectedText += sentenceText + " ";  // Добавляем текст предложения
                     }
@@ -282,27 +297,31 @@
         const paragraphsData = [];
     
         rightParagraphList.querySelectorAll(".report__paragraph").forEach(paragraphElement => {
-            const paragraphId = paragraphElement.querySelector("p").getAttribute("data-paragraph-id");
-            const paragraphText = paragraphElement.querySelector("p").innerText.trim();
-            const sentences = [];
+            const paragraph = paragraphElement.querySelector("p");
     
-            paragraphElement.querySelectorAll(".report__sentence").forEach(sentenceElement => {
-                const sentenceText = sentenceElement.innerText.trim();
-                if (sentenceText) {
-                    sentences.push(sentenceText);
-                }
-            });
+            // Проверяем, виден ли параграф на экране
+            if (isElementVisible(paragraph)) {
+                const paragraphId = paragraph.getAttribute("data-paragraph-id");
+                const paragraphText = paragraph.innerText.trim();
+                const sentences = [];
     
-            if (sentences.length > 0) {
-                paragraphsData.push({
-                    paragraph_id: paragraphId,
-                    paragraph_text: paragraphText,
-                    sentences: sentences
+                paragraphElement.querySelectorAll(".report__sentence").forEach(sentenceElement => {
+                    const sentenceText = cleanSelectText(sentenceElement);
+                    if (sentenceText) {
+                        sentences.push(sentenceText);
+                    }
                 });
+    
+                if (sentences.length > 0) {
+                    paragraphsData.push({
+                        paragraph_id: paragraphId,
+                        paragraph_text: paragraphText,
+                        sentences: sentences
+                    });
+                }
             }
         });
     
-        
         return paragraphsData;
     }
     
