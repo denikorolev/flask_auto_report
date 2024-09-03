@@ -45,3 +45,8 @@ dist/
 # Ignore temporary files
 *~
 *.swp
+
+# this is the test files
+test.py
+ind copy.html
+for_html_typing.html
