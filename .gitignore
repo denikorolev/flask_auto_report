@@ -9,3 +9,4 @@ __pycache__/
 *.pyc
 
 processed_files/
+__pycache__/
