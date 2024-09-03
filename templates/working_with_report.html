@@ -148,7 +148,7 @@
         <ul class="" id="right-paragraph-list">
             {% for item in paragraph_data %}
                 <li class="report__paragraph">
-                    <p contenteditable="true" {% if item.paragraph.paragraph_visible %}class="report__paragraph--visible" {% else %}class="report__paragraph--invisible"{% endif %}>
+                    <p contenteditable="true" data-paragraph-id="{{ item.paragraph.id }}" {% if item.paragraph.paragraph_visible %}class="report__paragraph--visible paragraph-java-finder" {% else %}class="report__paragraph--invisible paragraph-java-finder"{% endif %}>
                         {{ item.paragraph.paragraph }}
                     </p>
                     <ul class="">
@@ -168,10 +168,144 @@
         <!-- Button to copy text -->
         <button class="btn report__btn" id="copyButton">Copy Text</button>
         <button class="btn report__btn" id="exportButton">Export to Word</button>
+        <button class="btn report__btn" id="generateImpression">Generate Impression</button>
     </div>
+</div>
+<div class="sentence_adding_reques-container" id="sentenceAddingRequestContainer">
+    <!-- Здесь будет отображаться обработанный текст -->
+    <p id="processedText"></p>
 </div>
 
 <script>
+    // Собираем текст из правой части экрана для дальнейшей его обработки
+    function collectTextFromRightSide() {
+        const rightParagraphList = document.getElementById("right-paragraph-list");
+        let collectedText = "";
+    
+        rightParagraphList.querySelectorAll(".report__paragraph").forEach(paragraphElement => {
+            // Проверяем, виден ли параграф на экране
+            const paragraphStyle = window.getComputedStyle(paragraphElement.querySelector("p"));
+            if (paragraphStyle.display !== "none" && paragraphStyle.visibility !== "hidden") {
+                const paragraphText = paragraphElement.querySelector("p").innerText.trim();
+                collectedText += paragraphText + "\n";  // Добавляем текст параграфа
+    
+                paragraphElement.querySelectorAll(".report__sentence").forEach(sentenceElement => {
+                    let sentenceText = sentenceElement.innerHTML;
+    
+                    // Заменяем все <select> на выбранный текст
+                    sentenceElement.querySelectorAll("select").forEach(select => {
+                        const selectedOption = select.options[select.selectedIndex].textContent;
+                        sentenceText = sentenceText.replace(select.outerHTML, selectedOption);
+                    });
+    
+                    sentenceText = sentenceText.replace(/<[^>]*>?/gm, '').trim();  // Убираем все HTML теги, кроме текста
+    
+                    if (sentenceText) {
+                        collectedText += sentenceText + " ";  // Добавляем текст предложения
+                    }
+                });
+    
+                collectedText += "\n";  // Разделяем параграфы
+            }
+        });
+    
+        return collectedText.trim();  // Убираем лишние пробелы и возвращаем текст
+    }
+    
+    
+
+    // функция для отображения предложений, которые мы предлагаем пользователю добавить в базу данных
+    function displayProcessedParagraphs(paragraphs) {
+        const container = document.getElementById('sentenceAddingRequestContainer');
+        container.innerHTML = ''; // Очищаем контейнер перед добавлением новых данных
+
+        // Проверка, есть ли данные для обработки
+        if (!paragraphs || !Array.isArray(paragraphs)) {
+            console.error("Invalid paragraphs data:", paragraphs);
+            return;
+        }
+
+        paragraphs.forEach(paragraph => {
+            const paragraphDiv = document.createElement('div');
+            paragraphDiv.classList.add('paragraph-container');
+
+            const paragraphText = paragraph.paragraph_text || `Paragraph: ${paragraph.paragraph_id}`;
+            paragraphDiv.textContent = `Paragraph: ${paragraphText}`;
+
+            // Проверяем наличие предложений перед итерацией
+            if (paragraph.sentences && Array.isArray(paragraph.sentences)) {
+                paragraph.sentences.forEach(sentence => {
+                    const sentenceDiv = document.createElement('div');
+                    sentenceDiv.classList.add('sentence-container');
+                    sentenceDiv.textContent = sentence;
+                    paragraphDiv.appendChild(sentenceDiv);
+                });
+            } else if (typeof paragraph.sentence === "string") {
+                // Если это не массив, а строка, корректируем обработку
+                const sentenceDiv = document.createElement('div');
+                sentenceDiv.classList.add('sentence-container');
+                sentenceDiv.textContent = paragraph.sentence;
+                paragraphDiv.appendChild(sentenceDiv);
+            } else {
+                console.error("Invalid sentences data in paragraph:", paragraph);
+            }
+
+            container.appendChild(paragraphDiv);
+        });
+    }
+
+
+    // Функция для отправки данных на сервер в маршрут new_sentence_adding
+    function sendParagraphsToServer(paragraphsData) {
+        fetch("{{ url_for('working_with_reports.new_sentence_adding') }}", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                paragraphs: paragraphsData
+            })
+        }).then(response => {
+            if (response.ok) {
+                response.json().then(data => {
+                    displayProcessedParagraphs(data.processed_paragraphs);
+                });
+            } else {
+                alert("Failed to process paragraphs.");
+            }
+        });
+    }
+
+    // Функция для формирования данных параграфов и предложений для формирования предложений для добавления в базу данных
+    function collectParagraphsData() {
+        const rightParagraphList = document.getElementById("right-paragraph-list");
+        const paragraphsData = [];
+    
+        rightParagraphList.querySelectorAll(".report__paragraph").forEach(paragraphElement => {
+            const paragraphId = paragraphElement.querySelector("p").getAttribute("data-paragraph-id");
+            const paragraphText = paragraphElement.querySelector("p").innerText.trim();
+            const sentences = [];
+    
+            paragraphElement.querySelectorAll(".report__sentence").forEach(sentenceElement => {
+                const sentenceText = sentenceElement.innerText.trim();
+                if (sentenceText) {
+                    sentences.push(sentenceText);
+                }
+            });
+    
+            if (sentences.length > 0) {
+                paragraphsData.push({
+                    paragraph_id: paragraphId,
+                    paragraph_text: paragraphText,
+                    sentences: sentences
+                });
+            }
+        });
+    
+        
+        return paragraphsData;
+    }
+    
 
     // Key words changer
     function highlightKeyWords(text, keyWordsGroups) {
@@ -682,15 +816,15 @@
     
     // Button "Copy to clipboard" logic
     document.getElementById("copyButton").addEventListener("click", function() {
-        const rightParagraphList = document.getElementById("right-paragraph-list");
-        let textToCopy = "";
-    
-        rightParagraphList.querySelectorAll("p").forEach(function(paragraph) {
-            if (window.getComputedStyle(paragraph).display !== "none") {
-                textToCopy += cleanAndFormatText(paragraph) + "\n";
-            }
-        });
-    
+        // Собираем текст из правой части экрана
+        const textToCopy = collectTextFromRightSide();
+
+        // Формируем данные параграфов и предложений
+        const paragraphsData = collectParagraphsData();
+
+        // Используем функцию для отправки данных на сервер
+        sendParagraphsToServer(paragraphsData);
+
         navigator.clipboard.writeText(textToCopy.trim()).then(function() {
             alert("Text copied to clipboard");
         }).catch(function(err) {
@@ -700,15 +834,15 @@
     
     // "Export to word" button logic
     document.getElementById("exportButton").addEventListener("click", function() {
-        const rightParagraphList = document.getElementById("right-paragraph-list");
-        let textToExport = "";
-    
-        rightParagraphList.querySelectorAll("p").forEach(function(paragraph) {
-            if (window.getComputedStyle(paragraph).display !== "none") {
-                textToExport += cleanAndFormatText(paragraph) + "\n";
-            }
-        });
-    
+        // Собираем текст из правой части экрана для экспорта в Word
+        const textToExport = collectTextFromRightSide();
+
+        // Формируем данные параграфов и предложений
+        const paragraphsData = collectParagraphsData();
+
+        // Отправляем данные параграфов на сервер
+        sendParagraphsToServer(paragraphsData);
+
         const name = document.getElementById("patient-name").value;
         const birthdate = document.getElementById("patient-birthdate").value;
         const reportnumber = document.getElementById("report-number").value;
@@ -717,14 +851,14 @@
         const scanParam = "{{ report.comment }}";
         const reportSideElement = document.getElementById("report-side");
         const reportSide = reportSideElement ? reportSideElement.value : "";
-    
+
         fetch("{{ url_for('working_with_reports.export_to_word') }}", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({
-                text: textToExport.trim(),
+                text: textToExport,
                 name: name,
                 birthdate: birthdate,
                 subtype: subtype,
@@ -750,7 +884,7 @@
             }
         });
     });
-    
+
 </script>
 
 {% endblock container %}

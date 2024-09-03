@@ -1,11 +1,18 @@
 from flask import Blueprint, render_template, request, current_app, jsonify, send_file, flash, url_for
 from flask_login import login_required, current_user
 from models import db, Report, ReportType, ReportSubtype, ReportParagraph, Sentence, KeyWordsGroup
-from file_processing import file_saver, print_sqlalchemy_object
+from file_processing import file_saver, print_sqlalchemy_object, split_sentences, get_new_sentences
+from datetime import datetime  
+from openai import OpenAI 
+
 
 working_with_reports_bp = Blueprint('working_with_reports', __name__)
 
 # Functions
+def calculate_age(birthdate):
+    today = datetime.today()
+    age = today.year - birthdate.year - ((today.month, today.day) < (birthdate.month, birthdate.day))
+    return age
 
 def init_app(app):
     menu = app.config['MENU']
@@ -229,6 +236,30 @@ def delete_paragraph():
     return jsonify({"message": "Failed to delete paragraph."}), 400
 
 
+@working_with_reports_bp.route("/new_sentence_adding", methods=["POST"])
+@login_required
+def new_sentence_adding():
+    try:
+        data = request.get_json()
+        paragraphs = data.get("paragraphs", [])
+
+        if not paragraphs:
+            return jsonify({"message": "No paragraphs provided."}), 400
+
+        # Разбиваем предложения на более мелкие и получаем новые предложения
+        processed_paragraphs = split_sentences(paragraphs)
+        new_sentences = get_new_sentences(processed_paragraphs)
+
+        # Возвращаем новые предложения на клиентскую часть
+        return jsonify({"processed_paragraphs": new_sentences}), 200
+
+    except Exception as e:
+        current_app.logger.error(f"Unexpected error: {e}")
+        return jsonify({"message": f"Unexpected error: {e}"}), 500
+
+
+
+
 
 @working_with_reports_bp.route("/export_to_word", methods=["POST"])
 @login_required
@@ -280,12 +311,12 @@ def generate_impression():
             f"Протокол исследования:\n{text}"
         )
         
-        system_prompt = ("You are a professional radiologist speaking only Russian. Your role is to assist users in creating impressions based on provided MRI descriptions. You focus on making concise impressions for MRI reports. Your responses should be formal, clear, and precise, adhering to medical terminology standards. If there are several possible diagnoses or syndromes based on the provided descriptions, you should first mention the most likely one and then list the others in parentheses, separated by commas. When formulating a diagnosis or syndrome, adhere to the following probability classification: for 'almost certain,' state the diagnosis directly; for 'very likely,' use 'MRI findings are suggestive of...'; for 'likely,' use 'MRI findings may correspond to...'; and for '50/50' use 'MRI findings could indicate...'. Do not repeat anything from the provided description in your response, and avoid mentioning normal findings or detailed descriptions of abnormalities. Only include diagnoses or syndromes that belong in the 'Impression' section of the report.")
+        system_prompt = (f"You are a professional radiologist speaking only Russian. Your role is to assist users in creating impressions based on provided MRI descriptions. You focus on making concise impressions for MRI reports. Your responses should be formal, clear, and precise, adhering to medical terminology standards. If there are several possible diagnoses or syndromes based on the provided descriptions, you should first mention the most likely one and then list the others in parentheses, separated by commas. When formulating a diagnosis or syndrome, adhere to the following probability classification: for 'almost certain,' state the diagnosis directly; for 'very likely,' use 'MRI findings are suggestive of...'; for 'likely,' use 'MRI findings may correspond to...'; and for '50/50' use 'MRI findings could indicate...'. Do not repeat anything from the provided description in your response, and avoid mentioning normal findings or detailed descriptions of abnormalities. Only include diagnoses or syndromes that belong in the 'Impression' section of the report.")
 
         # Установка API ключа и модели
         api_key = current_app.config.get('OPENAI_API_KEY')
         api_model = current_app.config.get('OPENAI_MODEL')
-        api_assistant = "asst_IpRMfZnbJXW0IalVVslKin17"
+        # api_assistant = "asst_IpRMfZnbJXW0IalVVslKin17" check it later
 
         if not api_key:
             return jsonify({"message": "OpenAI API key is not configured."}), 500

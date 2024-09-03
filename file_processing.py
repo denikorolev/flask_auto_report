@@ -9,6 +9,8 @@ import glob
 from docx.shared import Pt, Inches
 from docx.enum.table import WD_ALIGN_VERTICAL
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
+import re
+from models import Sentence, ReportParagraph
 
 # Function for debugging. Using it you can show that is in the Alchemy object
 def print_sqlalchemy_object(obj, indent=0):
@@ -192,3 +194,54 @@ def file_saver(text, name, subtype, report_type, birthdate, reportnumber, scanPa
     document.save(new_file_path)
 
     return new_file_path
+
+
+def split_sentences(paragraphs):
+    split_paragraphs = []
+    sentence_endings = re.compile(r'(?<=[.!?])\s+')
+
+    for paragraph in paragraphs:
+        paragraph_id = paragraph.get("paragraph_id")
+        sentences = paragraph.get("sentences", [])
+        split_sentences = []
+
+        for sentence in sentences:
+            # Разбиваем предложения по концам предложений (точка, восклицательный знак или вопросительный знак)
+            split_sentences.extend(re.split(sentence_endings, sentence))
+
+        # Удаляем пустые предложения после разбиения
+        split_sentences = [s.strip() for s in split_sentences if s.strip()]
+
+        split_paragraphs.append({
+            "paragraph_id": paragraph_id,
+            "sentences": split_sentences
+        })
+
+    return split_paragraphs
+
+
+def get_new_sentences(processed_paragraphs):
+    new_sentences = []
+
+    for paragraph in processed_paragraphs:
+        paragraph_id = paragraph.get("paragraph_id")
+        sentences = paragraph.get("sentences", [])
+        
+        # Получаем существующие предложения и текст параграфа для данного параграфа из базы данных
+        existing_sentences = Sentence.query.filter_by(paragraph_id=paragraph_id).all()
+        existing_sentences_texts = [s.sentence.strip() for s in existing_sentences]
+
+        # Получаем текст параграфа из базы данных
+        paragraph_text = ReportParagraph.query.filter_by(id=paragraph_id).first().paragraph
+        
+        # Проверяем каждое предложение из обработанных, есть ли оно уже в базе данных
+        for sentence in sentences:
+            if sentence.strip() not in existing_sentences_texts:
+                new_sentences.append({
+                    "paragraph_id": paragraph_id,
+                    "paragraph_text": paragraph_text,  # Добавляем текст параграфа
+                    "sentence": sentence.strip()
+                })
+
+    return new_sentences
+
