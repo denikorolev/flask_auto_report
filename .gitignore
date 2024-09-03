@@ -3,3 +3,4 @@
 
 # Ignore the uploads folder
 uploads/
+.DS_Store
