@@ -74,65 +74,68 @@
                         <li class="">
                             {% if item.grouped_sentences %}
                                 {% for index, sentences in item.grouped_sentences.items() %}
-                                    {% if sentences|length == 1 %}
-                                        <div class="flex edit-container" sentence-index = "{{ sentences[0].index}}">
-                                            <p class="report__sentence" data-sentence-id="{{ sentences[0].id }}">{{ sentences[0].sentence }}</p>
-                                            <!-- button group -->
-                                            <div class="flex edit-group" style="display: none;">
-                                                <button class="icon-btn icon-btn--edit" type="button"
-                                                style="background: url('{{ url_for('static', filename='pic/edit_button.svg') }}') no-repeat center center;"
-                                                title="Edit">
-                                                </button>
-                                                <button class="icon-btn icon-btn--add_s_to_p" type="button"
-                                                style="background: url('{{ url_for('static', filename='pic/add_s_to_p_button.svg') }}') no-repeat center center;"
-                                                title="Add one more sentence below">
-                                                </button>
-                                                <button class="icon-btn icon-btn--add_s_to_s" type="button"
-                                                style="background: url('{{ url_for('static', filename='pic/add_s_to_s_button.svg') }}') no-repeat center center;"
-                                                title="Add sentence in sentences list">
-                                                </button>
-                                                <button class="icon-btn icon-btn--delete_sentence" type="button"
-                                                style="background: url('{{ url_for('static', filename='pic/delete_sentence_button.svg') }}') no-repeat center center;"
-                                                title="delete the sentence">
-                                                </button> 
-                                            </div>
-                                            
-                                            
-                                        </div>
-                                    {% else %}
-                                        <div class="flex edit-container">
-                                            <select class="report__select sentences_select" sentence-index = "{{ sentences[0].index}}" data-index="left-side-{{ item.paragraph.id }}-{{ index }}">
-                                                {% for sentence in sentences %}
-                                                    <option value="{{ sentence.id }}" data-weigh = "{{ sentence.weight}}" data-sentence="{{ sentence.sentence }}">{{ sentence.sentence }}</option>
-                                                {% endfor %}
-                                            </select>
-                                            
-                                            <!-- button group -->
-                                            <div class="flex edit-group" style="display: none;">
-                                                <button class="icon-btn icon-btn--edit" type="button"
-                                                style="background: url('{{ url_for('static', filename='pic/edit_button.svg') }}') no-repeat center center;"
-                                                title="Edit">
-                                                </button>
-                                                <button class="icon-btn icon-btn--add_s_to_p" type="button"
-                                                style="background: url('{{ url_for('static', filename='pic/add_s_to_p_button.svg') }}') no-repeat center center;"
-                                                title="Add one more sentence below">
-                                                </button>
-                                                <button class="icon-btn icon-btn--add_s_to_s" type="button"
-                                                style="background: url('{{ url_for('static', filename='pic/add_s_to_s_button.svg') }}') no-repeat center center;"
-                                                title="Add sentence in sentences list">
-                                                </button>
-                                                <button class="icon-btn icon-btn--delete_sentence" type="button"
-                                                style="background: url('{{ url_for('static', filename='pic/delete_sentence_button.svg') }}') no-repeat center center;"
-                                                title="delete the sentence">
-                                                </button> 
-                                                <button class="icon-btn icon-btn--increase-weight" type="button" title="Increase weight">+</button>
-                                                <button class="icon-btn icon-btn--set-weight" type="button" title="Set weight">*</button>
-                                                <button class="icon-btn icon-btn--decrease-weight" type="button" title="Decrease weight">-</button>
-                                                <button class="icon-btn icon-btn--save-weight" type="button" title="Save weight">s</button>
-                                            </div>
-                                            
-                                        </div>
-                                    {% endif %}
+                                    
+                                        {% if sentences|length == 1 %}
+                                            {% if sentences[0].index != 0 %}
+                                                <div class="flex edit-container" sentence-index = "{{ sentences[0].index}}">
+                                                    <p class="report__sentence" data-sentence-id="{{ sentences[0].id }}">{{ sentences[0].sentence }}</p>
+                                                    <!-- button group -->
+                                                    <div class="flex edit-group" style="display: none;">
+                                                        <button class="icon-btn icon-btn--edit" type="button"
+                                                        style="background: url('{{ url_for('static', filename='pic/edit_button.svg') }}') no-repeat center center;"
+                                                        title="Edit">
+                                                        </button>
+                                                        <button class="icon-btn icon-btn--add_s_to_p" type="button"
+                                                        style="background: url('{{ url_for('static', filename='pic/add_s_to_p_button.svg') }}') no-repeat center center;"
+                                                        title="Add one more sentence below">
+                                                        </button>
+                                                        <button class="icon-btn icon-btn--add_s_to_s" type="button"
+                                                        style="background: url('{{ url_for('static', filename='pic/add_s_to_s_button.svg') }}') no-repeat center center;"
+                                                        title="Add sentence in sentences list">
+                                                        </button>
+                                                        <button class="icon-btn icon-btn--delete_sentence" type="button"
+                                                        style="background: url('{{ url_for('static', filename='pic/delete_sentence_button.svg') }}') no-repeat center center;"
+                                                        title="delete the sentence">
+                                                        </button> 
+                                                    </div>
+                                                </div>
+                                            {% endif %}
+                                        {% else %}
+                                            {% if sentences[0].index != 0 %}    
+                                                <div class="flex edit-container">
+                                                    <select class="report__select sentences_select" sentence-index = "{{ sentences[0].index}}" data-index="left-side-{{ item.paragraph.id }}-{{ index }}">
+                                                        {% for sentence in sentences %}
+                                                            <option value="{{ sentence.id }}" data-weigh = "{{ sentence.weight}}" data-sentence="{{ sentence.sentence }}">{{ sentence.sentence }}</option>
+                                                        {% endfor %}
+                                                    </select>
+                                                    
+                                                    <!-- button group -->
+                                                    <div class="flex edit-group" style="display: none;">
+                                                        <button class="icon-btn icon-btn--edit" type="button"
+                                                        style="background: url('{{ url_for('static', filename='pic/edit_button.svg') }}') no-repeat center center;"
+                                                        title="Edit">
+                                                        </button>
+                                                        <button class="icon-btn icon-btn--add_s_to_p" type="button"
+                                                        style="background: url('{{ url_for('static', filename='pic/add_s_to_p_button.svg') }}') no-repeat center center;"
+                                                        title="Add one more sentence below">
+                                                        </button>
+                                                        <button class="icon-btn icon-btn--add_s_to_s" type="button"
+                                                        style="background: url('{{ url_for('static', filename='pic/add_s_to_s_button.svg') }}') no-repeat center center;"
+                                                        title="Add sentence in sentences list">
+                                                        </button>
+                                                        <button class="icon-btn icon-btn--delete_sentence" type="button"
+                                                        style="background: url('{{ url_for('static', filename='pic/delete_sentence_button.svg') }}') no-repeat center center;"
+                                                        title="delete the sentence">
+                                                        </button> 
+                                                        <button class="icon-btn icon-btn--increase-weight" type="button" title="Increase weight">+</button>
+                                                        <button class="icon-btn icon-btn--set-weight" type="button" title="Set weight">*</button>
+                                                        <button class="icon-btn icon-btn--decrease-weight" type="button" title="Decrease weight">-</button>
+                                                        <button class="icon-btn icon-btn--save-weight" type="button" title="Save weight">s</button>
+                                                    </div>
+                                                </div>
+                                            {% endif %}
+                                        {% endif %}
+                                    
                                 {% endfor %}
                             {% endif %}
                         </li>
@@ -156,7 +159,11 @@
                             {% if item.grouped_sentences %}
                                 <p>
                                 {% for index, sentences in item.grouped_sentences.items() %}
-                                    <span contenteditable="true" class="report__sentence" data-index="right-side-{{ item.paragraph.id }}-{{ index }}"> {{ sentences[0].sentence }} </span>
+                                    {% if sentences[0].index != 0 %}
+                                        <span contenteditable="true" class="report__sentence" data-index="right-side-{{ item.paragraph.id }}-{{ index }}"> {{ sentences[0].sentence }} </span>
+                                        <!-- Кнопка "+" для добавления предложения -->
+                                        <button class="icon-btn icon-btn--add-sentence" type="button" title="Add Sentence" data-paragraph-id="{{ item.paragraph.id }}">+</button>
+                                    {% endif %}
                                 {% endfor %}
                                 </p>
                             {% endif %}
@@ -188,6 +195,11 @@
     function cleanSelectText(element) {
         let text = element.innerHTML;
 
+        // Удаляем все кнопки из текста
+        element.querySelectorAll("button").forEach(button => {
+            button.remove();  // Удаляем кнопки из DOM, чтобы они не мешали сбору текста
+        });
+
         // Заменяем все <select> на выбранный текст
         element.querySelectorAll("select").forEach(select => {
             const selectedOption = select.options[select.selectedIndex].textContent;
@@ -202,30 +214,36 @@
     
     // Собираем текст из правой части экрана для дальнейшей его обработки
     function collectTextFromRightSide() {
-        const rightParagraphList = document.getElementById("right-paragraph-list");
-        let collectedText = "";
-    
-        rightParagraphList.querySelectorAll(".report__paragraph").forEach(paragraphElement => {
-            const paragraph = paragraphElement.querySelector("p");
-    
-            // Проверяем, виден ли параграф на экране
-            if (isElementVisible(paragraph)) {
-                const paragraphText = paragraph.innerText.trim();
-                collectedText += paragraphText + "\n";  // Добавляем текст параграфа
-    
-                paragraphElement.querySelectorAll(".report__sentence").forEach(sentenceElement => {
-                    const sentenceText = cleanSelectText(sentenceElement);
-                    if (sentenceText) {
-                        collectedText += sentenceText + " ";  // Добавляем текст предложения
-                    }
-                });
-    
-                collectedText += "\n";  // Разделяем параграфы
-            }
-        });
-    
-        return collectedText.trim();  // Убираем лишние пробелы и возвращаем текст
-    }
+    const rightParagraphList = document.getElementById("right-paragraph-list");
+    console.log("Right paragraph list found:", rightParagraphList);
+    let collectedText = "";
+
+    // Проходим по каждому параграфу
+    rightParagraphList.querySelectorAll(".report__paragraph").forEach(paragraphElement => {
+        const paragraph = paragraphElement.querySelector("p");
+        console.log("Paragraph found:", paragraph);
+
+        // Проверяем, виден ли параграф на экране
+        if (isElementVisible(paragraph)) {
+            const paragraphText = paragraph.innerText.trim();
+            collectedText += paragraphText + "\n";  // Добавляем текст параграфа
+            console.log("Collected paragraph text:", paragraphText);
+
+            // Проходим по каждому предложению внутри параграфа
+            paragraphElement.querySelectorAll(".report__sentence").forEach(sentenceElement => {
+                const sentenceText = cleanSelectText(sentenceElement);
+                if (sentenceText) {
+                    collectedText += sentenceText + " ";  // Добавляем текст предложения
+                    console.log("Collected sentence text:", sentenceText);
+                }
+            });
+
+            collectedText += "\n";  // Разделяем параграфы
+        }
+    });
+
+    return collectedText.trim();  // Убираем лишние пробелы и возвращаем текст
+}
     
     
 
@@ -233,42 +251,88 @@
     function displayProcessedParagraphs(paragraphs) {
         const container = document.getElementById('sentenceAddingRequestContainer');
         container.innerHTML = ''; // Очищаем контейнер перед добавлением новых данных
-
+    
         // Проверка, есть ли данные для обработки
         if (!paragraphs || !Array.isArray(paragraphs)) {
             console.error("Invalid paragraphs data:", paragraphs);
             return;
         }
-
+    
         paragraphs.forEach(paragraph => {
             const paragraphDiv = document.createElement('div');
             paragraphDiv.classList.add('paragraph-container');
-
+    
             const paragraphText = paragraph.paragraph_text || `Paragraph: ${paragraph.paragraph_id}`;
             paragraphDiv.textContent = `Paragraph: ${paragraphText}`;
-
-            // Проверяем наличие предложений перед итерацией
-            if (paragraph.sentences && Array.isArray(paragraph.sentences)) {
+    
+            // Проверка на массив предложений
+            if (Array.isArray(paragraph.sentences)) {
                 paragraph.sentences.forEach(sentence => {
                     const sentenceDiv = document.createElement('div');
                     sentenceDiv.classList.add('sentence-container');
                     sentenceDiv.textContent = sentence;
+    
+                    // Добавляем кнопку "Добавить" для каждого предложения
+                    const addButton = document.createElement('button');
+                    addButton.textContent = 'Добавить';
+                    addButton.classList.add('add-sentence-btn');
+                    addButton.addEventListener('click', function() {
+                        // Отправляем предложение на сервер
+                        addSentenceToDatabase(paragraph.paragraph_id, sentence);
+                    });
+    
+                    sentenceDiv.appendChild(addButton); // Добавляем кнопку к предложению
                     paragraphDiv.appendChild(sentenceDiv);
                 });
-            } else if (typeof paragraph.sentence === "string") {
-                // Если это не массив, а строка, корректируем обработку
+            } else if (typeof paragraph.sentence === 'string') {
+                // Если предложение передано как строка (единичное предложение)
                 const sentenceDiv = document.createElement('div');
                 sentenceDiv.classList.add('sentence-container');
                 sentenceDiv.textContent = paragraph.sentence;
+    
+                // Добавляем кнопку "Добавить" для предложения
+                const addButton = document.createElement('button');
+                addButton.textContent = 'Добавить';
+                addButton.classList.add('add-sentence-btn');
+                addButton.addEventListener('click', function() {
+                    // Отправляем предложение на сервер
+                    addSentenceToDatabase(paragraph.paragraph_id, paragraph.sentence);
+                });
+    
+                sentenceDiv.appendChild(addButton);
                 paragraphDiv.appendChild(sentenceDiv);
             } else {
-                console.error("Invalid sentences data in paragraph:", paragraph);
+                console.error('No valid sentences found for paragraph:', paragraph);
             }
-
+    
             container.appendChild(paragraphDiv);
         });
     }
+    
 
+    // Функция для отправки предложения на сервер
+    function addSentenceToDatabase(paragraphId, sentenceText) {
+        fetch("{{ url_for('working_with_reports.add_sentence_to_paragraph') }}", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                paragraph_id: paragraphId,
+                sentence_text: sentenceText
+            })
+        }).then(response => {
+            if (response.ok) {
+                response.json().then(data => {
+                    alert("Sentence added successfully!");
+                    // Обновить страницу или перезагрузить содержимое
+                    location.reload();
+                });
+            } else {
+                alert("Failed to add sentence.");
+            }
+        });
+    }
 
     // Функция для отправки данных на сервер в маршрут new_sentence_adding
     function sendParagraphsToServer(paragraphsData) {
@@ -326,7 +390,7 @@
     }
     
 
-    // Key words changer
+    // Function Key words changer
     function highlightKeyWords(text, keyWordsGroups) {
         const matchIndexes = {};
     
@@ -357,7 +421,7 @@
     }
     
     
-    // Logic for finding key_words
+    // Function Logic for finding key_words
     function updateRightSideText() {
         const keyWordsGroups = {{ key_words|tojson }};
         const rightParagraphList = document.getElementById("right-paragraph-list");
@@ -418,6 +482,10 @@
             setWeightButton.textContent = weight;
         }
     }
+
+    
+    
+
 
     // Decrise and increase button logic
     document.querySelectorAll(".icon-btn--increase-weight").forEach(button => {
@@ -855,7 +923,7 @@
     document.getElementById("exportButton").addEventListener("click", function() {
         // Собираем текст из правой части экрана для экспорта в Word
         const textToExport = collectTextFromRightSide();
-
+        console.log("Collected text: ", textToExport);
         // Формируем данные параграфов и предложений
         const paragraphsData = collectParagraphsData();
 
@@ -901,6 +969,125 @@
             } else {
                 alert("Failed to export to Word.");
             }
+        });
+    });
+
+    // Логика получения предложения с индексом 0 для конкретного параметра
+    document.addEventListener("DOMContentLoaded", function() {
+        // Функция для создания инпута для добавления нового предложения
+        function createInputForNewSentence(buttonElement) {
+            // Удаляем все активные элементы (селекты или инпуты)
+            document.querySelectorAll(".dynamic-select, .dynamic-input").forEach(el => el.remove());
+    
+            // Создаем инпут для нового предложения
+            const inputElement = document.createElement("input");
+            inputElement.type = "text";
+            inputElement.classList.add("dynamic-input");
+            inputElement.placeholder = "Введите предложение";
+    
+            // Добавляем поле ввода перед кнопкой
+            buttonElement.parentNode.insertBefore(inputElement, buttonElement);
+    
+            // Устанавливаем фокус на поле ввода
+            inputElement.focus();
+    
+            // Обработка нажатия Enter для добавления предложения
+            inputElement.addEventListener("keydown", function(event) {
+                if (event.key === "Enter") {
+                    const customSentence = inputElement.value.trim();
+                    if (customSentence) {
+                        // Создаем новый элемент <span> с введенным предложением и вставляем перед кнопкой
+                        const newSentenceElement = document.createElement("span");
+                        newSentenceElement.classList.add("report__sentence");
+                        newSentenceElement.textContent = customSentence;
+    
+                        buttonElement.parentNode.insertBefore(newSentenceElement, buttonElement);
+                        inputElement.remove();  // Удаляем поле ввода после добавления предложения
+                    }
+                }
+            });
+        }
+    
+        // Основная логика при нажатии на кнопку "+"
+        document.querySelectorAll(".icon-btn--add-sentence").forEach(button => {
+            button.addEventListener("click", function() {
+                const paragraphId = this.getAttribute("data-paragraph-id");
+                const buttonElement = this;
+    
+                // Удаляем предыдущие выпадающие списки или поля ввода, если они уже существуют
+                document.querySelectorAll(".dynamic-select, .dynamic-input").forEach(el => el.remove());
+                
+                // Получаем предложения с индексом 0 для этого параграфа
+                fetch("{{ url_for('working_with_reports.get_sentences_with_index_zero') }}", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        paragraph_id: paragraphId  // Передаем ID параграфа
+                    })
+                }).then(response => response.json())
+                .then(data => {
+                    if (data.sentences && data.sentences.length > 0) {
+                        // Создаем выпадающий список (select) с предложениями
+                        const selectElement = document.createElement("select");
+                        selectElement.classList.add("dynamic-select");
+
+                        // Добавляем первое пустое поле, значение пустое, а текст — "Введите предложение"
+                        const startOption = document.createElement("option");
+                        startOption.value = "";  // Пустое значение для выбора
+                        startOption.textContent = "Выберете предложение для добавления";  // Текст, который видит пользователь
+                        selectElement.appendChild(startOption);
+
+                        // Добавляем первое пустое поле, значение пустое, а текст — "Введите предложение"
+                        const emptyOption = document.createElement("option");
+                        emptyOption.value = "";  // Пустое значение для выбора
+                        emptyOption.textContent = "Введите свое предложение";  // Текст, который видит пользователь
+                        selectElement.appendChild(emptyOption);
+    
+                        // Добавляем остальные предложения с индексом 0
+                        data.sentences.forEach(sentence => {
+                            const option = document.createElement("option");
+                            option.value = sentence.id;
+                            option.textContent = sentence.sentence;
+                            selectElement.appendChild(option);
+                        });
+                        selectElement.value = "";
+
+                        
+    
+                        // Добавляем выпадающий список перед кнопкой
+                        buttonElement.parentNode.insertBefore(selectElement, buttonElement);
+    
+                        // Обработка выбора предложения
+                        selectElement.addEventListener("change", function() {
+                            if (selectElement.value === "") {
+                                // Если выбрано пустое поле, вызываем функцию для инпута
+                                
+                                createInputForNewSentence(buttonElement);
+                                selectElement.remove();  // Удаляем выпадающий список
+                            } else {
+                                // Если выбрано предложение из списка, добавляем его в текст
+                                const selectedSentence = selectElement.options[selectElement.selectedIndex].textContent;
+    
+                                // Создаем новый элемент <span> с предложением и вставляем перед кнопкой
+                                const newSentenceElement = document.createElement("span");
+                                newSentenceElement.classList.add("report__sentence");
+                                newSentenceElement.textContent = selectedSentence;
+    
+                                buttonElement.parentNode.insertBefore(newSentenceElement, buttonElement);
+                                selectElement.remove();  // Удаляем выпадающий список после добавления предложения
+                            }
+                        });
+    
+                    } else {
+                        // Если предложений нет, вызываем функцию для инпута
+                        createInputForNewSentence(buttonElement);
+                    }
+                }).catch(error => {
+                    console.error("Error:", error);
+                });
+            });
         });
     });
 

@@ -236,6 +236,21 @@ def delete_paragraph():
     return jsonify({"message": "Failed to delete paragraph."}), 400
 
 
+@working_with_reports_bp.route("/get_sentences_with_index_zero", methods=["POST"])
+@login_required
+def get_sentences_with_index_zero():
+    data = request.get_json()
+    paragraph_id = data.get("paragraph_id")
+
+    # Получаем предложения с индексом 0
+    sentences = Sentence.query.filter_by(paragraph_id=paragraph_id, index=0).all()
+
+    if sentences:
+        sentences_data = [{"id": sentence.id, "sentence": sentence.sentence} for sentence in sentences]
+        return jsonify({"sentences": sentences_data}), 200
+    return jsonify({"message": "No sentences found."}), 200
+
+
 @working_with_reports_bp.route("/new_sentence_adding", methods=["POST"])
 @login_required
 def new_sentence_adding():
@@ -346,3 +361,22 @@ def generate_impression():
     except Exception as e:
         current_app.logger.error(f"Unexpected error: {e}")
         return jsonify({"message": f"Unexpected error: {e}"}), 500
+    
+@working_with_reports_bp.route("/add_sentence_to_paragraph", methods=["POST"])
+@login_required
+def add_sentence_to_paragraph():
+    try:
+        data = request.get_json()
+        paragraph_id = data.get("paragraph_id")
+        sentence_text = data.get("sentence_text")
+
+        if not paragraph_id or not sentence_text:
+            return jsonify({"message": "Missing required data."}), 400
+
+        # Добавляем новое предложение в БД с индексом 0, весом 1, пустым комментарием
+        Sentence.create(paragraph_id=paragraph_id, index=0, weight=1, comment="", sentence=sentence_text)
+
+        return jsonify({"message": "Sentence added successfully!"}), 200
+    except Exception as e:
+        current_app.logger.error(f"Failed to add sentence: {e}")
+        return jsonify({"message": f"Failed to add sentence: {e}"}), 500
