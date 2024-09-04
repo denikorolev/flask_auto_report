@@ -214,36 +214,39 @@
     
     // Собираем текст из правой части экрана для дальнейшей его обработки
     function collectTextFromRightSide() {
-    const rightParagraphList = document.getElementById("right-paragraph-list");
-    console.log("Right paragraph list found:", rightParagraphList);
-    let collectedText = "";
+        const rightParagraphList = document.getElementById("right-paragraph-list");
+        console.log("Right paragraph list found:", rightParagraphList);
+        let collectedText = "";
 
-    // Проходим по каждому параграфу
-    rightParagraphList.querySelectorAll(".report__paragraph").forEach(paragraphElement => {
-        const paragraph = paragraphElement.querySelector("p");
-        console.log("Paragraph found:", paragraph);
+        // Проходим по каждому параграфу
+        rightParagraphList.querySelectorAll(".report__paragraph").forEach(paragraphElement => {
+            const paragraph = paragraphElement.querySelector("p");
 
-        // Проверяем, виден ли параграф на экране
-        if (isElementVisible(paragraph)) {
-            const paragraphText = paragraph.innerText.trim();
-            collectedText += paragraphText + "\n";  // Добавляем текст параграфа
-            console.log("Collected paragraph text:", paragraphText);
+            // Проверяем, видим ли параграф
+            if (isElementVisible(paragraph)) {
+                const paragraphText = paragraph.innerText.trim();
+                collectedText += paragraphText + "\n";  // Добавляем текст параграфа
+                console.log("Collected paragraph text:", paragraphText);
+            }
 
             // Проходим по каждому предложению внутри параграфа
             paragraphElement.querySelectorAll(".report__sentence").forEach(sentenceElement => {
-                const sentenceText = cleanSelectText(sentenceElement);
-                if (sentenceText) {
-                    collectedText += sentenceText + " ";  // Добавляем текст предложения
-                    console.log("Collected sentence text:", sentenceText);
+                // Проверяем, видимо ли предложение
+                if (isElementVisible(sentenceElement)) {
+                    const sentenceText = cleanSelectText(sentenceElement);
+                    if (sentenceText) {
+                        collectedText += sentenceText + " ";  // Добавляем текст предложения
+                        console.log("Collected sentence text:", sentenceText);
+                    }
                 }
             });
 
             collectedText += "\n";  // Разделяем параграфы
-        }
-    });
+        });
 
-    return collectedText.trim();  // Убираем лишние пробелы и возвращаем текст
-}
+        return collectedText.trim();  // Убираем лишние пробелы и возвращаем текст
+    }
+
     
     
 
