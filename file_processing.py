@@ -8,33 +8,7 @@ from datetime import datetime
 import glob
 from docx.shared import Pt, Inches
 from docx.enum.table import WD_ALIGN_VERTICAL
-from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
-import re
-from models import Sentence, ReportParagraph
 
-# Function for debugging. Using it you can show that is in the Alchemy object
-def print_sqlalchemy_object(obj, indent=0):
-    """ Recursively prints the attributes and relationships of a SQLAlchemy object """
-    indent_str = ' ' * indent
-    if isinstance(obj, list):
-        for item in obj:
-            print_sqlalchemy_object(item, indent)
-    elif isinstance(obj, dict):
-        for key, value in obj.items():
-            print(f"{indent_str}{key}:")
-            print_sqlalchemy_object(value, indent + 2)
-    elif hasattr(obj, '__dict__'):
-        print(f"{indent_str}{obj.__class__.__name__} object:")
-        for key, value in vars(obj).items():
-            if key.startswith('_'):
-                continue  # Skip internal attributes
-            if isinstance(value, list) or hasattr(value, '__dict__'):
-                print(f"{indent_str}  {key}:")
-                print_sqlalchemy_object(value, indent + 4)
-            else:
-                print(f"{indent_str}  {key}: {value}")
-    else:
-        print(f"{indent_str}{obj}")
 
 # Проверка допустимости расширения загружаемого файла
 def allowed_file(file_name, file_type):
@@ -85,7 +59,7 @@ def file_uploader (file, file_type):
         return "The file name or extension is not allowed"
     
 # Function for file saving in the docx format 
-def file_saver(text, name, subtype, report_type, birthdate, reportnumber, scanParam, side=""):
+def save_to_word(text, name, subtype, report_type, birthdate, reportnumber, scanParam, side=""):
     date_str = datetime.now().strftime("%d_%m_%y")
     upload_folder_path = current_app.config['UPLOAD_FOLDER']
     upload_folder_name = str(current_user.id)
@@ -196,52 +170,4 @@ def file_saver(text, name, subtype, report_type, birthdate, reportnumber, scanPa
     return new_file_path
 
 
-def split_sentences(paragraphs):
-    split_paragraphs = []
-    sentence_endings = re.compile(r'(?<=[.!?])\s+')
-
-    for paragraph in paragraphs:
-        paragraph_id = paragraph.get("paragraph_id")
-        sentences = paragraph.get("sentences", [])
-        split_sentences = []
-
-        for sentence in sentences:
-            # Разбиваем предложения по концам предложений (точка, восклицательный знак или вопросительный знак)
-            split_sentences.extend(re.split(sentence_endings, sentence))
-
-        # Удаляем пустые предложения после разбиения
-        split_sentences = [s.strip() for s in split_sentences if s.strip()]
-
-        split_paragraphs.append({
-            "paragraph_id": paragraph_id,
-            "sentences": split_sentences
-        })
-
-    return split_paragraphs
-
-
-def get_new_sentences(processed_paragraphs):
-    new_sentences = []
-
-    for paragraph in processed_paragraphs:
-        paragraph_id = paragraph.get("paragraph_id")
-        sentences = paragraph.get("sentences", [])
-        
-        # Получаем существующие предложения и текст параграфа для данного параграфа из базы данных
-        existing_sentences = Sentence.query.filter_by(paragraph_id=paragraph_id).all()
-        existing_sentences_texts = [s.sentence.strip() for s in existing_sentences]
-
-        # Получаем текст параграфа из базы данных
-        paragraph_text = ReportParagraph.query.filter_by(id=paragraph_id).first().paragraph
-        
-        # Проверяем каждое предложение из обработанных, есть ли оно уже в базе данных
-        for sentence in sentences:
-            if sentence.strip() not in existing_sentences_texts:
-                new_sentences.append({
-                    "paragraph_id": paragraph_id,
-                    "paragraph_text": paragraph_text,  # Добавляем текст параграфа
-                    "sentence": sentence.strip()
-                })
-
-    return new_sentences
 

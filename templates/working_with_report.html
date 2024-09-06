@@ -191,7 +191,7 @@
         return style.display !== "none" && style.visibility !== "hidden";
     }
 
-    // Функция для очистки текста от <select> элементов, оставляя только выбранный текст
+    // Функция для очистки текста от <select> элементов и кнопок, оставляя только выбранный текст
     function cleanSelectText(element) {
         let text = element.innerHTML;
 
@@ -209,13 +209,15 @@
         // Убираем все HTML теги, кроме текста
         text = text.replace(/<[^>]*>?/gm, '').trim();
 
+        // Удаляем лишние пробелы (оставляем только один пробел между словами)
+        text = text.replace(/\s\s+/g, ' ');
+
         return text;
     }
     
     // Собираем текст из правой части экрана для дальнейшей его обработки
     function collectTextFromRightSide() {
         const rightParagraphList = document.getElementById("right-paragraph-list");
-        console.log("Right paragraph list found:", rightParagraphList);
         let collectedText = "";
 
         // Проходим по каждому параграфу
@@ -226,7 +228,6 @@
             if (isElementVisible(paragraph)) {
                 const paragraphText = paragraph.innerText.trim();
                 collectedText += paragraphText + "\n";  // Добавляем текст параграфа
-                console.log("Collected paragraph text:", paragraphText);
             }
 
             // Проходим по каждому предложению внутри параграфа
@@ -236,7 +237,6 @@
                     const sentenceText = cleanSelectText(sentenceElement);
                     if (sentenceText) {
                         collectedText += sentenceText + " ";  // Добавляем текст предложения
-                        console.log("Collected sentence text:", sentenceText);
                     }
                 }
             });
@@ -247,8 +247,6 @@
         return collectedText.trim();  // Убираем лишние пробелы и возвращаем текст
     }
 
-    
-    
 
     // функция для отображения предложений, которые мы предлагаем пользователю добавить в базу данных
     function displayProcessedParagraphs(paragraphs) {
@@ -328,8 +326,6 @@
             if (response.ok) {
                 response.json().then(data => {
                     alert("Sentence added successfully!");
-                    // Обновить страницу или перезагрузить содержимое
-                    location.reload();
                 });
             } else {
                 alert("Failed to add sentence.");
@@ -337,7 +333,7 @@
         });
     }
 
-    // Функция для отправки данных на сервер в маршрут new_sentence_adding
+    // Функция для отправки данных на сервер в маршрут new_sentence_adding где будет произведен поиск новых предложений в тексте справа
     function sendParagraphsToServer(paragraphsData) {
         fetch("{{ url_for('working_with_reports.new_sentence_adding') }}", {
             method: "POST",
@@ -367,7 +363,6 @@
             const paragraph = paragraphElement.querySelector("p");
     
             // Проверяем, виден ли параграф на экране
-            if (isElementVisible(paragraph)) {
                 const paragraphId = paragraph.getAttribute("data-paragraph-id");
                 const paragraphText = paragraph.innerText.trim();
                 const sentences = [];
@@ -386,7 +381,6 @@
                         sentences: sentences
                     });
                 }
-            }
         });
     
         return paragraphsData;

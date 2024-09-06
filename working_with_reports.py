@@ -1,18 +1,16 @@
 from flask import Blueprint, render_template, request, current_app, jsonify, send_file, flash, url_for
 from flask_login import login_required, current_user
 from models import db, Report, ReportType, ReportSubtype, ReportParagraph, Sentence, KeyWordsGroup
-from file_processing import file_saver, print_sqlalchemy_object, split_sentences, get_new_sentences
-from datetime import datetime  
+from file_processing import save_to_word
+from calculating import calculate_age
+from sentence_processing import split_sentences, get_new_sentences
+
 from openai import OpenAI 
 
 
 working_with_reports_bp = Blueprint('working_with_reports', __name__)
 
 # Functions
-def calculate_age(birthdate):
-    today = datetime.today()
-    age = today.year - birthdate.year - ((today.month, today.day) < (birthdate.month, birthdate.day))
-    return age
 
 def init_app(app):
     menu = app.config['MENU']
@@ -93,7 +91,6 @@ def working_with_reports():
     paragraphs = ReportParagraph.query.filter_by(report_id=report.id).order_by(ReportParagraph.paragraph_index).all()
     subtype = report.report_subtype_rel.subtype
     report_type = report.report_type_rel.type
-    print_sqlalchemy_object(report) # this is debugger
     paragraph_data = []
     for paragraph in paragraphs:
         sentences = Sentence.query.filter_by(paragraph_id=paragraph.id).order_by(Sentence.index, Sentence.weight).all()
@@ -293,7 +290,7 @@ def export_to_word():
         return jsonify({"message": "Missing required information."}), 400
 
     try:
-        file_path = file_saver(text, name, subtype, report_type, birthdate, reportnumber, scanParam, side=side)
+        file_path = save_to_word(text, name, subtype, report_type, birthdate, reportnumber, scanParam, side=side)
         return send_file(file_path, as_attachment=True)
     except Exception as e:
         return jsonify({"message": f"Failed to export to Word: {e}"}), 500
@@ -311,12 +308,8 @@ def generate_impression():
 
         if not text or not birthdate_str or not report_type:
             return jsonify({"message": "Missing required information."}), 400
-
-        # Преобразуем строку даты рождения в объект даты и вычисляем возраст
-        try:
-            birthdate = datetime.strptime(birthdate_str, "%Y-%m-%d")
-            age = calculate_age(birthdate)
-        except ValueError:
+        age = calculate_age(birthdate_str)
+        if not age:
             return jsonify({"message": "Invalid birthdate format. Expected format: YYYY-MM-DD"}), 400
 
         # Подготовка промпта для GPT
