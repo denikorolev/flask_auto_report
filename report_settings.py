@@ -144,12 +144,7 @@ def add_keywords():
             user_id=current_user.id
         )
 
-    # Группируем ключевые слова с использованием новой функции
-    key_words_group = group_key_words_by_index(current_user.id)
-    
-    return {"status": "success", 
-            "message": "New key words group added successfully.", 
-            "key_words_group": key_words_group}, 200
+    return {"status": "success"}, 200
     
     
 @report_settings_bp.route('/delete_keywords', methods=['POST'])

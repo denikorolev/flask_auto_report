@@ -113,16 +113,14 @@
                 {% if key_words_group %}
                     {% for key_words in key_words_group %}
                         <div class="key-words-group" data-group="{{ key_words[0].group_index }}">
-                            <p>
-                                {% for key_word in key_words %}
-                                    <span data-group="{{ key_word.group_index }}" data-index="{{ key_word.index }}">
-                                        {{ key_word.key_word }}{% if not loop.last %}, {% endif %}
-                                    </span>
-                                {% endfor %}
-                                <!-- Кнопки для редактирования ключевых слов в группе -->
-                                <button class="btn report__btn delete-keywords-btn" data-group="{{ loop.index0 }}">Delete</button>
-                                <button class="btn report__btn edit-keywords-btn" data-group="{{ loop.index0 }}">Edit</button>
-                            </p>
+                            {% for key_word in key_words %}
+                                <span data-group="{{ key_word.group_index }}" data-index="{{ key_word.index }}">
+                                    {{ key_word.key_word }}{% if not loop.last %}, {% endif %}
+                                </span>
+                            {% endfor %}
+                            <!-- Кнопки для редактирования ключевых слов в группе -->
+                            <button class="btn report__btn delete-keywords-btn" data-group="{{ key_words[0].group_index }}">Delete</button>
+                            <button class="btn report__btn edit-keywords-btn" data-group="{{ key_words[0].group_index }}">Edit</button>
                         </div>
                     {% endfor %}
                     
@@ -150,64 +148,26 @@
     document.getElementById("keywords-form").addEventListener("submit", function(event) {
         event.preventDefault();
         const keyWordInput = document.getElementById("key_word_input").value;
-
+    
         fetch("{{ url_for('report_settings.add_keywords') }}", {
-            method: "POST",
+            method: "POST", // Используем POST
             headers: {
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({ key_word_input: keyWordInput })
         })
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === "success") {
-                const keyWordsList = document.getElementById("key-words-list");
-                
-                // Создаем новый элемент <p> для группы ключевых слов
-                const newGroup = document.createElement("p");
-                
-                // Проходим по каждому ключевому слову и добавляем его в новый <span>
-                data.key_words_group.forEach(function(wordData) {
-                    const wordSpan = document.createElement("span");
-                    wordSpan.setAttribute("data-group", wordData.group_index);
-                    wordSpan.setAttribute("data-index", wordData.index);
-                    wordSpan.textContent = wordData.key_word;
-                    
-                    newGroup.appendChild(wordSpan);
-
-                    // Добавляем запятую, если это не последнее слово в группе
-                    if (wordData !== data.key_words_group[data.key_words_group.length - 1]) {
-                        newGroup.appendChild(document.createTextNode(", "));
-                    }
-                });
-
-                // Добавляем кнопки "Delete" и "Edit" для группы ключевых слов
-                const deleteButton = document.createElement("button");
-                deleteButton.classList.add("btn", "report__btn", "delete-keywords-btn");
-                deleteButton.textContent = "Delete";
-                deleteButton.setAttribute("data-group", data.key_words_group[0].group_index);
-
-                const editButton = document.createElement("button");
-                editButton.classList.add("btn", "report__btn", "edit-keywords-btn");
-                editButton.textContent = "Edit";
-                editButton.setAttribute("data-group", data.key_words_group[0].group_index);
-
-                newGroup.appendChild(deleteButton);
-                newGroup.appendChild(editButton);
-
-                // Добавляем новую группу на страницу
-                keyWordsList.appendChild(newGroup);
-
-                // Очищаем поле ввода
-                document.getElementById("key_word_input").value = ""; 
+        .then(response => {
+            if (response.ok) {
+                location.reload(); // Обновляем страницу при успешном добавлении
             } else {
-                alert(data.message);
+                return response.json().then(data => alert(data.message));
             }
         })
         .catch(error => {
             console.error("Error:", error);
         });
     });
+    
 
 
     // Логика для удаления ключевых слов по группе
@@ -224,8 +184,12 @@
             .then(response => response.json())
             .then(data => {
                 if (data.status === "success") {
-                    // Удаляем группу с интерфейса
-                    document.querySelector(`.key-words-group[data-group='${groupIndex}']`).remove();
+                    const groupElement = document.querySelector(`.key-words-group[data-group='${groupIndex}']`);
+                    if (groupElement) {
+                        groupElement.remove();
+                    } else {
+                        console.error("Group element not found for deletion.");
+                    }
                 } else {
                     alert(data.message);
                 }
@@ -239,42 +203,62 @@
         button.addEventListener("click", function() {
             const groupIndex = this.dataset.group;
             const groupElement = document.querySelector(`.key-words-group[data-group='${groupIndex}']`);
-            const inputs = groupElement.querySelectorAll(".key-word-input");
 
-            if (this.textContent === "Edit") {
-                // Делаем ключевые слова редактируемыми
-                inputs.forEach(input => input.removeAttribute("readonly"));
-                this.textContent = "Save";
+            if (groupElement) {
+                const spans = groupElement.querySelectorAll("span");
+                
+                if (this.textContent === "Edit") {
+                    // Преобразуем <span> в <input> для редактирования
+                    spans.forEach(span => {
+                        const input = document.createElement("input");
+                        input.value = span.textContent.trim().replace(/,\s*$/, ''); // Убираем запятую, если есть
+                        input.setAttribute("data-id", span.dataset.index);
+                        input.classList.add("key-word-input");
+                        span.replaceWith(input);
+                    });
+                    this.textContent = "Save";
+                } else {
+                    // Собираем изменения
+                    const updatedWords = [];
+                    const inputs = groupElement.querySelectorAll(".key-word-input");
+                    inputs.forEach(input => {
+                        updatedWords.push({ id: input.dataset.id, key_word: input.value.trim() });
+                    });
+
+                    // Отправляем изменения на сервер
+                    fetch("{{ url_for('report_settings.edit_keywords') }}", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({ group_index: groupIndex, words: updatedWords })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === "success") {
+                            inputs.forEach(input => {
+                                const span = document.createElement("span");
+                                span.textContent = input.value.trim();
+                                span.setAttribute("data-group", groupIndex);
+                                span.setAttribute("data-index", input.dataset.id);
+                                input.replaceWith(span);
+                            });
+                            this.textContent = "Edit";
+                        } else {
+                            alert(data.message);
+                        }
+                    })
+                    .catch(error => console.error("Error:", error));
+                }
             } else {
-                // Сохраняем изменения
-                const updatedWords = [];
-                inputs.forEach(input => {
-                    updatedWords.push({ id: input.dataset.id, key_word: input.value.trim() });
-                });
-
-                fetch("{{ url_for('report_settings.edit_keywords') }}", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({ group_index: groupIndex, 
-                                           words: updatedWords 
-                                        })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === "success") {
-                        // Обновляем интерфейс, делаем инпуты неактивными
-                        inputs.forEach(input => input.setAttribute("readonly", true));
-                        this.textContent = "Edit";
-                    } else {
-                        alert(data.message);
-                    }
-                })
-                .catch(error => console.error("Error:", error));
+                console.error("Group element not found for editing.");
             }
         });
     });
+
+
+    
+
 </script>
 
 {% endblock container %}
