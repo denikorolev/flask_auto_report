@@ -9,120 +9,136 @@
 {% block container %}
 {{ super() }}
 
-<div class="container">
-    <!-- Types -->
-    <div class="types">
-        <form method="POST">
-            <div class="flex">
-                <label for="new_type" class="report_label__item">New Type:</label>
-                <input class="report_input__item" type="text" id="new_type" name="new_type">
-                <button class="btn report__btn" type="submit" name="add_new_type_button">Add Type</button>
-            </div>
-        </form>
-        <div class="report_borderline"></div>
-        <ul>
-            <li>
-                <div class="type_list">
-                    <label class="report_label__item" for="type_type">Edit Types:</label>
-                    <div>
-                    {% for type in report_types %}
-                        <form method="POST" class="flex">
-                            <input class="report_input__item" type="hidden" id="type_id" name="type_id" value="{{ type.id }}">
-                            <input class="report_input__item" type="text" id="type_type" name="type_type" value="{{ type.type }}">
-                            <button class="btn report__btn" type="submit" name="delete_type_button">Delete Type</button>
-                            <button class="btn report__btn" type="submit" name="edit_type_button">Edit Type</button>
-                        </form>
-                    {% endfor %}
+<div class="flex">
+    <div class="report_side__list">
+        <!-- Types -->
+        <div class="types">
+            <form method="POST">
+                <div class="flex">
+                    <label for="new_type" class="report_label__item">New Type:</label>
+                    <input class="report_input__item" type="text" id="new_type" name="new_type">
+                    <button class="btn report__btn" type="submit" name="add_new_type_button">Add Type</button>
+                </div>
+            </form>
+            <div class="report_borderline"></div>
+            <ul>
+                <li>
+                    <div class="type_list">
+                        <label class="report_label__item" for="type_type">Edit Types:</label>
+                        <div>
+                        {% for type in report_types %}
+                            <form method="POST" class="flex">
+                                <input class="report_input__item" type="hidden" id="type_id" name="type_id" value="{{ type.id }}">
+                                <input class="report_input__item" type="text" id="type_type" name="type_type" value="{{ type.type }}">
+                                <button class="btn report__btn" type="submit" name="delete_type_button">Delete Type</button>
+                                <button class="btn report__btn" type="submit" name="edit_type_button">Edit Type</button>
+                            </form>
+                        {% endfor %}
+                        </div>
                     </div>
-                </div>
-                <div class="report_borderline"></div>
-            </li>
-        </ul>
-    </div>
+                    <div class="report_borderline"></div>
+                </li>
+            </ul>
+        </div>
 
-    <!-- Subtypes -->
-    <div class="subtypes">
-        <form method="POST" class="flex">
-            <label class="report_label__item" for="report_subtype_type">New Subtype:</label>
-            <select class="report__select report__select--type" id="report_subtype_type" name="report_subtype_type" required>
-                {% for type in report_types %}
-                    <option value="{{ type.id }}">{{ type.type }}</option>
-                {% endfor %}
-            </select>
-            <input class="report_input__item" type="text" id="new_subtype" name="new_subtype">
-            <button class="btn report__btn" type="submit" name="add_new_subtype_button">Add Subtype</button>
-        </form>
-        <div class="report_borderline"></div>
-        <ul>
-            <li>
-                <div class="subtype_list">
-                    <label class="report_label__item" for="subtype_subtype">Edit Subtypes:</label>
-                    {% for subtype in report_subtypes %}
-                        <form method="POST" class="flex">
-                            <input class="report_input__item" type="hidden" id="subtype_id" name="subtype_id" value="{{ subtype.id }}" readonly>
-                            <input class="report_input__item" type="text" id="subtype_subtype" name="subtype_subtype" value="{{ subtype.subtype }}">
-                            <input class="report_input__item" type="text" id="subtype_type" name="subtype_type" value="{{ subtype.subtype_type_name }}" readonly>
-                            <button class="btn report__btn" type="submit" name="delete_subtype_button">Delete Subtype</button>
-                            <button class="btn report__btn" type="submit" name="edit_subtype_button">Edit Subtype</button>
-                        </form>
+        <!-- Subtypes -->
+        <div class="subtypes">
+            <form method="POST" class="flex">
+                <label class="report_label__item" for="report_subtype_type">New Subtype:</label>
+                <select class="report__select report__select--type" id="report_subtype_type" name="report_subtype_type" required>
+                    {% for type in report_types %}
+                        <option value="{{ type.id }}">{{ type.type }}</option>
                     {% endfor %}
-                </div>
-                <div class="report_borderline"></div>
-            </li>
-        </ul>
-    </div>
+                </select>
+                <input class="report_input__item" type="text" id="new_subtype" name="new_subtype">
+                <button class="btn report__btn" type="submit" name="add_new_subtype_button">Add Subtype</button>
+            </form>
+            <div class="report_borderline"></div>
+            <ul>
+                <li>
+                    <div class="subtype_list">
+                        <label class="report_label__item" for="subtype_subtype">Edit Subtypes:</label>
+                        {% for subtype in report_subtypes %}
+                            <form method="POST" class="flex">
+                                <input class="report_input__item" type="hidden" id="subtype_id" name="subtype_id" value="{{ subtype.id }}" readonly>
+                                <input class="report_input__item" type="text" id="subtype_subtype" name="subtype_subtype" value="{{ subtype.subtype }}">
+                                <input class="report_input__item" type="text" id="subtype_type" name="subtype_type" value="{{ subtype.subtype_type_name }}" readonly>
+                                <button class="btn report__btn" type="submit" name="delete_subtype_button">Delete Subtype</button>
+                                <button class="btn report__btn" type="submit" name="edit_subtype_button">Edit Subtype</button>
+                            </form>
+                        {% endfor %}
+                    </div>
+                    <div class="report_borderline"></div>
+                </li>
+            </ul>
+        </div>
 
-    <!-- Directory and name Picker -->
-    <div class="container">
-        <form method="POST" id="directory-form">
-            <label for="directory-path" class="report_label__item">Select Directory:</label>
-            <input type="text" id="directory-path" name="directory_path" value="{{ upload_folder_path }}" readonly>
-            <button type="button" class="btn report__btn" onclick="document.getElementById('file-input').click()">Choose Directory</button>
-            <input type="file" id="file-input" webkitdirectory directory style="display:none;" onchange="updateDirectoryPath()">
-            <button type="submit" class="btn report__btn" name="save_directory_button">Save Directory</button>
-        </form>
-        <form method="POST" id="folder-name-form">
-            <label for="folder-name" class="report_label__item">Folder Name:</label>
-            <input type="text" id="folder-name" name="folder_name" value="{{ upload_folder_name }}">
-            <button type="submit" class="btn report__btn" name="save_folder_name_button">Save Folder Name</button>
-        </form>
-    </div>
+        <!-- Directory and name Picker -->
+        <div class="container">
+            <form method="POST" id="directory-form">
+                <label for="directory-path" class="report_label__item">Select Directory:</label>
+                <input type="text" id="directory-path" name="directory_path" value="{{ upload_folder_path }}" readonly>
+                <button type="button" class="btn report__btn" onclick="document.getElementById('file-input').click()">Choose Directory</button>
+                <input type="file" id="file-input" webkitdirectory directory style="display:none;" onchange="updateDirectoryPath()">
+                <button type="submit" class="btn report__btn" name="save_directory_button">Save Directory</button>
+            </form>
+            <form method="POST" id="folder-name-form">
+                <label for="folder-name" class="report_label__item">Folder Name:</label>
+                <input type="text" id="folder-name" name="folder_name" value="{{ upload_folder_name }}">
+                <button type="submit" class="btn report__btn" name="save_folder_name_button">Save Folder Name</button>
+            </form>
+        </div>
 
-    <div class="container">
-        <h3>Upload File</h3>
-        <form method="POST" enctype="multipart/form-data">
-            <input type="file" name="file">
-            <button type="submit">Upload</button>
-        </form>
+        <div class="container">
+            <h3>Upload File</h3>
+            <form method="POST" enctype="multipart/form-data">
+                <input type="file" name="file">
+                <button type="submit">Upload</button>
+            </form>
+        </div>
     </div>
     
+    
    <!-- Key words processing -->
-   <div class="container">
-    <h3>Key Words</h3>
-    <div id="key-words-list">
-        {% if key_words_group %}
-            {% for key_words in key_words_group %}
-                <p>
-                    {% for key_word in key_words %}
-                        <span>{{ key_word }}{% if not loop.last %}, {% endif %}</span>
-                    {% endfor %}
-                </p>
-            {% endfor %}
-        {% else %}
-            <p>No key words found.</p>
-        {% endif %}
-    </div>
+    <div class="report_side--right">
+        <form id="keywords-form">
+            <label for="key_word_input" class="report_label__item">New Key Words (comma-separated):</label>
+            <input type="text" id="key_word_input" name="key_word_input" required>
+            <button type="submit" class="btn report__btn">Add Key Words Group</button>
+        </form>
 
-    <form id="keywords-form">
-        <label for="key_word_input" class="report_label__item">New Key Words (comma-separated):</label>
-        <input type="text" id="key_word_input" name="key_word_input" required>
-        <button type="submit" class="btn report__btn">Add Key Words Group</button>
-    </form>
-</div>
+        <div class="container">
+            <h3>Key Words</h3>
+            <div id="key-words-list">
+                {% if key_words_group %}
+                    {% for key_words in key_words_group %}
+                        <div class="key-words-group" data-group="{{ key_words[0].group_index }}">
+                            <p>
+                                {% for key_word in key_words %}
+                                    <span data-group="{{ key_word.group_index }}" data-index="{{ key_word.index }}">
+                                        {{ key_word.key_word }}{% if not loop.last %}, {% endif %}
+                                    </span>
+                                {% endfor %}
+                                <!-- Кнопки для редактирования ключевых слов в группе -->
+                                <button class="btn report__btn delete-keywords-btn" data-group="{{ loop.index0 }}">Delete</button>
+                                <button class="btn report__btn edit-keywords-btn" data-group="{{ loop.index0 }}">Edit</button>
+                            </p>
+                        </div>
+                    {% endfor %}
+                    
+                {% else %}
+                    <p>No key words found.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+   
 
 </div>
 
 <script>
+
+
     // File directory logic
     function updateDirectoryPath() {
         var input = document.getElementById('file-input');
@@ -130,10 +146,9 @@
         document.getElementById('directory-path').value = path.split('/')[0];
     }
 
-    // Adding new key word logic
+    // Добавление нового ключевого слова на страницу
     document.getElementById("keywords-form").addEventListener("submit", function(event) {
         event.preventDefault();
-
         const keyWordInput = document.getElementById("key_word_input").value;
 
         fetch("{{ url_for('report_settings.add_keywords') }}", {
@@ -147,19 +162,117 @@
         .then(data => {
             if (data.status === "success") {
                 const keyWordsList = document.getElementById("key-words-list");
-
+                
+                // Создаем новый элемент <p> для группы ключевых слов
                 const newGroup = document.createElement("p");
-                newGroup.textContent = data.key_words_group.join(", ");
+                
+                // Проходим по каждому ключевому слову и добавляем его в новый <span>
+                data.key_words_group.forEach(function(wordData) {
+                    const wordSpan = document.createElement("span");
+                    wordSpan.setAttribute("data-group", wordData.group_index);
+                    wordSpan.setAttribute("data-index", wordData.index);
+                    wordSpan.textContent = wordData.key_word;
+                    
+                    newGroup.appendChild(wordSpan);
 
+                    // Добавляем запятую, если это не последнее слово в группе
+                    if (wordData !== data.key_words_group[data.key_words_group.length - 1]) {
+                        newGroup.appendChild(document.createTextNode(", "));
+                    }
+                });
+
+                // Добавляем кнопки "Delete" и "Edit" для группы ключевых слов
+                const deleteButton = document.createElement("button");
+                deleteButton.classList.add("btn", "report__btn", "delete-keywords-btn");
+                deleteButton.textContent = "Delete";
+                deleteButton.setAttribute("data-group", data.key_words_group[0].group_index);
+
+                const editButton = document.createElement("button");
+                editButton.classList.add("btn", "report__btn", "edit-keywords-btn");
+                editButton.textContent = "Edit";
+                editButton.setAttribute("data-group", data.key_words_group[0].group_index);
+
+                newGroup.appendChild(deleteButton);
+                newGroup.appendChild(editButton);
+
+                // Добавляем новую группу на страницу
                 keyWordsList.appendChild(newGroup);
 
-                document.getElementById("key_word_input").value = ""; // Clear input
+                // Очищаем поле ввода
+                document.getElementById("key_word_input").value = ""; 
             } else {
                 alert(data.message);
             }
         })
         .catch(error => {
             console.error("Error:", error);
+        });
+    });
+
+
+    // Логика для удаления ключевых слов по группе
+    document.querySelectorAll(".delete-keywords-btn").forEach(button => {
+        button.addEventListener("click", function() {
+            const groupIndex = this.dataset.group;
+            fetch("{{ url_for('report_settings.delete_keywords') }}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ group_index: groupIndex })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === "success") {
+                    // Удаляем группу с интерфейса
+                    document.querySelector(`.key-words-group[data-group='${groupIndex}']`).remove();
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(error => console.error("Error:", error));
+        });
+    });
+
+    // Логика для редактирования ключевых слов
+    document.querySelectorAll(".edit-keywords-btn").forEach(button => {
+        button.addEventListener("click", function() {
+            const groupIndex = this.dataset.group;
+            const groupElement = document.querySelector(`.key-words-group[data-group='${groupIndex}']`);
+            const inputs = groupElement.querySelectorAll(".key-word-input");
+
+            if (this.textContent === "Edit") {
+                // Делаем ключевые слова редактируемыми
+                inputs.forEach(input => input.removeAttribute("readonly"));
+                this.textContent = "Save";
+            } else {
+                // Сохраняем изменения
+                const updatedWords = [];
+                inputs.forEach(input => {
+                    updatedWords.push({ id: input.dataset.id, key_word: input.value.trim() });
+                });
+
+                fetch("{{ url_for('report_settings.edit_keywords') }}", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ group_index: groupIndex, 
+                                           words: updatedWords 
+                                        })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === "success") {
+                        // Обновляем интерфейс, делаем инпуты неактивными
+                        inputs.forEach(input => input.setAttribute("readonly", true));
+                        this.textContent = "Edit";
+                    } else {
+                        alert(data.message);
+                    }
+                })
+                .catch(error => console.error("Error:", error));
+            }
         });
     });
 </script>

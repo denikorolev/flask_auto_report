@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, request, current_app, jsonify, send_file, flash, url_for
 from flask_login import login_required, current_user
+import os
 from models import db, Report, ReportType, ReportSubtype, ReportParagraph, Sentence, KeyWordsGroup
 from file_processing import save_to_word
 from calculating import calculate_age
@@ -276,21 +277,30 @@ def new_sentence_adding():
 @working_with_reports_bp.route("/export_to_word", methods=["POST"])
 @login_required
 def export_to_word():
-    data = request.get_json()
-    text = data.get("text")
-    name = data.get("name")
-    subtype = data.get("subtype")
-    report_type = data.get("report_type")
-    birthdate = data.get("birthdate")
-    reportnumber = data.get("reportnumber")
-    scanParam = data.get("scanParam")
-    side = data.get("side")
+    try:
+        data = request.get_json()
+        if data is None:
+                return jsonify({"message": "No JSON data received"}), 400
+        text = data.get("text")
+        name = data.get("name")
+        subtype = data.get("subtype")
+        report_type = data.get("report_type")
+        birthdate = data.get("birthdate")
+        reportnumber = data.get("reportnumber")
+        scanParam = data.get("scanParam")
+        side = data.get("side")
 
-    if not text or not name or not subtype:
-        return jsonify({"message": "Missing required information."}), 400
+        if not text or not name or not subtype:
+            return jsonify({"message": "Missing required information."}), 400
+    except Exception as e:
+        return jsonify({"message": f"Error processing request: {e}"}), 500
 
     try:
         file_path = save_to_word(text, name, subtype, report_type, birthdate, reportnumber, scanParam, side=side)
+        # Проверяем, существует ли файл
+        if not os.path.exists(file_path):
+            return jsonify({"message": "File not found"}), 500
+        
         return send_file(file_path, as_attachment=True)
     except Exception as e:
         return jsonify({"message": f"Failed to export to Word: {e}"}), 500

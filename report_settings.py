@@ -4,6 +4,7 @@ from flask import Blueprint, render_template, request, redirect, flash, current_
 from flask_login import login_required, current_user
 from models import db, ReportType, ReportSubtype, AppConfig, KeyWordsGroup 
 from file_processing import file_uploader
+from sentence_processing import group_key_words_by_index
 
 report_settings_bp = Blueprint('report_settings', __name__)
 
@@ -29,16 +30,8 @@ def report_settings():
         {'id': rst.id, 'type_id': rst.type, 'subtype': rst.subtype, "subtype_type_name": rst.report_type_rel.type}
         for rst in report_subtypes
     ]
-    
-    # Load key words using the method from the KeyWordsGroup class
-    key_words = KeyWordsGroup.find_by_user_id(current_user.id)
-    key_words_group = {}
-    for key_word in key_words:
-        if key_word.group_index not in key_words_group:
-            key_words_group[key_word.group_index] = []
-        key_words_group[key_word.group_index].append(key_word.key_word)
-    
-    key_words_group = list(key_words_group.values())
+    # Группируем ключевые слова с использованием  функции
+    key_words_group = group_key_words_by_index(current_user.id)
     
     # Processing type
     if request.method == "POST":
@@ -117,28 +110,33 @@ def report_settings():
                            )
 
 
-# Adding key words
 @report_settings_bp.route('/add_keywords', methods=['POST'])
 @login_required
 def add_keywords():
     key_word_input = request.json.get("key_word_input", "").strip()
     
     if not key_word_input:
-        return {"status": "error", "message": "No keywords provided."}, 400
+        return {"status": "error", 
+                "message": "No keywords provided."}, 400
 
-    key_words = [word.strip() for word in key_word_input.split(',') if word.strip()]
+    key_words = []
+    for word in key_word_input.split(','):
+        stripped_word = word.strip()
+        if stripped_word:
+            key_words.append(stripped_word)
     
     if not key_words:
-        return {"status": "error", "message": "Invalid keywords format."}, 400
+        return {"status": "error", 
+                "message": "Invalid keywords format."}, 400
     
     # Получаем все ключевые слова пользователя
     user_key_words = KeyWordsGroup.find_by_user_id(current_user.id)
 
-    # Определяем максимальный group_index
+    # Определяем максимальный group_index чтобы понять какой индекс присвоить новой группе
     max_group_index = max([kw.group_index for kw in user_key_words], default=0)
     new_group_index = max_group_index + 1
     
-    for i, key_word in enumerate(key_words, start=1):
+    for i, key_word in enumerate(key_words):
         KeyWordsGroup.create(
             group_index=new_group_index,
             index=i,
@@ -146,16 +144,53 @@ def add_keywords():
             user_id=current_user.id
         )
 
-    # Используем find_by_user_id для получения обновленного списка ключевых слов
-    updated_key_words = KeyWordsGroup.find_by_user_id(current_user.id)
+    # Группируем ключевые слова с использованием новой функции
+    key_words_group = group_key_words_by_index(current_user.id)
     
-    # Группируем ключевые слова по group_index для возврата в ответе
-    key_words_group = {}
-    for key_word in updated_key_words:
-        if key_word.group_index not in key_words_group:
-            key_words_group[key_word.group_index] = []
-        key_words_group[key_word.group_index].append(key_word.key_word)
+    return {"status": "success", 
+            "message": "New key words group added successfully.", 
+            "key_words_group": key_words_group}, 200
     
-    key_words_group = list(key_words_group.values())
     
-    return {"status": "success", "message": "New key words group added successfully.", "key_words_group": key_words_group[-1]}, 200
+@report_settings_bp.route('/delete_keywords', methods=['POST'])
+@login_required
+def delete_keywords():
+    group_index = request.json.get("group_index")
+
+    if not group_index:
+        return {"status": "error", "message": "Group index is required"}, 400
+
+    # Удаление всех ключевых слов с данным group_index для текущего пользователя
+    KeyWordsGroup.query.filter_by(group_index=group_index, user_id=current_user.id).delete()
+    db.session.commit()
+
+    return {"status": "success", "message": "Keywords group deleted successfully"}, 200
+
+
+@report_settings_bp.route('/edit_keywords', methods=['POST'])
+@login_required
+def edit_keywords():
+    data = request.json
+    group_index = data.get("group_index")
+    words = data.get("words")
+
+    if not group_index or not words:
+        return {"status": "error", "message": "Group index and\or words are required"}, 400
+
+    for word_data in words:
+        word_id = word_data.get("id")
+        key_word = word_data.get("key_word")
+
+        if not key_word:
+            # Если ключевое слово пустое, удаляем его
+            KeyWordsGroup.query.filter_by(index=word_id, user_id=current_user.id).delete()
+        else:
+            # Если ключевое слово есть, обновляем его
+            keyword_entry = KeyWordsGroup.query.filter_by(index=word_id, user_id=current_user.id).first()
+            if keyword_entry:
+                keyword_entry.key_word = key_word
+
+    db.session.commit()
+
+    return {"status": "success", "message": "Keywords updated successfully"}, 200
+

@@ -1,17 +1,15 @@
 # app.py
 
-from flask import Flask, redirect, url_for, flash, render_template, request
-from flask_login import LoginManager, current_user, login_required, user_logged_in
+from flask import Flask, redirect, url_for, flash, render_template
+from flask_login import LoginManager, login_required, user_logged_in
 from config import Config
 from flask_migrate import Migrate
 from auth import auth_bp  
-from models import db, User, AppConfig, Report, ReportType, ReportSubtype, ReportParagraph, Sentence
-import os
-import signal
+from models import db, User
 from werkzeug.utils import secure_filename
-from working_with_reports import working_with_reports_bp  # Import logic of create and editing of reports
-from my_reports import my_reports_bp  # Import new edit blueprint
-from report_settings import report_settings_bp  # Import new settings blueprint
+from working_with_reports import working_with_reports_bp  
+from my_reports import my_reports_bp 
+from report_settings import report_settings_bp  
 from new_report_creation import new_report_creation_bp
 from editing_report import editing_report_bp
 

@@ -82,3 +82,19 @@ def get_new_sentences(processed_paragraphs):
                 })
 
     return new_sentences
+
+# Function to group key words by group_index
+def group_key_words_by_index(user_id):
+    """ Ищем ключевые слова для данного юзера, группируем их в соответствии с group_index и index и добавляем эти индексы к данным """
+    key_words = KeyWordsGroup.find_by_user_id(user_id)
+    key_words_group = {}
+    for key_word in key_words:
+        if key_word.group_index not in key_words_group:
+            key_words_group[key_word.group_index] = []
+        key_words_group[key_word.group_index].append({
+            'key_word': key_word.key_word,
+            'group_index': key_word.group_index,
+            'index': key_word.index
+        })
+    
+    return list(key_words_group.values())
