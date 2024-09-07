@@ -87,14 +87,30 @@ def get_new_sentences(processed_paragraphs):
 def group_key_words_by_index(user_id):
     """ Ищем ключевые слова для данного юзера, группируем их в соответствии с group_index и index и добавляем эти индексы к данным """
     key_words = KeyWordsGroup.find_by_user_id(user_id)
-    key_words_group = {}
+    unsorted_key_words_group = {}
     for key_word in key_words:
-        if key_word.group_index not in key_words_group:
-            key_words_group[key_word.group_index] = []
-        key_words_group[key_word.group_index].append({
+        if key_word.group_index not in unsorted_key_words_group:
+            unsorted_key_words_group[key_word.group_index] = []
+        unsorted_key_words_group[key_word.group_index].append({
             'key_word': key_word.key_word,
             'group_index': key_word.group_index,
             'index': key_word.index
         })
     
-    return list(key_words_group.values())
+    # Сначала создаем список с парами (первая буква, группа ключевых слов)
+    key_words_group_with_first_letter = []
+    
+    for group_index, group in unsorted_key_words_group.items():
+        if group and group[0]["key_word"]:  # Проверяем, что группа и ключевое слово существуют
+            first_letter = group[0]["key_word"].lower()  # Получаем первую букву первого ключевого слова
+        else:
+            first_letter = ""  # Если группа пуста, используем пустую строку
+        key_words_group_with_first_letter.append((first_letter, group))
+
+    # Затем сортируем список по первой букве
+    key_words_group = sorted(key_words_group_with_first_letter, key=lambda x: x[0])
+
+    # Извлекаем только отсортированные группы (без первой буквы)
+    key_words_group = [group for _, group in key_words_group]
+    
+    return key_words_group
