@@ -10,6 +10,15 @@ report_settings_bp = Blueprint('report_settings', __name__)
 
 # Functions
 
+def process_keywords(key_word_input):
+    """Обрабатываем строку ключевых слов, разделенных запятой, и возвращаем список"""
+    key_words = []
+    for word in key_word_input.split(','):
+        stripped_word = word.strip()
+        if stripped_word:
+            key_words.append(stripped_word)
+    return key_words
+
 # Routs
 
 @report_settings_bp.route('/report_settings', methods=['GET', 'POST'])
@@ -119,11 +128,7 @@ def add_keywords():
         return {"status": "error", 
                 "message": "No keywords provided."}, 400
 
-    key_words = []
-    for word in key_word_input.split(','):
-        stripped_word = word.strip()
-        if stripped_word:
-            key_words.append(stripped_word)
+    key_words = process_keywords(key_word_input)
     
     if not key_words:
         return {"status": "error", 
@@ -146,6 +151,43 @@ def add_keywords():
 
     return {"status": "success"}, 200
     
+
+@report_settings_bp.route('/add_word_to_exist_group', methods=['POST'])
+@login_required
+def add_word_to_exist_group():
+    data = request.json
+    group_index = data.get("group_index")
+    key_word_input = data.get("key_word_input", "").strip()
+
+    if not group_index:
+        return {"status": "error", "message": "Group index is required"}, 400
+
+    if not key_word_input:
+        return {"status": "error", "message": "No keywords provided"}, 400
+
+    # Вынесем общую логику обработки ключевых слов в отдельную функцию
+    key_words = process_keywords(key_word_input)
+
+    if not key_words:
+        return {"status": "error", "message": "Invalid keywords format"}, 400
+
+    # Подсчитываем количество существующих ключевых слов в конкретной группе
+    num_of_exist_key_words = len(KeyWordsGroup.query.filter_by(group_index=group_index, user_id=current_user.id).all())
+
+        
+    # Добавляем ключевые слова в нужную группу
+    for i, key_word in enumerate(key_words, start=1):
+        KeyWordsGroup.create(
+            group_index=group_index,
+            index=num_of_exist_key_words + i,
+            key_word=key_word,
+            user_id=current_user.id
+        )
+    db.session.commit()
+
+    return {"status": "success", "message": "Keywords added successfully"}, 200
+    
+
     
 @report_settings_bp.route('/delete_keywords', methods=['POST'])
 @login_required

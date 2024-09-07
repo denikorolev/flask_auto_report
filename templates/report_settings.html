@@ -121,6 +121,13 @@
                             <!-- Кнопки для редактирования ключевых слов в группе -->
                             <button class="btn report__btn delete-keywords-btn" data-group="{{ key_words[0].group_index }}">Delete</button>
                             <button class="btn report__btn edit-keywords-btn" data-group="{{ key_words[0].group_index }}">Edit</button>
+                            <!-- Поле для ввода ключевого слова, которое будет показано при нажатии на кнопку -->
+                            <div class="add-keyword-input" style="display:none;" data-group="{{ key_words[0].group_index }}">
+                            <input type="text" placeholder="Enter new keyword(s)" class="new-keyword-input">
+                            <button class="btn report__btn submit-keyword-btn" data-group="{{ key_words[0].group_index }}">Submit</button>
+                            </div>
+                            <button class="btn report__btn add-keywords-btn" data-group="{{ key_words[0].group_index }}">Add Word</button>
+                            
                         </div>
                     {% endfor %}
                     
@@ -135,6 +142,52 @@
 </div>
 
 <script>
+
+    // Показываем поле для ввода ключевых слов при нажатии на кнопку "Add Word"
+    document.querySelectorAll(".add-keywords-btn").forEach(button => {
+        button.addEventListener("click", function() {
+            const groupIndex = this.dataset.group;
+            const inputContainer = document.querySelector(`.add-keyword-input[data-group='${groupIndex}']`);
+            if (inputContainer) {
+                inputContainer.style.display = inputContainer.style.display === "none" ? "inline-block" : "none";
+            }
+        });
+    });
+
+    // Логика отправки нового ключевого слова (работа кнопки add word)
+    document.querySelectorAll(".submit-keyword-btn").forEach(button => {
+        button.addEventListener("click", function() {
+            const groupIndex = this.dataset.group;
+            const inputElement = document.querySelector(`.add-keyword-input[data-group='${groupIndex}'] .new-keyword-input`);
+            const newKeywords = inputElement.value.trim();
+
+            if (!newKeywords) {
+                alert("Please enter at least one keyword.");
+                return;
+            }
+
+            // Отправляем ключевые слова на сервер
+            fetch("{{ url_for('report_settings.add_word_to_exist_group') }}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ group_index: groupIndex, key_word_input: newKeywords })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === "success") {
+                    location.reload(); // Перезагружаем страницу при успешном добавлении
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(error => {
+                console.error("Error:", error);
+            });
+        });
+    });
+
 
 
     // File directory logic
