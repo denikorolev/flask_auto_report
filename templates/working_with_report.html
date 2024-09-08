@@ -191,6 +191,7 @@
         return style.display !== "none" && style.visibility !== "hidden";
     }
 
+
     // Функция для очистки текста от <select> элементов и кнопок, оставляя только выбранный текст
     function cleanSelectText(element) {
         let text = element.innerHTML;
@@ -215,6 +216,7 @@
         return text;
     }
     
+
     // Собираем текст из правой части экрана для дальнейшей его обработки
     function collectTextFromRightSide() {
         const rightParagraphList = document.getElementById("right-paragraph-list");
@@ -391,19 +393,25 @@
     function highlightKeyWords(text, keyWordsGroups) {
         const matchIndexes = {};
     
+        // Функция для проверки, является ли символ буквой (учитывает кириллицу и латиницу)
+        function isLetter(char) {
+            return /[a-zA-Zа-яА-ЯёЁ]/.test(char);
+        }
+    
+        // Проходим по каждой группе ключевых слов
         keyWordsGroups.forEach(group => {
             group.forEach(word => {
                 if (!matchIndexes[word]) {
                     matchIndexes[word] = 0;
                 }
     
-                // Регулярное выражение для поиска слов
-                const regex = new RegExp(`(?<!<select[^>]*>|<option[^>]*>)(${word})(?![^<]*>|[^>]*</select>|[^>]*</option>)`, 'gi');
+                // Регулярное выражение для нахождения ключевого слова вне тегов и без букв перед и после
+                const regex = new RegExp(`(?<!<[^>]*>|[a-zA-Zа-яА-ЯёЁ])(${word})(?![^<]*>|[a-zA-Zа-яА-ЯёЁ])`, 'gi');
     
-                text = text.replace(regex, (matchedWord) => {
+                text = text.replace(regex, (matchedWord, offset, fullText) => {
                     matchIndexes[word] += 1;
     
-                    // Создаем select с опциями из той же группы слов
+                    // Создаём select с опциями из той же группы слов
                     const options = group.map(optionWord => {
                         const isSelected = optionWord.toLowerCase() === matchedWord.toLowerCase() ? "selected" : "";
                         return `<option value="${optionWord}" ${isSelected}>${optionWord}</option>`;
@@ -416,6 +424,8 @@
     
         return text;
     }
+    
+    
     
     
     // Function Logic for finding key_words
@@ -442,7 +452,6 @@
     }
     
     
-
     // Renewing of the right side text for key_words logic working
     document.addEventListener("DOMContentLoaded", function() {
         updateRightSideText(); 
@@ -480,11 +489,7 @@
         }
     }
 
-    
-    
-
-
-    // Decrise and increase button logic
+    // Increase button logic
     document.querySelectorAll(".icon-btn--increase-weight").forEach(button => {
         button.addEventListener("click", function() {
             const container = this.closest(".edit-container");
@@ -494,7 +499,8 @@
             setWeightButton.textContent = currentWeight;
         });
     });
-    
+
+    // Decrise button logic
     document.querySelectorAll(".icon-btn--decrease-weight").forEach(button => {
         button.addEventListener("click", function() {
             const container = this.closest(".edit-container");
@@ -535,8 +541,6 @@
         });
     });
     
-    
-       
     // Button "expand" logic
     document.querySelectorAll(".icon-btn--expand").forEach(button => {
         button.addEventListener("click", function() {
