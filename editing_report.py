@@ -40,17 +40,6 @@ def edit_report():
     if request.method == "POST":
         if request.is_json:  # Проверка, если данные запроса в формате JSON
             data = request.get_json()  # Получение данных JSON из запроса
-            if "edit_sentence" in data:
-                sentence_for_edit = Sentence.query.get(data["sentence_id"])
-                sentence_for_edit.index = data["sentence_index"]
-                sentence_for_edit.weight = data["sentence_weight"]
-                sentence_for_edit.comment = data["sentence_comment"]
-                sentence_for_edit.sentence = data["sentence_sentence"]
-                try:
-                    sentence_for_edit.save()
-                    return jsonify(success=True, message="Changes saved successfully")
-                except Exception as e:
-                    return jsonify(success=False, message=f"Something went wrong. error code: {e}")
 
             if "delete_sentence" in data:
                 try:
@@ -106,37 +95,36 @@ def edit_report():
                 except Exception as e:
                     return jsonify(success=False, message=f"Something went wrong. error code {e}")
 
-            if "add_sentence" in data:
-                sentence_index = 1
-                sentence_paragraph_id = data["add_sentence_paragraph"]
-                sentences = Sentence.find_by_paragraph_id(sentence_paragraph_id)
-                if sentences:
-                    sentence_length = len(sentences)
-                    sentence_index += sentence_length
-                try:
-                    Sentence.create(
-                        paragraph_id=sentence_paragraph_id,
-                        index=sentence_index,
-                        weight="1",
-                        comment="",
-                        sentence="add your sentence"
-                    )
-                    return jsonify(success=True, message="Sentence created successfully")
-                except Exception as e:
-                    return jsonify(success=False, message=f"Sentence can't be created, error code: {e}")
-                
             if "edit_sentences_bulk" in data:
                 try:
                     for sentence_data in data["sentences"]:
-                        sentence_for_edit = Sentence.query.get(sentence_data["sentence_id"])
-                        sentence_for_edit.index = sentence_data["sentence_index"]
-                        sentence_for_edit.weight = sentence_data["sentence_weight"]
-                        sentence_for_edit.comment = sentence_data["sentence_comment"]
-                        sentence_for_edit.sentence = sentence_data["sentence_sentence"]
-                        sentence_for_edit.save()
+                        print(sentence_data)
+                        if sentence_data["sentence_id"] == "new":
+                            # Логика для создания нового предложения
+                            print(f"Creating new sentence for paragraph_id={sentence_data['add_sentence_paragraph']}")
+                            sentence_index = sentence_data["sentence_index"]
+                            paragraph_id = sentence_data["add_sentence_paragraph"]
+                            Sentence.create(
+                            paragraph_id=paragraph_id,
+                            index=sentence_index,
+                            weight=sentence_data["sentence_weight"],
+                            comment=sentence_data["sentence_comment"],
+                            sentence=sentence_data["sentence_sentence"]
+                            )
+                        else:
+                            # Логика для обновления существующего предложения
+                            sentence_for_edit = Sentence.query.get(sentence_data["sentence_id"])
+                            print(f"Updating sentence with id={sentence_for_edit.id}")
+                            sentence_for_edit.index = sentence_data["sentence_index"]
+                            sentence_for_edit.weight = sentence_data["sentence_weight"]
+                            sentence_for_edit.comment = sentence_data["sentence_comment"]
+                            sentence_for_edit.sentence = sentence_data["sentence_sentence"]
+                            sentence_for_edit.save()
                     return jsonify(success=True, message="All sentences updated successfully")
                 except Exception as e:
+                    print(f"Error: {e}")
                     return jsonify(success=False, message=f"Something went wrong. error code: {e}")
+
 
     return render_template('edit_report.html', 
                            title=page_title, 

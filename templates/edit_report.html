@@ -48,6 +48,8 @@
         <div class="report_borderline"></div>
         <ul>
             <li class="flex_column">
+
+                <!-- Уровень параграфа -->
                 {% if report_paragraphs %}
                     {% for paragraph in report_paragraphs %}
                         <div class="flex_column">
@@ -63,6 +65,8 @@
                                     Expand ({{ paragraph.sentences|length }})
                                 </button>
                             </form>
+
+                            <!-- Уровень предложения -->
                             <div class="report_borderline"></div>
                             <ul id="sentences-{{ paragraph.id }}" class="sentence-list" style="display: none;">
                                 {% if paragraph.sentences %}
@@ -103,38 +107,95 @@
 </div>
 
 <script>
+
     document.addEventListener("DOMContentLoaded", function() {
-        // Toggle sentences and handle saving
+        // Обработка кнопки Expand/Save
         const toggleButtons = document.querySelectorAll(".toggle-sentences");
         toggleButtons.forEach(button => {
             button.addEventListener("click", function() {
                 const paragraphId = this.getAttribute("data-paragraph-id");
                 const sentenceList = document.getElementById(`sentences-${paragraphId}`);
+
+                // Логика кнопки Expand/Save
                 if (this.textContent.includes("Expand")) {
                     sentenceList.style.display = "block";
                     this.textContent = "Save";
                 } else if (this.textContent.includes("Save")) {
-                    this.textContent = `Expand (${sentenceList.children.length - 1})`; // Update text back to Expand
+                    this.textContent = `Expand (${sentenceList.children.length - 1})`; // Обновляем текст обратно на Expand
                     sentenceList.style.display = "none";
 
-                    // Collect all sentence data and send to the server
+                    // Сбор данных для всех предложений в списке
                     const sentenceForms = sentenceList.querySelectorAll(".edit-sentence-form");
                     const sentenceData = [];
-                    
+
                     sentenceForms.forEach(form => {
                         const formData = new FormData(form);
                         const jsonData = Object.fromEntries(formData.entries());
                         sentenceData.push(jsonData);
                     });
 
+                    // Отправляем данные предложений на сервер
                     fetch("{{ url_for('editing_report.edit_report', report_id=report.id) }}", {
                         method: "POST",
                         headers: {
                             "Content-Type": "application/json"
                         },
-                        body: JSON.stringify({edit_sentences_bulk: true, sentences: sentenceData})
-                    }).then(handleResponse);
+                        body: JSON.stringify({ edit_sentences_bulk: true, sentences: sentenceData })
+                    }).then(response => {
+                        if (response.ok) {
+                            alert("Sentences saved successfully!");
+                            window.location.reload(); // Обновляем страницу после успешного сохранения
+                        } else {
+                            alert("Failed to save sentences.");
+                        }
+                    });
                 }
+            });
+        });
+
+        // Добавление нового предложения без отправки на сервер
+        document.querySelectorAll(".add-sentence-form").forEach(form => {
+            form.addEventListener("submit", function(event) {
+                event.preventDefault();
+    
+                const paragraphId = form.querySelector('input[name="add_sentence_paragraph"]').value;
+                const sentenceList = document.getElementById(`sentences-${paragraphId}`);
+    
+                // Находим максимальный индекс среди предложений
+                let maxIndex = 0;
+                sentenceList.querySelectorAll("input[name='sentence_index']").forEach(input => {
+                    const index = parseInt(input.value, 10);
+                    if (index > maxIndex) {
+                        maxIndex = index;
+                    }
+                });
+    
+                // Назначаем новый индекс
+                const newSentenceIndex = maxIndex + 1;
+    
+                // Создаем новый элемент предложения
+                const newSentenceLi = document.createElement("li");
+                const newSentenceForm = document.createElement("form");
+                newSentenceForm.classList.add("edit-sentence-form");
+    
+                newSentenceForm.innerHTML = `
+                    <input type="hidden" name="sentence_id" value="new">
+                    <input type="hidden" name="add_sentence_paragraph" value="${paragraphId}">
+                    <input class="report_input__item" type="text" name="sentence_sentence" value="New sentence">
+                    <input class="report_input__item" type="text" name="sentence_index" value="${newSentenceIndex}">
+                    <input class="report_input__item" type="text" name="sentence_weight" value="1">
+                    <input class="report_input__item" type="text" name="sentence_comment" value="">
+                    <button class="btn report__btn delete-sentence-btn" type="button" data-sentence-id="new">Delete Sentence</button>
+                `;
+    
+                newSentenceLi.appendChild(newSentenceForm);
+                sentenceList.appendChild(newSentenceLi);
+                sentenceList.style.display = "block"; // Открываем список предложений, если он был скрыт
+
+                // Добавляем обработчик для удаления нового предложения
+                newSentenceForm.querySelector(".delete-sentence-btn").addEventListener("click", function() {
+                newSentenceLi.remove();  // Удаляем элемент из DOM
+            });
             });
         });
     
@@ -170,22 +231,6 @@
             });
         });
     
-        // Add sentence
-        document.querySelectorAll(".add-sentence-form").forEach(form => {
-            form.addEventListener("submit", function(event) {
-                event.preventDefault();
-                const formData = new FormData(this);
-                const jsonData = Object.fromEntries(formData.entries());
-                fetch("{{ url_for('editing_report.edit_report', report_id=report.id) }}", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({add_sentence: true, ...jsonData})
-                }).then(handleResponse);
-            });
-        });
-    
         // New paragraph
         document.querySelectorAll(".new-paragraph-form").forEach(form => {
             form.addEventListener("submit", function(event) {
@@ -202,37 +247,11 @@
             });
         });
     
-        // Edit sentence
-        document.querySelectorAll(".edit-sentence-btn").forEach(button => {
-            button.addEventListener("click", function() {
-                const sentenceId = this.getAttribute("data-sentence-id");
-                const sentenceElement = document.querySelector(`input[name="sentence_sentence"][data-sentence-id="${sentenceId}"]`);
-                const indexElement = document.querySelector(`input[name="sentence_index"][data-sentence-id="${sentenceId}"]`);
-                const weightElement = document.querySelector(`input[name="sentence_weight"][data-sentence-id="${sentenceId}"]`);
-                const commentElement = document.querySelector(`input[name="sentence_comment"][data-sentence-id="${sentenceId}"]`);
-    
-                fetch("{{ url_for('editing_report.edit_report', report_id=report.id) }}", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        edit_sentence: true,
-                        sentence_id: sentenceId,
-                        sentence_sentence: sentenceElement.value,
-                        sentence_index: indexElement.value,
-                        sentence_weight: weightElement.value,
-                        sentence_comment: commentElement.value
-                    })
-                }).then(handleResponse);
-            });
-        });
-    
         // Delete sentence
         document.querySelectorAll(".delete-sentence-btn").forEach(button => {
             button.addEventListener("click", function() {
                 const sentenceId = this.getAttribute("data-sentence-id");
-    
+        
                 fetch("{{ url_for('editing_report.edit_report', report_id=report.id) }}", {
                     method: "POST",
                     headers: {
@@ -242,7 +261,14 @@
                         delete_sentence: true,
                         sentence_id: sentenceId
                     })
-                }).then(handleResponse);
+                }).then(response => {
+                    if (response.ok) {
+                        alert("Sentence deleted successfully!");
+                        this.closest("li").remove(); // Удаляем элемент из DOM
+                    } else {
+                        alert("Failed to delete sentence.");
+                    }
+                });
             });
         });
     });
