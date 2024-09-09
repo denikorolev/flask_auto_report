@@ -106,39 +106,62 @@ class Report(BaseModel):
         db.session.add(new_report)
         db.session.commit()
         return new_report
+    
+    @classmethod
+    def find_by_user(cls, user_id):
+        """Возвращает все отчеты, связанные с данным пользователем."""
+        return cls.query.filter_by(userid=user_id).all()
 
 
 class ReportType(BaseModel):
     __tablename__ = 'report_type'
+    user_id = db.Column(db.BigInteger, db.ForeignKey('users.id'), nullable=False)
     type = db.Column(db.String(50), nullable=False)
     
+    user = db.relationship('User', backref=db.backref('report_types', lazy=True))
     subtypes_rel = db.relationship('ReportSubtype', back_populates='report_type_rel', lazy=True)
     
     @classmethod
-    def create(cls, type):
+    def create(cls, type, user_id):
         new_type = cls(
-            type=type
+            type=type,
+            user_id=user_id
         )
         db.session.add(new_type)
         db.session.commit()
         return new_type
+    
+    @classmethod
+    def find_by_user(cls, user_id):
+        """
+        Find all report types created by a specific user.
+        """
+        return cls.query.filter_by(user_id=user_id).all()
 
 class ReportSubtype(BaseModel):
     __tablename__ = "report_subtype"
+    user_id = db.Column(db.BigInteger, db.ForeignKey('users.id'), nullable=False)
     type = db.Column(db.SmallInteger, db.ForeignKey("report_type.id"), nullable=False)
     subtype = db.Column(db.String(250), nullable=False)
     
+    user = db.relationship('User', backref=db.backref('report_subtypes', lazy=True))
     report_type_rel = db.relationship('ReportType', back_populates='subtypes_rel', lazy=True)
     
     @classmethod
-    def create(cls, type, subtype):
+    def create(cls, type, subtype, user_id):
         new_subtype = cls(
             type=type,
-            subtype=subtype
+            subtype=subtype,
+            user_id=user_id
         )
         db.session.add(new_subtype)
         db.session.commit()
         return new_subtype
+    
+    @classmethod
+    def find_by_user(cls, user_id):
+        """Возвращает все подтипы, связанные с пользователем."""
+        return cls.query.filter_by(user_id=user_id).all()
 
 class ReportParagraph(BaseModel):
     __tablename__ = "report_paragraphs"
@@ -205,7 +228,7 @@ class KeyWordsGroup(BaseModel):
     key_word_reports = db.relationship('Report', secondary='key_word_report_link', backref='key_words', lazy=True)
 
     @classmethod
-    def create(cls, group_index, index, key_word, user_id, key_word_comment=None, public=False, reports=None, paragraphs=None):
+    def create(cls, group_index, index, key_word, user_id, key_word_comment=None, public=False, reports=None):
         """Creates a new keyword group entry."""
         new_key_word_group = cls(
             group_index=group_index,
@@ -217,6 +240,7 @@ class KeyWordsGroup(BaseModel):
         )
         # Если переданы отчеты, добавляем связи с ними
         if reports:
+            reports = Report.query.filter(Report.id.in_(reports), Report.userid == user_id).all()
             for report in reports:
                 new_key_word_group.key_word_reports.append(report)
 
@@ -225,7 +249,7 @@ class KeyWordsGroup(BaseModel):
         return new_key_word_group
 
     @classmethod
-    def find_by_user_id(cls, user_id):
+    def find_by_user(cls, user_id):
         """Finds all keyword groups for a specific user."""
         return cls.query.filter_by(user_id=user_id).order_by(cls.group_index, cls.index).all()
     

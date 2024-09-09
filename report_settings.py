@@ -2,7 +2,7 @@
 
 from flask import Blueprint, render_template, request, redirect, flash, current_app
 from flask_login import login_required, current_user
-from models import db, ReportType, ReportSubtype, AppConfig, KeyWordsGroup 
+from models import db, ReportType, ReportSubtype, AppConfig, KeyWordsGroup, Report 
 from file_processing import file_uploader
 from sentence_processing import group_key_words_by_index
 
@@ -30,22 +30,28 @@ def report_settings():
     upload_folder_path = current_app.config.get("UPLOAD_FOLDER_PATH")
     upload_folder_name = current_app.config.get("UPLOAD_FOLDER_NAME")
     
+    # Get all user reports
+    user_reports = Report.find_by_user(current_user.id)
     
-    # Geting report types and subtypes 
-    report_types = ReportType.query.all()  
-    report_subtypes = ReportSubtype.query.all() 
-    # Convert objects to dictionary
-    report_subtypes_dict = [
-        {'id': rst.id, 'type_id': rst.type, 'subtype': rst.subtype, "subtype_type_name": rst.report_type_rel.type}
-        for rst in report_subtypes
-    ]
+    # Get types
+    user_types = ReportType.find_by_user(current_user.id)
+    
+    # Get subtypes
+    user_subtypes = ReportSubtype.find_by_user(current_user.id)
+    
+    # Get user's keywords
+    user_keywords = KeyWordsGroup.find_by_user(current_user.id)
+    for key_word in user_keywords:
+        
+        print(key_word.key_word)
+    
     # Группируем ключевые слова с использованием  функции
-    key_words_group = group_key_words_by_index(current_user.id)
+    key_words_group = group_key_words_by_index(current_user.id, user_keywords)
     
     # Processing type
     if request.method == "POST":
         if "add_new_type_button" in request.form:
-            ReportType.create(type=request.form["new_type"])
+            ReportType.create(type=request.form["new_type"],user_id=current_user.id)
             flash("New type was created successfully")
             return redirect(request.url)
         
@@ -58,7 +64,12 @@ def report_settings():
             return redirect(request.url)
         
         if "edit_type_button" in request.form:
-            type_for_editing = ReportType.query.get(request.form["type_id"])
+            type_for_editing = ReportType.query.filter_by(id=request.form["type_id"], user_id=current_user.id).first()
+            
+            if not type_for_editing:
+                flash("You do not have permission to edit this type.", "error")
+                return redirect(request.url)
+            
             type_for_editing.type = request.form["type_type"]
             type_for_editing.save()
             flash("Type edited successfully")
@@ -66,23 +77,30 @@ def report_settings():
         
         # Processing subtype
         if "add_new_subtype_button" in request.form:
-            ReportSubtype.create(type=request.form["report_subtype_type"], subtype=request.form["new_subtype"])
+            ReportSubtype.create(type=request.form["report_subtype_type"], subtype=request.form["new_subtype"], user_id=current_user.id)
             flash("New subtype was created successfully")
             return redirect(request.url)
         
         if "delete_subtype_button" in request.form:
-            try:
-                ReportSubtype.delete_by_id(request.form["subtype_id"])
-                flash("Subtype was deleted successfully")
-            except:
-                flash("It's impossible to delele the subtype because of existing of the reports with this type")
+            # Используем метод find_by_user для получения подтипов текущего пользователя
+            subtype_for_deletion = ReportSubtype.find_by_user(current_user.id)
+            subtype_for_deletion = next((st for st in subtype_for_deletion if st.id == int(request.form["subtype_id"])), None)
+
+            if subtype_for_deletion:
+                ReportSubtype.delete_by_id(subtype_for_deletion.id)
+                flash("Subtype deleted successfully")
+            else:
+                flash("You don't have permission to delete this subtype")
             return redirect(request.url)
         
         if "edit_subtype_button" in request.form:
-            subtype_for_editing = ReportSubtype.query.get(request.form["subtype_id"])
-            subtype_for_editing.subtype = request.form["subtype_subtype"]
-            subtype_for_editing.save()
-            flash("Subtype edited successfully")
+            subtype_for_editing = ReportSubtype.query.filter_by(id=request.form["subtype_id"], user_id=current_user.id).first()
+            if subtype_for_editing:
+                subtype_for_editing.subtype = request.form["subtype_subtype"]
+                subtype_for_editing.save()
+                flash("Subtype edited successfully")
+            else:
+                flash("You don't have permission to edit this subtype")
             return redirect(request.url)
         
         # Directory and folder name settings
@@ -111,18 +129,21 @@ def report_settings():
     return render_template('report_settings.html', 
                            title = page_title,
                            menu = menu,
-                           report_types=report_types, 
-                           report_subtypes=report_subtypes_dict,
                            upload_folder_path=upload_folder_path,
                            upload_folder_name=upload_folder_name,
-                           key_words_group=key_words_group 
+                           key_words_group=key_words_group,
+                           user_reports=user_reports,
+                           user_types=user_types,
+                           user_subtypes=user_subtypes 
                            )
 
 
 @report_settings_bp.route('/add_keywords', methods=['POST'])
 @login_required
 def add_keywords():
-    key_word_input = request.json.get("key_word_input", "").strip()
+    data = request.get_json()
+    key_word_input = data.get('key_word_input').strip()
+    report_ids = data.get('report_ids', [])  # Получаем список отчетов или пустой список
     
     if not key_word_input:
         return {"status": "error", 
@@ -135,7 +156,7 @@ def add_keywords():
                 "message": "Invalid keywords format."}, 400
     
     # Получаем все ключевые слова пользователя
-    user_key_words = KeyWordsGroup.find_by_user_id(current_user.id)
+    user_key_words = KeyWordsGroup.find_by_user(current_user.id)
 
     # Определяем максимальный group_index чтобы понять какой индекс присвоить новой группе
     max_group_index = max([kw.group_index for kw in user_key_words], default=0)
@@ -146,7 +167,8 @@ def add_keywords():
             group_index=new_group_index,
             index=i,
             key_word=key_word,
-            user_id=current_user.id
+            user_id=current_user.id,
+            reports=report_ids
         )
 
     return {"status": "success"}, 200

@@ -26,7 +26,7 @@
                     <div class="type_list">
                         <label class="report_label__item" for="type_type">Edit Types:</label>
                         <div>
-                        {% for type in report_types %}
+                        {% for type in user_types %}
                             <form method="POST" class="flex">
                                 <input class="report_input__item" type="hidden" id="type_id" name="type_id" value="{{ type.id }}">
                                 <input class="report_input__item" type="text" id="type_type" name="type_type" value="{{ type.type }}">
@@ -46,7 +46,7 @@
             <form method="POST" class="flex">
                 <label class="report_label__item" for="report_subtype_type">New Subtype:</label>
                 <select class="report__select report__select--type" id="report_subtype_type" name="report_subtype_type" required>
-                    {% for type in report_types %}
+                    {% for type in user_types %}
                         <option value="{{ type.id }}">{{ type.type }}</option>
                     {% endfor %}
                 </select>
@@ -58,11 +58,11 @@
                 <li>
                     <div class="subtype_list">
                         <label class="report_label__item" for="subtype_subtype">Edit Subtypes:</label>
-                        {% for subtype in report_subtypes %}
+                        {% for subtype in user_subtypes %}
                             <form method="POST" class="flex">
                                 <input class="report_input__item" type="hidden" id="subtype_id" name="subtype_id" value="{{ subtype.id }}" readonly>
                                 <input class="report_input__item" type="text" id="subtype_subtype" name="subtype_subtype" value="{{ subtype.subtype }}">
-                                <input class="report_input__item" type="text" id="subtype_type" name="subtype_type" value="{{ subtype.subtype_type_name }}" readonly>
+                                <input class="report_input__item" type="text" id="subtype_type" name="subtype_type" value="{{ subtype.report_type_rel.type }}" readonly>
                                 <button class="btn report__btn" type="submit" name="delete_subtype_button">Delete Subtype</button>
                                 <button class="btn report__btn" type="submit" name="edit_subtype_button">Edit Subtype</button>
                             </form>
@@ -104,6 +104,23 @@
         <form id="keywords-form">
             <label for="key_word_input" class="report_label__item">New Key Words (comma-separated):</label>
             <input type="text" id="key_word_input" name="key_word_input" required>
+            <!-- Чекбокс для выбора связывания с отчетом -->
+            <div>
+                <label for="link_reports_checkbox" class="report_label__item">Link to Reports:</label>
+                <input type="checkbox" id="link_reports_checkbox" name="link_reports_checkbox">
+            </div>
+            <!-- Список reports пользователя -->
+            <div id="report-checkboxes-container" style="display: none;">
+                <label class="report_label__item">Select Reports:</label>
+                <div>
+                    {% for report in user_reports %}
+                        <label>
+                            <input type="checkbox" name="report_ids" value="{{ report.id }}">
+                            {{ report.report_name }}
+                        </label><br>
+                    {% endfor %}
+                </div>
+            </div>
             <button type="submit" class="btn report__btn">Add Key Words Group</button>
         </form>
 
@@ -112,23 +129,48 @@
             <div id="key-words-list">
                 {% if key_words_group %}
                     {% for key_words in key_words_group %}
-                        <div class="key-words-group" data-group="{{ key_words[0].group_index }}">
-                            {% for key_word in key_words %}
-                                <span data-group="{{ key_word.group_index }}" data-index="{{ key_word.index }}">
-                                    {{ key_word.key_word }}{% if not loop.last %}, {% endif %}
-                                </span>
-                            {% endfor %}
-                            <!-- Кнопки для редактирования ключевых слов в группе -->
-                            <button class="btn report__btn delete-keywords-btn" data-group="{{ key_words[0].group_index }}">Delete</button>
-                            <button class="btn report__btn edit-keywords-btn" data-group="{{ key_words[0].group_index }}">Edit</button>
-                            <!-- Поле для ввода ключевого слова, которое будет показано при нажатии на кнопку -->
-                            <div class="add-keyword-input" style="display:none;" data-group="{{ key_words[0].group_index }}">
-                            <input type="text" placeholder="Enter new keyword(s)" class="new-keyword-input">
-                            <button class="btn report__btn submit-keyword-btn" data-group="{{ key_words[0].group_index }}">Submit</button>
+                        {% if not key_words['linked_reports'] %}
+                            <div class="key-words-group" data-group="{{ key_words['keywords'][0].group_index }}">
+                                {% for key_word in key_words['keywords'] %}
+                                    <span data-group="{{ key_word.group_index }}" data-index="{{ key_word.index }}">
+                                        {{ key_word.key_word }}{% if not loop.last %}, {% endif %}
+                                    </span>
+                                {% endfor %}
+                                <!-- Кнопки для редактирования ключевых слов в группе -->
+                                <button class="btn report__btn delete-keywords-btn" data-group="{{ key_words['keywords'][0].group_index }}">Delete</button>
+                                <button class="btn report__btn edit-keywords-btn" data-group="{{ key_words['keywords'][0].group_index }}">Edit</button>
+                                <!-- Поле для ввода ключевого слова, которое будет показано при нажатии на кнопку -->
+                                <div class="add-keyword-input" style="display:none;" data-group="{{ key_words['keywords'][0].group_index }}">
+                                <input type="text" placeholder="Enter new keyword(s)" class="new-keyword-input">
+                                <button class="btn report__btn submit-keyword-btn" data-group="{{ key_words['keywords'][0].group_index }}">Submit</button>
+                                </div>
+                                <button class="btn report__btn add-keywords-btn" data-group="{{ key_words['keywords'][0].group_index }}">Add Word</button>
+                                
                             </div>
-                            <button class="btn report__btn add-keywords-btn" data-group="{{ key_words[0].group_index }}">Add Word</button>
-                            
-                        </div>
+                            {% else %}
+                                <div class="key-words-group" data-group="{{ key_words['keywords'][0].group_index }}">
+                                    {% for key_word in key_words['keywords'] %}
+                                        <span data-group="{{ key_word.group_index }}" data-index="{{ key_word.index }}">
+                                            {{ key_word.key_word }}{% if not loop.last %}, {% endif %}
+                                        </span>
+                                    {% endfor %}
+                                    <div>
+                                        Связанные отчеты:
+                                        {% for report_id in key_words['linked_reports'] %}
+                                            <span>Report ID: {{ report_id }}</span>{% if not loop.last %}, {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                    <!-- Кнопки для редактирования ключевых слов в группе -->
+                                    <button class="btn report__btn delete-keywords-btn" data-group="{{ key_words['keywords'][0].group_index }}">Delete</button>
+                                    <button class="btn report__btn edit-keywords-btn" data-group="{{ key_words['keywords'][0].group_index }}">Edit</button>
+                                    <!-- Поле для ввода ключевого слова, которое будет показано при нажатии на кнопку -->
+                                    <div class="add-keyword-input" style="display:none;" data-group="{{ key_words['keywords'][0].group_index }}">
+                                        <input type="text" placeholder="Enter new keyword(s)" class="new-keyword-input">
+                                        <button class="btn report__btn submit-keyword-btn" data-group="{{ key_words['keywords'][0].group_index }}">Submit</button>
+                                    </div>
+                                    <button class="btn report__btn add-keywords-btn" data-group="{{ key_words['keywords'][0].group_index }}">Add Word</button>
+                                </div>
+                            {% endif %}
                     {% endfor %}
                     
                 {% else %}
@@ -142,6 +184,13 @@
 </div>
 
 <script>
+
+    // File directory logic
+    function updateDirectoryPath() {
+        var input = document.getElementById('file-input');
+        var path = input.files[0].webkitRelativePath;
+        document.getElementById('directory-path').value = path.split('/')[0];
+    }
 
     // Показываем поле для ввода ключевых слов при нажатии на кнопку "Add Word"
     document.querySelectorAll(".add-keywords-btn").forEach(button => {
@@ -189,25 +238,41 @@
     });
 
 
+    // Показываем или скрываем список отчетов при выборе чекбокса
+    document.getElementById('link_reports_checkbox').addEventListener('change', function() {
+        const reportCheckboxesContainer = document.getElementById('report-checkboxes-container');
+        if (this.checked) {
+            reportCheckboxesContainer.style.display = 'block';
+        } else {
+            reportCheckboxesContainer.style.display = 'none';
+        }
+    });
 
-    // File directory logic
-    function updateDirectoryPath() {
-        var input = document.getElementById('file-input');
-        var path = input.files[0].webkitRelativePath;
-        document.getElementById('directory-path').value = path.split('/')[0];
-    }
 
     // Добавление нового ключевого слова на страницу
     document.getElementById("keywords-form").addEventListener("submit", function(event) {
         event.preventDefault();
+        
         const keyWordInput = document.getElementById("key_word_input").value;
-    
+        const linkReportsCheckbox = document.getElementById("link_reports_checkbox").checked;
+
+        // Собираем выбранные отчеты, если чекбокс отмечен
+        let reportIds = [];
+        if (linkReportsCheckbox) {
+            const reportCheckboxes = document.querySelectorAll('input[name="report_ids"]:checked');
+            reportCheckboxes.forEach(checkbox => reportIds.push(checkbox.value));
+        }
+
+        // Отправляем данные на сервер
         fetch("{{ url_for('report_settings.add_keywords') }}", {
             method: "POST", // Используем POST
             headers: {
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify({ key_word_input: keyWordInput })
+            body: JSON.stringify({ 
+                key_word_input: keyWordInput,
+                report_ids: reportIds  // Передаем выбранные отчеты
+            })
         })
         .then(response => {
             if (response.ok) {
@@ -220,8 +285,8 @@
             console.error("Error:", error);
         });
     });
-    
 
+    
 
     // Логика для удаления ключевых слов по группе
     document.querySelectorAll(".delete-keywords-btn").forEach(button => {

@@ -87,36 +87,88 @@ def get_new_sentences(processed_paragraphs):
 
     return new_sentences
 
-# Function to group key words by group_index
-def group_key_words_by_index(user_id):
-    """ Ищем ключевые слова для данного юзера, группируем 
-    их в соответствии с group_index и index и добавляем эти 
-    индексы к данным """
-    key_words = KeyWordsGroup.find_by_user_id(user_id)
+def sort_key_words_group(unsorted_key_words_group):
+    """ Сортировка групп ключевых слов по первой букве ключевого слова """
+    key_words_group_with_first_letter = []
+    
+    for group_index, group_data in unsorted_key_words_group.items():
+        keywords = group_data.get("keywords", [])
+        if keywords and keywords[0]["key_word"]:  # Проверяем, что ключевые слова существуют
+            first_letter = keywords[0]["key_word"].lower()  # Получаем первую букву первого ключевого слова
+        else:
+            first_letter = ""  # Если ключевых слов нет, используем пустую строку
+
+        # Добавляем первую букву и саму группу данных для сортировки
+        key_words_group_with_first_letter.append((first_letter, group_data))
+
+    # Сортируем список по первой букве
+    sorted_key_words_group = sorted(key_words_group_with_first_letter, key=lambda x: x[0])
+
+    # Извлекаем только отсортированные группы (без первой буквы)
+    return [group_data for _, group_data in sorted_key_words_group]
+
+
+
+def group_key_words_by_index(user_id, report_ids=None):
+    """ Ищем ключевые слова для данного пользователя, группируем их по group_index
+    и включаем информацию о связанных отчетах. Если нет связи с отчетами, добавляем None.
+    
+    Args:
+        user_id (int): Идентификатор пользователя.
+        report_ids (list): Список идентификаторов отчетов, с которыми связаны ключевые слова (может быть пустым или None).
+    
+    Returns:
+        list: Отсортированный список групп ключевых слов с информацией о связанных отчетах.
+    """
     unsorted_key_words_group = {}
-    for key_word in key_words:
+
+    # Обрабатываем ключевые слова для каждого отчета
+    if report_ids:
+        for report_id in report_ids:
+            if isinstance(report_id, KeyWordsGroup):
+                report_id = report_id.id
+            else:
+                # Получаем ключевые слова, связанные с конкретным отчетом
+                keywords_linked_to_report = KeyWordsGroup.find_by_report(report_id)
+                
+                if not keywords_linked_to_report:
+                    continue  # Пропускаем, если для отчета нет связанных ключевых слов
+
+                for key_word in keywords_linked_to_report:
+                    if key_word.group_index not in unsorted_key_words_group:
+                        unsorted_key_words_group[key_word.group_index] = {
+                            "keywords": [],
+                            "linked_reports": []
+                        }
+
+                    unsorted_key_words_group[key_word.group_index]["keywords"].append({
+                        'key_word': key_word.key_word,
+                        'group_index': key_word.group_index,
+                        'index': key_word.index
+                    })
+
+                    # Добавляем отчет, с которым связана группа ключевых слов
+                    if report_id not in unsorted_key_words_group[key_word.group_index]["linked_reports"]:
+                        unsorted_key_words_group[key_word.group_index]["linked_reports"].append(report_id)
+    
+    # Получаем ключевые слова без отчетов
+    keywords_without_reports = KeyWordsGroup.find_without_reports(user_id)
+    
+    for key_word in keywords_without_reports:
         if key_word.group_index not in unsorted_key_words_group:
-            unsorted_key_words_group[key_word.group_index] = []
-        unsorted_key_words_group[key_word.group_index].append({
+            unsorted_key_words_group[key_word.group_index] = {
+                "keywords": [],
+                "linked_reports": []
+            }
+
+        unsorted_key_words_group[key_word.group_index]["keywords"].append({
             'key_word': key_word.key_word,
             'group_index': key_word.group_index,
             'index': key_word.index
         })
-    
-    # Сначала создаем список с парами (первая буква, группа ключевых слов)
-    key_words_group_with_first_letter = []
-    
-    for group_index, group in unsorted_key_words_group.items():
-        if group and group[0]["key_word"]:  # Проверяем, что группа и ключевое слово существуют
-            first_letter = group[0]["key_word"].lower()  # Получаем первую букву первого ключевого слова
-        else:
-            first_letter = ""  # Если группа пуста, используем пустую строку
-        key_words_group_with_first_letter.append((first_letter, group))
 
-    # Затем сортируем список по первой букве
-    key_words_group = sorted(key_words_group_with_first_letter, key=lambda x: x[0])
+    # Сортировка групп ключевых слов
+    key_words_group = sort_key_words_group(unsorted_key_words_group)
+    print(key_words_group)
 
-    # Извлекаем только отсортированные группы (без первой буквы)
-    key_words_group = [group for _, group in key_words_group]
-    
     return key_words_group
