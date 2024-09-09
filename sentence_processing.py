@@ -4,9 +4,10 @@ from flask_login import current_user
 import re
 from models import Sentence, ReportParagraph, KeyWordsGroup
 
-
 def clean_text(sentence, key_words):
-    """ Функция очистки текста от пробелов, знаков припенания и ключевых слов с приведением всех слов предложения к нижнему регистру """
+    """ Функция очистки текста от пробелов, знаков припенания и 
+    ключевых слов с приведением всех слов предложения к нижнему 
+    регистру """
     # Приводим текст к строчным буквам
     sentence = sentence.lower()
     # Удаляем ключевые слова
@@ -21,7 +22,8 @@ def clean_text(sentence, key_words):
 
 
 def split_sentences(paragraphs):
-    """ Разделяем полученный текст на отдельные предложения ориентируясь на знаки припенания .!? """
+    """ Разделяем полученный текст на отдельные предложения 
+    ориентируясь на знаки препинания .!? """
     split_paragraphs = []
     sentence_endings = re.compile(r'(?<=[.!?])\s+')
 
@@ -45,7 +47,9 @@ def split_sentences(paragraphs):
     return split_paragraphs
 
 def get_new_sentences(processed_paragraphs):
-    """ Получаем только новые предложения, игнорируя те, что уже есть в базе данных, учитываем возможную разницу лишь в ключевых словах key_words """
+    """ Получаем только новые предложения, игнорируя те, что уже 
+    есть в базе данных, учитываем возможную разницу лишь в 
+    ключевых словах key_words """
     new_sentences = []
 
     # Получаем ключевые слова для текущего пользователя
@@ -85,7 +89,9 @@ def get_new_sentences(processed_paragraphs):
 
 # Function to group key words by group_index
 def group_key_words_by_index(user_id):
-    """ Ищем ключевые слова для данного юзера, группируем их в соответствии с group_index и index и добавляем эти индексы к данным """
+    """ Ищем ключевые слова для данного юзера, группируем 
+    их в соответствии с group_index и index и добавляем эти 
+    индексы к данным """
     key_words = KeyWordsGroup.find_by_user_id(user_id)
     unsorted_key_words_group = {}
     for key_word in key_words:

@@ -4,8 +4,16 @@ from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
 from sqlalchemy.orm import joinedload
+from utils import ensure_list
 
 db = SQLAlchemy()
+
+# Association table between KeyWordsGroup and Report
+key_word_report_link = db.Table(
+    'key_word_report_link',
+    db.Column('key_word_id', db.BigInteger, db.ForeignKey('key_words_group.id'), primary_key=True),
+    db.Column('report_id', db.BigInteger, db.ForeignKey('reports.id'), primary_key=True)
+)
 
 class User(db.Model, UserMixin):
     __tablename__ = 'users'
@@ -192,9 +200,12 @@ class KeyWordsGroup(BaseModel):
     user_id = db.Column(db.BigInteger, db.ForeignKey('users.id'), nullable=False)
 
     user = db.relationship('User', backref=db.backref('key_words_groups', lazy=True))
+    
+    # Связь многие ко многим с таблицей reports
+    key_word_reports = db.relationship('Report', secondary='key_word_report_link', backref='key_words', lazy=True)
 
     @classmethod
-    def create(cls, group_index, index, key_word, user_id, key_word_comment=None, public=False):
+    def create(cls, group_index, index, key_word, user_id, key_word_comment=None, public=False, reports=None, paragraphs=None):
         """Creates a new keyword group entry."""
         new_key_word_group = cls(
             group_index=group_index,
@@ -204,6 +215,11 @@ class KeyWordsGroup(BaseModel):
             public=public,
             user_id=user_id
         )
+        # Если переданы отчеты, добавляем связи с ними
+        if reports:
+            for report in reports:
+                new_key_word_group.key_word_reports.append(report)
+
         db.session.add(new_key_word_group)
         db.session.commit()
         return new_key_word_group
@@ -212,8 +228,83 @@ class KeyWordsGroup(BaseModel):
     def find_by_user_id(cls, user_id):
         """Finds all keyword groups for a specific user."""
         return cls.query.filter_by(user_id=user_id).order_by(cls.group_index, cls.index).all()
+    
+    @classmethod
+    def find_without_reports(cls, user_id):
+        """Возвращает все ключевые слова пользователя, не связанные с отчетами."""
+        return cls.query.outerjoin(cls.key_word_reports).filter(
+            cls.key_word_reports == None,  # Нет связей с отчетами
+            cls.user_id == user_id  # Фильтр по пользователю
+        ).all()
+        
+    @classmethod
+    def find_by_report(cls, report_id):
+        """Возвращает все ключевые слова, связанные с данным отчетом."""
+        return cls.query.join(cls.key_word_reports).filter(
+            Report.id == report_id
+        ).all()
+        
+    @classmethod
+    def get_keywords_for_report(cls, report_id, user_id):
+        """ Функция получения списка всех ключевых слов необходимых 
+        для конкретного отчета, включает как связанные с отчетом 
+        ключевые слова так и общие ключевые слова конкретного пользователя """
+        
+        keywords_linked_to_report = cls.find_by_report(report_id)
+        keywords_without_reports = cls.find_without_reports(user_id)
+        
+        # Объединяем списки
+        all_keywords = keywords_linked_to_report + keywords_without_reports
+        # Убираем дубликаты (на случай если один и тот же ключевое слово было и там, и там)
+        all_keywords = list({keyword.id: keyword for keyword in all_keywords}.values())
 
+        return all_keywords
+        
     @classmethod
     def find_public(cls):
         """Finds all public keyword groups."""
         return cls.query.filter_by(public=True).all()
+
+    @classmethod
+    def add_reports_to_keywords(cls, keywords, reports):
+        """Добавляет отчеты к одному или нескольким ключевым словам."""
+        # Если keywords не список, преобразуем его в список
+        keywords = ensure_list(keywords)
+        reports = ensure_list(reports)
+
+        # Добавляем отчеты к каждому ключевому слову
+        for keyword in keywords:
+            for report in reports:
+                if report not in keyword.key_word_reports:
+                    keyword.key_word_reports.append(report)
+
+        db.session.commit()
+
+    @classmethod
+    def remove_reports_from_keywords(cls, keywords, reports):
+        """Удаляет отчеты у одного или нескольких ключевых слов."""
+        # Если keywords не список, преобразуем его в список
+        keywords = ensure_list(keywords)
+        reports = ensure_list(reports)
+
+        # Удаляем отчеты у каждого ключевого слова
+        for keyword in keywords:
+            for report in reports:
+                if report in keyword.key_word_reports:
+                    keyword.key_word_reports.remove(report)
+
+        db.session.commit()
+        
+    @classmethod
+    def remove_all_reports_from_keywords(cls, keywords):
+        """Удаляет все связи с отчетами для одного или нескольких ключевых слов."""
+        # Если keywords не список, преобразуем его в список
+        keywords = ensure_list(keywords)
+
+        # Удаляем связи с отчетами для каждого ключевого слова
+        for keyword in keywords:
+            keyword.key_word_reports = []  # Очищаем все связи с отчетами
+
+        db.session.commit()
+
+    
