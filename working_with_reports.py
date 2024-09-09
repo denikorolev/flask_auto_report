@@ -136,74 +136,7 @@ def update_sentence():
         return jsonify({"message": "Sentence updated successfully!"}), 200
     return jsonify({"message": "Failed to update sentence."}), 400
 
-@working_with_reports_bp.route("/add_sentence", methods=['POST'])
-@login_required
-def add_sentence():
-    data = request.get_json()
-    paragraph_id = data.get('paragraph_id')
-    index = data.get('index')
-    sentence_text = "new_sentence"
-    add_to_list_flag = data.get("add_to_list_flag")
 
-    if add_to_list_flag:
-         # Create new sentence
-        new_sentence = Sentence(paragraph_id=paragraph_id, index=index, weight = 1, comment = "", sentence=sentence_text)
-        db.session.add(new_sentence)
-        db.session.commit()
-            
-    else:
-        index += 1
-        # Increment the index of all subsequent sentences
-        sentences_to_update = Sentence.query.filter(Sentence.paragraph_id == paragraph_id, Sentence.index >= index).all()
-        for sentence in sentences_to_update:
-            sentence.index += 1
-            db.session.commit()
-
-        # Create new sentence
-        new_sentence = Sentence(paragraph_id=paragraph_id, index=index, weight = 1, comment = "", sentence=sentence_text)
-        db.session.add(new_sentence)
-        db.session.commit()
-    
-    return jsonify({"message": "Sentence added successfully!"}), 200
-
-@working_with_reports_bp.route("/delete_sentence", methods=['POST'])
-@login_required
-def delete_sentence():
-    data = request.get_json()
-    sentence_id = data.get('sentence_id')
-    paragraph_id = data.get('paragraph_id')
-
-    sentence = Sentence.query.get(sentence_id)
-    if sentence:
-        index = sentence.index
-        db.session.delete(sentence)
-        db.session.commit()
-
-        # Обновляем индексы оставшихся предложений только если это не часть группы
-        sentences_with_same_index = Sentence.query.filter(Sentence.paragraph_id == paragraph_id, Sentence.index == index).all()
-        if len(sentences_with_same_index) == 0:
-            # Обновляем индексы только если больше нет предложений с таким же индексом
-            sentences_to_update = Sentence.query.filter(Sentence.paragraph_id == paragraph_id, Sentence.index > index).all()
-            for sentence in sentences_to_update:
-                sentence.index -= 1
-                db.session.commit()
-
-        return jsonify({"message": "Sentence deleted successfully!"}), 200
-    return jsonify({"message": "Failed to delete sentence."}), 400
-
-@working_with_reports_bp.route("/update_sentence_weight", methods=["POST"])
-@login_required
-def update_sentence_weight():
-    data = request.get_json()
-    sentence_id = data.get("sentence_id")
-    new_weight = data.get("new_weight")
-
-    sentence = Sentence.query.get(sentence_id)
-    if sentence:
-        sentence.weight = new_weight
-        db.session.commit()
-        return jsonify({"message": "Weight updated successfully!"}), 200
-    return jsonify({"message": "Failed to update weight."}), 400
 
 
 @working_with_reports_bp.route("/update_paragraph", methods=["POST"])
@@ -220,19 +153,6 @@ def update_paragraph():
         return jsonify({"message": "Paragraph updated successfully!"}), 200
     return jsonify({"message": "Failed to update paragraph."}), 400
 
-@working_with_reports_bp.route("/delete_paragraph", methods=["POST"])
-@login_required
-def delete_paragraph():
-    data = request.get_json()
-    paragraph_id = data.get("paragraph_id")
-
-    paragraph = ReportParagraph.query.get(paragraph_id)
-    if paragraph:
-        db.session.delete(paragraph)
-        db.session.commit()
-        return jsonify({"message": "Paragraph deleted successfully!"}), 200
-    return jsonify({"message": "Failed to delete paragraph."}), 400
-
 
 @working_with_reports_bp.route("/get_sentences_with_index_zero", methods=["POST"])
 @login_required
@@ -248,7 +168,7 @@ def get_sentences_with_index_zero():
         return jsonify({"sentences": sentences_data}), 200
     return jsonify({"message": "No sentences found."}), 200
 
-
+# Добавляем новое предложение с индексом 0
 @working_with_reports_bp.route("/new_sentence_adding", methods=["POST"])
 @login_required
 def new_sentence_adding():
@@ -269,8 +189,26 @@ def new_sentence_adding():
     except Exception as e:
         current_app.logger.error(f"Unexpected error: {e}")
         return jsonify({"message": f"Unexpected error: {e}"}), 500
+    
+    
+@working_with_reports_bp.route("/add_sentence_to_paragraph", methods=["POST"])
+@login_required
+def add_sentence_to_paragraph():
+    try:
+        data = request.get_json()
+        paragraph_id = data.get("paragraph_id")
+        sentence_text = data.get("sentence_text")
 
+        if not paragraph_id or not sentence_text:
+            return jsonify({"message": "Missing required data."}), 400
 
+        # Добавляем новое предложение в БД с индексом 0, весом 1, пустым комментарием
+        Sentence.create(paragraph_id=paragraph_id, index=0, weight=1, comment="", sentence=sentence_text)
+
+        return jsonify({"message": "Sentence added successfully!"}), 200
+    except Exception as e:
+        current_app.logger.error(f"Failed to add sentence: {e}")
+        return jsonify({"message": f"Failed to add sentence: {e}"}), 500
 
 
 
@@ -365,21 +303,4 @@ def generate_impression():
         current_app.logger.error(f"Unexpected error: {e}")
         return jsonify({"message": f"Unexpected error: {e}"}), 500
     
-@working_with_reports_bp.route("/add_sentence_to_paragraph", methods=["POST"])
-@login_required
-def add_sentence_to_paragraph():
-    try:
-        data = request.get_json()
-        paragraph_id = data.get("paragraph_id")
-        sentence_text = data.get("sentence_text")
 
-        if not paragraph_id or not sentence_text:
-            return jsonify({"message": "Missing required data."}), 400
-
-        # Добавляем новое предложение в БД с индексом 0, весом 1, пустым комментарием
-        Sentence.create(paragraph_id=paragraph_id, index=0, weight=1, comment="", sentence=sentence_text)
-
-        return jsonify({"message": "Sentence added successfully!"}), 200
-    except Exception as e:
-        current_app.logger.error(f"Failed to add sentence: {e}")
-        return jsonify({"message": f"Failed to add sentence: {e}"}), 500

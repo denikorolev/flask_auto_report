@@ -45,10 +45,10 @@
     <div class="report_side__list">
         <ul class="report_paragraph__list" id="left-paragraph-list">
             {% for item in paragraph_data %}
-                <li class="flex_column report__paragraph">
+                <li class="flex_column report__paragraph" data-paragraph-id="{{ item.paragraph.id }}">
                     <div class="flex">
                         <p contenteditable="false" data-paragraph-id="{{ item.paragraph.id }}"
-                        class="paragraph-java-finder {% if item.paragraph.paragraph_visible %}bold-paragraph{% else %}indented-paragraph{% endif %}"
+                        class="paragraph_title {% if item.paragraph.paragraph_visible %}bold-paragraph{% else %}indented-paragraph{% endif %}"
                         >
                             {{ item.paragraph.paragraph }}
                         </p>
@@ -62,10 +62,6 @@
                             <button class="icon-btn icon-btn--edit-paragraph" type="button"
                             style="background: url('{{ url_for('static', filename='pic/edit_button.svg') }}') no-repeat center center;"
                             title="Edit Paragraph">
-                            </button>
-                            <button class="icon-btn icon-btn--delete-paragraph" type="button"
-                            style="background: url('{{ url_for('static', filename='pic/delete_sentence_button.svg') }}') no-repeat center center;"
-                            title="Delete Paragraph">
                             </button>
                         </div>
                     </div>
@@ -85,18 +81,6 @@
                                                         style="background: url('{{ url_for('static', filename='pic/edit_button.svg') }}') no-repeat center center;"
                                                         title="Edit">
                                                         </button>
-                                                        <button class="icon-btn icon-btn--add_s_to_p" type="button"
-                                                        style="background: url('{{ url_for('static', filename='pic/add_s_to_p_button.svg') }}') no-repeat center center;"
-                                                        title="Add one more sentence below">
-                                                        </button>
-                                                        <button class="icon-btn icon-btn--add_s_to_s" type="button"
-                                                        style="background: url('{{ url_for('static', filename='pic/add_s_to_s_button.svg') }}') no-repeat center center;"
-                                                        title="Add sentence in sentences list">
-                                                        </button>
-                                                        <button class="icon-btn icon-btn--delete_sentence" type="button"
-                                                        style="background: url('{{ url_for('static', filename='pic/delete_sentence_button.svg') }}') no-repeat center center;"
-                                                        title="delete the sentence">
-                                                        </button> 
                                                     </div>
                                                 </div>
                                             {% endif %}
@@ -105,7 +89,7 @@
                                                 <div class="flex edit-container">
                                                     <select class="report__select sentences_select" sentence-index = "{{ sentences[0].index}}" data-index="left-side-{{ item.paragraph.id }}-{{ index }}">
                                                         {% for sentence in sentences %}
-                                                            <option value="{{ sentence.id }}" data-weigh = "{{ sentence.weight}}" data-sentence="{{ sentence.sentence }}">{{ sentence.sentence }}</option>
+                                                            <option value="{{ sentence.id }}" data-sentence="{{ sentence.sentence }}">{{ sentence.sentence }}</option>
                                                         {% endfor %}
                                                     </select>
                                                     
@@ -115,22 +99,6 @@
                                                         style="background: url('{{ url_for('static', filename='pic/edit_button.svg') }}') no-repeat center center;"
                                                         title="Edit">
                                                         </button>
-                                                        <button class="icon-btn icon-btn--add_s_to_p" type="button"
-                                                        style="background: url('{{ url_for('static', filename='pic/add_s_to_p_button.svg') }}') no-repeat center center;"
-                                                        title="Add one more sentence below">
-                                                        </button>
-                                                        <button class="icon-btn icon-btn--add_s_to_s" type="button"
-                                                        style="background: url('{{ url_for('static', filename='pic/add_s_to_s_button.svg') }}') no-repeat center center;"
-                                                        title="Add sentence in sentences list">
-                                                        </button>
-                                                        <button class="icon-btn icon-btn--delete_sentence" type="button"
-                                                        style="background: url('{{ url_for('static', filename='pic/delete_sentence_button.svg') }}') no-repeat center center;"
-                                                        title="delete the sentence">
-                                                        </button> 
-                                                        <button class="icon-btn icon-btn--increase-weight" type="button" title="Increase weight">+</button>
-                                                        <input type="number" class="sentence-weight-input" value="{{ sentences[0].weight }}" style="width: 50px;">
-                                                        <button class="icon-btn icon-btn--decrease-weight" type="button" title="Decrease weight">-</button>
-                                                        <button class="icon-btn icon-btn--save-weight" type="button" title="Save weight">s</button>
                                                     </div>
                                                 </div>
                                             {% endif %}
@@ -143,7 +111,13 @@
                 </li>
             {% endfor %}
         </ul>
-        <button class="btn report__btn" id="toggleEditButton" title="Toggle Edit Mode">Edit</button>
+        <!-- Кнопка Edit для редактирования отчета -->
+        <a href="/editing_report/edit_report?report_id={{ report.id }}" target="_blank" class="btn icon-btn--edit-paragraph"
+        title="Open this report for editing in new window">
+        Edit this report
+        </a>
+        <!-- Новая кнопка для отображения элементов с классом .edit-group -->
+        <button class="btn icon-btn--show-edit-groups" type="button" title="Show Edit Options">Show Edit Options</button>
     </div>
     
     <!-- Right side -->
@@ -151,7 +125,7 @@
         <ul class="" id="right-paragraph-list">
             {% for item in paragraph_data %}
                 <li class="report__paragraph">
-                    <p contenteditable="true" data-paragraph-id="{{ item.paragraph.id }}" {% if item.paragraph.paragraph_visible %}class="report__paragraph--visible paragraph-java-finder" {% else %}class="report__paragraph--invisible paragraph-java-finder"{% endif %}>
+                    <p contenteditable="true" data-paragraph-id="{{ item.paragraph.id }}" {% if item.paragraph.paragraph_visible %}class="report__paragraph--visible paragraph_title" {% else %}class="report__paragraph--invisible paragraph_title"{% endif %}>
                         {{ item.paragraph.paragraph }}
                     </p>
                     <ul class="">
@@ -184,6 +158,36 @@
 </div>
 
 <script>
+
+    // Функция для создания редактируемого предложения в span
+    function createEditableSentenceElement(sentenceText) {
+        const newSentenceElement = document.createElement("span");
+        newSentenceElement.classList.add("report__sentence");
+        newSentenceElement.textContent = sentenceText;
+
+        // Делаем содержимое редактируемым
+        newSentenceElement.contentEditable = "true";
+
+        return newSentenceElement;
+    }
+
+
+    // Функция для переключения видимости списка предложений
+    function toggleSentenceList(button) {
+        const sentenceList = button.closest(".report__paragraph").querySelector(".sentence-list");
+        if (sentenceList.style.display === "none" || sentenceList.style.display === "") {
+            sentenceList.style.display = "block";
+            button.classList.add("expanded");
+            button.classList.remove("collapsed");
+            button.title = "Collapse";
+        } else {
+            sentenceList.style.display = "none";
+            button.classList.remove("expanded");
+            button.classList.add("collapsed");
+            button.title = "Expand";
+        }
+    }
+
 
     // Функция для проверки, виден ли элемент на экране
     function isElementVisible(element) {
@@ -387,6 +391,30 @@
     
         return paragraphsData;
     }
+
+    // Функция очистки и форматирования текста перед использованием его в функциях copy-to-clipboard и export-to-word
+    function cleanAndFormatText(element) {
+        let formattedText = element.innerHTML;
+    
+        // Проходим по каждому select и заменяем его на выбранный текст
+        element.querySelectorAll("select").forEach(function(select) {
+            const selectedOption = select.options[select.selectedIndex].textContent;
+            formattedText = formattedText.replace(select.outerHTML, selectedOption);
+        });
+    
+        // Убираем все теги <span> и оставляем только текст внутри них
+        formattedText = formattedText.replace(/<span[^>]*>(.*?)<\/span>/gi, function(match, p1) {
+            return p1.trim(); // Возвращаем текст внутри span, удаляя лишние пробелы
+        });
+    
+        // Удаляем лишние пробелы, табуляции и новые строки
+        formattedText = formattedText.replace(/\s+/g, " ").trim();
+    
+        // Убираем лишние пробелы и пустые строки между абзацами
+        formattedText = formattedText.replace(/\s*\n\s*/g, "\n").trim();
+    
+        return formattedText;
+    }
     
 
     // Функция для выделения ключевых слов и работы с ними
@@ -426,7 +454,7 @@
     }
     
     
-    // Function Logic for finding key_words
+    // Функция для поиска key_words
     function updateRightSideText() {
         const keyWordsGroups = {{ key_words|tojson }};
         const rightParagraphList = document.getElementById("right-paragraph-list");
@@ -450,111 +478,46 @@
     }
     
     
-    // Renewing of the right side text for key_words logic working
+    // Обновление текста справа. Нужно для работы логики key_words
     document.addEventListener("DOMContentLoaded", function() {
         updateRightSideText(); 
     });
 
-     // Toggle Edit Mode
-     document.getElementById("toggleEditButton").addEventListener("click", function() {
+    // Кнопка переключатель видимости кнопок редактирования
+    document.querySelector(".icon-btn--show-edit-groups").addEventListener("click", function() {
         const editGroups = document.querySelectorAll(".edit-group");
-        const isEditing = this.classList.toggle("editing-mode");
-
+    
+        // Переключение между видимостью "none" и "inline-block" у элементов с классом .edit-group
         editGroups.forEach(group => {
-            group.style.display = isEditing ? "flex" : "none";
+            if (group.style.display === "none" || group.style.display === "") {
+                group.style.display = "inline-block";
+            } else {
+                group.style.display = "none";
+            }
         });
-    });
-    
-    // Set Weigh button logic
-    document.querySelectorAll(".report__select").forEach(selectElement => {
-        // Инициализация кнопки при загрузке
-        updateWeightButton(selectElement);
-    
-        // Обновление кнопки при изменении выбора
-        selectElement.addEventListener("change", function() {
-            updateWeightButton(selectElement);
-        });
-    });
-    
-    // Функция для обновления отображаемого значения веса
-    function updateWeightButton(selectElement) {
-        const selectedOption = selectElement.selectedOptions[0];
-        const weight = selectedOption.getAttribute("data-weigh");
-        const container = selectElement.closest(".edit-container");
-        const weightInput = container.querySelector(".sentence-weight-input");
-    
-        if (weightInput) {
-            weightInput.value = weight;
+        
+        // Изменение текста кнопки в зависимости от состояния
+        const button = document.querySelector(".icon-btn--show-edit-groups");
+        if (button.textContent === "Show Edit Options") {
+            button.textContent = "Hide Edit Options";
+        } else {
+            button.textContent = "Show Edit Options";
         }
-    }
-
-    // Increase button logic
-    document.querySelectorAll(".icon-btn--increase-weight").forEach(button => {
-        button.addEventListener("click", function() {
-            const container = this.closest(".edit-container");
-            const weightInput = container.querySelector(".sentence-weight-input");
-            let currentWeight = parseInt(weightInput.value, 10);
-            currentWeight += 1;
-            weightInput.value = currentWeight;
-        });
-    });
-
-    // Decrise button logic
-    document.querySelectorAll(".icon-btn--decrease-weight").forEach(button => {
-        button.addEventListener("click", function() {
-            const container = this.closest(".edit-container");
-            const weightInput = container.querySelector(".sentence-weight-input");
-            let currentWeight = parseInt(weightInput.value, 10);
-            currentWeight -= 1;
-            weightInput.value = currentWeight;
-        });
-    });
-
-    // "s" button logic for save sentence's weight to the bd
-    document.querySelectorAll(".icon-btn--save-weight").forEach(button => {
-        button.addEventListener("click", function() {
-            const container = this.closest(".edit-container");
-            const weightInput = container.querySelector(".sentence-weight-input");
-            const selectElement = container.querySelector(".report__select");
-            const selectedOption = selectElement.selectedOptions[0];
-            const sentenceId = selectedOption.value;
-            const newWeight = parseInt(weightInput.value, 10);
-    
-            fetch("{{ url_for('working_with_reports.update_sentence_weight') }}", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    sentence_id: sentenceId,
-                    new_weight: newWeight
-                })
-            }).then(response => {
-                if (response.ok) {
-                    alert("Weight updated successfully!");
-                    selectedOption.setAttribute("data-weigh", newWeight);
-                } else {
-                    alert("Failed to update weight.");
-                }
-            });
-        });
     });
     
-    // Button "expand" logic
+
+    // Логика для кнопки "expand"
     document.querySelectorAll(".icon-btn--expand").forEach(button => {
         button.addEventListener("click", function() {
-            const sentenceList = this.closest(".report__paragraph").querySelector(".sentence-list");
-            if (sentenceList.style.display === "none") {
-                sentenceList.style.display = "block";
-                this.classList.add("expanded"); 
-                this.classList.remove("collapsed");
-                this.title = "Collapse"; 
-            } else {
-                sentenceList.style.display = "none";
-                this.classList.remove("expanded"); 
-                this.classList.add("collapsed");
-                this.title = "Expand"; 
-            }
+            toggleSentenceList(this);
+        });
+    });
+
+    // Логика для разворачивания по клику на текст параграфа
+    document.querySelectorAll(".paragraph_title").forEach(paragraph => {
+        paragraph.addEventListener("click", function() {
+            const expandButton = this.closest(".report__paragraph").querySelector(".icon-btn--expand");
+            toggleSentenceList(expandButton);  // Используем ту же логику, что и для кнопки
         });
     });
     
@@ -587,7 +550,7 @@
     });
     
 
-   // Button "Edit" logic with icon change for sentences
+   // Кнопка "Edit" для предложений
     document.querySelectorAll(".icon-btn--edit").forEach(button => {
         button.addEventListener("click", function() {
             const container = this.closest(".edit-container");
@@ -610,7 +573,6 @@
                     })
                 }).then(response => {
                     if (response.ok) {
-                        alert("Sentence updated successfully!");
                         this.classList.remove("editing");
                         this.style.background = "url('{{ url_for('static', filename='pic/edit_button.svg') }}') no-repeat center center";
                         if (selectElement) {
@@ -650,10 +612,10 @@
         });
     });
  
-    // Button "Edit Paragraph" logic
+    // Кнопка "Edit" для параграфов
     document.querySelectorAll(".icon-btn--edit-paragraph").forEach(button => {
         button.addEventListener("click", function() {
-            const paragraphElement = this.closest("li").querySelector(".paragraph-java-finder");
+            const paragraphElement = this.closest("li").querySelector(".paragraph_title");
             
             // Проверка на null
         if (!paragraphElement) {
@@ -678,7 +640,6 @@
                     })
                 }).then(response => {
                     if (response.ok) {
-                        alert("Paragraph updated successfully!");
                         this.classList.remove("editing");
                         paragraphElement.contentEditable = false;
                         paragraphElement.classList.remove("editing");
@@ -698,165 +659,6 @@
     });
 
 
-   // Button "Add s to p" logic - adding sentence to the paragraph
-    document.querySelectorAll(".icon-btn--add_s_to_p").forEach(button => {
-        button.addEventListener("click", function() {
-            const container = this.closest(".edit-container");
-            const sentenceElement = container.querySelector(".report__sentence");
-            const selectElement = container.querySelector(".report__select");
-        
-            let paragraphId;
-            let currentIndex;
-
-            if (selectElement) {
-                // Если предложения сгруппированы в select, получаем ID параграфа и индекс
-                paragraphId = selectElement.getAttribute("data-index").split("-")[2];
-                currentIndex = parseInt(selectElement.getAttribute("sentence-index")); // Извлекаем индекс из атрибута sentence-index
-            } else {
-                // Для одиночных предложений
-                paragraphId = container.closest(".report__paragraph").querySelector("p").getAttribute("data-paragraph-id");
-                currentIndex = parseInt(sentenceElement.closest(".edit-container").getAttribute("sentence-index")); // Извлекаем индекс из атрибута sentence-index
-            }
-
-            // Отправляем запрос на сервер для добавления нового предложения
-            fetch("{{ url_for('working_with_reports.add_sentence') }}", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    paragraph_id: paragraphId,
-                    index: currentIndex, 
-                    add_to_list_flag: false
-                })
-            }).then(response => {
-                if (response.ok) {
-                    alert("Sentence added successfully!");
-                    location.reload(); // Перезагрузка страницы для отображения нового предложения
-                } else {
-                    alert("Failed to add sentence.");
-                }
-            });
-        });
-    });
-
-
-    // Button "Add s to s" logic - adding sentence to the sentences list aka select
-    document.querySelectorAll(".icon-btn--add_s_to_s").forEach(button => {
-        button.addEventListener("click", function() {
-            const container = this.closest(".edit-container");
-            const sentenceElement = container.querySelector(".report__sentence");
-            const selectElement = container.querySelector(".report__select");
-            
-            let paragraphId;
-            let currentIndex;
-            if (selectElement) {
-                paragraphId = selectElement.getAttribute("data-index").split("-")[2];
-                currentIndex = parseInt(selectElement.getAttribute("sentence-index")); 
-
-            } else {
-                paragraphId = container.closest(".report__paragraph").querySelector("p").getAttribute("data-paragraph-id");
-                currentIndex = parseInt(sentenceElement.closest(".edit-container").getAttribute("sentence-index"));
-            }
-            
-            fetch("{{ url_for('working_with_reports.add_sentence') }}", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    paragraph_id: paragraphId,
-                    index: currentIndex, 
-                    add_to_list_flag: true
-                })
-            }).then(response => {
-                if (response.ok) {
-                    alert("Sentence added successfully!");
-                    location.reload(); // Перезагрузка страницы для отображения нового предложения
-                } else {
-                    alert("Failed to add sentence.");
-                }
-            });
-        });
-    });
-
-
-    // Button "Delete" logic for sentences
-    document.querySelectorAll(".icon-btn--delete_sentence").forEach(button => {
-        button.addEventListener("click", function() {
-            const container = this.closest(".edit-container");
-            const selectElement = container.querySelector(".report__select");
-            let sentenceId;
-
-            if (selectElement) {
-                // Если предложения сгруппированы в select
-                const selectedOption = selectElement.selectedOptions[0];
-                sentenceId = selectedOption.value; // Получаем sentence-id из value выбранной опции
-            } else {
-                // Для одиночных предложений
-                const sentenceElement = container.querySelector(".report__sentence");
-                sentenceId = sentenceElement.getAttribute("data-sentence-id");
-            }
-
-            const paragraphId = container.closest(".report__paragraph").querySelector("p").getAttribute("data-paragraph-id");
-
-            if (confirm("Are you sure you want to delete this sentence?")) {
-                fetch("{{ url_for('working_with_reports.delete_sentence') }}", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        sentence_id: sentenceId,
-                        paragraph_id: paragraphId
-                    })
-                }).then(response => {
-                    if (response.ok) {
-                        alert("Sentence deleted successfully!");
-                        location.reload(); // Перезагрузка страницы для отображения обновленного списка предложений
-                    } else {
-                        alert("Failed to delete sentence.");
-                    }
-                });
-            }
-        });
-    });
-
-    // Button "Delete Paragraph" logic
-    document.querySelectorAll(".icon-btn--delete-paragraph").forEach(button => {
-        button.addEventListener("click", function() {
-            const paragraphElement = this.closest("li").querySelector(".paragraph-java-finder");
-            
-            // Проверка на null
-        if (!paragraphElement) {
-            console.error("Paragraph element not found.");
-            return;
-        }
-            
-            const paragraphId = paragraphElement.getAttribute("data-paragraph-id");
-
-            if (confirm("Are you sure you want to delete this paragraph?")) {
-                fetch("{{ url_for('working_with_reports.delete_paragraph') }}", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        paragraph_id: paragraphId
-                    })
-                }).then(response => {
-                    if (response.ok) {
-                        alert("Paragraph deleted successfully!");
-                        paragraphElement.closest("li").remove();
-                    } else {
-                        alert("Failed to delete paragraph.");
-                    }
-                });
-            }
-        });
-    });
-    
-    
     // Logic for renewing data on the right container then data on the left one was changed
     document.getElementById("left-paragraph-list").addEventListener("change", function(event) {
         if (event.target.tagName === "SELECT") {
@@ -877,29 +679,6 @@
         }
     });
 
-    // Clean and format text before using it in the copy-to-clipboard and export-to-word function
-    function cleanAndFormatText(element) {
-        let formattedText = element.innerHTML;
-    
-        // Проходим по каждому select и заменяем его на выбранный текст
-        element.querySelectorAll("select").forEach(function(select) {
-            const selectedOption = select.options[select.selectedIndex].textContent;
-            formattedText = formattedText.replace(select.outerHTML, selectedOption);
-        });
-    
-        // Убираем все теги <span> и оставляем только текст внутри них
-        formattedText = formattedText.replace(/<span[^>]*>(.*?)<\/span>/gi, function(match, p1) {
-            return p1.trim(); // Возвращаем текст внутри span, удаляя лишние пробелы
-        });
-    
-        // Удаляем лишние пробелы, табуляции и новые строки
-        formattedText = formattedText.replace(/\s+/g, " ").trim();
-    
-        // Убираем лишние пробелы и пустые строки между абзацами
-        formattedText = formattedText.replace(/\s*\n\s*/g, "\n").trim();
-    
-        return formattedText;
-    }
     
     // Button "Copy to clipboard" logic
     document.getElementById("copyButton").addEventListener("click", function() {
@@ -923,7 +702,6 @@
     document.getElementById("exportButton").addEventListener("click", function() {
         // Собираем текст из правой части экрана для экспорта в Word
         const textToExport = collectTextFromRightSide();
-        console.log("Collected text: ", textToExport);
         // Формируем данные параграфов и предложений
         const paragraphsData = collectParagraphsData();
 
@@ -972,7 +750,7 @@
         });
     });
 
-    // Логика получения предложения с индексом 0 для конкретного параметра
+    // Логика добавления предложения после нажания на кнопку +
     document.addEventListener("DOMContentLoaded", function() {
         // Функция для создания инпута для добавления нового предложения
         function createInputForNewSentence(buttonElement) {
@@ -996,13 +774,10 @@
                 if (event.key === "Enter") {
                     const customSentence = inputElement.value.trim();
                     if (customSentence) {
-                        // Создаем новый элемент <span> с введенным предложением и вставляем перед кнопкой
-                        const newSentenceElement = document.createElement("span");
-                        newSentenceElement.classList.add("report__sentence");
-                        newSentenceElement.textContent = customSentence;
+                        const newSentenceElement = createEditableSentenceElement(customSentence);
     
                         buttonElement.parentNode.insertBefore(newSentenceElement, buttonElement);
-                        inputElement.remove();  // Удаляем поле ввода после добавления предложения
+                        inputElement.remove();  
                     }
                 }
             });
@@ -1069,14 +844,9 @@
                             } else {
                                 // Если выбрано предложение из списка, добавляем его в текст
                                 const selectedSentence = selectElement.options[selectElement.selectedIndex].textContent;
-    
-                                // Создаем новый элемент <span> с предложением и вставляем перед кнопкой
-                                const newSentenceElement = document.createElement("span");
-                                newSentenceElement.classList.add("report__sentence");
-                                newSentenceElement.textContent = selectedSentence;
-    
+                                const newSentenceElement = createEditableSentenceElement(selectedSentence);
                                 buttonElement.parentNode.insertBefore(newSentenceElement, buttonElement);
-                                selectElement.remove();  // Удаляем выпадающий список после добавления предложения
+                                selectElement.remove();  
                             }
                         });
     

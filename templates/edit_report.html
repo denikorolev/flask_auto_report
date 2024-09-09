@@ -108,6 +108,21 @@
 
 <script>
 
+    // Функция обработки ответа сервера
+    function handleResponse(response) {
+        response.json().then(data => {
+            if (response.ok) {
+                window.location.reload();  
+            } else {
+                alert(`Error: ${data.message}`);
+            }
+        }).catch(error => {
+            console.error("Failed to parse response:", error);
+            alert("Something went wrong.");
+        });
+    }
+    
+
     document.addEventListener("DOMContentLoaded", function() {
         // Обработка кнопки Expand/Save
         const toggleButtons = document.querySelectorAll(".toggle-sentences");

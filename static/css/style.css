@@ -305,6 +305,11 @@ html {
     text-indent: 0;
 }
 
+.paragraph_title {
+    cursor: pointer; /* Изменяет курсор на указатель при наведении */
+}
+
+
 .footer {
     display: flex;
     align-items: center;
