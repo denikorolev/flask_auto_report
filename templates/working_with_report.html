@@ -128,7 +128,7 @@
                                                         title="delete the sentence">
                                                         </button> 
                                                         <button class="icon-btn icon-btn--increase-weight" type="button" title="Increase weight">+</button>
-                                                        <button class="icon-btn icon-btn--set-weight" type="button" title="Set weight">*</button>
+                                                        <input type="number" class="sentence-weight-input" value="{{ sentences[0].weight }}" style="width: 50px;">
                                                         <button class="icon-btn icon-btn--decrease-weight" type="button" title="Decrease weight">-</button>
                                                         <button class="icon-btn icon-btn--save-weight" type="button" title="Save weight">s</button>
                                                     </div>
@@ -389,7 +389,7 @@
     }
     
 
-    // Function Key words changer
+    // Функция для выделения ключевых слов и работы с ними
     function highlightKeyWords(text, keyWordsGroups) {
         const matchIndexes = {};
     
@@ -424,8 +424,6 @@
     
         return text;
     }
-    
-    
     
     
     // Function Logic for finding key_words
@@ -478,14 +476,15 @@
         });
     });
     
+    // Функция для обновления отображаемого значения веса
     function updateWeightButton(selectElement) {
         const selectedOption = selectElement.selectedOptions[0];
         const weight = selectedOption.getAttribute("data-weigh");
         const container = selectElement.closest(".edit-container");
-        const setWeightButton = container.querySelector(".icon-btn--set-weight");
+        const weightInput = container.querySelector(".sentence-weight-input");
     
-        if (setWeightButton) {
-            setWeightButton.textContent = weight;
+        if (weightInput) {
+            weightInput.value = weight;
         }
     }
 
@@ -493,10 +492,10 @@
     document.querySelectorAll(".icon-btn--increase-weight").forEach(button => {
         button.addEventListener("click", function() {
             const container = this.closest(".edit-container");
-            const setWeightButton = container.querySelector(".icon-btn--set-weight");
-            let currentWeight = parseInt(setWeightButton.textContent, 10);
+            const weightInput = container.querySelector(".sentence-weight-input");
+            let currentWeight = parseInt(weightInput.value, 10);
             currentWeight += 1;
-            setWeightButton.textContent = currentWeight;
+            weightInput.value = currentWeight;
         });
     });
 
@@ -504,10 +503,10 @@
     document.querySelectorAll(".icon-btn--decrease-weight").forEach(button => {
         button.addEventListener("click", function() {
             const container = this.closest(".edit-container");
-            const setWeightButton = container.querySelector(".icon-btn--set-weight");
-            let currentWeight = parseInt(setWeightButton.textContent, 10);
+            const weightInput = container.querySelector(".sentence-weight-input");
+            let currentWeight = parseInt(weightInput.value, 10);
             currentWeight -= 1;
-            setWeightButton.textContent = currentWeight;
+            weightInput.value = currentWeight;
         });
     });
 
@@ -515,11 +514,11 @@
     document.querySelectorAll(".icon-btn--save-weight").forEach(button => {
         button.addEventListener("click", function() {
             const container = this.closest(".edit-container");
-            const setWeightButton = container.querySelector(".icon-btn--set-weight");
+            const weightInput = container.querySelector(".sentence-weight-input");
             const selectElement = container.querySelector(".report__select");
             const selectedOption = selectElement.selectedOptions[0];
             const sentenceId = selectedOption.value;
-            const newWeight = parseInt(setWeightButton.textContent, 3);
+            const newWeight = parseInt(weightInput.value, 10);
     
             fetch("{{ url_for('working_with_reports.update_sentence_weight') }}", {
                 method: "POST",
@@ -878,7 +877,7 @@
         }
     });
 
-    // Clean and format text befor using it in the copy-to-clipboard and export-to-word function
+    // Clean and format text before using it in the copy-to-clipboard and export-to-word function
     function cleanAndFormatText(element) {
         let formattedText = element.innerHTML;
     

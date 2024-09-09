@@ -95,36 +95,6 @@ def edit_report():
                 except Exception as e:
                     return jsonify(success=False, message=f"Something went wrong. error code {e}")
 
-            if "edit_sentences_bulk" in data:
-                try:
-                    for sentence_data in data["sentences"]:
-                        print(sentence_data)
-                        if sentence_data["sentence_id"] == "new":
-                            # Логика для создания нового предложения
-                            print(f"Creating new sentence for paragraph_id={sentence_data['add_sentence_paragraph']}")
-                            sentence_index = sentence_data["sentence_index"]
-                            paragraph_id = sentence_data["add_sentence_paragraph"]
-                            Sentence.create(
-                            paragraph_id=paragraph_id,
-                            index=sentence_index,
-                            weight=sentence_data["sentence_weight"],
-                            comment=sentence_data["sentence_comment"],
-                            sentence=sentence_data["sentence_sentence"]
-                            )
-                        else:
-                            # Логика для обновления существующего предложения
-                            sentence_for_edit = Sentence.query.get(sentence_data["sentence_id"])
-                            print(f"Updating sentence with id={sentence_for_edit.id}")
-                            sentence_for_edit.index = sentence_data["sentence_index"]
-                            sentence_for_edit.weight = sentence_data["sentence_weight"]
-                            sentence_for_edit.comment = sentence_data["sentence_comment"]
-                            sentence_for_edit.sentence = sentence_data["sentence_sentence"]
-                            sentence_for_edit.save()
-                    return jsonify(success=True, message="All sentences updated successfully")
-                except Exception as e:
-                    print(f"Error: {e}")
-                    return jsonify(success=False, message=f"Something went wrong. error code: {e}")
-
 
     return render_template('edit_report.html', 
                            title=page_title, 
@@ -132,3 +102,40 @@ def edit_report():
                            report=report,
                            report_paragraphs=report_paragraphs
                            )
+
+
+@editing_report_bp.route('/edit_sentences_bulk', methods=['POST'])
+@login_required
+def edit_sentences_bulk():
+    if not request.is_json:
+        return jsonify(success=False, message="Invalid request format"), 400
+
+    data = request.get_json()
+    try:
+        for sentence_data in data["sentences"]:
+            print(sentence_data)
+            if sentence_data["sentence_id"] == "new":
+                # Логика для создания нового предложения
+                print(f"Creating new sentence for paragraph_id={sentence_data['add_sentence_paragraph']}")
+                sentence_index = sentence_data["sentence_index"]
+                paragraph_id = sentence_data["add_sentence_paragraph"]
+                Sentence.create(
+                    paragraph_id=paragraph_id,
+                    index=sentence_index,
+                    weight=sentence_data["sentence_weight"],
+                    comment=sentence_data["sentence_comment"],
+                    sentence=sentence_data["sentence_sentence"]
+                )
+            else:
+                # Логика для обновления существующего предложения
+                sentence_for_edit = Sentence.query.get(sentence_data["sentence_id"])
+                print(f"Updating sentence with id={sentence_for_edit.id}")
+                sentence_for_edit.index = sentence_data["sentence_index"]
+                sentence_for_edit.weight = sentence_data["sentence_weight"]
+                sentence_for_edit.comment = sentence_data["sentence_comment"]
+                sentence_for_edit.sentence = sentence_data["sentence_sentence"]
+                sentence_for_edit.save()
+        return jsonify(success=True, message="All sentences updated successfully")
+    except Exception as e:
+        print(f"Error: {e}")
+        return jsonify(success=False, message=f"Something went wrong. error code: {e}")

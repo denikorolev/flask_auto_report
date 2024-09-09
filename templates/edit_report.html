@@ -135,15 +135,14 @@
                     });
 
                     // Отправляем данные предложений на сервер
-                    fetch("{{ url_for('editing_report.edit_report', report_id=report.id) }}", {
+                    fetch("{{ url_for('editing_report.edit_sentences_bulk') }}", {
                         method: "POST",
                         headers: {
                             "Content-Type": "application/json"
                         },
-                        body: JSON.stringify({ edit_sentences_bulk: true, sentences: sentenceData })
+                        body: JSON.stringify({sentences: sentenceData })
                     }).then(response => {
                         if (response.ok) {
-                            alert("Sentences saved successfully!");
                             window.location.reload(); // Обновляем страницу после успешного сохранения
                         } else {
                             alert("Failed to save sentences.");
