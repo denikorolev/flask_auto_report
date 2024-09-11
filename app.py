@@ -1,5 +1,5 @@
 # app.py
-#v0.1.0
+#v0.1.2
 
 from flask import Flask, redirect, url_for, flash, render_template
 from flask_login import LoginManager, login_required, user_logged_in

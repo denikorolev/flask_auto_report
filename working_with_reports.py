@@ -1,5 +1,5 @@
 #working_with_reports.py
-#v0.1.0
+#v0.1.2
 
 from flask import Blueprint, render_template, request, current_app, jsonify, send_file, flash, url_for
 from flask_login import login_required, current_user
@@ -7,31 +7,15 @@ import os
 from models import db, Report, ReportType, ReportSubtype, ReportParagraph, Sentence, KeyWordsGroup
 from file_processing import save_to_word
 from calculating import calculate_age
-from sentence_processing import split_sentences, get_new_sentences, group_key_words_by_index
+from sentence_processing import split_sentences, get_new_sentences, group_keywords
 from errors_processing import print_object_structure
-from collections import defaultdict
+
 from openai import OpenAI 
 
 
 working_with_reports_bp = Blueprint('working_with_reports', __name__)
 
 # Functions
-
-def ease_group_keywords_by_index(keywords):
-    """
-    Функция для группировки ключевых слов по group_index.
-    
-    :param keywords: список объектов KeyWordsGroup
-    :return: список списков, где ключевые слова сгруппированы по одинаковому group_index
-    """
-    grouped_keywords = defaultdict(list)
-
-    # Проход по списку объектов и добавление слов в соответствующие группы
-    for keyword in keywords:
-        grouped_keywords[keyword.group_index].append(keyword.key_word)
-
-    # Преобразование словаря в список списков
-    return list(grouped_keywords.values())
 
 
 def init_app(app):
@@ -83,8 +67,8 @@ def working_with_reports():
     current_report_id = request.args.get("report_id")
     # Получаем ключевые слова для текущего пользователя
     
-    easy_key = KeyWordsGroup.get_keywords_for_report(current_user.id, current_report_id)
-    key_words_group = ease_group_keywords_by_index(easy_key)
+    key_words_obj = KeyWordsGroup.get_keywords_for_report(current_user.id, current_report_id)
+    key_words_group = group_keywords(key_words_obj)
 
     # Для отладки
     print(key_words_group)

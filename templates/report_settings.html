@@ -1,5 +1,5 @@
 <!-- report_settings.html -->
- <!-- v0.1.0 -->
+ <!-- v0.1.2 -->
 
 {% extends "index.html" %}
 
@@ -99,9 +99,8 @@
         </div>
     </div>
     
-    
-   <!-- Key words processing -->
-    <div class="report_side--right">
+    <!-- Key words processing -->
+    <div class="">
         <form id="keywords-form">
             <label for="key_word_input" class="report_label__item">New Key Words (comma-separated):</label>
             <input type="text" id="key_word_input" name="key_word_input" required>
@@ -110,6 +109,7 @@
                 <label for="link_reports_checkbox" class="report_label__item">Link to Reports:</label>
                 <input type="checkbox" id="link_reports_checkbox" name="link_reports_checkbox">
             </div>
+
             <!-- Список reports пользователя -->
             <div id="report-checkboxes-container" style="display: none;">
                 <label class="report_label__item">Select Reports:</label>
@@ -124,63 +124,79 @@
             </div>
             <button type="submit" class="btn report__btn">Add Key Words Group</button>
         </form>
-
         <div class="container">
-            <h3>Key Words</h3>
-            <div id="key-words-list">
-                {% if key_words_group %}
-                    {% for key_words in key_words_group %}
-                        {% if not key_words['linked_reports'] %}
-                            <div class="key-words-group" data-group="{{ key_words['keywords'][0].group_index }}">
-                                {% for key_word in key_words['keywords'] %}
-                                    <span data-group="{{ key_word.group_index }}" data-index="{{ key_word.index }}">
-                                        {{ key_word.key_word }}{% if not loop.last %}, {% endif %}
-                                    </span>
-                                {% endfor %}
-                                <!-- Кнопки для редактирования ключевых слов в группе -->
-                                <button class="btn report__btn delete-keywords-btn" data-group="{{ key_words['keywords'][0].group_index }}">Delete</button>
-                                <button class="btn report__btn edit-keywords-btn" data-group="{{ key_words['keywords'][0].group_index }}">Edit</button>
-                                <!-- Поле для ввода ключевого слова, которое будет показано при нажатии на кнопку -->
-                                <div class="add-keyword-input" style="display:none;" data-group="{{ key_words['keywords'][0].group_index }}">
+
+            <!-- Key words processing -->
+
+            <!-- Блок глобальных ключевых слов -->
+            <h3>Global Key Words</h3>
+            <div id="global-key-words-list">
+                {% if global_key_words %}
+                    {% for group in global_key_words %}
+                        <div class="key-words-group" data-group="{{ group.group_index }}">
+                            {% for word in group.key_words %}
+                                <span data-group="{{ group.group_index }}">
+                                    {{ word }}{% if not loop.last %}, {% endif %}
+                                </span>
+                            {% endfor %}
+
+                            <!-- Кнопки для редактирования и добавления ключевых слов -->
+                            <button class="btn report__btn delete-keywords-btn" data-group="{{ group.group_index }}">Delete</button>
+                            <button class="btn report__btn edit-keywords-btn" data-group="{{ group.group_index }}">Edit</button>
+                            <div class="add-keyword-input" style="display:none;" data-group="{{ group.group_index }}">
                                 <input type="text" placeholder="Enter new keyword(s)" class="new-keyword-input">
-                                <button class="btn report__btn submit-keyword-btn" data-group="{{ key_words['keywords'][0].group_index }}">Submit</button>
-                                </div>
-                                <button class="btn report__btn add-keywords-btn" data-group="{{ key_words['keywords'][0].group_index }}">Add Word</button>
-                                
+                                <button class="btn report__btn submit-keyword-btn" data-group="{{ group.group_index }}">Submit</button>
                             </div>
-                            {% else %}
-                                <div class="key-words-group" data-group="{{ key_words['keywords'][0].group_index }}">
-                                    {% for key_word in key_words['keywords'] %}
-                                        <span data-group="{{ key_word.group_index }}" data-index="{{ key_word.index }}">
-                                            {{ key_word.key_word }}{% if not loop.last %}, {% endif %}
-                                        </span>
-                                    {% endfor %}
-                                    <div>
-                                        Связанные отчеты:
-                                        {% for report_id in key_words['linked_reports'] %}
-                                            <span>Report ID: {{ report_id }}</span>{% if not loop.last %}, {% endif %}
-                                        {% endfor %}
-                                    </div>
-                                    <!-- Кнопки для редактирования ключевых слов в группе -->
-                                    <button class="btn report__btn delete-keywords-btn" data-group="{{ key_words['keywords'][0].group_index }}">Delete</button>
-                                    <button class="btn report__btn edit-keywords-btn" data-group="{{ key_words['keywords'][0].group_index }}">Edit</button>
-                                    <!-- Поле для ввода ключевого слова, которое будет показано при нажатии на кнопку -->
-                                    <div class="add-keyword-input" style="display:none;" data-group="{{ key_words['keywords'][0].group_index }}">
-                                        <input type="text" placeholder="Enter new keyword(s)" class="new-keyword-input">
-                                        <button class="btn report__btn submit-keyword-btn" data-group="{{ key_words['keywords'][0].group_index }}">Submit</button>
-                                    </div>
-                                    <button class="btn report__btn add-keywords-btn" data-group="{{ key_words['keywords'][0].group_index }}">Add Word</button>
-                                </div>
-                            {% endif %}
+                            <button class="btn report__btn add-keywords-btn" data-group="{{ group.group_index }}">Add Word</button>
+                        </div>
                     {% endfor %}
-                    
                 {% else %}
-                    <p>No key words found.</p>
+                    <p>No global key words found.</p>
                 {% endif %}
             </div>
         </div>
+        
+
+        <!-- Новый блок для ключевых слов, привязанных к отчетам -->
+        <div class="container">
+            <h3>Report-specific Key Words</h3>
+
+            <div id="report-key-words-list">
+                {% if report_key_words %}
+                    {% for report in report_key_words %}
+                        {% if report.key_words %}
+                            <div class="report-key-words-group">
+                                <h4>Report: {{ report.report_name }}</h4>
+                                <div class="key-words-group" data-report="{{ report.report_id }}">
+                                    {% for word in report.key_words %}
+                                        <span data-report="{{ report.report_id }}">
+                                            {{ word }}{% if not loop.last %}, {% endif %}
+                                        </span>
+                                    {% endfor %}
+                                </div>
+
+                                <!-- Кнопки для редактирования и добавления ключевых слов -->
+                                <button class="btn report__btn delete-report-keywords-btn" data-report="{{ report.report_id }}">Delete</button>
+                                <button class="btn report__btn edit-report-keywords-btn" data-report="{{ report.report_id }}">Edit</button>
+                                <div class="add-report-keyword-input" style="display:none;" data-report="{{ report.report_id }}">
+                                    <input type="text" placeholder="Enter new keyword(s)" class="new-report-keyword-input">
+                                    <button class="btn report__btn submit-report-keyword-btn" data-report="{{ report.report_id }}">Submit</button>
+                                </div>
+                                <button class="btn report__btn add-report-keywords-btn" data-report="{{ report.report_id }}">Add Word</button>
+                            </div>
+                            <div class="report_borderline"></div>
+                        {% endif %}
+                    {% endfor %}
+                {% else %}
+                    <p>No report-specific key words found.</p>
+                {% endif %}
+            </div>
+        </div>
+
+
     </div>
-   
+
+
 
 </div>
 
@@ -331,7 +347,6 @@
                     spans.forEach(span => {
                         const input = document.createElement("input");
                         input.value = span.textContent.trim().replace(/,\s*$/, ''); // Убираем запятую, если есть
-                        input.setAttribute("data-id", span.dataset.index);
                         input.classList.add("key-word-input");
                         span.replaceWith(input);
                     });

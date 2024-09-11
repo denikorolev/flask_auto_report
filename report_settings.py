@@ -1,11 +1,12 @@
 # report_settings.py
-#v0.1.0
+#v0.1.2
 
 from flask import Blueprint, render_template, request, redirect, flash, current_app
 from flask_login import login_required, current_user
 from models import db, ReportType, ReportSubtype, AppConfig, KeyWordsGroup, Report 
+from itertools import chain
 from file_processing import file_uploader
-from sentence_processing import group_key_words_by_index
+from sentence_processing import group_keywords, sort_key_words_group
 
 report_settings_bp = Blueprint('report_settings', __name__)
 
@@ -40,8 +41,19 @@ def report_settings():
     # Get subtypes
     user_subtypes = ReportSubtype.find_by_user(current_user.id)
     
-    # Группируем ключевые слова с использованием  функции
-    key_words_group = group_key_words_by_index(current_user.id, user_reports)
+    # Prepare global key words
+    global_user_key_words = KeyWordsGroup.find_without_reports(current_user.id)
+    unsorted_global_key_words = group_keywords(global_user_key_words, with_index=True)
+    global_key_words = sort_key_words_group(unsorted_global_key_words)
+    
+    # Prepare key words linked to reports
+    uncleared_report_user_key_words = []
+    for report in user_reports:
+        uncleared_report_user_key_words.append(KeyWordsGroup.find_by_report(report.id))
+    report_user_key_words = list(chain.from_iterable(uncleared_report_user_key_words))
+    print(report_user_key_words)
+    report_key_words = group_keywords(keywords=report_user_key_words, with_report=True)
+    
     
     # Processing type
     if request.method == "POST":
@@ -126,7 +138,8 @@ def report_settings():
                            menu = menu,
                            upload_folder_path=upload_folder_path,
                            upload_folder_name=upload_folder_name,
-                           key_words_group=key_words_group,
+                           global_key_words=global_key_words,
+                           report_key_words=report_key_words,
                            user_reports=user_reports,
                            user_types=user_types,
                            user_subtypes=user_subtypes 
