@@ -429,24 +429,24 @@
         // Теперь проходим по списку строк (ключевых слов)
         keyWordsGroup.forEach(word => {
 
-            if (!matchIndexes[word]) {
-                matchIndexes[word] = 0;
+            if (!matchIndexes[word.key_word]) {
+                matchIndexes[word.key_word] = 0;
             }
     
                 // Регулярное выражение для нахождения ключевого слова вне тегов и без букв перед и после
                 const regex = new RegExp(`(?<!<[^>]*>|[a-zA-Zа-яА-ЯёЁ])(${word})(?![^<]*>|[a-zA-Zа-яА-ЯёЁ])`, 'gi');
 
                 text = text.replace(regex, (matchedWord, offset, fullText) => {
-                    matchIndexes[word] += 1;
+                    matchIndexes[word.key_word] += 1;
     
                     // Создаём select с опциями из той же группы слов
                     const options = keyWordsGroup.map(optionWord => {
-                        const isSelected = optionWord.toLowerCase() === matchedWord.toLowerCase() ? "selected" : "";
-                        return `<option value="${optionWord}" ${isSelected}>${optionWord}</option>`;
+                        const isSelected = optionWord.key_word.toLowerCase() === matchedWord.toLowerCase() ? "selected" : "";
+                        return `<option value="${optionWord.key_word}" ${isSelected}>${optionWord.key_word}</option>`;
                     }).join('');
 
     
-                    return `<select class="report__select_dynamic" data-match-index="${word}-${matchIndexes[word]}">${options}</select>`;
+                    return `<select class="report__select_dynamic" data-match-index="${word.key_word}-${matchIndexes[word.key_word]}">${options}</select>`;
                 });
             });
         return text;
