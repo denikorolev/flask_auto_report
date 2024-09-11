@@ -1,4 +1,5 @@
 # models.py
+#v0.1.0
 
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -269,7 +270,7 @@ class KeyWordsGroup(BaseModel):
         ).all()
         
     @classmethod
-    def get_keywords_for_report(cls, report_id, user_id):
+    def get_keywords_for_report(cls, user_id, report_id):
         """ Функция получения списка всех ключевых слов необходимых 
         для конкретного отчета, включает как связанные с отчетом 
         ключевые слова так и общие ключевые слова конкретного пользователя """
