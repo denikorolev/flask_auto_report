@@ -4,7 +4,8 @@ import os
 from models import db, Report, ReportType, ReportSubtype, ReportParagraph, Sentence, KeyWordsGroup
 from file_processing import save_to_word
 from calculating import calculate_age
-from sentence_processing import split_sentences, get_new_sentences
+from sentence_processing import split_sentences, get_new_sentences, group_key_words_by_index
+from errors_processing import print_object_structure
 
 from openai import OpenAI 
 
@@ -59,20 +60,13 @@ def choosing_report():
 @login_required
 def working_with_reports(): 
     menu = init_app(current_app)
+    current_report_id = request.args.get("report_id")
     # Получаем ключевые слова для текущего пользователя
-    user_key_words = KeyWordsGroup.find_by_user_id(current_user.id)
+    
+    key_words_group = group_key_words_by_index(current_user.id, current_report_id)
 
-    # Группируем ключевые слова по group_index
-    words_for_fast_changing = []
-    current_group = []
-    current_index = user_key_words[0].group_index if user_key_words else None
-
-    for key_word in user_key_words:
-        if key_word.group_index != current_index:
-            words_for_fast_changing.append(current_group)
-            current_group = []
-            current_index = key_word.group_index
-        current_group.append(key_word.key_word)
+    # Для отладки
+    print_object_structure(key_words_group)        
         
     if request.method == "POST":
         data = request.get_json()
@@ -85,7 +79,7 @@ def working_with_reports():
         else:
             return jsonify({"message": "Invalid report ID."}), 400
         
-    report = Report.query.get(request.args.get("report_id"))  # Get report_id from url
+    report = Report.query.get(current_report_id) 
     full_name = request.args.get("full_name", "")
     birthdate = request.args.get("birthdate", "")
     report_number = request.args.get("reportNumber", "")
@@ -119,7 +113,7 @@ def working_with_reports():
         full_name=full_name,
         birthdate=birthdate,
         report_number=report_number,
-        key_words=words_for_fast_changing                   
+        key_words=key_words_group                 
     )
 
 @working_with_reports_bp.route("/update_sentence", methods=['POST'])

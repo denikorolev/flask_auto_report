@@ -39,14 +39,8 @@ def report_settings():
     # Get subtypes
     user_subtypes = ReportSubtype.find_by_user(current_user.id)
     
-    # Get user's keywords
-    user_keywords = KeyWordsGroup.find_by_user(current_user.id)
-    for key_word in user_keywords:
-        
-        print(key_word.key_word)
-    
     # Группируем ключевые слова с использованием  функции
-    key_words_group = group_key_words_by_index(current_user.id, user_keywords)
+    key_words_group = group_key_words_by_index(current_user.id, user_reports)
     
     # Processing type
     if request.method == "POST":

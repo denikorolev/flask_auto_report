@@ -316,3 +316,9 @@ html {
     margin: 0 25px 0 25px;
     z-index: 1000;
 }
+
+
+.red-highlight {
+    color: red;
+    font-weight: bold;
+}

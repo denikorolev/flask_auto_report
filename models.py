@@ -225,7 +225,7 @@ class KeyWordsGroup(BaseModel):
     user = db.relationship('User', backref=db.backref('key_words_groups', lazy=True))
     
     # Связь многие ко многим с таблицей reports
-    key_word_reports = db.relationship('Report', secondary='key_word_report_link', backref='key_words', lazy=True)
+    key_word_reports = db.relationship('Report', secondary='key_word_report_link', backref='key_words', lazy=True, cascade="all, delete")
 
     @classmethod
     def create(cls, group_index, index, key_word, user_id, key_word_comment=None, public=False, reports=None):

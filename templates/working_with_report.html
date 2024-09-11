@@ -418,7 +418,7 @@
     
 
     // Функция для выделения ключевых слов и работы с ними
-    function highlightKeyWords(text, keyWordsGroups) {
+    function highlightKeyWords(text, keyWordsGroup) {
         const matchIndexes = {};
     
         // Функция для проверки, является ли символ буквой (учитывает кириллицу и латиницу)
@@ -426,59 +426,91 @@
             return /[a-zA-Zа-яА-ЯёЁ]/.test(char);
         }
     
-        // Проходим по каждой группе ключевых слов
-        keyWordsGroups.forEach(group => {
-            group.forEach(word => {
-                if (!matchIndexes[word]) {
-                    matchIndexes[word] = 0;
-                }
+        // Теперь проходим по списку строк (ключевых слов)
+        keyWordsGroup.forEach(word => {
+
+            if (!matchIndexes[word]) {
+                matchIndexes[word] = 0;
+            }
     
                 // Регулярное выражение для нахождения ключевого слова вне тегов и без букв перед и после
                 const regex = new RegExp(`(?<!<[^>]*>|[a-zA-Zа-яА-ЯёЁ])(${word})(?![^<]*>|[a-zA-Zа-яА-ЯёЁ])`, 'gi');
-    
+
                 text = text.replace(regex, (matchedWord, offset, fullText) => {
                     matchIndexes[word] += 1;
     
                     // Создаём select с опциями из той же группы слов
-                    const options = group.map(optionWord => {
+                    const options = keyWordsGroup.map(optionWord => {
                         const isSelected = optionWord.toLowerCase() === matchedWord.toLowerCase() ? "selected" : "";
                         return `<option value="${optionWord}" ${isSelected}>${optionWord}</option>`;
                     }).join('');
+
     
                     return `<select class="report__select_dynamic" data-match-index="${word}-${matchIndexes[word]}">${options}</select>`;
                 });
             });
-        });
-    
         return text;
     }
     
     
-    // Функция для поиска key_words
+   // Функция для поиска key_words
     function updateRightSideText() {
+        // Получаем ключевые слова
         const keyWordsGroups = {{ key_words|tojson }};
+
         const rightParagraphList = document.getElementById("right-paragraph-list");
 
+        // Проходим по каждому параграфу (p, span) в правом списке
         rightParagraphList.querySelectorAll("p, span").forEach(paragraph => {
             const currentIndex = paragraph.getAttribute("data-index");
 
+            // Логируем текущий индекс
+
+            // Если нет data-index, пропускаем этот параграф
             if (!currentIndex) {
                 return;
             }
 
+            // Получаем обычный текст параграфа
             let plainText = paragraph.innerText || paragraph.textContent;
 
+            // Если ключевые слова еще не обработаны, добавляем select
             if (!paragraph.querySelector('select')) {
-                const highlightedText = highlightKeyWords(plainText, keyWordsGroups);
-                paragraph.innerHTML = highlightedText;
+
+                // Проходим по каждой группе ключевых слов
+                keyWordsGroups.forEach(group => {
+
+                    // Проверяем, существует ли массив keywords и не пуст ли он
+                    if (Array.isArray(group.keywords) && group.keywords.length > 0) {
+
+                        // Теперь проходим по каждому ключевому слову
+                        group.keywords.forEach(wordObj => {
+
+                            // Выделяем ключевые слова в тексте
+                            const groupKeywords = group.keywords.map(kw => kw.key_word);
+
+                            const highlightedText = highlightKeyWords(plainText, groupKeywords);
+
+                            // Логируем результат обработки
+                            console.log("highlightedText:", highlightedText);
+
+                            paragraph.innerHTML = highlightedText;
+                            // Логируем обновленное содержимое параграфа
+                            console.log("Updated paragraph.innerHTML:", paragraph.innerHTML);
+                        });
+                    } else {
+                        console.log("No valid keywords array found for this group or it is empty.");
+                    }
+                });
             }
 
+            // Сохраняем индекс
             paragraph.setAttribute("data-index", currentIndex);
         });
     }
+
     
-    
-    // Обновление текста справа. Нужно для работы логики key_words
+    // Обновление текста справа. Нужно для работы логики key_words. По сути здесь запускается вся эта логика.
     document.addEventListener("DOMContentLoaded", function() {
         updateRightSideText(); 
     });

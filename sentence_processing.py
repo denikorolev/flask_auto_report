@@ -2,7 +2,7 @@
 
 from flask_login import current_user
 import re
-from models import Sentence, ReportParagraph, KeyWordsGroup
+from models import Sentence, ReportParagraph, KeyWordsGroup, Report, User
 
 def clean_text(sentence, key_words):
     """ Функция очистки текста от пробелов, знаков припенания и 
@@ -54,7 +54,7 @@ def get_new_sentences(processed_paragraphs):
 
     # Получаем ключевые слова для текущего пользователя
     key_words = []
-    user_key_words = KeyWordsGroup.find_by_user_id(current_user.id)
+    user_key_words = KeyWordsGroup.find_by_user(current_user.id)
     for kw in user_key_words:
         key_words.append(kw.key_word.lower())
 
@@ -125,32 +125,31 @@ def group_key_words_by_index(user_id, report_ids=None):
     # Обрабатываем ключевые слова для каждого отчета
     if report_ids:
         for report_id in report_ids:
-            if isinstance(report_id, KeyWordsGroup):
+            if isinstance(report_id, Report):
                 report_id = report_id.id
-            else:
+            
                 # Получаем ключевые слова, связанные с конкретным отчетом
-                keywords_linked_to_report = KeyWordsGroup.find_by_report(report_id)
-                
-                if not keywords_linked_to_report:
-                    continue  # Пропускаем, если для отчета нет связанных ключевых слов
+            keywords_linked_to_report = KeyWordsGroup.find_by_report(report_id)
+            
+            if not keywords_linked_to_report:
+                continue  # Пропускаем, если для отчета нет связанных ключевых слов
 
-                for key_word in keywords_linked_to_report:
-                    if key_word.group_index not in unsorted_key_words_group:
-                        unsorted_key_words_group[key_word.group_index] = {
-                            "keywords": [],
-                            "linked_reports": []
-                        }
+            for key_word in keywords_linked_to_report:
+                if key_word.group_index not in unsorted_key_words_group:
+                    unsorted_key_words_group[key_word.group_index] = {
+                        "keywords": [],
+                        "linked_reports": []
+                    }
 
-                    unsorted_key_words_group[key_word.group_index]["keywords"].append({
-                        'key_word': key_word.key_word,
-                        'group_index': key_word.group_index,
-                        'index': key_word.index
-                    })
+                unsorted_key_words_group[key_word.group_index]["keywords"].append({
+                    'key_word': key_word.key_word,
+                    'group_index': key_word.group_index,
+                    'index': key_word.index
+                })
 
-                    # Добавляем отчет, с которым связана группа ключевых слов
-                    if report_id not in unsorted_key_words_group[key_word.group_index]["linked_reports"]:
-                        unsorted_key_words_group[key_word.group_index]["linked_reports"].append(report_id)
-    
+                # Добавляем отчет, с которым связана группа ключевых слов
+                if report_id not in unsorted_key_words_group[key_word.group_index]["linked_reports"]:
+                    unsorted_key_words_group[key_word.group_index]["linked_reports"].append(report_id)
     # Получаем ключевые слова без отчетов
     keywords_without_reports = KeyWordsGroup.find_without_reports(user_id)
     
@@ -169,6 +168,5 @@ def group_key_words_by_index(user_id, report_ids=None):
 
     # Сортировка групп ключевых слов
     key_words_group = sort_key_words_group(unsorted_key_words_group)
-    print(key_words_group)
 
     return key_words_group

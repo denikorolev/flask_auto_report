@@ -1,37 +1,23 @@
+# errors_processing.py
 
-from flask import current_app
-from flask_login import current_user
-from docx import Document
-import os
-from datetime import datetime
-import glob
-from docx.shared import Pt, Inches
-from docx.enum.table import WD_ALIGN_VERTICAL
-from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
-import re
-from models import Sentence, ReportParagraph, KeyWordsGroup
-
-
-# Function for debugging. Using it you can show that is in the Alchemy object
-def print_sqlalchemy_object(obj, indent=0):
-    """ Recursively prints the attributes and relationships of a SQLAlchemy object """
-    indent_str = ' ' * indent
-    if isinstance(obj, list):
-        for item in obj:
-            print_sqlalchemy_object(item, indent)
-    elif isinstance(obj, dict):
+def print_object_structure(obj, indent=0):
+    """Функция для рекурсивного вывода структуры объекта"""
+    indent_str = ' ' * (indent * 4)  # Уровень отступов для форматирования вывода
+    if isinstance(obj, dict):
+        print(f"{indent_str}{{}}:")  # Выводим, что это словарь
         for key, value in obj.items():
-            print(f"{indent_str}{key}:")
-            print_sqlalchemy_object(value, indent + 2)
-    elif hasattr(obj, '__dict__'):
-        print(f"{indent_str}{obj.__class__.__name__} object:")
-        for key, value in vars(obj).items():
-            if key.startswith('_'):
-                continue  # Skip internal attributes
-            if isinstance(value, list) or hasattr(value, '__dict__'):
-                print(f"{indent_str}  {key}:")
-                print_sqlalchemy_object(value, indent + 4)
-            else:
-                print(f"{indent_str}  {key}: {value}")
+            print(f"{indent_str}    {key}:")
+            print_object_structure(value, indent + 1)  # Рекурсивно выводим значения
+    elif isinstance(obj, list):
+        print(f"{indent_str}[]:")  # Выводим, что это список
+        for index, value in enumerate(obj):
+            print(f"{indent_str}    [{index}]:")
+            print_object_structure(value, indent + 1)  # Рекурсивно выводим элементы списка
+    elif hasattr(obj, '__dict__'):  # Если это объект класса с атрибутами
+        print(f"{indent_str}{type(obj).__name__}:")  # Выводим имя класса объекта
+        for key, value in obj.__dict__.items():
+            print(f"{indent_str}    {key}:")
+            print_object_structure(value, indent + 1)  # Рекурсивно выводим атрибуты объекта
     else:
-        print(f"{indent_str}{obj}")
+        print(f"{indent_str}{repr(obj)}")  # Выводим простое значение (строка, число и т.д.)
+
