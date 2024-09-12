@@ -1,5 +1,5 @@
 # report_settings.py
-#v0.1.2
+#v0.1.3
 
 from flask import Blueprint, render_template, request, redirect, flash, current_app
 from flask_login import login_required, current_user
@@ -51,9 +51,9 @@ def report_settings():
     for report in user_reports:
         uncleared_report_user_key_words.append(KeyWordsGroup.find_by_report(report.id))
     report_user_key_words = list(chain.from_iterable(uncleared_report_user_key_words))
-    print(report_user_key_words)
-    report_key_words = group_keywords(keywords=report_user_key_words, with_report=True)
     
+    report_key_words = group_keywords(report_user_key_words, with_report=True)
+    print(report_key_words)
     
     # Processing type
     if request.method == "POST":

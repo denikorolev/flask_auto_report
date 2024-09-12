@@ -1,5 +1,5 @@
 # sentence_processing.py
-#v0.1.2
+#v0.1.3
 
 from flask_login import current_user
 import re
@@ -132,9 +132,124 @@ def group_keywords(keywords, with_index=False, with_report=False):
     with_report=True:
         list of dict: Список словарей, где ключи report_id, report_name, group_index и key_words.
     """
+    
+    # Группируем ключевые слова по group_index
+    grouped_keywords = defaultdict(list)
+    for keyword in keywords:
+        grouped_keywords[keyword.group_index].append(keyword.key_word)
 
     if with_report:
-        report_key_words = defaultdict(lambda: {'report_name': '', 'key_words': [], 'group_indexes': set()})
+        # Используем список для хранения данных по отчетам
+        report_key_words = []
+        seen_groups = set()  # Множество для хранения уникальных групп
+
+        for keyword in keywords:
+            group_index = keyword.group_index
+            group_words = grouped_keywords[group_index]
+
+            # Для каждого отчета, связанного с ключевым словом
+            for report in keyword.key_word_reports:
+                # Проверяем, не была ли группа уже добавлена для этого отчета
+                if (report.id, group_index) not in seen_groups:
+                    # Добавляем всю группу ключевых слов, если её еще не добавили
+                    report_key_words.append({
+                        'report_id': report.id,
+                        'report_name': report.report_name,
+                        'group_index': group_index,
+                        'key_words': group_words  # Добавляем всю группу ключевых слов
+                    })
+                    # Отмечаем, что группа с этим group_index уже добавлена для данного отчета
+                    seen_groups.add((report.id, group_index))
+
+        return report_key_words
+
+    # Если with_index=True, возвращаем список словарей с group_index
+    if with_index:
+        grouped_keywords_with_index = []
+        for group_index, words in grouped_keywords.items():
+            grouped_keywords_with_index.append({'group_index': group_index, 'key_words': words})
+        return grouped_keywords_with_index
+    
+    # Если with_index=False, возвращаем просто сгруппированные ключевые слова
+    return list(grouped_keywords.values())
+
+    """
+    Создаем список сгруппированных слов или список словарей 
+    с ключами group_index и key_words в зависимости от полученных 
+    на входе аргументов, а также список ключевых слов с отчетами,
+    если with_report=True.
+
+    Args:
+        keywords (list): Список объектов класса KeyWordGroup.
+        with_index (boolean): Флаг для определения результата с или без добавления индекса.
+        with_report (boolean): Флаг для группировки ключевых слов по отчетам.
+    
+    Returns:
+    with_index=True:
+        list of dict: Список словарей с ключами group_index и key_words.
+    with_index=False:
+        list of lists: Список списков с отсортированными по group_index ключевыми словами.
+    with_report=True:
+        list of dict: Список словарей, где ключи report_id, report_name, group_index и key_words.
+    """
+
+    if with_report:
+        # Используем defaultdict для группировки по report_id и group_index
+        report_key_words = []
+
+        for keyword in keywords:
+            # Для каждого связанного с ключевым словом отчета создаем отдельную запись
+            for report in keyword.key_word_reports:
+                report_data = {
+                    'report_id': report.id,
+                    'report_name': report.report_name,
+                    'key_words': [keyword.key_word],  # Добавляем ключевое слово
+                    'group_index': keyword.group_index  # Уникальный индекс для каждой группы
+                }
+                
+                # Добавляем данные в список
+                report_key_words.append(report_data)
+
+        # Возвращаем список словарей для каждого отчета и связанных с ним ключевых слов
+        return report_key_words
+
+    # Группировка ключевых слов по group_index
+    grouped_keywords = defaultdict(list)
+    for keyword in keywords:
+        grouped_keywords[keyword.group_index].append(keyword.key_word)
+
+    # Если with_index=True, возвращаем список словарей с group_index
+    if with_index:
+        grouped_keywords_with_index = []
+        for group_index, words in grouped_keywords.items():
+            grouped_keywords_with_index.append({'group_index': group_index, 'key_words': words})
+        return grouped_keywords_with_index
+    
+    # Если with_index=False, возвращаем просто сгруппированные ключевые слова
+    return list(grouped_keywords.values())
+
+    """
+    Создаем список сгруппированных слов или список словарей 
+    с ключами group_index и key_words в зависимости от полученных 
+    на входе аргументов, а также список ключевых слов с отчетами,
+    если with_report=True.
+
+    Args:
+        keywords (list): Список объектов класса KeyWordGroup.
+        with_index (boolean): Флаг для определения результата с или без добавления индекса.
+        with_report (boolean): Флаг для группировки ключевых слов по отчетам.
+    
+    Returns:
+    with_index=True:
+        list of dict: Список словарей с ключами group_index и key_words.
+    with_index=False:
+        list of lists: Список списков с отсортированными по group_index ключевыми словами.
+    with_report=True:
+        list of dict: Список словарей, где ключи report_id, report_name, group_index и key_words.
+    """
+
+    if with_report:
+        report_key_words = defaultdict(lambda: {'report_name': '', 'key_words': [], 'group_index': set()})
 
         for keyword in keywords:
             # Проверяем, связан ли ключ с отчетом
@@ -142,13 +257,13 @@ def group_keywords(keywords, with_index=False, with_report=False):
                 report_data = report_key_words[report.id]
                 report_data['report_name'] = report.report_name
                 report_data['key_words'].append(keyword.key_word)
-                report_data['group_indexes'].add(keyword.group_index)  # Добавляем group_index
+                report_data['group_index'].add(keyword.group_index)  # Добавляем group_index
                 
-        # Преобразуем defaultdict в обычный список словарей, где group_indexes преобразуются в список
+        # Преобразуем defaultdict в обычный список словарей, где group_index преобразуются в список
         return [{'report_id': report_id, 
                  'report_name': data['report_name'], 
                  'key_words': data['key_words'], 
-                 'group_indexes': list(data['group_indexes'])} 
+                 'group_index': list(data['group_index'])} 
                 for report_id, data in report_key_words.items()]
     
     # Группируем ключевые слова по group_index
