@@ -1,7 +1,7 @@
 # report_settings.py
-#v0.1.3
+#v0.2.0
 
-from flask import Blueprint, render_template, request, redirect, flash, current_app
+from flask import Blueprint, render_template, request, redirect, flash, current_app, jsonify
 from flask_login import login_required, current_user
 from models import db, ReportType, ReportSubtype, AppConfig, KeyWordsGroup, Report 
 from itertools import chain
@@ -45,7 +45,6 @@ def report_settings():
     global_user_key_words = KeyWordsGroup.find_without_reports(current_user.id)
     unsorted_global_key_words = group_keywords(global_user_key_words, with_index=True)
     global_key_words = sort_key_words_group(unsorted_global_key_words)
-    
     # Prepare key words linked to reports
     uncleared_report_user_key_words = []
     for report in user_reports:
@@ -53,7 +52,6 @@ def report_settings():
     report_user_key_words = list(chain.from_iterable(uncleared_report_user_key_words))
     
     report_key_words = group_keywords(report_user_key_words, with_report=True)
-    print(report_key_words)
     
     # Processing type
     if request.method == "POST":
@@ -225,39 +223,42 @@ def delete_keywords():
     group_index = request.json.get("group_index")
 
     if not group_index:
-        return {"status": "error", "message": "Group index is required"}, 400
+        return jsonify({"status": "error", "message": "Group index is required"}), 400
 
     # Удаление всех ключевых слов с данным group_index для текущего пользователя
     KeyWordsGroup.query.filter_by(group_index=group_index, user_id=current_user.id).delete()
     db.session.commit()
 
-    return {"status": "success", "message": "Keywords group deleted successfully"}, 200
+    return jsonify({"status": "success", "message": "Keywords group deleted successfully"}), 200
 
 
 @report_settings_bp.route('/edit_keywords', methods=['POST'])
 @login_required
 def edit_keywords():
     data = request.json
-    group_index = data.get("group_index")
-    words = data.get("words")
+    key_words = data.get("key_words")
+    print(data)
 
-    if not group_index or not words:
-        return {"status": "error", "message": "Group index and\or words are required"}, 400
+    if not key_words:
+        return jsonify({"status": "error", "message": "Words are required"}), 400
 
-    for word_data in words:
-        word_id = word_data.get("id")
-        key_word = word_data.get("key_word")
+    for word in key_words:
+        word_id = word.get("id")
+        key_word = word.get("word")
 
         if not key_word:
             # Если ключевое слово пустое, удаляем его
-            KeyWordsGroup.query.filter_by(index=word_id, user_id=current_user.id).delete()
+            word_for_delete = KeyWordsGroup.query.get(word_id)
+            print(word_for_delete)
+            word_for_delete.delete()
+            
         else:
             # Если ключевое слово есть, обновляем его
-            keyword_entry = KeyWordsGroup.query.filter_by(index=word_id, user_id=current_user.id).first()
+            keyword_entry = KeyWordsGroup.query.get(word_id)
             if keyword_entry:
                 keyword_entry.key_word = key_word
 
     db.session.commit()
 
-    return {"status": "success", "message": "Keywords updated successfully"}, 200
+    return jsonify({"status": "success", "message": "Keywords updated successfully"}), 200
 

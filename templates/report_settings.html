@@ -1,5 +1,5 @@
 <!-- report_settings.html -->
- <!-- v0.1.2 -->
+ <!-- v0.2.0 -->
 
 {% extends "index.html" %}
 
@@ -135,8 +135,8 @@
                     {% for group in global_key_words %}
                         <div class="key-words-group" data-group="{{ group.group_index }}">
                             {% for word in group.key_words %}
-                                <span data-group="{{ group.group_index }}">
-                                    {{ word }}{% if not loop.last %}, {% endif %}
+                                <span data-id="{{ word.id }}" data-group="{{ group.group_index }}">
+                                    {{ word.word }}{% if not loop.last %}, {% endif %}
                                 </span>
                             {% endfor %}
 
@@ -163,26 +163,32 @@
 
             <div id="report-key-words-list">
                 {% if report_key_words %}
-                    {% for report in report_key_words %}
-                        {% if report.key_words %}
-                            <div class="report-key-words-group">
-                                <h4>Report: {{ report.report_name }}</h4>
-                                <div class="key-words-group" data-report="{{ report.report_id }}">
+                {% set ns = namespace(last_report_id=None) %}  <!-- Используем namespace для хранения значения переменной -->
+                {% for report in report_key_words %}
+                    {% if report.key_words %}
+                        <div class="report-key-words-group">
+                            {% if ns.last_report_id != report.report_id %}
+                                <h4>Report: {{ report.report_name }} </h4>
+                                {% set ns.last_report_id = report.report_id %} <!-- Меняем значение переменной для отслеживания ID текущего протокола вывода -->
+                            {% endif %}
+
+                                <!-- Группа ключевых слов -->
+                                <div class="key-words-group" data-report="{{ report.report_id }}" data-group="{{ report.group_index }}">
                                     {% for word in report.key_words %}
-                                        <span data-report="{{ report.report_id }}">
-                                            {{ word }}{% if not loop.last %}, {% endif %}
+                                        <span data-id="{{ word.id }}" data-group="{{ report.group_index }}" data-report="{{ report.report_id }} ">
+                                            {{ word.word }}{% if not loop.last %}, {% endif %}
                                         </span>
                                     {% endfor %}
                                 </div>
 
                                 <!-- Кнопки для редактирования и добавления ключевых слов -->
-                                <button class="btn report__btn delete-report-keywords-btn" data-report="{{ report.report_id }}">Delete</button>
-                                <button class="btn report__btn edit-report-keywords-btn" data-report="{{ report.report_id }}">Edit</button>
-                                <div class="add-report-keyword-input" style="display:none;" data-report="{{ report.report_id }}">
+                                <button class="btn report__btn delete-report-keywords-btn" data-report="{{ report.report_id }}" data-group="{{ report.group_index }}">Delete</button>
+                                <button class="btn report__btn edit-report-keywords-btn" data-report="{{ report.report_id }}" data-group="{{ report.group_index }}">Edit</button>
+                                <div class="add-report-keyword-input" style="display:none;" data-report="{{ report.report_id }}" data-group="{{ report.group_index }}">
                                     <input type="text" placeholder="Enter new keyword(s)" class="new-report-keyword-input">
-                                    <button class="btn report__btn submit-report-keyword-btn" data-report="{{ report.report_id }}">Submit</button>
+                                    <button class="btn report__btn submit-report-keyword-btn" data-report="{{ report.report_id }}" data-group="{{ report.group_index }}">Submit</button>
                                 </div>
-                                <button class="btn report__btn add-report-keywords-btn" data-report="{{ report.report_id }}">Add Word</button>
+                                <button class="btn report__btn add-report-keywords-btn" data-report="{{ report.report_id }}" data-group="{{ report.group_index }}">Add Word</button>
                             </div>
                             <div class="report_borderline"></div>
                         {% endif %}
@@ -201,26 +207,134 @@
 </div>
 
 <script>
-
-    // File directory logic
-    function updateDirectoryPath() {
-        var input = document.getElementById('file-input');
-        var path = input.files[0].webkitRelativePath;
-        document.getElementById('directory-path').value = path.split('/')[0];
+   
+    /**
+    * Sends a JSON request to the server.
+    * 
+    * @param {Object} options - Options for the request.
+    * @param {string} options.url - The URL for the request.
+    * @param {string} [options.method="POST"] - The HTTP method (default is POST).
+    * @param {Object} options.data - The data to be sent in the request body.
+    * @returns {Promise<Object>} - The response data as a JSON object.
+    */
+    function sendRequest({ url, method = "POST", data = {} }) {
+        return fetch(url, {
+            method: method,  // Используем POST по умолчанию
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === "success") {
+                return data;  // Возвращаем успешный ответ
+            } else {
+                throw new Error(data.message || "Request failed");
+            }
+        })
+        .catch(error => {
+            console.error("Error:", error);
+            alert(error.message);  // Выводим ошибку в алерт
+        });
     }
 
-    // Показываем поле для ввода ключевых слов при нажатии на кнопку "Add Word"
+    // Функция удаления ключевых слов
+    function deleteKeywords({ groupIndex, reportId = null }) {
+        const data = reportId ? { report_id: reportId, group_index: groupIndex } : { group_index: groupIndex };
+        sendRequest({
+            url: "{{ url_for('report_settings.delete_keywords') }}",
+            method: "POST",
+            data: data
+        }).then(() => location.reload());  
+    }
+
+    // Функция редактирования ключевых слов
+    function editKeywords({ updatedWords }) {
+        sendRequest({
+            url: "{{ url_for('report_settings.edit_keywords') }}",
+            method: "POST",
+            data: { key_words: updatedWords }  // Передаем массив слов с id и новым значением
+        }).then(() => location.reload());
+    }
+    
+    
+    // Функция добавления ключевого слова к имеющейся группе ключевых слов
+    function addKeywords({ groupIndex, reportId = null, newKeywords }) {
+        const data = reportId ? { report_id: reportId, group_index: groupIndex, key_word_input: newKeywords } : { group_index: groupIndex, key_word_input: newKeywords };
+        sendRequest({
+            url: "{{ url_for('report_settings.add_word_to_exist_group') }}",
+            method: "POST",
+            data: data
+        }).then(() => location.reload());  
+    }
+    
+    // Универсальная функция для обработки нажатия кнопки Edit для ключевых слов
+    function handleEditButtonClick(button) {
+        const groupElement = document.querySelector(`.key-words-group[data-group='${button.dataset.group}']`);
+        
+        if (groupElement) {
+            const spans = groupElement.querySelectorAll("span");
+    
+            if (button.textContent === "Edit") {
+                // Преобразуем span в input для редактирования
+                spans.forEach(span => {
+                    const input = document.createElement("input");
+                    input.value = span.textContent.trim().replace(/,\s*$/, '');  // Убираем запятую
+                    input.setAttribute("data-id", span.getAttribute("data-id"));  // Переносим id слова в input
+                    input.classList.add("key-word-input");
+                    span.replaceWith(input);
+                });
+                button.textContent = "Save";
+            } else {
+                // Собираем измененные ключевые слова с их id
+                const updatedWords = [];
+                const inputs = groupElement.querySelectorAll(".key-word-input");
+                inputs.forEach(input => {
+                    updatedWords.push({
+                        id: input.getAttribute("data-id"),  // Добавляем id слова
+                        word: input.value.trim()  // Добавляем измененное ключевое слово
+                    });
+                });
+    
+                // Отправляем изменения на сервер
+                editKeywords({ updatedWords });  // Передаем только обновленные ключевые слова с их id
+            }
+        }
+    }
+
+    // Логика для кнопок Edit в глобальном и report-specific блоках
+    document.querySelectorAll(".edit-keywords-btn, .edit-report-keywords-btn").forEach(button => {
+        button.addEventListener("click", function() {
+            handleEditButtonClick(this);  // Обрабатываем нажатие на кнопку Edit
+        });
+    });
+
+    
+    
+    
+
+
+    // Логика для кнопок в блоке Global Key Words
+    // Удаление 
+    document.querySelectorAll(".delete-keywords-btn").forEach(button => {
+        button.addEventListener("click", function() {
+            const groupIndex = this.dataset.group;  // Получаем group_index
+            deleteKeywords({ groupIndex });  // Удаляем ключевые слова для global_key_words
+        });
+    });
+    
+    // Добавление слова в группу
     document.querySelectorAll(".add-keywords-btn").forEach(button => {
         button.addEventListener("click", function() {
             const groupIndex = this.dataset.group;
             const inputContainer = document.querySelector(`.add-keyword-input[data-group='${groupIndex}']`);
+
             if (inputContainer) {
                 inputContainer.style.display = inputContainer.style.display === "none" ? "inline-block" : "none";
             }
         });
     });
-
-    // Логика отправки нового ключевого слова (работа кнопки add word)
     document.querySelectorAll(".submit-keyword-btn").forEach(button => {
         button.addEventListener("click", function() {
             const groupIndex = this.dataset.group;
@@ -232,28 +346,57 @@
                 return;
             }
 
-            // Отправляем ключевые слова на сервер
-            fetch("{{ url_for('report_settings.add_word_to_exist_group') }}", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({ group_index: groupIndex, key_word_input: newKeywords })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === "success") {
-                    location.reload(); // Перезагружаем страницу при успешном добавлении
-                } else {
-                    alert(data.message);
-                }
-            })
-            .catch(error => {
-                console.error("Error:", error);
-            });
+            addKeywords({ groupIndex, newKeywords });  // Передаем group_index и новое ключевое слово
         });
     });
 
+
+    // Логика для кнопок в блоке Report-specific Key Words
+    // Удаление
+    document.querySelectorAll(".delete-report-keywords-btn").forEach(button => {
+        button.addEventListener("click", function() {
+            const reportId = this.dataset.report;  // Получаем report_id
+            const groupIndex = this.dataset.group;  // Получаем group_index
+            deleteKeywords({ reportId, groupIndex });  // Удаляем ключевые слова для report_key_words
+        });
+    });
+        
+    // Добавление слова в группу
+    document.querySelectorAll(".add-report-keywords-btn").forEach(button => {
+        button.addEventListener("click", function() {
+            const reportId = this.dataset.report;
+            const groupIndex = this.dataset.group;
+            const inputContainer = document.querySelector(`.add-report-keyword-input[data-report='${reportId}'][data-group='${groupIndex}']`);
+
+            if (inputContainer) {
+                inputContainer.style.display = inputContainer.style.display === "none" ? "inline-block" : "none";
+            }
+        });
+    });
+    document.querySelectorAll(".submit-report-keyword-btn").forEach(button => {
+        button.addEventListener("click", function() {
+            const reportId = this.dataset.report;
+            const groupIndex = this.dataset.group;
+            const inputElement = document.querySelector(`.add-report-keyword-input[data-report='${reportId}'][data-group='${groupIndex}'] .new-report-keyword-input`);
+            const newKeywords = inputElement.value.trim();
+
+            if (!newKeywords) {
+                alert("Please enter at least one keyword.");
+                return;
+            }
+
+            addKeywords({ reportId, groupIndex, newKeywords });  // Передаем report_id, group_index и новое ключевое слово
+        });
+    });
+
+
+
+    // File directory logic
+    function updateDirectoryPath() {
+        var input = document.getElementById('file-input');
+        var path = input.files[0].webkitRelativePath;
+        document.getElementById('directory-path').value = path.split('/')[0];
+    }
 
     // Показываем или скрываем список отчетов при выборе чекбокса
     document.getElementById('link_reports_checkbox').addEventListener('change', function() {
@@ -302,94 +445,6 @@
             console.error("Error:", error);
         });
     });
-
-    
-
-    // Логика для удаления ключевых слов по группе
-    document.querySelectorAll(".delete-keywords-btn").forEach(button => {
-        button.addEventListener("click", function() {
-            const groupIndex = this.dataset.group;
-            fetch("{{ url_for('report_settings.delete_keywords') }}", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({ group_index: groupIndex })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === "success") {
-                    const groupElement = document.querySelector(`.key-words-group[data-group='${groupIndex}']`);
-                    if (groupElement) {
-                        groupElement.remove();
-                    } else {
-                        console.error("Group element not found for deletion.");
-                    }
-                } else {
-                    alert(data.message);
-                }
-            })
-            .catch(error => console.error("Error:", error));
-        });
-    });
-
-    // Логика для редактирования ключевых слов
-    document.querySelectorAll(".edit-keywords-btn").forEach(button => {
-        button.addEventListener("click", function() {
-            const groupIndex = this.dataset.group;
-            const groupElement = document.querySelector(`.key-words-group[data-group='${groupIndex}']`);
-
-            if (groupElement) {
-                const spans = groupElement.querySelectorAll("span");
-                
-                if (this.textContent === "Edit") {
-                    // Преобразуем <span> в <input> для редактирования
-                    spans.forEach(span => {
-                        const input = document.createElement("input");
-                        input.value = span.textContent.trim().replace(/,\s*$/, ''); // Убираем запятую, если есть
-                        input.classList.add("key-word-input");
-                        span.replaceWith(input);
-                    });
-                    this.textContent = "Save";
-                } else {
-                    // Собираем изменения
-                    const updatedWords = [];
-                    const inputs = groupElement.querySelectorAll(".key-word-input");
-                    inputs.forEach(input => {
-                        updatedWords.push({ id: input.dataset.id, key_word: input.value.trim() });
-                    });
-
-                    // Отправляем изменения на сервер
-                    fetch("{{ url_for('report_settings.edit_keywords') }}", {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json"
-                        },
-                        body: JSON.stringify({ group_index: groupIndex, words: updatedWords })
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.status === "success") {
-                            inputs.forEach(input => {
-                                const span = document.createElement("span");
-                                span.textContent = input.value.trim();
-                                span.setAttribute("data-group", groupIndex);
-                                span.setAttribute("data-index", input.dataset.id);
-                                input.replaceWith(span);
-                            });
-                            this.textContent = "Edit";
-                        } else {
-                            alert(data.message);
-                        }
-                    })
-                    .catch(error => console.error("Error:", error));
-                }
-            } else {
-                console.error("Group element not found for editing.");
-            }
-        });
-    });
-
 
     
 

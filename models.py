@@ -1,5 +1,5 @@
 # models.py
-#v0.1.0
+#v0.2.0
 
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -12,8 +12,8 @@ db = SQLAlchemy()
 # Association table between KeyWordsGroup and Report
 key_word_report_link = db.Table(
     'key_word_report_link',
-    db.Column('key_word_id', db.BigInteger, db.ForeignKey('key_words_group.id'), primary_key=True),
-    db.Column('report_id', db.BigInteger, db.ForeignKey('reports.id'), primary_key=True)
+    db.Column('key_word_id', db.BigInteger, db.ForeignKey('key_words_group.id', ondelete="CASCADE"), primary_key=True),
+    db.Column('report_id', db.BigInteger, db.ForeignKey('reports.id', ondelete="CASCADE"), primary_key=True)
 )
 
 class User(db.Model, UserMixin):
@@ -226,7 +226,7 @@ class KeyWordsGroup(BaseModel):
     user = db.relationship('User', backref=db.backref('key_words_groups', lazy=True))
     
     # Связь многие ко многим с таблицей reports
-    key_word_reports = db.relationship('Report', secondary='key_word_report_link', backref='key_words', lazy=True, cascade="all, delete")
+    key_word_reports = db.relationship('Report', secondary='key_word_report_link', backref='key_words', lazy=True)
 
     @classmethod
     def create(cls, group_index, index, key_word, user_id, key_word_comment=None, public=False, reports=None):
@@ -284,6 +284,21 @@ class KeyWordsGroup(BaseModel):
         all_keywords = list({keyword.id: keyword for keyword in all_keywords}.values())
 
         return all_keywords
+    
+    @classmethod
+    def find_by_word_and_group(cls, key_word, group_index, user_id):
+        """
+        Поиск ключевого слова по значению key_word и group_index для конкретного пользователя.
+        
+        Args:
+            key_word (str): Ключевое слово для поиска.
+            group_index (int): Индекс группы ключевых слов.
+            user_id (int): ID пользователя.
+
+        Returns:
+            KeyWordsGroup: Найденная запись ключевого слова, если таковая существует.
+        """
+        return cls.query.filter_by(key_word=key_word, group_index=group_index, user_id=user_id).first()
         
     @classmethod
     def find_public(cls):
