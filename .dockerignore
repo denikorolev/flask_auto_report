@@ -1,0 +1,23 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+env/
+venv/
+.git/
+
+.dockerignore
+.git
+.gitignore
+
+# Ignore unusefull files
+README.md
+ind copy.html
+for_html_typing.html
+test.py
+st_copy.css
+media.css
+
+# Ignore temporary files
+*~
+*.swp
