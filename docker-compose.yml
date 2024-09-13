@@ -42,7 +42,7 @@ services:
     image: postgres:13
     environment:
       POSTGRES_USER: deniskorolev
-      POSTGRES_PASSWORD: 
+      POSTGRES_PASSWORD: uy$0pnpo11
       POSTGRES_DB: radiologary
     ports:
       - "5432:5432"
@@ -53,7 +53,7 @@ services:
     image: postgres:13
     environment:
       POSTGRES_USER: deniskorolev
-      POSTGRES_PASSWORD: 
+      POSTGRES_PASSWORD: 0000
       POSTGRES_DB: radiologary_test
     ports:
       - "5433:5432"
