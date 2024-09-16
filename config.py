@@ -17,7 +17,11 @@ class Config:
     DB_PASS = os.getenv("DB_PASS", "")
     SECRET_KEY = os.getenv("SECRET_KEY", "my_secret_key")
 
-    SQLALCHEMY_DATABASE_URI = f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{PORT}/{DB_NAME}"
+    # Если пароль не задан, разрешить подключение без пароля для теста
+    if DB_PASS:
+        SQLALCHEMY_DATABASE_URI = f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{PORT}/{DB_NAME}"
+    else:
+        SQLALCHEMY_DATABASE_URI = f"postgresql://{DB_USER}@{DB_HOST}:{PORT}/{DB_NAME}"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
     UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads') 

@@ -2,25 +2,29 @@ version: "3.8"
 services:
   web:
     build: .
+    env_file: 
+      - .env
     ports:
       - "5000:5000"
-    volumes:
-      - .:/app
     environment:
       - FLASK_ENV=development
-      - DATABASE_URL=postgresql://deniskorolev:@db:5432/radiologary
+      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASS}@${DB_HOST}:${PORT}/${DB_NAME}
+      - SECRET_KEY=${SECRET_KEY}
+    command: gunicorn app:app -b 0.0.0.0:5000 --timeout 120
     depends_on:
       - db
 
   web_test:
     build: .
+    env_file: 
+      - .env
     ports:
       - "5001:5000"
-    volumes:
-      - .:/app
     environment:
       - FLASK_ENV=development
-      - DATABASE_URL=postgresql://deniskorolev:@db_test:5432/radiologary_test
+      - DATABASE_URL=postgresql://${DB_USER_TEST}:${DB_PASS_TEST}@${DB_HOST_TEST}:${PORT_TEST}/${DB_NAME_TEST}
+      - SECRET_KEY=${SECRET_KEY}
+    command: gunicorn app:app -b 0.0.0.0:5001 --timeout 120
     depends_on:
       - db_test
 
@@ -40,25 +44,31 @@ services:
 
   db:
     image: postgres:13
+    env_file: 
+      - .env
     environment:
-      POSTGRES_USER: deniskorolev
-      POSTGRES_PASSWORD: uy$0pnpo11
-      POSTGRES_DB: radiologary
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASS}
+      POSTGRES_DB: ${DB_NAME}
     ports:
-      - "5432:5432"
+      - "${PORT}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - /home/deniskorolev/backups:/backups
 
   db_test:
     image: postgres:13
+    env_file: 
+      - .env
     environment:
-      POSTGRES_USER: deniskorolev
-      POSTGRES_PASSWORD: 0000
-      POSTGRES_DB: radiologary_test
+      POSTGRES_USER: ${DB_USER_TEST}
+      POSTGRES_PASSWORD: ${DB_PASS_TEST}
+      POSTGRES_DB: ${DB_NAME_TEST}
     ports:
-      - "5433:5432"
+      - "${PORT_TEST}:5432"
     volumes:
       - pgdata_test:/var/lib/postgresql/data
+      - /home/deniskorolev/backups:/backups
 
 volumes:
   pgdata:

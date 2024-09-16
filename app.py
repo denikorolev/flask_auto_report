@@ -70,6 +70,8 @@ def test_db_connection():
 # This is only for redirection to the main page
 @app.route("/")
 def index():
+    if not test_db_connection():
+        return "Database connection failed", 500
     return redirect(url_for("main"))
 
 # This is the main page
