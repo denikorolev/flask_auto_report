@@ -1,5 +1,5 @@
 # file_processing.py
-#v0.1.0
+#v0.1.1
 
 from flask import current_app
 from flask_login import current_user
@@ -68,7 +68,7 @@ def save_to_word(text, name, subtype, report_type, birthdate, reportnumber, scan
         upload_folder_name = str(current_user.id)
         modified_date_str = date_str.replace("_", ".")
         modified_birthdate = birthdate.replace("-", ".")
-        upload_folder = current_app.config['UPLOAD_FOLDER']
+        upload_folder = "uploads2"
         image_path = os.path.join(upload_folder, "Sugnatura.jpg")
 
         # Find the most recent template

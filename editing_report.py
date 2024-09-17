@@ -29,7 +29,7 @@ def edit_report():
         if not report or report.userid != current_user.id:
             return jsonify(success=False, message="Report not found or you don't have permission to edit it"), 403
 
-    report_paragraphs = sorted(report.report_paragraphs_list, key=lambda p: p.paragraph_index) if report else []
+    report_paragraphs = sorted(report.report_paragraphs, key=lambda p: p.paragraph_index) if report else []
     for paragraph in report_paragraphs:
         paragraph.sentences = sorted(paragraph.sentences, key=lambda s: (s.index, s.weight))
         # Добавляем маркер для разделения предложений

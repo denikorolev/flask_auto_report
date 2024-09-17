@@ -1,5 +1,5 @@
 <!-- create_report.html -->
- <!-- v0.1.0 -->
+ <!-- v0.1.1 -->
 
 {% extends "index.html" %}
 
@@ -86,6 +86,10 @@
 <script id="allSubtypesData" type="application/json">{{ report_subtypes|tojson }}</script>
 
 <script>
+
+    /* логика необходимая для правильного сопоставления типов и подтипов 
+    в выпадающих списках а также визуализации полей связанных с выбором 
+    файла или протокола при его создании */
     document.addEventListener("DOMContentLoaded", function() {
         const reportTypeSelect = document.getElementById("report_type");
         const reportSubtypeSelect = document.getElementById("report_subtype");
@@ -121,6 +125,7 @@
     
         actionSelect.dispatchEvent(new Event("change"));
     });
-    </script>
+
+</script>
 
 {% endblock container %}
