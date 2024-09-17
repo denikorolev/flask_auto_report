@@ -430,7 +430,8 @@
     
         // Проходим по каждой группе ключевых слов
         keyWordsGroups.forEach(group => {
-            group.forEach(word => {
+            group.forEach(item => {
+                const word = item.word;  // Достаем слово из словаря
                 if (!matchIndexes[word]) {
                     matchIndexes[word] = 0;
                 }
@@ -442,7 +443,8 @@
                     matchIndexes[word] += 1;
     
                     // Создаём select с опциями из той же группы слов
-                    const options = group.map(optionWord => {
+                    const options = group.map(option => {
+                        const optionWord = option.word;  // Получаем слово из каждого словаря
                         const isSelected = optionWord.toLowerCase() === matchedWord.toLowerCase() ? "selected" : "";
                         return `<option value="${optionWord}" ${isSelected}>${optionWord}</option>`;
                     }).join('');

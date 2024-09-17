@@ -171,7 +171,7 @@ class ReportParagraph(BaseModel):
     paragraph = db.Column(db.String(255), nullable=False)
     paragraph_visible = db.Column(db.Boolean, default=False, nullable=False)
 
-    report_rel = db.relationship("Report", backref=db.backref("report_paragraphs_list", lazy=True), overlaps="paragraphs,report")
+    # report_rel = db.relationship("Report", backref=db.backref("report_paragraphs_list", lazy=True), overlaps="paragraphs,report")
     sentences = db.relationship('Sentence', backref='paragraph', cascade="all, delete-orphan", overlaps="paragraph,sentences")
 
     @classmethod
@@ -194,7 +194,7 @@ class Sentence(BaseModel):
     comment = db.Column(db.String(100), nullable=False)
     sentence = db.Column(db.String(400), nullable=False)
 
-    report_paragraph_rel = db.relationship("ReportParagraph", backref=db.backref("sentences_list", lazy=True), overlaps="paragraph,sentences")
+    # report_paragraph_rel = db.relationship("ReportParagraph", backref=db.backref("sentences_list", lazy=True), overlaps="paragraph,sentences")
 
     @classmethod
     def create(cls, paragraph_id, index, weight, comment, sentence):
