@@ -43,12 +43,12 @@ def load_user(user_id):
         return session.get(User, int(user_id))
 
 # Handle user logged in event
-@user_logged_in.connect_via(app)
-def on_user_logged_in(sender, user):
-    user_config = Config.load_user_config(user.id)
-    for key, value in user_config.items():
-        if value:
-            app.config[key] = value
+# @user_logged_in.connect_via(app)
+# def on_user_logged_in(sender, user):
+#     user_config = Config.load_user_config(user.id)
+#     for key, value in user_config.items():
+#         if value:
+#             app.config[key] = value
             
 
 # Use menu from config
@@ -90,5 +90,5 @@ def close_db(error):
 
 
 
-if __name__ == "__main__":
-    app.run(debug=True, port=5001)
+# if __name__ == "__main__":
+#     app.run(debug=True, port=5001)
