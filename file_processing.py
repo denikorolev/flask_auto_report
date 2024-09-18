@@ -1,5 +1,5 @@
 # file_processing.py
-#v0.1.1
+#v0.2.0
 
 from flask import current_app
 from flask_login import current_user
@@ -10,6 +10,7 @@ import glob
 from docx.shared import Pt, Inches
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from docx.enum.table import WD_ALIGN_VERTICAL
+from config import Config
 
 
 # Проверка допустимости расширения загружаемого файла
@@ -50,7 +51,7 @@ def file_uploader (file, file_type):
         name = "word_template"
         date_str = datetime.now().strftime("%d_%m_%y")
         filename_with_date = f"{name}_{date_str}{ext}"
-        upload_folder = current_app.config['UPLOAD_FOLDER']
+        upload_folder = Config.get_user_upload_folder()
         file_path = os.path.join(upload_folder, filename_with_date)
         try:
             file.save(file_path)
@@ -60,20 +61,38 @@ def file_uploader (file, file_type):
     else:
         return "The file name or extension is not allowed"
     
+    
 # Function for file saving in the docx format 
 def save_to_word(text, name, subtype, report_type, birthdate, reportnumber, scanParam, side=""):
+    print("in save to word function")
     try:
         date_str = datetime.now().strftime("%d_%m_%y")
-        upload_folder_path = current_app.config['UPLOAD_FOLDER']
-        upload_folder_name = str(current_user.id)
         modified_date_str = date_str.replace("_", ".")
         modified_birthdate = birthdate.replace("-", ".")
-        upload_folder = "uploads2"
+    except:
+        print("date manipulation failed")
+        pass
+    try:
+        # Используем функцию из Config для получения папки пользователя
+        upload_folder = Config.get_user_upload_folder()
+            
+            
+        report_upload_folder_path = os.path.join(upload_folder, f"reports_{date_str}")
+        # Создаем вложенную папку, если она не существует
+        if not os.path.exists(report_upload_folder_path):
+            os.makedirs(report_upload_folder_path)
+            
         image_path = os.path.join(upload_folder, "Sugnatura.jpg")
 
-        # Find the most recent template
-        template_path = max(glob.glob(os.path.join(upload_folder_path, "word_template_*.docx")), key=os.path.getmtime)
-
+        # Найти самый последний шаблон файла
+        template_files = glob.glob(os.path.join(upload_folder, "word_template_*.docx"))
+        # Проверяем, есть ли файлы-шаблоны
+        if not template_files:
+            # Сообщаем об ошибке, если нет шаблонов
+            raise Exception("No template files found. Please upload a template file before generating the report.")
+        # Найти самый последний по времени измененный файл
+        template_path = max(template_files, key=os.path.getmtime)
+        
         document = Document(template_path)
         
         def set_font_size(doc, size):
@@ -161,17 +180,18 @@ def save_to_word(text, name, subtype, report_type, birthdate, reportnumber, scan
         # Set font size for the rest of the document
         set_font_size(document, 12)
         
-        # Create new folder
-        new_folder = os.path.join(upload_folder_path, f"{upload_folder_name}_{date_str}")
-        os.makedirs(new_folder, exist_ok=True)
+        # # Create new folder
+        # new_folder = os.path.join(report_upload_folder_path, f"{upload_folder_name}_{date_str}")
+        # os.makedirs(new_folder, exist_ok=True)
 
         # Save new document
         new_filename = f"{name}_{subtype}_{date_str}.docx"
-        new_file_path = os.path.join(new_folder, new_filename)
+        new_file_path = os.path.join(report_upload_folder_path, new_filename)
         document.save(new_file_path)
 
         return new_file_path
     except Exception as e:
+        print(f"Error in save_to_word: {e}")
         raise Exception(f"Error in save_to_word: {e}")
 
 

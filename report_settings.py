@@ -108,18 +108,18 @@ def report_settings():
                 flash("You don't have permission to edit this subtype")
             return redirect(request.url)
         
-        # Directory and folder name settings
-        if "save_directory_button" in request.form:
-            directory_path = request.form["directory_path"]
-            AppConfig.set_config_value("UPLOAD_FOLDER_PATH", directory_path, current_user.id)
-            flash("Directory path saved successfully", "success")
-            return redirect(request.url)
+        # # Directory and folder name settings
+        # if "save_directory_button" in request.form:
+        #     directory_path = request.form["directory_path"]
+        #     AppConfig.set_config_value("UPLOAD_FOLDER_PATH", directory_path, current_user.id)
+        #     flash("Directory path saved successfully", "success")
+        #     return redirect(request.url)
         
-        if "save_folder_name_button" in request.form:
-            folder_name = request.form["folder_name"]
-            AppConfig.set_config_value("UPLOAD_FOLDER_NAME", folder_name, current_user.id)
-            flash("Folder name saved successfully", "success")
-            return redirect(request.url)
+        # if "save_folder_name_button" in request.form:
+        #     folder_name = request.form["folder_name"]
+        #     AppConfig.set_config_value("UPLOAD_FOLDER_NAME", folder_name, current_user.id)
+        #     flash("Folder name saved successfully", "success")
+        #     return redirect(request.url)
         
         # Handling file upload
         if 'file' in request.files:
@@ -134,8 +134,6 @@ def report_settings():
     return render_template('report_settings.html', 
                            title = page_title,
                            menu = menu,
-                           upload_folder_path=upload_folder_path,
-                           upload_folder_name=upload_folder_name,
                            global_key_words=global_key_words,
                            report_key_words=report_key_words,
                            user_reports=user_reports,

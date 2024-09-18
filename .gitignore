@@ -6,7 +6,7 @@ __pycache__/
 *.pyc
 
 # Ignore uploads
-uploads/
+/uploads/reports*/
 
 # Ignore macOS system files
 .DS_Store

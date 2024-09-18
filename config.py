@@ -1,8 +1,9 @@
 # config.py
-#v0.1.1
+#v0.2.0
 # Все переменные настроек пользователя сохранены в базе данных в 
 # таблице app_config их можно добавлять через AppConfig класс в models.py
 
+from flask_login import current_user
 import os
 from dotenv import load_dotenv
 from models import AppConfig
@@ -24,7 +25,7 @@ class Config:
         SQLALCHEMY_DATABASE_URI = f"postgresql://{DB_USER}@{DB_HOST}:{PORT}/{DB_NAME}"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
-    UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads') 
+    BASE_UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')  # Основная папка uploads 
     
     # OpenAI API configuration
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -44,9 +45,26 @@ class Config:
         """
         Load user-specific configuration from the database.
         """
-        upload_folder_path = AppConfig.get_config_value("UPLOAD_FOLDER_PATH", user_id)
-        upload_folder_name = AppConfig.get_config_value("UPLOAD_FOLDER_NAME", user_id)
-        return {
-            "UPLOAD_FOLDER_PATH": upload_folder_path,
-            "UPLOAD_FOLDER_NAME": upload_folder_name
-        }
+        
+        return None
+    
+    @staticmethod
+    def get_user_upload_folder():
+        """
+        Создаёт путь к папке для загрузок пользователя в формате: <первая_часть_email>_<user_id>.
+        Если папка не существует, она будет создана.
+        """
+        user_email = current_user.user_email
+        user_id = current_user.id
+        
+        # Извлекаем первую часть email (до @)
+        email_prefix = user_email.split('@')[0]
+        
+        # Путь к папке пользователя
+        user_folder = os.path.join(Config.BASE_UPLOAD_FOLDER, f"{email_prefix}_{user_id}")
+        
+        # Создание папки, если её нет
+        if not os.path.exists(user_folder):
+            os.makedirs(user_folder)
+        
+        return user_folder

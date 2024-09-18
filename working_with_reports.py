@@ -1,5 +1,5 @@
 #working_with_reports.py
-#v0.1.2
+#v0.1.3
 
 from flask import Blueprint, render_template, request, current_app, jsonify, send_file, flash, url_for
 from flask_login import login_required, current_user
@@ -70,9 +70,6 @@ def working_with_reports():
     key_words_obj = KeyWordsGroup.get_keywords_for_report(current_user.id, current_report_id)
     key_words_group = group_keywords(key_words_obj)
 
-    # Для отладки
-    print(key_words_group)
-    # print_object_structure(easy_key)        
         
     if request.method == "POST":
         data = request.get_json()
