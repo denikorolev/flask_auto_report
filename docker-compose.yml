@@ -84,8 +84,9 @@ services:
     volumes:
       - ./certbot/conf:/etc/letsencrypt
       - ./certbot/www:/var/www/certbot
-    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do sleep 12h & wait $!; certbot renew; done;'"
-    # Certbot будет автоматически обновлять сертификаты каждые 12 часов
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do sleep 12h & wait $!; certbot renew; done;'" # Certbot будет автоматически обновлять сертификаты каждые 12 часов
+    command: certonly --webroot --webroot-path=/var/www/certbot --email korolevdg@gmail.com --agree-tos --no-eff-email --force-renewal -d radiologary.com -d www.radiologary.com
+    
 
 volumes:
   pgdata:
