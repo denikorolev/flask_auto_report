@@ -238,28 +238,34 @@
         rightParagraphList.querySelectorAll(".report__paragraph").forEach(paragraphElement => {
             const paragraph = paragraphElement.querySelector("p");
 
-            // Проверяем, видим ли параграф
+            // Добавляем текст параграфа, если он виден
             if (isElementVisible(paragraph)) {
                 const paragraphText = paragraph.innerText.trim();
-                collectedText += paragraphText + "\n";  // Добавляем текст параграфа
+                collectedText += paragraphText + " ";  // Добавляем текст параграфа, если он виден
             }
+
+            let hasSentences = false;  // Флаг для проверки наличия предложений
 
             // Проходим по каждому предложению внутри параграфа
             paragraphElement.querySelectorAll(".report__sentence").forEach(sentenceElement => {
                 // Проверяем, видимо ли предложение
                 if (isElementVisible(sentenceElement)) {
-                    const sentenceText = cleanSelectText(sentenceElement);
+                    const sentenceText = cleanSelectText(sentenceElement);  // Используем функцию для очистки текста
                     if (sentenceText) {
                         collectedText += sentenceText + " ";  // Добавляем текст предложения
+                        hasSentences = true;  // Устанавливаем флаг, что есть предложения
                     }
                 }
             });
 
-            collectedText += "\n";  // Разделяем параграфы
+            // Если есть предложения, добавляем перевод строки
+            if (hasSentences) {
+                collectedText += "\n";  // Разделяем параграфы, если были предложения
+            }
         });
 
-        return collectedText.trim();  // Убираем лишние пробелы и возвращаем текст
-    }
+    return collectedText.trim();  // Убираем лишние пробелы и возвращаем текст
+}
 
 
     // функция для отображения предложений, которые мы предлагаем пользователю добавить в базу данных
