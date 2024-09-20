@@ -10,7 +10,7 @@ services:
     environment:
       - FLASK_ENV=production
       - DB_HOST=db  # Переопределяем переменную DB_HOST для Docker, чтобы подключаться к контейнеру базы данных
-      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASS}@${DB_HOST}:${PORT}/${DB_NAME}
+      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_NAME}
       - SECRET_KEY=${SECRET_KEY}
     command: gunicorn app:app -b 0.0.0.0:5000 --timeout 120
     depends_on:
@@ -25,7 +25,7 @@ services:
     environment:
       - FLASK_ENV=testing
       - DB_HOST=db_test  # Переопределяем переменную DB_HOST для Docker, чтобы подключаться к контейнеру базы данных
-      - DATABASE_URL=postgresql://${DB_USER_TEST}:${DB_PASS_TEST}@${DB_HOST_TEST}:${PORT_TEST}/${DB_NAME_TEST}
+      - DATABASE_URL=postgresql://${DB_USER_TEST}:${DB_PASS_TEST}@${DB_HOST_TEST}:${DB_PORT_TEST}/${DB_NAME_TEST}
       - SECRET_KEY=${SECRET_KEY}
     command: gunicorn app:app -b 0.0.0.0:5001 --timeout 120
     depends_on:
