@@ -1,5 +1,5 @@
 <!-- working_with_report.html -->
-<!-- v0.2.0 -->
+<!-- v0.2.1 -->
  
 {% extends "index.html" %}
 
@@ -215,6 +215,12 @@
 
         // Убираем все HTML теги, кроме текста
         text = text.replace(/<[^>]*>?/gm, '').trim();
+
+        // Используем встроенный DOM-парсер для замены мнемоник
+        const tempElement = document.createElement("textarea");
+        tempElement.innerHTML = text;
+        text = tempElement.value;
+
 
         // Удаляем лишние пробелы (оставляем только один пробел между словами)
         text = text.replace(/\s\s+/g, ' ');
