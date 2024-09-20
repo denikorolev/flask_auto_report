@@ -700,15 +700,14 @@
     document.getElementById("copyButton").addEventListener("click", function() {
         // Собираем текст из правой части экрана
         const textToCopy = collectTextFromRightSide();
-
-        // Формируем данные параграфов и предложений
-        const paragraphsData = collectParagraphsData();
-
-        // Используем функцию для отправки данных на сервер
-        sendParagraphsToServer(paragraphsData);
-
+    
         navigator.clipboard.writeText(textToCopy.trim()).then(function() {
             alert("Text copied to clipboard");
+    
+            // После успешного копирования выполняем отправку данных
+            const paragraphsData = collectParagraphsData();
+            sendParagraphsToServer(paragraphsData);
+    
         }).catch(function(err) {
             console.error("Failed to copy text: ", err);
         });

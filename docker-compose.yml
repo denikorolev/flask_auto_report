@@ -35,16 +35,21 @@ services:
     image: nginx:alpine
     ports:
       - "80:80"
+      - "443:443"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./certbot/conf:/etc/letsencrypt  # Добавляем том для сертификатов
+      - ./certbot/www:/var/www/certbot    # Том для временных файлов Certbot
+    depends_on:
+      - web
 
-  nginx_test:
-    image: nginx:alpine
-    ports:
-      - "8080:80"
-    volumes:
-      - ./nginx_test.conf:/etc/nginx/nginx.conf
-    command: ["nginx", "-g", "daemon off;", "-c", "/etc/nginx/nginx.conf"]
+  # nginx_test:
+  #   image: nginx:alpine
+  #   ports:
+  #     - "8080:80"
+  #   volumes:
+  #     - ./nginx_test.conf:/etc/nginx/nginx.conf
+  #   command: ["nginx", "-g", "daemon off;", "-c", "/etc/nginx/nginx.conf"]
 
   db:
     image: postgres:13
@@ -73,6 +78,14 @@ services:
     volumes:
       - pgdata_test:/var/lib/postgresql/data
       - /home/deniskorolev/backups:/backups
+
+  certbot:
+    image: certbot/certbot
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do sleep 12h & wait $!; certbot renew; done;'"
+    # Certbot будет автоматически обновлять сертификаты каждые 12 часов
 
 volumes:
   pgdata:
