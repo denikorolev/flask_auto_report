@@ -12,12 +12,6 @@ import shutil
 
 new_report_creation_bp = Blueprint('new_report_creation', __name__)
 
-# Functions
-# Access configuration parameters
-def init_app(app):
-    menu = app.config['MENU']
-    return menu
-
 # Check the file extensions for being in allowed list
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'doc', 'docx'}
@@ -28,7 +22,7 @@ def allowed_file(filename):
 @login_required
 def create_report():
     page_title = "List of the reports"
-    menu = init_app(current_app)
+    menu = current_app.config['MENU']
     # Geting report types and subtypes 
     report_types = ReportType.query.all()  
     report_subtypes = ReportSubtype.query.all() 

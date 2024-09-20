@@ -7,17 +7,12 @@ from models import Report, ReportType, ReportSubtype
 
 my_reports_bp = Blueprint('my_reports', __name__)
 
-# Access configuration parameters
-def init_app(app):
-    menu = app.config['MENU']
-    return menu
-
 @my_reports_bp.route('/reports_list', methods=['POST', 'GET'])
 @login_required
 def reports_list(): 
     page_title = "List of the reports"
     # Initialize config variables
-    menu = init_app(current_app)
+    menu = current_app.config['MENU']
     # Geting report types and subtypes 
     report_types = ReportType.query.all()  
     report_subtypes = ReportSubtype.query.all() 

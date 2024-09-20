@@ -1,7 +1,7 @@
 # editing_report.py
-#v0.1.0
+#v0.2.1
 
-from flask import Blueprint, render_template, request, flash, current_app, jsonify
+from flask import Blueprint, render_template, request, current_app, jsonify
 from flask_login import current_user, login_required
 from models import db, Report, ReportParagraph, Sentence  
 
@@ -9,10 +9,6 @@ from models import db, Report, ReportParagraph, Sentence
 editing_report_bp = Blueprint('editing_report', __name__)
 
 # Functions
-# Access configuration parameters
-def init_app(app):
-    menu = app.config['MENU']
-    return menu
 
 # Routs
 
@@ -20,7 +16,7 @@ def init_app(app):
 @login_required
 def edit_report():
     page_title = "Editing report"
-    menu = init_app(current_app)
+    menu = current_app.config['MENU']
     report_id = request.args.get("report_id")
     report = None
 

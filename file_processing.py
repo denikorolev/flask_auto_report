@@ -10,7 +10,7 @@ import glob
 from docx.shared import Pt, Inches
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from docx.enum.table import WD_ALIGN_VERTICAL
-from config import Config
+from config import get_config
 
 
 # Проверка допустимости расширения загружаемого файла
@@ -51,7 +51,8 @@ def file_uploader (file, file_type):
         name = "word_template"
         date_str = datetime.now().strftime("%d_%m_%y")
         filename_with_date = f"{name}_{date_str}{ext}"
-        upload_folder = Config.get_user_upload_folder()
+        config_class = get_config()
+        upload_folder = config_class.get_user_upload_folder()
         file_path = os.path.join(upload_folder, filename_with_date)
         try:
             file.save(file_path)
@@ -74,7 +75,8 @@ def save_to_word(text, name, subtype, report_type, birthdate, reportnumber, scan
         pass
     try:
         # Используем функцию из Config для получения папки пользователя
-        upload_folder = Config.get_user_upload_folder()
+        config_class = get_config()
+        upload_folder = config_class.get_user_upload_folder()
             
             
         report_upload_folder_path = os.path.join(upload_folder, f"reports_{date_str}")

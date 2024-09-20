@@ -1,21 +1,24 @@
 # app.py
-#v0.2.0
+#v0.3.0
 
 from flask import Flask, redirect, url_for, flash, render_template
 from flask_login import LoginManager, login_required, user_logged_in
-from config import Config
+from config import get_config
 from flask_migrate import Migrate
 from auth import auth_bp  
 from models import db, User
-from werkzeug.utils import secure_filename
+import os
+
+# Импортирую блюпринты
 from working_with_reports import working_with_reports_bp  
 from my_reports import my_reports_bp 
 from report_settings import report_settings_bp  
 from new_report_creation import new_report_creation_bp
 from editing_report import editing_report_bp
 
+
 app = Flask(__name__)
-app.config.from_object(Config) # Load configuration from file config.py
+app.config.from_object(get_config()) # Load configuration from file config.py
 
 # Initialize SQLAlchemy
 db.init_app(app)
@@ -41,15 +44,6 @@ app.register_blueprint(new_report_creation_bp, url_prefix="/new_report_creation"
 def load_user(user_id):
     with db.session() as session:
         return session.get(User, int(user_id))
-
-# Handle user logged in event
-# @user_logged_in.connect_via(app)
-# def on_user_logged_in(sender, user):
-#     user_config = Config.load_user_config(user.id)
-#     for key, value in user_config.items():
-#         if value:
-#             app.config[key] = value
-            
 
 # Use menu from config
 menu = app.config['MENU']
@@ -90,5 +84,10 @@ def close_db(error):
 
 
 
-# if __name__ == "__main__":
-#     app.run(debug=True, port=5001)
+import os
+
+if __name__ == "__main__":
+    # Если приложение запущено не в режиме продакшена (например, локальная разработка), запускаем Flask встроенным сервером
+    if os.getenv("FLASK_ENV") == "local":
+        app.run(debug=True, port=int(os.getenv("PORT", 5001)))  # Включаем отладку и указываем порт
+

@@ -17,11 +17,6 @@ working_with_reports_bp = Blueprint('working_with_reports', __name__)
 
 # Functions
 
-
-def init_app(app):
-    menu = app.config['MENU']
-    return menu
-
 def get_user_reports():
     user_reports = Report.query.filter_by(userid=current_user.id).all()
     return user_reports
@@ -31,7 +26,7 @@ def get_user_reports():
 @working_with_reports_bp.route("/choosing_report", methods=['POST', 'GET'])
 @login_required
 def choosing_report(): 
-    menu = init_app(current_app)
+    menu = current_app.config['MENU']
     report_types = ReportType.query.all()  
     report_subtypes = ReportSubtype.query.all() 
     user_reports = get_user_reports()
@@ -63,7 +58,7 @@ def choosing_report():
 @working_with_reports_bp.route("/working_with_reports", methods=['POST', 'GET'])
 @login_required
 def working_with_reports(): 
-    menu = init_app(current_app)
+    menu = current_app.config['MENU']
     current_report_id = request.args.get("report_id")
     # Получаем ключевые слова для текущего пользователя
     

@@ -1,9 +1,9 @@
 # report_settings.py
-#v0.2.0
+#v0.2.1
 
 from flask import Blueprint, render_template, request, redirect, flash, current_app, jsonify
 from flask_login import login_required, current_user
-from models import db, ReportType, ReportSubtype, AppConfig, KeyWordsGroup, Report 
+from models import db, ReportType, ReportSubtype, KeyWordsGroup, Report 
 from itertools import chain
 from file_processing import file_uploader
 from sentence_processing import group_keywords, sort_key_words_group
@@ -29,9 +29,6 @@ def report_settings():
     page_title = "Report settings"
     # Get data from the config
     menu = current_app.config["MENU"]
-    upload_folder_path = current_app.config.get("UPLOAD_FOLDER_PATH")
-    upload_folder_name = current_app.config.get("UPLOAD_FOLDER_NAME")
-    
     # Get all user reports
     user_reports = Report.find_by_user(current_user.id)
     
