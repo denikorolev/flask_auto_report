@@ -172,7 +172,7 @@ def select_existing_report():
             paragraph=paragraph.paragraph,
             paragraph_visible=paragraph.paragraph_visible
         )
-        for sentence in paragraph.sentences_list:
+        for sentence in paragraph.sentences:
             Sentence.create(
                 paragraph_id=new_paragraph.id,
                 index=sentence.index,

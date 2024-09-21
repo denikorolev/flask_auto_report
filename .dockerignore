@@ -21,3 +21,10 @@ media.css
 # Ignore temporary files
 *~
 *.swp
+
+certbot/
+nginx.conf
+nginx_test.conf
+.env
+docker-compose.yml
+*.log
