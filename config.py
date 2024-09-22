@@ -24,7 +24,7 @@ class Config:
     
     # Menu configuration
     MENU = [
-        {"name": "main", "url": "main"},
+        {"name": "main", "url": "index"},
         {"name": "report", "url": "working_with_reports.choosing_report"},
         {"name": "my reports", "url": "my_reports.reports_list"},
         {"name": "new report", "url": "new_report_creation.create_report"},

@@ -1,0 +1,69 @@
+<!-- base.html -->
+<!-- v0.2.2 -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="icon" href="{{ url_for("static", filename="pic/favi2.png")}}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for("static", filename="css/normalize.css")}}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for("static", filename='css/style.css') }}">
+    <title> {{ title }} </title>
+</head>
+<body>
+
+<!-- Общая шапка и меню -->
+{% block menu %}
+<div class="header">
+    <img class="header__logo" src="{{ url_for("static", filename="pic/favi.webp")}}" alt="logo ">
+    <ul class="header__menu">
+        {% for m in menu %}
+            <li class="header__menu_item">
+                <a href="{{ url_for(m.url) }}">{{ m.name }}</a>
+            </li>
+        {% endfor %}
+    </ul>
+    <p>Hello, {{ current_user.user_role }}, {{ current_user.user_name }}!</p>
+    <a href="{{ url_for("auth.logout") }}">Logout</a>
+</div>
+
+<div class="header__flash_massages">
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+        {% for message in messages %}
+            <p class="text">{{ message }}</p>
+        {% endfor %}
+    {% endif %}
+    {% endwith %}
+</div>
+{% endblock menu %}
+
+<!-- Общий контент страниц -->
+<div class="section">
+    <h1 class="title">{{ title }}</h1>
+</div>
+
+<div class="section">
+    {% block container %}
+    {% endblock container %}
+</div>
+
+<div class="section">
+    {% block tips %}
+    {% endblock tips %}
+</div>
+
+<!-- Футер -->
+<footer class="footer">
+    <p>&copy; 2023 Radiologary</p>
+</footer>
+
+<!-- Общие скрипты -->
+
+<script src="/static/js/api.js"></script>
+
+<!-- Блок для специфичных JS-скриптов -->
+{% block scripts %}
+{% endblock scripts %}
+
+</body>
+</html>

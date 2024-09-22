@@ -4,7 +4,7 @@
 from flask import Blueprint, render_template, request, current_app, jsonify, send_file, flash, url_for
 from flask_login import login_required, current_user
 import os
-from models import db, Report, ReportType, ReportSubtype, ReportParagraph, Sentence, KeyWordsGroup
+from models import db, Report, ReportType, ReportParagraph, Sentence, KeyWordsGroup
 from file_processing import save_to_word
 from calculating import calculate_age
 from sentence_processing import split_sentences, get_new_sentences, group_keywords
@@ -17,42 +17,36 @@ working_with_reports_bp = Blueprint('working_with_reports', __name__)
 
 # Functions
 
-def get_user_reports():
-    user_reports = Report.query.filter_by(userid=current_user.id).all()
-    return user_reports
-
 # Routes
 
 @working_with_reports_bp.route("/choosing_report", methods=['POST', 'GET'])
 @login_required
 def choosing_report(): 
     menu = current_app.config['MENU']
-    report_types = ReportType.query.all()  
-    report_subtypes = ReportSubtype.query.all() 
-    user_reports = get_user_reports()
-    
+    report_types_and_subtypes = ReportType.get_types_with_subtypes(current_user.id) 
+    user_reports = Report.find_by_user(current_user.id)
+
     if request.method == "POST":
-        if "select_report_type_subtype" in request.form:
-            rep_type = request.form["report_type"]
-            rep_subtype = request.form["report_subtype"]
+        if request.is_json:
+            data = request.get_json()
+            rep_type = data.get("report_type")
+            rep_subtype = data.get("report_subtype")
             reports = Report.query.filter_by(userid=current_user.id, report_type=rep_type, report_subtype=rep_subtype).all()
-            return render_template(
-                "choose_report.html",
-                title="Report",
-                menu=menu,
-                user_reports=user_reports,
-                report_types=report_types,
-                report_subtypes=report_subtypes,
-                reports=reports
-            )
+
+            # Возвращаем данные в формате JSON
+            return jsonify({
+                "reports": [
+                    {"id": report.id, "report_name": report.report_name}
+                    for report in reports
+                ]
+            })
         
     return render_template(
         "choose_report.html",
         title="Report",
         menu=menu,
         user_reports=user_reports,
-        report_types=report_types,
-        report_subtypes=report_subtypes
+        report_types_and_subtypes=report_types_and_subtypes
     )
 
 @working_with_reports_bp.route("/working_with_reports", methods=['POST', 'GET'])

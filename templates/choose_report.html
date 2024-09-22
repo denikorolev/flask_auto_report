@@ -1,11 +1,7 @@
 <!-- choose_report.html -->
 <!-- v0.1.0 -->
 
-{% extends "index.html" %}
-
-{% block tips %}
- <!-- исключаю блок из блоков отображаемых на странице -->
-{% endblock tips %}
+{% extends "base.html" %}
 
 {% block container %}
 {{ super() }}
@@ -42,8 +38,8 @@
     <div class="flex_column" id="reports-container">
         <label class="report_label__item" for="report_type">Choose report type:</label>
         <select class="report__select" id="report_type" name="report_type" required>
-            {% for rt in report_types %}
-                <option value="{{ rt.id }}">{{ rt.type }}</option>
+            {% for rt in report_types_and_subtypes %}
+                <option value="{{ rt.type_id }}">{{ rt.type_text }}</option>
             {% endfor %}
         </select>
     </div>
@@ -52,175 +48,29 @@
         <label class="report_label__item" for="report_subtype">Choose report subtype:</label>
         <select class="report__select" id="report_subtype" name="report_subtype" required>
             {% for rst in report_subtypes %}
-                <option value="{{ rst.id }}" data-type-id="{{ rst.type }}">{{ rst.subtype }}</option>
+                <!-- Подтипы будут динамически обновляться с помощью JS -->
             {% endfor %}
         </select>
     </div>
-    <button class="btn report__btn" type="submit" id="select_report_type_subtype" name="select_report_type_subtype">Show reports</button>
+    <button class="btn report__btn" type="button" id="select_report_type_subtype" name="select_report_type_subtype">Show reports</button>
     <button class="btn report__btn" type="button" id="nextButton" name="nextButton">Next</button>
 </form>
 
-{% if reports %}
-<div class="">
+<div id="reports-list">
     {% for report in reports %}
         <a class="flex report-link" href="#" data-report-id="{{ report.id }}"> 
             <p class="report__sentence">{{ report.report_name }}</p>
-             
         </a>
     {% endfor %}
 </div>
-{% endif %}
 
-<script>
-// Button check report logic with handling field above safety
-document.addEventListener("DOMContentLoaded", function () {
-    const reportTypeSelect = document.getElementById("report_type");
-    const reportSubtypeSelect = document.getElementById("report_subtype");
-    const allSubtypes = Array.from(reportSubtypeSelect.options);
-
-    // Функция для обновления подтипов на основе выбранного типа
-    function updateSubtypes() {
-        const selectedTypeId = reportTypeSelect.value.trim(); // Убедитесь, что значение без пробелов
-        reportSubtypeSelect.innerHTML = ''; // Очистить текущие опции
-        allSubtypes.forEach(subtypeOption => {
-            if (subtypeOption.getAttribute('data-type-id').trim() === selectedTypeId) {
-                reportSubtypeSelect.appendChild(subtypeOption); // Добавить соответствующие опции
-            }
-        });
-        reportSubtypeSelect.selectedIndex = 0; // Установить первую опцию как выбранную
-    }
-
-    // Добавление обработчика события для изменения типа
-    reportTypeSelect.addEventListener("change", updateSubtypes);
-
-    // Вызов функции для установки начального состояния при загрузке страницы
-    updateSubtypes();
-});
-
-// Логика обработки имени фамилии и тд
-document.addEventListener("DOMContentLoaded", function () {
-    // Восстановление данных формы, если они есть
-    if (localStorage.getItem("exportFormData")) {
-        const formData = JSON.parse(localStorage.getItem("exportFormData"));
-        document.getElementById("patient-surname").value = formData.patient_surname || "";
-        document.getElementById("patient-name").value = formData.patient_name || "";
-        document.getElementById("patient-patronymicname").value = formData.patient_patronymicname || "";
-        document.getElementById("patient-birthdate").value = formData.patient_birthdate || "";
-        document.getElementById("report-number").value = formData.report_number || "";
-    }
-
-    // Сохранение данных формы в localStorage
-    function saveFormData() {
-        const formData = {
-            patient_surname: document.getElementById("patient-surname").value,
-            patient_name: document.getElementById("patient-name").value,
-            patient_patronymicname: document.getElementById("patient-patronymicname").value,
-            patient_birthdate: document.getElementById("patient-birthdate").value,
-            report_number: document.getElementById("report-number").value,
-        };
-        localStorage.setItem("exportFormData", JSON.stringify(formData));
-    }
-
-    document.getElementById("exportForm").addEventListener("input", saveFormData);
-
-    // Обработка отправки формы через AJAX
-    document.getElementById("reportForm").addEventListener("submit", function (event) {
-        event.preventDefault(); // Предотвращение стандартного отправления формы
-
-        // Отправка данных формы через AJAX
-        const formData = new FormData(this);
-        fetch("{{ url_for('working_with_reports.choosing_report') }}", {
-            method: "POST",
-            body: formData
-        })
-            .then(response => response.text())
-            .then(html => {
-                // Замена текущего документа новым содержимым
-                document.documentElement.innerHTML = html;
-            })
-            .catch(error => console.error("Error:", error));
-    });
-
-    // Обработка клика по ссылке на отчет
-    document.querySelectorAll(".report-link").forEach(link => {
-        link.addEventListener("click", function(event) {
-            event.preventDefault(); // Останавливаем стандартное поведение ссылки
-
-            // Собираем данные формы
-            let surname = document.getElementById("patient-surname").value.trim();
-            let name = document.getElementById("patient-name").value.trim();
-            let patronymic = document.getElementById("patient-patronymicname").value.trim();
-            const birthdate = document.getElementById("patient-birthdate").value;
-            const reportNumber = document.getElementById("report-number").value;
-
-            // Форматируем фамилию, имя и отчество
-            surname = surname.charAt(0).toUpperCase() + surname.slice(1).toLowerCase();
-            if (name.length === 1) {
-                name = name.toUpperCase() + ".";
-            } else {
-                name = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
-            }
-
-            if (patronymic.length === 1) {
-                patronymic = patronymic.toUpperCase() + ".";
-            } else {
-                patronymic = patronymic.charAt(0).toUpperCase() + patronymic.slice(1).toLowerCase();
-            }
-
-            // Формируем полное имя
-            const fullname = `${surname} ${name} ${patronymic}`;
-
-            // Получаем ID отчета из атрибута data
-            const reportId = this.getAttribute("data-report-id");
-
-            // Отправляем данные на сервер через fetch
-            fetch("{{ url_for('working_with_reports.working_with_reports') }}", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    fullname,
-                    birthdate,
-                    reportNumber,
-                    reportId
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.redirect_url) {
-                    window.location.href = data.redirect_url;
-                } else {
-                    alert("Failed to prepare report.");
-                }
-            })
-            .catch(error => {
-                console.error("Error:", error);
-            });
-        });
-    });
-
-
-
-    // Handle "Next" button click
-    document.getElementById("nextButton").addEventListener("click", function() {
-        // Clear name and birthdate fields
-        document.getElementById("patient-surname").value = "";
-        document.getElementById("patient-name").value = "";
-        document.getElementById("patient-patronymicname").value = "";
-        document.getElementById("patient-birthdate").value = "";
-
-        // Increment report number by 1
-        const reportNumberElement = document.getElementById("report-number");
-        const reportNumberValue = parseInt(reportNumberElement.value, 10);
-        reportNumberElement.value = isNaN(reportNumberValue) ? 1 : reportNumberValue + 1;
-
-        // Save updated data to localStorage
-        saveFormData();
-    });
-});
-
-
+<script id="report-types-data" type="application/json">
+    {{ report_types_and_subtypes|tojson }}
 </script>
 
 {% endblock container %}
+
+{% block scripts %}
+<!-- Подключаем js файл для этой страницы -->
+<script src="/static/js/choose_report.js"></script>
+{% endblock scripts %}

@@ -138,6 +138,33 @@ class ReportType(BaseModel):
         Find all report types created by a specific user.
         """
         return cls.query.filter_by(user_id=user_id).all()
+    
+    @classmethod
+    def get_types_with_subtypes(cls, user_id):
+        """
+        Собирает список словарей с типами и их подтипами для указанного пользователя.
+        Args:
+            user_id (int): ID пользователя.
+        Returns:
+            list: Список словарей с типами и подтипами.
+        """
+        types = cls.query.filter_by(user_id=user_id).all()
+        result = []
+        
+        for report_type in types:
+            subtypes = [
+                {
+                    "subtype_id": subtype.id,
+                    "subtype_text": subtype.subtype
+                } 
+                for subtype in report_type.subtypes_rel
+            ]
+            result.append({
+                "type_id": report_type.id,
+                "type_text": report_type.type,
+                "subtypes": subtypes
+            })
+        return result
 
 class ReportSubtype(BaseModel):
     __tablename__ = "report_subtype"

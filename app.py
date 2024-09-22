@@ -61,21 +61,17 @@ def test_db_connection():
         return False
 
 
-# This is only for redirection to the main page
-@app.route("/")
+@app.route("/", methods=['POST', 'GET'])
+@login_required
 def index():
+    # Проверяем подключение к базе данных
     if not test_db_connection():
         return "Database connection failed", 500
-    return redirect(url_for("main"))
-
-# This is the main page
-
-@app.route('/main', methods=['POST', 'GET'])
-@login_required
-def main():
-    test_db_connection()
-    return render_template('index.html', title="Main page Radiologary", menu=menu)
-
+    
+    # Отображаем главную страницу
+    return render_template('index.html', 
+                           title="Main page Radiologary", 
+                           menu=menu)
 
 
 @app.teardown_appcontext # I need to figure out how it works
