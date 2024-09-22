@@ -64,11 +64,13 @@ def test_db_connection():
 @app.route("/", methods=['POST', 'GET'])
 @login_required
 def index():
+    app.logger.info("Accessed the root route '/'")
     # Проверяем подключение к базе данных
     if not test_db_connection():
         return "Database connection failed", 500
     
     # Отображаем главную страницу
+    app.logger.info("Rendering index.html")
     return render_template('index.html', 
                            title="Main page Radiologary", 
                            menu=menu)

@@ -38,19 +38,12 @@ services:
       - "443:443"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf
-      - ./certbot/conf:/etc/letsencrypt  # Добавляем том для сертификатов
-      - ./certbot/www:/var/www/certbot    # Том для временных файлов Certbot
+      - ./certbot/conf:/etc/letsencrypt  
+      - ./certbot/www:/var/www/certbot    
     depends_on:
       - web
+      - web_test
 
-  nginx_test:
-    image: nginx:alpine
-    ports:
-      - "8080:80"
-    volumes:
-      - ./nginx_test.conf:/etc/nginx/nginx.conf
-    depends_on:
-    - web_test
     
   db:
     image: postgres:13
