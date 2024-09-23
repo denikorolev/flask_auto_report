@@ -24,7 +24,6 @@ services:
       - "5001:5001"
     environment:
       - FLASK_ENV=testing
-      - DB_HOST=db_test  # Переопределяем переменную DB_HOST для Docker, чтобы подключаться к контейнеру базы данных
       - DATABASE_URL=postgresql://${DB_USER_TEST}:${DB_PASS_TEST}@${DB_HOST_TEST}:${DB_PORT_TEST}/${DB_NAME_TEST}
       - SECRET_KEY=${SECRET_KEY}
     command: gunicorn app:app -b 0.0.0.0:5001 --timeout 120
@@ -68,7 +67,7 @@ services:
       POSTGRES_PASSWORD: ${DB_PASS_TEST}
       POSTGRES_DB: ${DB_NAME_TEST}
     ports:
-      - "${DB_PORT_TEST}:5432"
+      - "5433:5432"
     volumes:
       - pgdata_test:/var/lib/postgresql/data
       - /home/deniskorolev/backups:/backups
