@@ -4,6 +4,7 @@
 from flask import Blueprint, render_template, request, current_app, jsonify, send_file, flash, url_for
 from flask_login import login_required, current_user
 import os
+from urllib.parse import quote
 from models import db, Report, ReportType, ReportParagraph, Sentence, KeyWordsGroup
 from file_processing import save_to_word
 from calculating import calculate_age
@@ -224,8 +225,14 @@ def export_to_word():
         # Проверяем, существует ли файл
         if not os.path.exists(file_path):
             return jsonify({"message": "File not found"}), 500
-        
-        return send_file(file_path, as_attachment=True)
+        new_filename = os.path.basename(file_path)
+
+        # Применяем правильную кодировку для имени файла, чтобы браузер мог его корректно воспринять
+        quoted_filename = quote(new_filename)
+        print(quoted_filename)
+        response = send_file(file_path, as_attachment=True)
+        response.headers["Content-Disposition"] = f"attachment; filename*=UTF-8''{quoted_filename}"
+        return response
     except Exception as e:
         return jsonify({"message": f"Failed to export to Word: {e}"}), 500
 

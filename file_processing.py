@@ -65,7 +65,11 @@ def file_uploader (file, file_type):
     
 # Function for file saving in the docx format 
 def save_to_word(text, name, subtype, report_type, birthdate, reportnumber, scanParam, side=""):
-    print("in save to word function")
+    # Убираем лишние пробелы и проверяем на пустые строки
+    name = name.strip() or "NoName"
+    subtype = subtype.strip() or "NoSubtype"
+    report_type = report_type.strip() or "NoReportType"
+
     try:
         date_str = datetime.now().strftime("%d_%m_%y")
         modified_date_str = date_str.replace("_", ".")
@@ -117,6 +121,13 @@ def save_to_word(text, name, subtype, report_type, birthdate, reportnumber, scan
         p.paragraph_format.space_after = Pt(0)
 
         p = document.add_paragraph()
+        p.add_run("Дата рождения: ").bold = True
+        p.add_run(modified_birthdate)
+        p.add_run(" г.р.")
+        p.paragraph_format.space_before = Pt(0)  
+        p.paragraph_format.space_after = Pt(0)
+        
+        p = document.add_paragraph()
         p.add_run("Вид исследования: ").bold = True
         p.add_run(report_type)
         
@@ -128,13 +139,6 @@ def save_to_word(text, name, subtype, report_type, birthdate, reportnumber, scan
             
         p.add_run(" ")
         p.add_run(subtype)
-        p.paragraph_format.space_before = Pt(0)  
-        p.paragraph_format.space_after = Pt(0)
-        
-        p = document.add_paragraph()
-        p.add_run("Дата рождения: ").bold = True
-        p.add_run(modified_birthdate)
-        p.add_run(" г.р.")
         p.paragraph_format.space_before = Pt(0)  
         p.paragraph_format.space_after = Pt(0)
         
@@ -182,15 +186,14 @@ def save_to_word(text, name, subtype, report_type, birthdate, reportnumber, scan
         # Set font size for the rest of the document
         set_font_size(document, 12)
         
-        # # Create new folder
-        # new_folder = os.path.join(report_upload_folder_path, f"{upload_folder_name}_{date_str}")
-        # os.makedirs(new_folder, exist_ok=True)
 
         # Save new document
-        new_filename = f"{name}_{subtype}_{date_str}.docx"
+        new_filename = f"{name.replace(' ', '_').replace('-', '_')}_{report_type.replace(' ', '_').replace('-', '_')}_{subtype.replace(' ', '_').replace('-', '_')}_{date_str}.docx"
         new_file_path = os.path.join(report_upload_folder_path, new_filename)
         document.save(new_file_path)
-
+        print(f"File saved with name: {os.path.basename(new_file_path)}")
+        print(new_filename)
+        print(new_file_path)
         return new_file_path
     except Exception as e:
         print(f"Error in save_to_word: {e}")
