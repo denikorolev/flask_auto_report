@@ -1,5 +1,5 @@
 # report_settings.py
-#v0.2.1
+#v0.3.1
 
 from flask import Blueprint, render_template, request, redirect, flash, current_app, jsonify
 from flask_login import login_required, current_user
@@ -7,13 +7,17 @@ from models import db, ReportType, ReportSubtype, KeyWordsGroup, Report
 from itertools import chain
 from file_processing import file_uploader
 from sentence_processing import group_keywords, sort_key_words_group
+from errors_processing import print_object_structure
+from utils import ensure_list
 
 report_settings_bp = Blueprint('report_settings', __name__)
 
 # Functions
 
 def process_keywords(key_word_input):
-    """Обрабатываем строку ключевых слов, разделенных запятой, и возвращаем список"""
+    """Обрабатываем строку ключевых слов, разделенных запятой, 
+    и возвращаем список"""
+    
     key_words = []
     for word in key_word_input.split(','):
         stripped_word = word.strip()
@@ -22,7 +26,7 @@ def process_keywords(key_word_input):
     return key_words
 
 # Routs
-
+# Главный маршрут страницы
 @report_settings_bp.route('/report_settings', methods=['GET', 'POST'])
 @login_required
 def report_settings():
@@ -105,19 +109,6 @@ def report_settings():
                 flash("You don't have permission to edit this subtype")
             return redirect(request.url)
         
-        # # Directory and folder name settings
-        # if "save_directory_button" in request.form:
-        #     directory_path = request.form["directory_path"]
-        #     AppConfig.set_config_value("UPLOAD_FOLDER_PATH", directory_path, current_user.id)
-        #     flash("Directory path saved successfully", "success")
-        #     return redirect(request.url)
-        
-        # if "save_folder_name_button" in request.form:
-        #     folder_name = request.form["folder_name"]
-        #     AppConfig.set_config_value("UPLOAD_FOLDER_NAME", folder_name, current_user.id)
-        #     flash("Folder name saved successfully", "success")
-        #     return redirect(request.url)
-        
         # Handling file upload
         if 'file' in request.files:
             file = request.files['file']
@@ -138,7 +129,7 @@ def report_settings():
                            user_subtypes=user_subtypes 
                            )
 
-
+# Маршрут для добавления группы ключевых слов
 @report_settings_bp.route('/add_keywords', methods=['POST'])
 @login_required
 def add_keywords():
@@ -174,14 +165,14 @@ def add_keywords():
 
     return {"status": "success"}, 200
     
-
+# Маршрут для добавления одного или нескольких ключевых слов в уже существующую группу
 @report_settings_bp.route('/add_word_to_exist_group', methods=['POST'])
 @login_required
 def add_word_to_exist_group():
     data = request.json
     group_index = data.get("group_index")
+    reports = ensure_list(data.get("report_id"))
     key_word_input = data.get("key_word_input", "").strip()
-
     if not group_index:
         return {"status": "error", "message": "Group index is required"}, 400
 
@@ -204,14 +195,14 @@ def add_word_to_exist_group():
             group_index=group_index,
             index=num_of_exist_key_words + i,
             key_word=key_word,
-            user_id=current_user.id
+            user_id=current_user.id,
+            reports=reports
         )
     db.session.commit()
 
     return {"status": "success", "message": "Keywords added successfully"}, 200
     
 
-    
 @report_settings_bp.route('/delete_keywords', methods=['POST'])
 @login_required
 def delete_keywords():
@@ -225,6 +216,39 @@ def delete_keywords():
     db.session.commit()
 
     return jsonify({"status": "success", "message": "Keywords group deleted successfully"}), 200
+
+# Отвязываем группу ключевых слов от конкретного отчета
+@report_settings_bp.route('/unlink_keyword_from_report', methods=['POST'])
+@login_required
+def unlink_keyword_from_report():
+    data = request.json
+    group_index = data.get("group_index")
+    report_id = data.get("report_id")
+    print(Report.query.get(report_id))
+    if not group_index or not report_id:
+        return jsonify({"status": "error", "message": "Group index and report ID are required"}), 400
+
+    # Найдем ключевые слова в этой группе, связанные с данным отчетом
+    keywords = KeyWordsGroup.find_by_group_index(group_index=group_index, user_id=current_user.id)
+    print(keywords)
+    if not keywords:
+        return jsonify({"status": "error", "message": "No keywords found for this group"}), 404
+
+    # Получаем объект отчета по report_id
+    report = Report.query.get(report_id)
+    
+    if not report:
+        return jsonify({"status": "error", "message": "Report not found"}), 404
+
+    # Убираем связь ключевых слов с данным отчетом
+    for keyword in keywords:
+        if report in keyword.key_word_reports:
+            keyword.key_word_reports.remove(report)
+
+
+    db.session.commit()
+
+    return jsonify({"status": "success", "message": "Keywords unlinked from report successfully"}), 200
 
 
 @report_settings_bp.route('/edit_keywords', methods=['POST'])

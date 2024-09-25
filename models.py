@@ -113,7 +113,6 @@ class Report(BaseModel):
         """Возвращает все отчеты, связанные с данным пользователем."""
         return cls.query.filter_by(userid=user_id).all()
 
-
 class ReportType(BaseModel):
     __tablename__ = 'report_type'
     user_id = db.Column(db.BigInteger, db.ForeignKey('users.id'), nullable=False)
@@ -313,19 +312,21 @@ class KeyWordsGroup(BaseModel):
         return all_keywords
     
     @classmethod
-    def find_by_word_and_group(cls, key_word, group_index, user_id):
+    def find_by_group_index(cls, group_index, user_id):
         """
-        Поиск ключевого слова по значению key_word и group_index для конкретного пользователя.
-        
+        Поиск ключевых слов по значению group_index для конкретного пользователя.
+
         Args:
-            key_word (str): Ключевое слово для поиска.
             group_index (int): Индекс группы ключевых слов.
             user_id (int): ID пользователя.
 
         Returns:
-            KeyWordsGroup: Найденная запись ключевого слова, если таковая существует.
+            list[KeyWordsGroup]: Найденные записи слов данной группы. Возвращает пустой список, если ничего не найдено.
         """
-        return cls.query.filter_by(key_word=key_word, group_index=group_index, user_id=user_id).first()
+        # Проверка существования индексов на полях group_index и user_id для повышения производительности
+        # Запрос по фильтрации ключевых слов для конкретного пользователя с указанным group_index
+        return cls.query.filter_by(group_index=group_index, user_id=user_id).all()
+
         
     @classmethod
     def find_public(cls):

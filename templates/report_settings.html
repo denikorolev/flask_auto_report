@@ -1,5 +1,5 @@
 <!-- report_settings.html -->
- <!-- v0.2.0 -->
+ <!-- v0.3.0 -->
 
 {% extends "base.html" %}
 
@@ -115,23 +115,29 @@
 
             <!-- Блок глобальных ключевых слов -->
             <h3>Global Key Words</h3>
-            <div id="global-key-words-list">
+            <div id="">
                 {% if global_key_words %}
                     {% for group in global_key_words %}
-                        <div class="key-words-group" data-group="{{ group.group_index }}">
-                            {% for word in group.key_words %}
-                                <span data-id="{{ word.id }}" data-group="{{ group.group_index }}">
-                                    {{ word.word }}{% if not loop.last %}, {% endif %}
-                                </span>
-                            {% endfor %}
+
+                            <!-- Группа глобальных ключевых слов -->
+                        <div class="flex">
+                            <div class="key-words-group" data-group="{{ group.group_index }}">
+                                {% for word in group.key_words %}
+                                    <span data-id="{{ word.id }}" data-group="{{ group.group_index }}">
+                                        {{ word.word }}{% if not loop.last %}, {% endif %}
+                                    </span>
+                                {% endfor %}
+                            </div>
 
                             <!-- Кнопки для редактирования и добавления ключевых слов -->
-                            <button class="btn report__btn delete-keywords-btn" data-group="{{ group.group_index }}">Delete</button>
-                            <button class="btn report__btn edit-keywords-btn" data-group="{{ group.group_index }}">Edit</button>
-                            <div class="add-keyword-input" style="display:none;" data-group="{{ group.group_index }}">
-                                <input type="text" placeholder="Enter new keyword(s)" class="new-keyword-input">
+                             <div class="">
+                                <button class="btn report__btn delete-keywords-btn" data-group="{{ group.group_index }}">Delete</button>
+                                <button class="btn report__btn edit-keywords-btn" data-group="{{ group.group_index }}">Edit</button>
+                                <div class="add-keyword-input" style="display:none;" data-group="{{ group.group_index }}">
+                                    <input type="text" placeholder="Enter new keyword(s)" class="new-keyword-input">
+                                </div>
+                                <button class="btn report__btn add-keywords-btn" data-group="{{ group.group_index }}">Add Word</button>
                             </div>
-                            <button class="btn report__btn add-keywords-btn" data-group="{{ group.group_index }}">Add Word</button>
                         </div>
                     {% endfor %}
                 {% else %}
@@ -150,30 +156,35 @@
                 {% set ns = namespace(last_report_id=None) %}  <!-- Используем namespace для хранения значения переменной -->
                 {% for report in report_key_words %}
                     {% if report.key_words %}
-                        <div class="report-key-words-group">
+                        <div class="key-words-group">
                             {% if ns.last_report_id != report.report_id %}
                                 <h4>Report: {{ report.report_name }} </h4>
                                 {% set ns.last_report_id = report.report_id %} <!-- Меняем значение переменной для отслеживания ID текущего протокола вывода -->
                             {% endif %}
 
-                                <!-- Группа ключевых слов -->
-                                <div class="key-words-group" data-report="{{ report.report_id }}" data-group="{{ report.group_index }}">
-                                    {% for word in report.key_words %}
-                                        <span data-id="{{ word.id }}" data-group="{{ report.group_index }}" data-report="{{ report.report_id }} ">
-                                            {{ word.word }}{% if not loop.last %}, {% endif %}
-                                        </span>
-                                    {% endfor %}
-                                </div>
+                                <!-- Группа ключевых слов привязанных к отчету-->
+                                <div class="flex">
+                                    <div class="key-words-group" data-report="{{ report.report_id }}" data-group="{{ report.group_index }}">
+                                        {% for word in report.key_words %}
+                                            <span data-id="{{ word.id }}" data-group="{{ report.group_index }}" data-report="{{ report.report_id }} ">
+                                                {{ word.word }}{% if not loop.last %}, {% endif %}
+                                            </span>
+                                        {% endfor %}
+                                    </div>
 
-                                <!-- Кнопки для редактирования и добавления ключевых слов -->
-                                <button class="btn report__btn delete-report-keywords-btn" data-report="{{ report.report_id }}" data-group="{{ report.group_index }}">Delete</button>
-                                <button class="btn report__btn edit-report-keywords-btn" data-report="{{ report.report_id }}" data-group="{{ report.group_index }}">Edit</button>
-                                <div class="add-report-keyword-input" style="display:none;" data-report="{{ report.report_id }}" data-group="{{ report.group_index }}">
-                                    <input type="text" placeholder="Enter new keyword(s)" class="new-report-keyword-input">
+                                    <!-- Кнопки для редактирования и добавления ключевых слов привязанных к отчетам -->
+                                    <div class="">
+                                        <button class="btn report__btn delete-report-keywords-btn" data-report="{{ report.report_id }}" data-group="{{ report.group_index }}">Delete</button>
+                                        <button class="btn report__btn edit-report-keywords-btn" data-report="{{ report.report_id }}" data-group="{{ report.group_index }}">Edit</button>
+                                        <button class="btn report__btn unlink-report-keywords-btn" data-report="{{ report.report_id }}" data-group="{{ report.group_index }}">Unlink</button>
+                                        <div class="add-keyword-input" style="display:none;" data-report="{{ report.report_id }}" data-group="{{ report.group_index }}">
+                                            <input type="text" placeholder="Enter new keyword(s)" class="new-keyword-input">
+                                        </div>
+                                        <button class="btn report__btn add-report-keywords-btn" data-report="{{ report.report_id }}" data-group="{{ report.group_index }}">Add Word</button>
+                                    </div>
                                 </div>
-                                <button class="btn report__btn add-report-keywords-btn" data-report="{{ report.report_id }}" data-group="{{ report.group_index }}">Add Word</button>
                             </div>
-                            <div class="report_borderline"></div>
+                           
                         {% endif %}
                     {% endfor %}
                 {% else %}

@@ -1,4 +1,5 @@
 // static/js/report_settings.js
+// v0.3.0
 
 // Функция удаления ключевых слов
 function deleteKeywords({ groupIndex, reportId = null }) {
@@ -26,6 +27,18 @@ function addKeywords({ groupIndex, reportId = null, newKeywords }) {
         url: "/report_settings/add_word_to_exist_group",
         method: "POST",
         data: data
+    }).then(() => location.reload());
+}
+
+// Функция для удаления связи ключевого слова с отчетом
+function unlinkKeywordFromReport({ groupIndex, reportId }) {
+    sendRequest({
+        url: "/report_settings/unlink_keyword_from_report",
+        method: "POST",
+        data: {
+            group_index: groupIndex,
+            report_id: reportId
+        }
     }).then(() => location.reload());
 }
 
@@ -66,7 +79,16 @@ function handleEditButtonClick(button) {
 // Универсальная функция для обработки нажатия кнопки Add для ключевых слов
 function handleAddButtonClick(button) {
     const groupIndex = button.dataset.group;
-    const inputContainer = document.querySelector(`.add-keyword-input[data-group='${groupIndex}']`);
+    const reportId = button.dataset.report || null;  // Если есть reportId, используем его
+    let inputContainer;
+
+    if (reportId) {
+        // Если это ключевые слова, привязанные к отчету
+        inputContainer = document.querySelector(`.add-keyword-input[data-group='${groupIndex}'][data-report='${reportId}']`);
+    } else {
+        // Если это глобальные ключевые слова
+        inputContainer = document.querySelector(`.add-keyword-input[data-group='${groupIndex}']`);
+    }
 
     if (inputContainer) {
         if (button.textContent === "Add Word") {
@@ -76,15 +98,19 @@ function handleAddButtonClick(button) {
         } else {
             // Собрать данные и отправить на сервер, после этого скрыть поле и изменить текст кнопки обратно на Add Word
             const inputElement = inputContainer.querySelector(".new-keyword-input");
+            console.log(inputElement);
             const newKeywords = inputElement.value.trim();
-
+            
+            console.log(newKeywords);
             if (!newKeywords) {
                 alert("Please enter at least one keyword.");
                 return;
             }
 
-            addKeywords({ groupIndex, newKeywords });  // Отправляем данные на сервер
+            addKeywords({ groupIndex, reportId, newKeywords });  // Отправляем данные на сервер
         }
+    } else {
+        console.error("Input container not found for groupIndex:", groupIndex, "reportId:", reportId);
     }
 }
 
@@ -95,6 +121,14 @@ document.querySelectorAll(".edit-keywords-btn, .edit-report-keywords-btn").forEa
     });
 });
 
+// Логика для кнопок Unlink в блоке ключевых слов, привязанных к отчетам
+document.querySelectorAll(".unlink-report-keywords-btn").forEach(button => {
+    button.addEventListener("click", function() {
+        const reportId = this.dataset.report;
+        const groupIndex = this.dataset.group;
+        unlinkKeywordFromReport({ groupIndex, reportId });
+    });
+});
 
 
 
@@ -106,8 +140,6 @@ document.querySelectorAll(".delete-keywords-btn").forEach(button => {
         deleteKeywords({ groupIndex });  // Удаляем ключевые слова для global_key_words
     });
 });
-
-
 
 
 // Удаление для конкретного отчета
@@ -129,7 +161,7 @@ document.querySelectorAll(".add-keywords-btn").forEach(button => {
 // Добавление слова в группу для отчета
 document.querySelectorAll(".add-report-keywords-btn").forEach(button => {
     button.addEventListener("click", function() {
-        handleAddButtonClick(this);  // Обрабатываем нажатие на кнопку Add Word для report-specific
+        handleAddButtonClick(this); 
     });
 });
 
