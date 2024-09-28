@@ -8,9 +8,6 @@ WORKDIR /app
 # Копируем файл зависимостей
 COPY requirements.txt requirements.txt
 
-# Генерируем requirements.txt
-RUN pipreqs /app --force
-
 # Устанавливаем зависимости
 RUN pip install --no-cache-dir -r requirements.txt
 
