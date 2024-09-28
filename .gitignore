@@ -50,3 +50,6 @@ dist/
 test.py
 ind copy.html
 for_html_typing.html
+
+# # script for deploing
+# deploy.sh

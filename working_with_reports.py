@@ -1,10 +1,9 @@
 #working_with_reports.py
-#v0.2.1
+#v0.3.1
 
 from flask import Blueprint, render_template, request, current_app, jsonify, send_file, session, url_for
 from flask_login import login_required, current_user
 import os
-import uuid
 from models import db, Report, ReportType, ReportParagraph, Sentence, KeyWordsGroup
 from file_processing import save_to_word
 from calculating import calculate_age
