@@ -5,6 +5,7 @@ from flask import current_app
 from flask_login import current_user
 from docx import Document
 import os
+from unidecode import unidecode
 from datetime import datetime
 import glob
 from docx.shared import Pt, Inches
@@ -188,7 +189,8 @@ def save_to_word(text, name, subtype, report_type, birthdate, reportnumber, scan
         
 
         # Save new document
-        new_filename = f"{name.replace(' ', '_').replace('-', '_')}_{report_type.replace(' ', '_').replace('-', '_')}_{subtype.replace(' ', '_').replace('-', '_')}_{date_str}.docx"
+        utf_filename = f"{name.replace(' ', '_').replace('-', '_')}_{report_type.replace(' ', '_').replace('-', '_')}_{subtype.replace(' ', '_').replace('-', '_')}_{date_str}.docx"
+        new_filename = unidecode(utf_filename)
         new_file_path = os.path.join(report_upload_folder_path, new_filename)
         document.save(new_file_path)
         print(f"File saved with name: {os.path.basename(new_file_path)}")
