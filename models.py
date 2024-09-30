@@ -4,7 +4,7 @@
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
-from sqlalchemy.orm import joinedload
+from sqlalchemy import Index
 from utils import ensure_list
 
 db = SQLAlchemy()
@@ -13,7 +13,8 @@ db = SQLAlchemy()
 key_word_report_link = db.Table(
     'key_word_report_link',
     db.Column('key_word_id', db.BigInteger, db.ForeignKey('key_words_group.id', ondelete="CASCADE"), primary_key=True),
-    db.Column('report_id', db.BigInteger, db.ForeignKey('reports.id', ondelete="CASCADE"), primary_key=True)
+    db.Column('report_id', db.BigInteger, db.ForeignKey('reports.id', ondelete="CASCADE"), primary_key=True),
+    Index('ix_key_word_report_link_keyword_report', 'key_word_id', 'report_id')
 )
 
 class User(db.Model, UserMixin):
@@ -31,7 +32,6 @@ class User(db.Model, UserMixin):
 
     def check_password(self, password):
         return check_password_hash(self.user_pass, password)
-
 
 class AppConfig(db.Model):
     __tablename__ = 'app_config'
@@ -78,10 +78,43 @@ class BaseModel(db.Model):
             return True
         return False
 
+class UserProfile(BaseModel):
+    __tablename__ = 'user_profiles'
+    
+    user_id = db.Column(db.BigInteger, db.ForeignKey('users.id'), nullable=False)
+    profile_name = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.String(500), nullable=True)
+    
+    user = db.relationship('User', backref=db.backref('profiles', lazy=True))
+
+    @classmethod
+    def create(cls, user_id, profile_name, description=None):
+        new_profile = cls(user_id=user_id, profile_name=profile_name, description=description)
+        db.session.add(new_profile)
+        db.session.commit()
+        return new_profile
+
+    @classmethod
+    def get_user_profiles(cls, user_id):
+        """Возвращает все профили, принадлежащие пользователю."""
+        return cls.query.filter_by(user_id=user_id).all()
+
+    @classmethod
+    def find_by_id(cls, profile_id):
+        """Ищет профиль по его ID."""
+        return cls.query.get(profile_id)
+    
+    @classmethod
+    def find_by_id_and_user(cls, profile_id, user_id):
+        """Ищет профиль по его ID и ID пользователя."""
+        return cls.query.filter_by(id=profile_id, user_id=user_id).first()
+
 class Report(BaseModel):
     __tablename__ = "reports"
     userid = db.Column(db.BigInteger, db.ForeignKey('users.id'), nullable=False)
+    profile_id = db.Column(db.BigInteger, db.ForeignKey('user_profiles.id'), nullable=True)
     comment = db.Column(db.String(255), nullable=True)
+    comment2 = db.Column(db.String(255), nullable=True)
     report_name = db.Column(db.String(255), nullable=False)
     report_type = db.Column(db.Integer, db.ForeignKey('report_type.id'), nullable=False)
     report_subtype = db.Column(db.Integer, db.ForeignKey('report_subtype.id'), nullable=False)
@@ -89,20 +122,23 @@ class Report(BaseModel):
     report_side = db.Column(db.Boolean, nullable=True, default=None)
     
     user = db.relationship('User', backref=db.backref('reports', lazy=True))
+    profile = db.relationship('UserProfile', backref=db.backref('reports', lazy=True))  
     report_type_rel = db.relationship('ReportType', backref=db.backref('reports', lazy=True), overlaps="report_type")
     report_subtype_rel = db.relationship('ReportSubtype', backref=db.backref('reports', lazy=True), overlaps="report_subtype")
     report_paragraphs = db.relationship('ReportParagraph', backref='report', cascade="all, delete-orphan", overlaps="paragraphs,report")
 
     @classmethod
-    def create(cls, userid, report_name, report_type, report_subtype, comment=None, public=False, report_side=None):
+    def create(cls, userid, report_name, report_type, report_subtype, comment=None, comment2=None, public=False, report_side=None, profile_id=None):
         new_report = cls(
             userid=userid,
             report_name=report_name,
             report_type=report_type,
             report_subtype=report_subtype,
             comment=comment,
+            comment2=comment2,
             public=public,
-            report_side=report_side
+            report_side=report_side,
+            profile_id=profile_id
         )
         db.session.add(new_report)
         db.session.commit()
@@ -117,15 +153,33 @@ class ReportType(BaseModel):
     __tablename__ = 'report_type'
     user_id = db.Column(db.BigInteger, db.ForeignKey('users.id'), nullable=False)
     type = db.Column(db.String(50), nullable=False)
+    type_index = db.Column(db.Integer, nullable=True)
     
     user = db.relationship('User', backref=db.backref('report_types', lazy=True))
     subtypes_rel = db.relationship('ReportSubtype', back_populates='report_type_rel', lazy=True)
     
     @classmethod
-    def create(cls, type, user_id):
+    def create(cls, type, user_id, type_index=None):
+        """
+        Creates a new report type.
+        
+        Args:
+            type (str): The type of the report.
+            user_id (int): The ID of the user creating the report type.
+            type_index (int, optional): The index of the type. If not provided, it will be set automatically.
+
+        Returns:
+            ReportType: The newly created report type object.
+        """
+        # If type_index is not provided, set it to the next available index
+        if type_index is None:
+            max_index = db.session.query(db.func.max(cls.type_index)).scalar() or 0
+            type_index = max_index + 1
+
         new_type = cls(
             type=type,
-            user_id=user_id
+            user_id=user_id,
+            type_index=type_index
         )
         db.session.add(new_type)
         db.session.commit()
@@ -170,16 +224,35 @@ class ReportSubtype(BaseModel):
     user_id = db.Column(db.BigInteger, db.ForeignKey('users.id'), nullable=False)
     type = db.Column(db.SmallInteger, db.ForeignKey("report_type.id"), nullable=False)
     subtype = db.Column(db.String(250), nullable=False)
+    subtype_index = db.Column(db.Integer, nullable=True)
     
     user = db.relationship('User', backref=db.backref('report_subtypes', lazy=True))
     report_type_rel = db.relationship('ReportType', back_populates='subtypes_rel', lazy=True)
     
     @classmethod
-    def create(cls, type, subtype, user_id):
+    def create(cls, type, subtype, user_id, subtype_index=None):
+        """
+        Creates a new report subtype.
+
+        Args:
+            type (int): The ID of the report type.
+            subtype (str): The subtype text.
+            user_id (int): The ID of the user creating the subtype.
+            subtype_index (int, optional): The index of the subtype. If not provided, it will be set automatically.
+
+        Returns:
+            ReportSubtype: The newly created report subtype object.
+        """
+        # If subtype_index is not provided, set it to the next available index
+        if subtype_index is None:
+            max_index = db.session.query(db.func.max(cls.subtype_index)).scalar() or 0
+            subtype_index = max_index + 1
+
         new_subtype = cls(
             type=type,
             subtype=subtype,
-            user_id=user_id
+            user_id=user_id,
+            subtype_index=subtype_index
         )
         db.session.add(new_subtype)
         db.session.commit()

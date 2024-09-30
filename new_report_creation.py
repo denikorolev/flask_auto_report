@@ -2,7 +2,7 @@
 #v0.1.1
 # Includes create_report route
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, session
+from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, session, g
 from flask_login import current_user, login_required
 from models import db, User, Report, ReportType, ReportSubtype, ReportParagraph, Sentence  
 from file_processing import extract_paragraphs_and_sentences
@@ -31,6 +31,7 @@ def create_report():
         {'id': rst.id, 'type_id': rst.type, 'subtype': rst.subtype, "subtype_type_name": rst.report_type_rel.type}
         for rst in report_subtypes
     ]
+    profile_id = g.current_profile.id
     
     # IF part
     if request.method == 'POST':
@@ -50,7 +51,8 @@ def create_report():
                 report_type=report_type,
                 report_subtype=report_subtype,
                 comment=comment,
-                report_side=report_side
+                report_side=report_side,
+                profile_id=profile_id
             )
             flash("Report created successfully", "success")
             return redirect(url_for("editing_report.edit_report", report_id=new_report.id))
@@ -98,7 +100,8 @@ def create_report():
                         report_type=report_type,  
                         report_subtype=report_subtype,  
                         comment=comment,  
-                        report_side=report_side  
+                        report_side=report_side,
+                        profile_id=profile_id  
                     )
 
                     # Add paragraphs and sentences to the report
@@ -143,6 +146,7 @@ def create_report():
 @login_required
 def select_existing_report():
     existing_report_id = request.form.get('existing_report_id')
+    profile_id = g.current_profile.id
     if not existing_report_id:
         flash('No report selected', 'error')
         return redirect(url_for('new_report_creation.create_report'))
@@ -161,7 +165,8 @@ def select_existing_report():
         report_type=report_type,
         report_subtype=report_subtype,
         comment=comment,
-        report_side=report_side
+        report_side=report_side,
+        profile_id=profile_id
     )
     # Copy paragraphs and sentences from the existing report
     existing_report = Report.query.get(existing_report_id)

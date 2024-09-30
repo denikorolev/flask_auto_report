@@ -1,12 +1,12 @@
 # app.py
 #v0.3.0
 
-from flask import Flask, redirect, url_for, flash, render_template
-from flask_login import LoginManager, login_required, user_logged_in
+from flask import Flask, redirect, url_for, flash, render_template, request, session, g
+from flask_login import LoginManager, login_required, user_logged_in, current_user
 from config import get_config
 from flask_migrate import Migrate
 from auth import auth_bp  
-from models import db, User
+from models import db, User, UserProfile, Report, ReportType, ReportSubtype
 import os
 
 # Импортирую блюпринты
@@ -64,19 +64,124 @@ def test_db_connection():
 @app.route("/", methods=['POST', 'GET'])
 @login_required
 def index():
-    app.logger.info("Accessed the root route '/'")
     # Проверяем подключение к базе данных
     if not test_db_connection():
         return "Database connection failed", 500
     
-    # Отображаем главную страницу
-    app.logger.info("Rendering index.html")
+    if 'profile_id' in session:
+        # Проверяем, принадлежит ли профиль текущему пользователю
+        profile = UserProfile.query.filter_by(id=session['profile_id'], user_id=current_user.id).first()
+        if profile:
+            g.current_profile = profile
+        else:
+            # Если профиль не найден или не принадлежит текущему пользователю, очищаем сессию
+            session.pop('profile_id', None)
+            g.current_profile = None
+    # Проверяем, есть ли у пользователя профиль
+    user_profiles = UserProfile.get_user_profiles(current_user.id)
+    
+    # Начало временного блока
+    # Присваиваем профиль всем отчетам, у которых он еще не установлен (временный фрагмент)
+    reports_without_profile = Report.query.filter_by(userid=current_user.id, profile_id=None).all()
+    if reports_without_profile:
+        usrprofile_temp = user_profiles[0]
+        for report in reports_without_profile:
+            report.profile_id = usrprofile_temp.id
+            db.session.add(report)
+        db.session.commit()
+        flash(f"Assigned profile '{usrprofile_temp.profile_name}' to {len(reports_without_profile)} reports.", "success")
+    
+    # Обновление поля type_index в таблице ReportType
+    report_types_to_update = ReportType.query.filter_by(type_index=None).all()
+    if report_types_to_update:
+        for index, report_type in enumerate(report_types_to_update, start=1):
+            report_type.type_index = index
+            db.session.add(report_type)
+        print("type indexes added")
+    # Обновление поля subtype_index в таблице ReportSubtype
+    report_subtypes_to_update = ReportSubtype.query.filter_by(subtype_index=None).all()
+    if report_subtypes_to_update:
+        for index, report_subtype in enumerate(report_subtypes_to_update, start=1):
+            report_subtype.subtype_index = index
+            db.session.add(report_subtype)
+        print("subtype indexes added")
+    # Сохраняем изменения, если были обновления
+    if report_types_to_update or report_subtypes_to_update:
+        db.session.commit()
+    
+    # Найти записи с пустым полем report_side
+    reports_without_side = Report.query.filter(Report.report_side == None).all()
+    
+    if reports_without_side:
+        print(f"Found {len(reports_without_side)} reports with empty report_side field.")
+        
+        # Обновить записи, установив report_side в False
+        for report in reports_without_side:
+            report.report_side = False
+            db.session.add(report)
+        
+        # Сохранить изменения
+        db.session.commit()
+        print("Updated all reports with empty report_side field to False.")
+    else:
+        print("No reports found with empty report_side field.")
+    # Начало временного блока
+    # Начало временного блока
+    
+    if not user_profiles:
+        flash("You do not have a profile. Please create one.", "warning")
+        
     return render_template('index.html', 
                            title="Main page Radiologary", 
-                           menu=menu)
+                           menu=menu,
+                           user_profiles=user_profiles
+                           )
 
 
-@app.teardown_appcontext # I need to figure out how it works
+# Новый маршрут для создания профиля
+@app.route("/create_profile", methods=['POST', 'GET'])
+@login_required
+def create_profile():
+    if request.method == 'POST':
+        profile_name = request.form.get('profile_name')
+        description = request.form.get('description')
+
+        if profile_name:
+            # Создаем профиль пользователя
+            UserProfile.create(current_user.id, profile_name, description)
+            flash("Profile created successfully!", "success")
+            return redirect(url_for('index'))
+        else:
+            flash("Profile name is required.", "danger")
+
+    return render_template('create_profile.html', title="Create Profile")
+
+# Логика для того чтобы установить выбранный профайл
+@app.route("/set_profile/<int:profile_id>")
+@login_required
+def set_profile(profile_id):
+    profile = UserProfile.find_by_id_and_user(profile_id, current_user.id)
+    if profile:
+        session['profile_id'] = profile.id
+        flash(f"Profile '{profile.profile_name}' set as current.", "success")
+    else:
+        flash("Profile not found.", "danger")
+    return redirect(url_for('index'))
+
+
+# Логика для того, чтобы сделать данные профиля доступными в любом месте программы
+@app.before_request
+def load_current_profile():
+    # Проверяем, установлен ли профиль в сессии
+    if 'profile_id' in session:
+        g.current_profile = UserProfile.find_by_id(session['profile_id'])
+    else:
+        # Профиль не установлен, используем None
+        g.current_profile = None
+            
+            
+# Это обязательная часть для разрыва сессии базы данных после каждого обращения
+@app.teardown_appcontext 
 def close_db(error):
     db.session.remove()
 

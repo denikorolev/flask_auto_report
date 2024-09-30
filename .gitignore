@@ -1,55 +1,46 @@
 # Ignore environment files
 .env
-
-# Ignore Python cache
-__pycache__/
-*.pyc
-
-# Ignore uploads
-/uploads/korolevdg_1/reports*/
-
-# Ignore macOS system files
-.DS_Store
-
-# Ignore processed files
-processed_files/
-
 # Ignore virtual environments
 venv/
 env/
-
+# Ignore Python cache
+__pycache__/
+*.pyc
+# Ignore macOS system files
+.DS_Store
 # Ignore logs
 *.log
 logs/
-
 # Ignore Jupyter Notebook checkpoints
 .ipynb_checkpoints/
-
 # Ignore coverage reports
 htmlcov/
 .coverage
-
 # Ignore cache directories
 .mypy_cache/
 .pytest_cache/
-
 # Ignore IDE directories
 .idea/
 .vscode/
-
 # Ignore build directories
 build/
 dist/
 *.egg-info/
-
 # Ignore temporary files
 *~
 *.swp
+
 
 # this is the test files
 test.py
 ind copy.html
 for_html_typing.html
 
-# script for deploing
+# scripts
 deploy.sh
+start.sh
+
+# My folders
+/uploads/korolevdg_1/reports*/
+backups/
+processed_files/

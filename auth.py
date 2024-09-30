@@ -1,6 +1,6 @@
 # auth.py
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import login_user, login_required, logout_user, current_user
 from models import db, User
@@ -22,6 +22,7 @@ def login():
 @auth_bp.route("/logout")
 @login_required
 def logout():
+    session.pop('profile_id', None)
     logout_user()
     return redirect(url_for("auth.login"))
 
