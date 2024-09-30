@@ -22,8 +22,9 @@
     </div>
     <div>
         <label for="report-number">Report Number:</label>
-        <input style="margin-right: 10px;" type="number" id="report-number" name="report_number" value="{{ report_number }}"readonly>
+        <input style="margin-right: 10px;" type="text" id="report-number" name="report_number" value="{{ report_number }}"readonly>
     </div>
+
     <!-- Контейнер для поля выбора стороны, скрыт по умолчанию -->
     {% if report.report_side == True %}
     <div>
@@ -35,9 +36,17 @@
         </select>
     </div>
     {% endif %}
+
+    <!-- Кнопка "Edit Form" -->
     <button class="icon-btn icon-btn--edit-form" type="button"
         style="background: url('{{ url_for('static', filename='pic/edit_button.svg') }}') no-repeat center center;"
         title="Edit Form">
+    </button>
+
+    <!-- Кнопка "Add Report" -->
+    <button class="btn report__btn icon-btn--add-report" type="button"
+    title="Add Report">
+    Add Report
     </button>
 </form>
 
@@ -113,12 +122,12 @@
             {% endfor %}
         </ul>
         <!-- Кнопка Edit для редактирования отчета -->
-        <a href="/editing_report/edit_report?report_id={{ report.id }}" target="_blank" class="btn icon-btn--edit-paragraph"
+        <a href="/editing_report/edit_report?report_id={{ report.id }}" target="_blank" class="btn report__btn icon-btn--edit-paragraph"
         title="Open this report for editing in new window">
         Edit this report
         </a>
         <!-- Новая кнопка для отображения элементов с классом .edit-group -->
-        <button class="btn icon-btn--show-edit-groups" type="button" title="Show Edit Options">Show Edit Options</button>
+        <button class="btn report__btn icon-btn--show-edit-groups" type="button" title="Show Edit Options">Show Edit Options</button>
     </div>
     
     <!-- Right side -->
@@ -159,6 +168,33 @@
 </div>
 
 <script>
+
+
+    // Функция для извлечения максимального числа из номера протокола и увеличения его на 1
+    function getMaxReportNumber(reportNumber) {
+        // Разбиваем строку на части по символу "-"
+        const parts = reportNumber.split('-');
+
+        if (parts.length < 2) {
+            // Если нет "-", просто преобразуем строку в число и возвращаем
+            return parseInt(reportNumber, 10);
+        }
+
+        // Получаем правую часть (последнее число)
+        const rightPart = parts[parts.length - 1];
+
+        // Получаем левую часть (все, кроме последней части)
+        let leftPart = parts.slice(0, parts.length - 1).join('-');
+
+        // Определяем количество символов в правой части
+        const numDigitsInRightPart = rightPart.length;
+
+        // Заменяем последние символы левой части на правую часть
+        const newLeftPart = leftPart.slice(0, -numDigitsInRightPart) + rightPart;
+
+        // Преобразуем результат в число и прибавляем 1
+        return parseInt(newLeftPart, 10) + 1;
+    }
 
     // Функция для создания редактируемого предложения в span
     function createEditableSentenceElement(sentenceText) {
@@ -468,6 +504,29 @@
         return text;
     }
     
+    // Нажатие на кнопку Add report
+    document.addEventListener("DOMContentLoaded", function() {
+        const addReportButton = document.querySelector(".icon-btn--add-report");
+        
+        addReportButton.addEventListener("click", function() {
+            // Получаем значение из поля "surname" и разбиваем его на части
+            let surnameInput = document.getElementById("patient-name").value.trim();
+            let [surname = "", name = "", patronymic = ""] = surnameInput.split(" ");
+    
+            const birthdate = document.getElementById("patient-birthdate").value;
+            let reportNumber = document.getElementById("report-number").value.trim();
+    
+            // Преобразуем номер протокола к максимальному числу и прибавляем 1
+            const maxReportNumber = getMaxReportNumber(reportNumber);
+            const newReportNumber = (maxReportNumber).toString();
+    
+            // Формируем строку для передачи параметров через URL
+            const url = `choosing_report?patient_surname=${encodeURIComponent(surname)}&patient_name=${encodeURIComponent(name)}&patient_patronymicname=${encodeURIComponent(patronymic)}&patient_birthdate=${encodeURIComponent(birthdate)}&report_number=${encodeURIComponent(newReportNumber)}`;
+    
+            // Переходим на страницу choose_report
+            window.location.href = url;
+        });
+    });
     
     // Функция для поиска key_words
     function updateRightSideText() {

@@ -3,6 +3,23 @@
 
 // Логика обновления подтипов в зависимости от выбранного типа
 document.addEventListener("DOMContentLoaded", function () {
+    
+    // Получаем параметры из URL, для заполнения формы с ФИО если мы пришли сюда из working with report
+    const urlParams = new URLSearchParams(window.location.search);
+    const surname = urlParams.get('patient_surname');
+    const name = urlParams.get('patient_name');
+    const patronymicname = urlParams.get('patient_patronymicname');
+    const birthdate = urlParams.get('patient_birthdate');
+    const reportNumber = urlParams.get('report_number');
+
+    // Устанавливаем значения полей, если они переданы
+    if (surname) document.getElementById("patient-surname").value = surname;
+    if (name) document.getElementById("patient-name").value = name;
+    if (patronymicname) document.getElementById("patient-patronymicname").value = patronymicname;
+    if (birthdate) document.getElementById("patient-birthdate").value = birthdate;
+    if (reportNumber) document.getElementById("report-number").value = reportNumber;
+    
+    // Далее идет формирование тип\подтип списков
     // Чтение данных из скрытого тега <script>
     const reportTypesDataScript = document.getElementById("report-types-data");
     const reportTypesAndSubtypes = JSON.parse(reportTypesDataScript.textContent);
