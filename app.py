@@ -79,10 +79,11 @@ def index():
             g.current_profile = None
     # Проверяем, есть ли у пользователя профиль
     user_profiles = UserProfile.get_user_profiles(current_user.id)
-    
+    app.logger.info(f"User profiles found: {len(user_profiles)}")
     # Начало временного блока
     # Присваиваем профиль всем отчетам, у которых он еще не установлен (временный фрагмент)
     reports_without_profile = Report.query.filter_by(userid=current_user.id, profile_id=None).all()
+    app.logger.info(f"Reports without profile found: {len(reports_without_profile)}")
     if user_profiles:
         if reports_without_profile:
             usrprofile_temp = user_profiles[0]
@@ -91,7 +92,8 @@ def index():
                 db.session.add(report)
             db.session.commit()
             flash(f"Assigned profile '{usrprofile_temp.profile_name}' to {len(reports_without_profile)} reports.", "success")
-    
+            app.logger.info(f"Assigned profile '{usrprofile_temp.profile_name}' to reports.")
+            
     # Обновление поля type_index в таблице ReportType
     report_types_to_update = ReportType.query.filter_by(type_index=None).all()
     if report_types_to_update:

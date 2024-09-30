@@ -1,6 +1,6 @@
 # auth.py
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, current_app as app
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import login_user, login_required, logout_user, current_user
 from models import db, User
@@ -10,12 +10,24 @@ auth_bp = Blueprint('auth', __name__)
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
+        app.logger.info("Received login POST request")
         user_email = request.form["email"]
         password = request.form["password"]
+        app.logger.info(f"Attempting login for email: {user_email}")
+        
         user = User.query.filter_by(user_email=user_email).first()
+        if user:
+            app.logger.info(f"User found: {user.user_name}")
+        else:
+            app.logger.info("User not found")
+             
         if user and user.check_password(password):
             login_user(user)
+            app.logger.info(f"Login successful for user: {user.user_name}")
             return redirect(url_for("index"))
+        else:
+            app.logger.info(f"Incorrect password for user: {user.user_name}")
+            
         flash("Invalid credentials", "error")
     return render_template("login.html", title="LogIn")
 
