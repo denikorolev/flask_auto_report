@@ -8,6 +8,7 @@ from flask_migrate import Migrate
 from auth import auth_bp  
 from models import db, User, UserProfile, Report, ReportType, ReportSubtype
 import os
+import logging
 
 # Импортирую блюпринты
 from working_with_reports import working_with_reports_bp  
@@ -189,10 +190,11 @@ def close_db(error):
     db.session.remove()
 
 
-
-import os
-
 if __name__ == "__main__":
+    # Настройка логирования для вывода в stdout
+    logging.basicConfig(level=logging.INFO)
+    app.logger.setLevel(logging.INFO)
+    
     # Если приложение запущено не в режиме продакшена (например, локальная разработка), запускаем Flask встроенным сервером
     if os.getenv("FLASK_ENV") == "local":
         app.run(debug=True, port=int(os.getenv("PORT", 5001)))  # Включаем отладку и указываем порт
