@@ -1,4 +1,3 @@
-# docker-compose.yml
 version: "3.8"
 services:
   web:
@@ -16,20 +15,6 @@ services:
     depends_on:
       - db
 
-  web_test:
-    build: .
-    env_file: 
-      - .env
-    ports:
-      - "5001:5001"
-    environment:
-      - FLASK_ENV=testing
-      - DATABASE_URL=postgresql://${DB_USER_TEST}:${DB_PASS_TEST}@${DB_HOST_TEST}:${DB_PORT_TEST}/${DB_NAME_TEST}
-      - SECRET_KEY=${SECRET_KEY}
-    command: gunicorn app:app -b 0.0.0.0:5001 --timeout 120
-    depends_on:
-      - db_test
-
   nginx:
     image: nginx:alpine
     ports:
@@ -41,9 +26,7 @@ services:
       - ./certbot/www:/var/www/certbot    
     depends_on:
       - web
-      - web_test
 
-    
   db:
     image: postgres:13
     env_file: 
@@ -58,28 +41,12 @@ services:
       - pgdata:/var/lib/postgresql/data
       - /home/deniskorolev/backups:/backups
 
-  db_test:
-    image: postgres:13
-    env_file: 
-      - .env
-    environment:
-      POSTGRES_USER: ${DB_USER_TEST}
-      POSTGRES_PASSWORD: ${DB_PASS_TEST}
-      POSTGRES_DB: ${DB_NAME_TEST}
-    ports:
-      - "5433:5432"
-    volumes:
-      - pgdata_test:/var/lib/postgresql/data
-      - /home/deniskorolev/backups:/backups
-
   certbot:
     image: certbot/certbot
     volumes:
       - ./certbot/conf:/etc/letsencrypt
       - ./certbot/www:/var/www/certbot
-    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do sleep 12h & wait $!; certbot renew; done;'" # Certbot будет автоматически обновлять сертификаты каждые 12 часов
-    
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do sleep 12h & wait $!; certbot renew; done;'"
 
 volumes:
   pgdata:
-  pgdata_test:
