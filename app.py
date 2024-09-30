@@ -83,13 +83,14 @@ def index():
     # Начало временного блока
     # Присваиваем профиль всем отчетам, у которых он еще не установлен (временный фрагмент)
     reports_without_profile = Report.query.filter_by(userid=current_user.id, profile_id=None).all()
-    if reports_without_profile:
-        usrprofile_temp = user_profiles[0]
-        for report in reports_without_profile:
-            report.profile_id = usrprofile_temp.id
-            db.session.add(report)
-        db.session.commit()
-        flash(f"Assigned profile '{usrprofile_temp.profile_name}' to {len(reports_without_profile)} reports.", "success")
+    if user_profiles:
+        if reports_without_profile:
+            usrprofile_temp = user_profiles[0]
+            for report in reports_without_profile:
+                report.profile_id = usrprofile_temp.id
+                db.session.add(report)
+            db.session.commit()
+            flash(f"Assigned profile '{usrprofile_temp.profile_name}' to {len(reports_without_profile)} reports.", "success")
     
     # Обновление поля type_index в таблице ReportType
     report_types_to_update = ReportType.query.filter_by(type_index=None).all()
@@ -125,8 +126,8 @@ def index():
         print("Updated all reports with empty report_side field to False.")
     else:
         print("No reports found with empty report_side field.")
-    # Начало временного блока
-    # Начало временного блока
+    # Конец временного блока
+    # Конец временного блока
     
     if not user_profiles:
         flash("You do not have a profile. Please create one.", "warning")
