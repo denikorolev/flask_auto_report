@@ -112,14 +112,14 @@ class UserProfile(BaseModel):
 class Report(BaseModel):
     __tablename__ = "reports"
     userid = db.Column(db.BigInteger, db.ForeignKey('users.id'), nullable=False)
-    profile_id = db.Column(db.BigInteger, db.ForeignKey('user_profiles.id'), nullable=True)
+    profile_id = db.Column(db.BigInteger, db.ForeignKey('user_profiles.id'), nullable=False)
     comment = db.Column(db.String(255), nullable=True)
     comment2 = db.Column(db.String(255), nullable=True)
     report_name = db.Column(db.String(255), nullable=False)
     report_type = db.Column(db.Integer, db.ForeignKey('report_type.id'), nullable=False)
     report_subtype = db.Column(db.Integer, db.ForeignKey('report_subtype.id'), nullable=False)
     public = db.Column(db.Boolean, default=False, nullable=False)
-    report_side = db.Column(db.Boolean, nullable=True, default=None)
+    report_side = db.Column(db.Boolean, nullable=False, default=False)
     
     user = db.relationship('User', backref=db.backref('reports', lazy=True))
     profile = db.relationship('UserProfile', backref=db.backref('reports', lazy=True))  
@@ -128,17 +128,17 @@ class Report(BaseModel):
     report_paragraphs = db.relationship('ReportParagraph', backref='report', cascade="all, delete-orphan", overlaps="paragraphs,report")
 
     @classmethod
-    def create(cls, userid, report_name, report_type, report_subtype, comment=None, comment2=None, public=False, report_side=None, profile_id=None):
+    def create(cls, userid, report_name, report_type, report_subtype, profile_id, comment=None, comment2=None, public=False, report_side=False):
         new_report = cls(
             userid=userid,
             report_name=report_name,
             report_type=report_type,
             report_subtype=report_subtype,
+            profile_id=profile_id,
             comment=comment,
             comment2=comment2,
             public=public,
-            report_side=report_side,
-            profile_id=profile_id
+            report_side=report_side
         )
         db.session.add(new_report)
         db.session.commit()
@@ -153,7 +153,7 @@ class ReportType(BaseModel):
     __tablename__ = 'report_type'
     user_id = db.Column(db.BigInteger, db.ForeignKey('users.id'), nullable=False)
     type = db.Column(db.String(50), nullable=False)
-    type_index = db.Column(db.Integer, nullable=True)
+    type_index = db.Column(db.Integer, nullable=False)
     
     user = db.relationship('User', backref=db.backref('report_types', lazy=True))
     subtypes_rel = db.relationship('ReportSubtype', back_populates='report_type_rel', lazy=True)
@@ -224,7 +224,7 @@ class ReportSubtype(BaseModel):
     user_id = db.Column(db.BigInteger, db.ForeignKey('users.id'), nullable=False)
     type = db.Column(db.SmallInteger, db.ForeignKey("report_type.id"), nullable=False)
     subtype = db.Column(db.String(250), nullable=False)
-    subtype_index = db.Column(db.Integer, nullable=True)
+    subtype_index = db.Column(db.Integer, nullable=False)
     
     user = db.relationship('User', backref=db.backref('report_subtypes', lazy=True))
     report_type_rel = db.relationship('ReportType', back_populates='subtypes_rel', lazy=True)

@@ -50,9 +50,9 @@ def create_report():
                 report_name=report_name,
                 report_type=report_type,
                 report_subtype=report_subtype,
+                profile_id=profile_id,
                 comment=comment,
                 report_side=report_side,
-                profile_id=profile_id
             )
             flash("Report created successfully", "success")
             return redirect(url_for("editing_report.edit_report", report_id=new_report.id))
@@ -98,10 +98,10 @@ def create_report():
                         userid=current_user.id,
                         report_name=report_name,  
                         report_type=report_type,  
-                        report_subtype=report_subtype,  
+                        report_subtype=report_subtype,
+                        profile_id=profile_id,  
                         comment=comment,  
-                        report_side=report_side,
-                        profile_id=profile_id  
+                        report_side=report_side
                     )
 
                     # Add paragraphs and sentences to the report
@@ -164,9 +164,9 @@ def select_existing_report():
         report_name=report_name,
         report_type=report_type,
         report_subtype=report_subtype,
+        profile_id=profile_id,
         comment=comment,
-        report_side=report_side,
-        profile_id=profile_id
+        report_side=report_side
     )
     # Copy paragraphs and sentences from the existing report
     existing_report = Report.query.get(existing_report_id)
