@@ -1,5 +1,4 @@
 <!-- base.html -->
-<!-- v0.2.2 -->
 
 <!DOCTYPE html>
 <html lang="en">
@@ -25,6 +24,11 @@
         {% endif %}
     </ul>
 
+    <!-- Сообщение о версии программы -->
+     {% if version %}
+        <p>Programm version {{ version }}</p>
+     {% endif %}
+    
     <!-- Сообщение о текущем профиле -->
     {% if g.current_profile %}
         <p>Current profile: {{ g.current_profile.profile_name }}</p>

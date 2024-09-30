@@ -1,5 +1,4 @@
 <!-- working_with_report.html -->
-<!-- v0.2.1 -->
  
 {% extends "base.html" %}
 
@@ -265,7 +264,7 @@
         });
 
     return collectedText.trim();  // Убираем лишние пробелы и возвращаем текст
-}
+    }
 
 
     // функция для отображения предложений, которые мы предлагаем пользователю добавить в базу данных
@@ -470,28 +469,28 @@
     }
     
     
-   // Функция для поиска key_words
-   function updateRightSideText() {
-    const keyWordsGroups = {{ key_words|tojson }};
-    const rightParagraphList = document.getElementById("right-paragraph-list");
+    // Функция для поиска key_words
+    function updateRightSideText() {
+        const keyWordsGroups = {{ key_words|tojson }};
+        const rightParagraphList = document.getElementById("right-paragraph-list");
 
-    rightParagraphList.querySelectorAll("p, span").forEach(paragraph => {
-        const currentIndex = paragraph.getAttribute("data-index");
+        rightParagraphList.querySelectorAll("p, span").forEach(paragraph => {
+            const currentIndex = paragraph.getAttribute("data-index");
 
-        if (!currentIndex) {
-            return;
-        }
+            if (!currentIndex) {
+                return;
+            }
 
-        let plainText = paragraph.innerText || paragraph.textContent;
+            let plainText = paragraph.innerText || paragraph.textContent;
 
-        if (!paragraph.querySelector('select')) {
-            const highlightedText = highlightKeyWords(plainText, keyWordsGroups);
-            paragraph.innerHTML = highlightedText;
-        }
+            if (!paragraph.querySelector('select')) {
+                const highlightedText = highlightKeyWords(plainText, keyWordsGroups);
+                paragraph.innerHTML = highlightedText;
+            }
 
-        paragraph.setAttribute("data-index", currentIndex);
-    });
-}
+            paragraph.setAttribute("data-index", currentIndex);
+        });
+    }
 
     
     // Обновление текста справа. Нужно для работы логики key_words. По сути здесь запускается вся эта логика.

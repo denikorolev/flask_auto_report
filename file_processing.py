@@ -74,7 +74,10 @@ def save_to_word(text, name, subtype, report_type, birthdate, reportnumber, scan
     try:
         date_str = datetime.now().strftime("%d_%m_%y")
         modified_date_str = date_str.replace("_", ".")
-        modified_birthdate = birthdate.replace("-", ".")
+        # Преобразование строки в объект datetime
+        trans_birthdate = datetime.strptime(birthdate, "%Y-%m-%d")
+        # Форматирование даты
+        modified_birthdate = trans_birthdate.strftime("%d.%m.%y")
     except:
         print("date manipulation failed")
         pass

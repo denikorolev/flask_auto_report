@@ -1,12 +1,11 @@
 # app.py
-#v0.3.0
 
 from flask import Flask, redirect, url_for, flash, render_template, request, session, g
-from flask_login import LoginManager, login_required, user_logged_in, current_user
+from flask_login import LoginManager, login_required, current_user
 from config import get_config
 from flask_migrate import Migrate
 from auth import auth_bp  
-from models import db, User, UserProfile, Report, ReportType, ReportSubtype
+from models import db, User, UserProfile
 import os
 import logging
 
@@ -17,6 +16,7 @@ from report_settings import report_settings_bp
 from new_report_creation import new_report_creation_bp
 from editing_report import editing_report_bp
 
+version = "0.3.0"
 
 app = Flask(__name__)
 app.config.from_object(get_config()) # Load configuration from file config.py
@@ -80,57 +80,6 @@ def index():
             g.current_profile = None
     # Проверяем, есть ли у пользователя профиль
     user_profiles = UserProfile.get_user_profiles(current_user.id)
-    app.logger.info(f"User profiles found: {len(user_profiles)}")
-    # Начало временного блока
-    # Присваиваем профиль всем отчетам, у которых он еще не установлен (временный фрагмент)
-    reports_without_profile = Report.query.filter_by(userid=current_user.id, profile_id=None).all()
-    app.logger.info(f"Reports without profile found: {len(reports_without_profile)}")
-    if user_profiles:
-        if reports_without_profile:
-            usrprofile_temp = user_profiles[0]
-            for report in reports_without_profile:
-                report.profile_id = usrprofile_temp.id
-                db.session.add(report)
-            db.session.commit()
-            flash(f"Assigned profile '{usrprofile_temp.profile_name}' to {len(reports_without_profile)} reports.", "success")
-            app.logger.info(f"Assigned profile '{usrprofile_temp.profile_name}' to reports.")
-            
-    # Обновление поля type_index в таблице ReportType
-    report_types_to_update = ReportType.query.filter_by(type_index=None).all()
-    if report_types_to_update:
-        for index, report_type in enumerate(report_types_to_update, start=1):
-            report_type.type_index = index
-            db.session.add(report_type)
-        print("type indexes added")
-    # Обновление поля subtype_index в таблице ReportSubtype
-    report_subtypes_to_update = ReportSubtype.query.filter_by(subtype_index=None).all()
-    if report_subtypes_to_update:
-        for index, report_subtype in enumerate(report_subtypes_to_update, start=1):
-            report_subtype.subtype_index = index
-            db.session.add(report_subtype)
-        print("subtype indexes added")
-    # Сохраняем изменения, если были обновления
-    if report_types_to_update or report_subtypes_to_update:
-        db.session.commit()
-    
-    # Найти записи с пустым полем report_side
-    reports_without_side = Report.query.filter(Report.report_side == None).all()
-    
-    if reports_without_side:
-        print(f"Found {len(reports_without_side)} reports with empty report_side field.")
-        
-        # Обновить записи, установив report_side в False
-        for report in reports_without_side:
-            report.report_side = False
-            db.session.add(report)
-        
-        # Сохранить изменения
-        db.session.commit()
-        print("Updated all reports with empty report_side field to False.")
-    else:
-        print("No reports found with empty report_side field.")
-    # Конец временного блока
-    # Конец временного блока
     
     if not user_profiles:
         flash("You do not have a profile. Please create one.", "warning")
@@ -138,7 +87,8 @@ def index():
     return render_template('index.html', 
                            title="Main page Radiologary", 
                            menu=menu,
-                           user_profiles=user_profiles
+                           user_profiles=user_profiles,
+                           version=version
                            )
 
 
