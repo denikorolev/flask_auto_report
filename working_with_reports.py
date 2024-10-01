@@ -49,6 +49,7 @@ def choosing_report():
         report_types_and_subtypes=report_types_and_subtypes
     )
 
+
 @working_with_reports_bp.route("/working_with_reports", methods=['POST', 'GET'])
 @login_required
 def working_with_reports(): 
@@ -67,9 +68,9 @@ def working_with_reports():
         report_number = data.get("reportNumber", "")
         report_id = data.get("reportId")
         if report_id:
-            return jsonify({"redirect_url": url_for('working_with_reports.working_with_reports', report_id=report_id, full_name=full_name, birthdate=birthdate, reportNumber=report_number)})
+            return jsonify({"status": "success", "redirect_url": url_for('working_with_reports.working_with_reports', report_id=report_id, full_name=full_name, birthdate=birthdate, reportNumber=report_number)})
         else:
-            return jsonify({"message": "Invalid report ID."}), 400
+            return jsonify({"status": "error", "message": "Invalid report ID."}), 400
         
     report = Report.query.get(current_report_id) 
     full_name = request.args.get("full_name", "")
@@ -108,6 +109,7 @@ def working_with_reports():
         key_words=key_words_group                 
     )
 
+
 @working_with_reports_bp.route("/update_sentence", methods=['POST'])
 @login_required
 def update_sentence():
@@ -119,10 +121,8 @@ def update_sentence():
     if sentence:
         sentence.sentence = new_value
         db.session.commit()
-        return jsonify({"message": "Sentence updated successfully!"}), 200
-    return jsonify({"message": "Failed to update sentence."}), 400
-
-
+        return jsonify({"status": "success", "message": "Sentence updated successfully!"}), 200
+    return jsonify({"status": "error", "message": "Failed to update sentence."}), 400
 
 
 @working_with_reports_bp.route("/update_paragraph", methods=["POST"])
@@ -154,6 +154,7 @@ def get_sentences_with_index_zero():
         return jsonify({"sentences": sentences_data}), 200
     return jsonify({"message": "No sentences found."}), 200
 
+
 # Добавляем новое предложение с индексом 0
 @working_with_reports_bp.route("/new_sentence_adding", methods=["POST"])
 @login_required
@@ -163,18 +164,17 @@ def new_sentence_adding():
         paragraphs = data.get("paragraphs", [])
 
         if not paragraphs:
-            return jsonify({"message": "No paragraphs provided."}), 400
+            return jsonify({"status": "error", "message": "No paragraphs provided."}), 400
 
         # Разбиваем предложения на более мелкие и получаем новые предложения
         processed_paragraphs = split_sentences(paragraphs)
         new_sentences = get_new_sentences(processed_paragraphs)
 
         # Возвращаем новые предложения на клиентскую часть
-        return jsonify({"processed_paragraphs": new_sentences}), 200
+        return jsonify({"status": "success", "processed_paragraphs": new_sentences}), 200
 
     except Exception as e:
-        current_app.logger.error(f"Unexpected error: {e}")
-        return jsonify({"message": f"Unexpected error: {e}"}), 500
+        return jsonify({"status": "error", "message": f"Unexpected error: {e}"}), 500
     
     
 @working_with_reports_bp.route("/add_sentence_to_paragraph", methods=["POST"])
@@ -186,15 +186,14 @@ def add_sentence_to_paragraph():
         sentence_text = data.get("sentence_text")
 
         if not paragraph_id or not sentence_text:
-            return jsonify({"message": "Missing required data."}), 400
+            return jsonify({"status": "error", "message": "Missing required data."}), 400
 
         # Добавляем новое предложение в БД с индексом 0, весом 1, пустым комментарием
         Sentence.create(paragraph_id=paragraph_id, index=0, weight=1, comment="", sentence=sentence_text)
 
-        return jsonify({"message": "Sentence added successfully!"}), 200
+        return jsonify({"status": "success", "message": "Sentence added successfully!"}), 200
     except Exception as e:
-        current_app.logger.error(f"Failed to add sentence: {e}")
-        return jsonify({"message": f"Failed to add sentence: {e}"}), 500
+        return jsonify({"status": "error", "message": f"Failed to add sentence: {e}"}), 500
 
 
 
@@ -204,7 +203,7 @@ def export_to_word():
     try:
         data = request.get_json()
         if data is None:
-                return jsonify({"message": "No JSON data received"}), 400
+                return jsonify({"status": "error", "message": "No JSON data received"}), 400
         text = data.get("text")
         name = data.get("name")
         subtype = data.get("subtype")
@@ -215,19 +214,19 @@ def export_to_word():
         side = data.get("side")
 
         if not text or not name or not subtype:
-            return jsonify({"message": "Missing required information."}), 400
+            return jsonify({"status": "error", "message": "Missing required information."}), 400
     except Exception as e:
-        return jsonify({"message": f"Error processing request: {e}"}), 500
+        return jsonify({"status": "error", "message": f"Error processing request: {e}"}), 500
 
     try:
         file_path = save_to_word(text, name, subtype, report_type, birthdate, reportnumber, scanParam, side=side)
         # Проверяем, существует ли файл
         if not os.path.exists(file_path):
-            return jsonify({"message": "File not found"}), 500
+            return jsonify({"status": "error", "message": "File not found"}), 500
         
         return send_file(file_path, as_attachment=True)
     except Exception as e:
-        return jsonify({"message": f"Failed to export to Word: {e}"}), 500
+        return jsonify({"status": "error", "message": f"Failed to export to Word: {e}"}), 500
 
 
 @working_with_reports_bp.route("/generate_impression", methods=['POST'])

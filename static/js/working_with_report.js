@@ -1,20 +1,61 @@
 // working_with_report.js
-// v0.1.0
 
-// Функция для создания редактируемого предложения в span
+
+/**
+ * Extracts the maximum number from the protocol number and increments it by 1.
+ * 
+ * @param {string} reportNumber - The report number in format "XXXX-XXXX".
+ * @returns {number} - The incremented report number.
+ */
+function getMaxReportNumber(reportNumber) {
+    // Split the string by the "-" character
+    const parts = reportNumber.split('-');
+
+    if (parts.length < 2) {
+        // If there's no "-", simply convert the string to a number and return
+        return parseInt(reportNumber, 10) + 1;
+    }
+
+    // Get the right part (the last number)
+    const rightPart = parts[parts.length - 1];
+
+    // Get the left part (everything except the last part)
+    let leftPart = parts.slice(0, parts.length - 1).join('-');
+
+    // Determine the number of digits in the right part
+    const numDigitsInRightPart = rightPart.length;
+
+    // Replace the last characters of the left part with the right part
+    const newLeftPart = leftPart.slice(0, -numDigitsInRightPart) + rightPart;
+
+    // Convert the result to a number and add 1
+    return parseInt(newLeftPart, 10) + 1;
+}
+
+
+/**
+ * Creates an editable sentence element wrapped in a span.
+ * 
+ * @param {string} sentenceText - The text of the sentence.
+ * @returns {HTMLElement} - A new span element containing the editable sentence.
+ */
 function createEditableSentenceElement(sentenceText) {
     const newSentenceElement = document.createElement("span");
     newSentenceElement.classList.add("report__sentence");
     newSentenceElement.textContent = sentenceText;
 
-    // Делаем содержимое редактируемым
+    // Make the content editable
     newSentenceElement.contentEditable = "true";
 
     return newSentenceElement;
 }
 
 
-// Функция для переключения видимости списка предложений
+/**
+ * Toggles the visibility of the sentence list associated with a button.
+ * 
+ * @param {HTMLElement} button - The button that toggles the sentence list.
+ */
 function toggleSentenceList(button) {
     const sentenceList = button.closest(".report__paragraph").querySelector(".sentence-list");
     if (sentenceList.style.display === "none" || sentenceList.style.display === "") {
@@ -31,89 +72,106 @@ function toggleSentenceList(button) {
 }
 
 
-// Функция для проверки, виден ли элемент на экране
+/**
+ * Checks if an element is visible on the screen.
+ * 
+ * @param {HTMLElement} element - The element to check.
+ * @returns {boolean} - True if the element is visible, false otherwise.
+ */
 function isElementVisible(element) {
     const style = window.getComputedStyle(element);
     return style.display !== "none" && style.visibility !== "hidden";
 }
 
 
-// Функция для очистки текста от <select> элементов и кнопок, оставляя только выбранный текст
+/**
+ * Cleans text from <select> elements and buttons, leaving only the selected text.
+ * 
+ * @param {HTMLElement} element - The element containing the text to clean.
+ * @returns {string} - The cleaned text.
+ */
 function cleanSelectText(element) {
     let text = element.innerHTML;
 
-    // Удаляем все кнопки из текста
+    // Remove all buttons from the text
     element.querySelectorAll("button").forEach(button => {
-        button.remove();  // Удаляем кнопки из DOM, чтобы они не мешали сбору текста
+        button.remove();  // Remove buttons from DOM to avoid interference with text collection
     });
 
-    // Заменяем все <select> на выбранный текст
+    // Replace all <select> elements with their selected text
     element.querySelectorAll("select").forEach(select => {
         const selectedOption = select.options[select.selectedIndex].textContent;
         text = text.replace(select.outerHTML, selectedOption);
     });
 
-    // Убираем все HTML теги, кроме текста
+    // Remove all HTML tags except text
     text = text.replace(/<[^>]*>?/gm, '').trim();
 
-    // Используем встроенный DOM-парсер для замены мнемоник
+    // Use a DOM parser to replace entities
     const tempElement = document.createElement("textarea");
     tempElement.innerHTML = text;
     text = tempElement.value;
 
-
-    // Удаляем лишние пробелы (оставляем только один пробел между словами)
+    // Remove extra spaces (leave only one space between words)
     text = text.replace(/\s\s+/g, ' ');
 
     return text;
 }
 
 
-// Собираем текст из правой части экрана для дальнейшей его обработки
+/**
+ * Collects text from the right side of the screen for further processing.
+ * 
+ * @returns {string} - The collected and cleaned text.
+ */
 function collectTextFromRightSide() {
     const rightParagraphList = document.getElementById("right-paragraph-list");
     let collectedText = "";
 
-    // Проходим по каждому параграфу
+    // Iterate through each paragraph
     rightParagraphList.querySelectorAll(".report__paragraph").forEach(paragraphElement => {
         const paragraph = paragraphElement.querySelector("p");
 
-        // Добавляем текст параграфа, если он виден
+        // Add paragraph text if it is visible
         if (isElementVisible(paragraph)) {
             const paragraphText = paragraph.innerText.trim();
-            collectedText += paragraphText + " ";  // Добавляем текст параграфа, если он виден
+            collectedText += paragraphText + " ";
         }
 
-        let hasSentences = false;  // Флаг для проверки наличия предложений
+        let hasSentences = false;  // Flag to check for the presence of sentences
 
-        // Проходим по каждому предложению внутри параграфа
+        // Iterate through each sentence within the paragraph
         paragraphElement.querySelectorAll(".report__sentence").forEach(sentenceElement => {
-            // Проверяем, видимо ли предложение
+            // Check if the sentence is visible
             if (isElementVisible(sentenceElement)) {
-                const sentenceText = cleanSelectText(sentenceElement);  // Используем функцию для очистки текста
+                const sentenceText = cleanSelectText(sentenceElement);  // Use the function to clean the text
                 if (sentenceText) {
-                    collectedText += sentenceText + " ";  // Добавляем текст предложения
-                    hasSentences = true;  // Устанавливаем флаг, что есть предложения
+                    collectedText += sentenceText + " ";
+                    hasSentences = true;  // Set the flag indicating that there are sentences
                 }
             }
         });
 
-        // Если есть предложения, добавляем перевод строки
+        // If there are sentences, add a newline
         if (hasSentences) {
-            collectedText += "\n";  // Разделяем параграфы, если были предложения
+            collectedText += "\n";  // Separate paragraphs if there were sentences
         }
     });
 
-return collectedText.trim();  // Убираем лишние пробелы и возвращаем текст
+    return collectedText.trim();  // Remove extra spaces and return the text
 }
 
 
-// функция для отображения предложений, которые мы предлагаем пользователю добавить в базу данных
+/**
+ * Displays processed paragraphs and sentences that are suggested for the user to add to the database.
+ * 
+ * @param {Array} paragraphs - Array of paragraph objects to display.
+ */
 function displayProcessedParagraphs(paragraphs) {
     const container = document.getElementById('sentenceAddingRequestContainer');
-    container.innerHTML = ''; // Очищаем контейнер перед добавлением новых данных
+    container.innerHTML = ''; // Clear the container before adding new data
 
-    // Проверка, есть ли данные для обработки
+    // Check if there is data to process
     if (!paragraphs || !Array.isArray(paragraphs)) {
         console.error("Invalid paragraphs data:", paragraphs);
         return;
@@ -126,37 +184,37 @@ function displayProcessedParagraphs(paragraphs) {
         const paragraphText = paragraph.paragraph_text || `Paragraph: ${paragraph.paragraph_id}`;
         paragraphDiv.textContent = `Paragraph: ${paragraphText}`;
 
-        // Проверка на массив предложений
+        // Check for an array of sentences
         if (Array.isArray(paragraph.sentences)) {
             paragraph.sentences.forEach(sentence => {
                 const sentenceDiv = document.createElement('div');
                 sentenceDiv.classList.add('sentence-container');
                 sentenceDiv.textContent = sentence;
 
-                // Добавляем кнопку "Добавить" для каждого предложения
+                // Add "Add" button for each sentence
                 const addButton = document.createElement('button');
                 addButton.textContent = 'Добавить';
                 addButton.classList.add('add-sentence-btn');
                 addButton.addEventListener('click', function() {
-                    // Отправляем предложение на сервер
+                    // Send the sentence to the server
                     addSentenceToDatabase(paragraph.paragraph_id, sentence);
                 });
 
-                sentenceDiv.appendChild(addButton); // Добавляем кнопку к предложению
+                sentenceDiv.appendChild(addButton); // Add the button to the sentence
                 paragraphDiv.appendChild(sentenceDiv);
             });
         } else if (typeof paragraph.sentence === 'string') {
-            // Если предложение передано как строка (единичное предложение)
+            // If a single sentence is passed as a string
             const sentenceDiv = document.createElement('div');
             sentenceDiv.classList.add('sentence-container');
             sentenceDiv.textContent = paragraph.sentence;
 
-            // Добавляем кнопку "Добавить" для предложения
+            // Add "Add" button for the sentence
             const addButton = document.createElement('button');
             addButton.textContent = 'Добавить';
             addButton.classList.add('add-sentence-btn');
             addButton.addEventListener('click', function() {
-                // Отправляем предложение на сервер
+                // Send the sentence to the server
                 addSentenceToDatabase(paragraph.paragraph_id, paragraph.sentence);
             });
 
@@ -171,82 +229,158 @@ function displayProcessedParagraphs(paragraphs) {
 }
 
 
-// Функция для отправки предложения на сервер
-function addSentenceToDatabase(paragraphId, sentenceText) {
-    fetch("{{ url_for('working_with_reports.add_sentence_to_paragraph') }}", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            paragraph_id: paragraphId,
-            sentence_text: sentenceText
-        })
-    }).then(response => {
-        if (response.ok) {
-            response.json().then(data => {
-                alert("Sentence added successfully!");
-            });
-        } else {
-            alert("Failed to add sentence.");
+/**
+ * Sends a request to add a sentence to the database.
+ * 
+ * @param {number} paragraphId - The ID of the paragraph to which the sentence belongs.
+ * @param {string} sentenceText - The text of the sentence to be added.
+ */
+async function addSentenceToDatabase(paragraphId, sentenceText) {
+    try {
+        const response = await sendRequest({
+            url: "/working_with_reports/add_sentence_to_paragraph",
+            method: "POST",
+            data: {
+                paragraph_id: paragraphId,
+                sentence_text: sentenceText
+            }
+        });
+
+        if (response.message) {
+            alert(response.message); // Show success or error message
         }
+    } catch (error) {
+        console.error("Error adding sentence:", error);
+        alert("Failed to add sentence.");
+    }
+}
+
+
+/**
+ * Функция для переключения видимости списка предложений
+ * @param {HTMLElement} button - Кнопка, которая была нажата
+ */
+function toggleSentenceList(button) {
+    const sentenceList = button.closest(".report__paragraph").querySelector(".sentence-list");
+    if (sentenceList.style.display === "none" || sentenceList.style.display === "") {
+        sentenceList.style.display = "block";
+        button.classList.add("expanded");
+        button.classList.remove("collapsed");
+        button.title = "Collapse";
+    } else {
+        sentenceList.style.display = "none";
+        button.classList.remove("expanded");
+        button.classList.add("collapsed");
+        button.title = "Expand";
+    }
+}
+
+
+/**
+ * Функция для выделения ключевых слов в тексте
+ * @param {string} text - Текст для обработки
+ * @param {Array} keyWordsGroups - Массив групп ключевых слов
+ * @returns {string} - Обновленный текст с выделенными ключевыми словами
+ */
+function highlightKeyWords(text, keyWordsGroups) {
+    const matchIndexes = {};
+
+    // Проходим по каждой группе ключевых слов
+    keyWordsGroups.forEach(group => {
+        group.forEach(item => {
+            const word = item.word; // Достаем слово из словаря
+            if (!matchIndexes[word]) {
+                matchIndexes[word] = 0;
+            }
+
+            // Регулярное выражение для нахождения ключевого слова вне тегов и без букв перед и после
+            const regex = new RegExp(`(?<!<[^>]*>|[a-zA-Zа-яА-ЯёЁ])(${word})(?![^<]*>|[a-zA-Zа-яА-ЯёЁ])`, "gi");
+
+            text = text.replace(regex, (matchedWord) => {
+                matchIndexes[word] += 1;
+
+                // Создаём select с опциями из той же группы слов
+                const options = group
+                    .map(option => {
+                        const optionWord = option.word; // Получаем слово из каждого словаря
+                        const isSelected = optionWord.toLowerCase() === matchedWord.toLowerCase() ? "selected" : "";
+                        return `<option value="${optionWord}" ${isSelected}>${optionWord}</option>`;
+                    })
+                    .join("");
+
+                return `<select class="report__select_dynamic" data-match-index="${word}-${matchIndexes[word]}">${options}</select>`;
+            });
+        });
+    });
+
+    return text;
+}
+
+/**
+ * Функция для обновления текста справа и выделения ключевых слов
+ */
+function updateRightSideText() {
+    // Используем глобальную переменную, переданную из HTML
+    const rightParagraphList = document.getElementById("right-paragraph-list");
+
+    rightParagraphList.querySelectorAll("p, span").forEach(paragraph => {
+        const currentIndex = paragraph.getAttribute("data-index");
+
+        if (!currentIndex) {
+            return;
+        }
+
+        let plainText = paragraph.innerText || paragraph.textContent;
+
+        if (!paragraph.querySelector("select")) {
+            const highlightedText = highlightKeyWords(plainText, keyWordsGroups);
+            paragraph.innerHTML = highlightedText;
+        }
+
+        paragraph.setAttribute("data-index", currentIndex);
     });
 }
 
-// Функция для отправки данных на сервер в маршрут new_sentence_adding где будет произведен поиск новых предложений в тексте справа
-function sendParagraphsToServer(paragraphsData) {
-    fetch("{{ url_for('working_with_reports.new_sentence_adding') }}", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            paragraphs: paragraphsData
-        })
-    }).then(response => {
-        if (response.ok) {
-            response.json().then(data => {
-                displayProcessedParagraphs(data.processed_paragraphs);
-            });
-        } else {
-            alert("Failed to process paragraphs.");
-        }
-    });
-}
 
-// Функция для формирования данных параграфов и предложений для формирования предложений для добавления в базу данных
+/**
+ * Собирает данные параграфов и предложений для отправки на сервер
+ * @returns {Array} Массив с данными параграфов и предложений
+ */
 function collectParagraphsData() {
     const rightParagraphList = document.getElementById("right-paragraph-list");
     const paragraphsData = [];
 
     rightParagraphList.querySelectorAll(".report__paragraph").forEach(paragraphElement => {
         const paragraph = paragraphElement.querySelector("p");
+        const paragraphId = paragraph.getAttribute("data-paragraph-id");
+        const paragraphText = paragraph.innerText.trim();
+        const sentences = [];
 
-        // Проверяем, виден ли параграф на экране
-            const paragraphId = paragraph.getAttribute("data-paragraph-id");
-            const paragraphText = paragraph.innerText.trim();
-            const sentences = [];
-
-            paragraphElement.querySelectorAll(".report__sentence").forEach(sentenceElement => {
-                const sentenceText = cleanSelectText(sentenceElement);
-                if (sentenceText) {
-                    sentences.push(sentenceText);
-                }
-            });
-
-            if (sentences.length > 0) {
-                paragraphsData.push({
-                    paragraph_id: paragraphId,
-                    paragraph_text: paragraphText,
-                    sentences: sentences
-                });
+        paragraphElement.querySelectorAll(".report__sentence").forEach(sentenceElement => {
+            const sentenceText = cleanSelectText(sentenceElement);
+            if (sentenceText) {
+                sentences.push(sentenceText);
             }
+        });
+
+        if (sentences.length > 0) {
+            paragraphsData.push({
+                paragraph_id: paragraphId,
+                paragraph_text: paragraphText,
+                sentences: sentences,
+            });
+        }
     });
 
     return paragraphsData;
 }
 
-// Функция очистки и форматирования текста перед использованием его в функциях copy-to-clipboard и export-to-word
+
+/**
+ * Очищает и форматирует текст перед использованием в функциях копирования и экспорта
+ * @param {HTMLElement} element - Элемент, содержащий текст для очистки
+ * @returns {string} - Очищенный и отформатированный текст
+ */
 function cleanAndFormatText(element) {
     let formattedText = element.innerHTML;
 
@@ -271,251 +405,7 @@ function cleanAndFormatText(element) {
 }
 
 
-// Функция для выделения ключевых слов и работы с ними
-function highlightKeyWords(text, keyWordsGroups) {
-    const matchIndexes = {};
-
-    // Функция для проверки, является ли символ буквой (учитывает кириллицу и латиницу)
-    function isLetter(char) {
-        return /[a-zA-Zа-яА-ЯёЁ]/.test(char);
-    }
-
-    // Проходим по каждой группе ключевых слов
-    keyWordsGroups.forEach(group => {
-        group.forEach(item => {
-            const word = item.word;  // Достаем слово из словаря
-            if (!matchIndexes[word]) {
-                matchIndexes[word] = 0;
-            }
-
-            // Регулярное выражение для нахождения ключевого слова вне тегов и без букв перед и после
-            const regex = new RegExp(`(?<!<[^>]*>|[a-zA-Zа-яА-ЯёЁ])(${word})(?![^<]*>|[a-zA-Zа-яА-ЯёЁ])`, 'gi');
-
-            text = text.replace(regex, (matchedWord, offset, fullText) => {
-                matchIndexes[word] += 1;
-
-                // Создаём select с опциями из той же группы слов
-                const options = group.map(option => {
-                    const optionWord = option.word;  // Получаем слово из каждого словаря
-                    const isSelected = optionWord.toLowerCase() === matchedWord.toLowerCase() ? "selected" : "";
-                    return `<option value="${optionWord}" ${isSelected}>${optionWord}</option>`;
-                }).join('');
-
-                return `<select class="report__select_dynamic" data-match-index="${word}-${matchIndexes[word]}">${options}</select>`;
-            });
-        });
-    });
-
-    return text;
-}
-
-
-// Функция для поиска key_words
-function updateRightSideText() {
-const keyWordsGroups = {{ key_words|tojson }};
-const rightParagraphList = document.getElementById("right-paragraph-list");
-
-rightParagraphList.querySelectorAll("p, span").forEach(paragraph => {
-    const currentIndex = paragraph.getAttribute("data-index");
-
-    if (!currentIndex) {
-        return;
-    }
-
-    let plainText = paragraph.innerText || paragraph.textContent;
-
-    if (!paragraph.querySelector('select')) {
-        const highlightedText = highlightKeyWords(plainText, keyWordsGroups);
-        paragraph.innerHTML = highlightedText;
-    }
-
-    paragraph.setAttribute("data-index", currentIndex);
-});
-}
-
-
-// Обновление текста справа. Нужно для работы логики key_words. По сути здесь запускается вся эта логика.
-document.addEventListener("DOMContentLoaded", function() {
-    updateRightSideText(); 
-});
-
-// Кнопка переключатель видимости кнопок редактирования
-document.querySelector(".icon-btn--show-edit-groups").addEventListener("click", function() {
-    const editGroups = document.querySelectorAll(".edit-group");
-
-    // Переключение между видимостью "none" и "inline-block" у элементов с классом .edit-group
-    editGroups.forEach(group => {
-        if (group.style.display === "none" || group.style.display === "") {
-            group.style.display = "inline-block";
-        } else {
-            group.style.display = "none";
-        }
-    });
-    
-    // Изменение текста кнопки в зависимости от состояния
-    const button = document.querySelector(".icon-btn--show-edit-groups");
-    if (button.textContent === "Show Edit Options") {
-        button.textContent = "Hide Edit Options";
-    } else {
-        button.textContent = "Show Edit Options";
-    }
-});
-
-
-// Логика для кнопки "expand"
-document.querySelectorAll(".icon-btn--expand").forEach(button => {
-    button.addEventListener("click", function() {
-        toggleSentenceList(this);
-    });
-});
-
-// Логика для разворачивания по клику на текст параграфа
-document.querySelectorAll(".paragraph_title").forEach(paragraph => {
-    paragraph.addEventListener("click", function() {
-        const expandButton = this.closest(".report__paragraph").querySelector(".icon-btn--expand");
-        toggleSentenceList(expandButton);  // Используем ту же логику, что и для кнопки
-    });
-});
-
-// Button edit logic for editing name, date of birth etc
-document.addEventListener("DOMContentLoaded", function() {
-    const editButton = document.querySelector(".icon-btn--edit-form");
-    const formInputs = document.querySelectorAll("#exportForm input");
-
-    editButton.addEventListener("click", function() {
-        // Check if the inputs are currently read-only
-        const isReadOnly = formInputs[0].hasAttribute("readonly");
-
-        formInputs.forEach(input => {
-            if (isReadOnly) {
-                input.removeAttribute("readonly"); // Make inputs editable
-            } else {
-                input.setAttribute("readonly", true); // Make inputs read-only
-            }
-        });
-
-        // Change the button icon accordingly
-        if (isReadOnly) {
-            editButton.style.background = "url('{{ url_for('static', filename='pic/save_button.svg') }}') no-repeat center center";
-            editButton.title = "Save Changes";
-        } else {
-            editButton.style.background = "url('{{ url_for('static', filename='pic/edit_button.svg') }}') no-repeat center center";
-            editButton.title = "Edit Form";
-        }
-    });
-});
-
-
-// Кнопка "Edit" для предложений
-document.querySelectorAll(".icon-btn--edit").forEach(button => {
-    button.addEventListener("click", function() {
-        const container = this.closest(".edit-container");
-        const sentenceElement = container.querySelector(".report__sentence");
-        const selectElement = container.querySelector(".report__select");
-
-        if (this.classList.contains("editing")) {
-            // Save logic
-            const sentenceId = sentenceElement ? sentenceElement.getAttribute("data-sentence-id") : selectElement.value;
-            const newValue = sentenceElement ? sentenceElement.innerText : container.querySelector(".report__input").value;
-
-            fetch("{{ url_for('working_with_reports.update_sentence') }}", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    sentence_id: sentenceId,
-                    new_value: newValue
-                })
-            }).then(response => {
-                if (response.ok) {
-                    this.classList.remove("editing");
-                    this.style.background = "url('{{ url_for('static', filename='pic/edit_button.svg') }}') no-repeat center center";
-                    if (selectElement) {
-                        const input = container.querySelector(".report__input");
-                        const selectedOption = selectElement.selectedOptions[0];
-                        selectedOption.setAttribute("data-sentence", input.value);
-                        selectedOption.textContent = input.value;
-                        input.remove();
-                        selectElement.style.display = "inline-block";
-                    } else {
-                        sentenceElement.contentEditable = false;
-                        sentenceElement.classList.remove("editing");
-                    }
-                } else {
-                    alert("Failed to update sentence.");
-                }
-            });
-        } else {
-            // Edit logic
-            this.classList.add("editing");
-            this.style.background = "url('{{ url_for('static', filename='pic/save_button.svg') }}') no-repeat center center";
-
-            if (selectElement) {
-                const selectedOption = selectElement.selectedOptions[0];
-                const sentenceText = selectedOption.getAttribute("data-sentence");
-                const input = document.createElement("input");
-                input.type = "text";
-                input.value = sentenceText;
-                input.className = "report__input";
-                container.insertBefore(input, selectElement);
-                selectElement.style.display = "none";
-            } else {
-                sentenceElement.contentEditable = true;
-                sentenceElement.classList.add("editing");
-            }
-        }
-    });
-});
-
-// Кнопка "Edit" для параграфов
-document.querySelectorAll(".icon-btn--edit-paragraph").forEach(button => {
-    button.addEventListener("click", function() {
-        const paragraphElement = this.closest("li").querySelector(".paragraph_title");
-        
-        // Проверка на null
-    if (!paragraphElement) {
-        console.error("Paragraph element not found.");
-        return;
-    }
-
-        const paragraphId = paragraphElement.getAttribute("data-paragraph-id");
-
-        if (this.classList.contains("editing")) {
-            // Save logic for paragraph
-            const newParagraphValue = paragraphElement.innerText;
-
-            fetch("{{ url_for('working_with_reports.update_paragraph') }}", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    paragraph_id: paragraphId,
-                    new_value: newParagraphValue
-                })
-            }).then(response => {
-                if (response.ok) {
-                    this.classList.remove("editing");
-                    paragraphElement.contentEditable = false;
-                    paragraphElement.classList.remove("editing");
-                    this.style.background = "url('{{ url_for('static', filename='pic/edit_button.svg') }}') no-repeat center center";
-                } else {
-                    alert("Failed to update paragraph.");
-                }
-            });
-        } else {
-            // Edit logic for paragraph
-            this.classList.add("editing");
-            paragraphElement.contentEditable = true;
-            paragraphElement.classList.add("editing");
-            this.style.background = "url('{{ url_for('static', filename='pic/save_button.svg') }}') no-repeat center center";
-        }
-    });
-});
-
-
-// Logic for renewing data on the right container then data on the left one was changed
+// Логика для обновления правой части при изменении данных на левой стороне
 document.getElementById("left-paragraph-list").addEventListener("change", function(event) {
     if (event.target.tagName === "SELECT") {
         const index = event.target.getAttribute("data-index");
@@ -536,78 +426,352 @@ document.getElementById("left-paragraph-list").addEventListener("change", functi
 });
 
 
-// Button "Copy to clipboard" logic
-document.getElementById("copyButton").addEventListener("click", function() {
+// Логика для кнопки "Add Report"
+document.addEventListener("DOMContentLoaded", function() {
+    const addReportButton = document.querySelector(".icon-btn--add-report");
+
+    addReportButton.addEventListener("click", function() {
+        // Получаем значение из поля "surname" и разбиваем его на части
+        let surnameInput = document.getElementById("patient-name").value.trim();
+        let [surname = "", name = "", patronymic = ""] = surnameInput.split(" ");
+
+        const birthdate = document.getElementById("patient-birthdate").value;
+        let reportNumber = document.getElementById("report-number").value.trim();
+
+        // Преобразуем номер протокола к максимальному числу и прибавляем 1
+        const maxReportNumber = getMaxReportNumber(reportNumber);
+        const newReportNumber = (maxReportNumber).toString();
+
+        // Формируем строку для передачи параметров через URL
+        const url = `choosing_report?patient_surname=${encodeURIComponent(surname)}&patient_name=${encodeURIComponent(name)}&patient_patronymicname=${encodeURIComponent(patronymic)}&patient_birthdate=${encodeURIComponent(birthdate)}&report_number=${encodeURIComponent(newReportNumber)}`;
+
+        // Переходим на страницу choose_report
+        window.location.href = url;
+    });
+});
+
+
+// Логика для обновления текста и выделения ключевых слов. С нее начинается вся 
+// логика ключевых слов, по сути здесь просто запускается эта логика 
+// при старте страницы
+document.addEventListener("DOMContentLoaded", function() {
+    updateRightSideText(); // Запускает выделение ключевых слов при загрузке страницы
+});
+
+
+
+// Логика для кнопки "Edit Form" (редактирование имени, даты рождения и номера отчета)
+document.addEventListener("DOMContentLoaded", function() {
+    const editButton = document.querySelector(".icon-btn--edit-form");
+    const formInputs = document.querySelectorAll("#exportForm input");
+
+    editButton.addEventListener("click", function() {
+        // Проверяем, являются ли поля формы только для чтения
+        const isReadOnly = formInputs[0].hasAttribute("readonly");
+
+        formInputs.forEach(input => {
+            if (isReadOnly) {
+                input.removeAttribute("readonly"); // Делаем поля формы редактируемыми
+            } else {
+                input.setAttribute("readonly", true); // Делаем поля формы только для чтения
+            }
+        });
+
+        // Меняем иконку кнопки и текст подсказки
+        if (isReadOnly) {
+            editButton.style.background = "url('/static/pic/save_button.svg') no-repeat center center";
+            editButton.title = "Save Changes";
+        } else {
+            editButton.style.background = "url('/static/pic/edit_button.svg') no-repeat center center";
+            editButton.title = "Edit Form";
+        }
+    });
+});
+
+
+// Логика для переключения видимости кнопок редактирования а 
+// также разворачивания списков при нажатии кнопки expand или имени параграфа
+document.addEventListener("DOMContentLoaded", function() {
+    /**
+     * Логика переключения видимости кнопок редактирования
+     */
+    document.querySelector(".icon-btn--show-edit-groups").addEventListener("click", function() {
+        const editGroups = document.querySelectorAll(".edit-group");
+
+        // Переключение между видимостью "none" и "inline-block" у элементов с классом .edit-group
+        editGroups.forEach(group => {
+            if (group.style.display === "none" || group.style.display === "") {
+                group.style.display = "inline-block";
+            } else {
+                group.style.display = "none";
+            }
+        });
+
+        // Изменение текста кнопки в зависимости от состояния
+        if (this.textContent === "Show Edit Options") {
+            this.textContent = "Hide Edit Options";
+        } else {
+            this.textContent = "Show Edit Options";
+        }
+    });
+
+    /**
+     * Логика для кнопки "expand"
+     */
+    document.querySelectorAll(".icon-btn--expand").forEach(button => {
+        button.addEventListener("click", function() {
+            toggleSentenceList(this);
+        });
+    });
+
+    /**
+     * Логика для разворачивания по клику на текст параграфа
+     */
+    document.querySelectorAll(".paragraph_title").forEach(paragraph => {
+        paragraph.addEventListener("click", function() {
+            const expandButton = this.closest(".report__paragraph").querySelector(".icon-btn--expand");
+            toggleSentenceList(expandButton); // Используем ту же логику, что и для кнопки
+        });
+    });
+});
+
+// Логика редактирования предложений и параграфов
+document.addEventListener("DOMContentLoaded", function() {
+    /**
+     * Логика для кнопки "Edit" в предложениях.
+     */
+    document.querySelectorAll(".icon-btn--edit").forEach(button => {
+        button.addEventListener("click", function() {
+            const container = this.closest(".edit-container");
+            const sentenceElement = container.querySelector(".report__sentence");
+            const selectElement = container.querySelector(".report__select");
+
+            if (this.classList.contains("editing")) {
+                // Save logic
+                const sentenceId = sentenceElement ? sentenceElement.getAttribute("data-sentence-id") : selectElement.value;
+                const newValue = sentenceElement ? sentenceElement.innerText : container.querySelector(".report__input").value;
+
+                // Отправляем запрос на сервер с использованием sendRequest
+                sendRequest({
+                    url: "/working_with_reports/update_sentence",
+                    method: "POST",
+                    data: {
+                        sentence_id: sentenceId,
+                        new_value: newValue
+                    }
+                }).then(() => {
+                    this.classList.remove("editing");
+                    this.style.background = "url('/static/pic/edit_button.svg') no-repeat center center";
+                    if (selectElement) {
+                        const input = container.querySelector(".report__input");
+                        const selectedOption = selectElement.selectedOptions[0];
+                        selectedOption.setAttribute("data-sentence", input.value);
+                        selectedOption.textContent = input.value;
+                        input.remove();
+                        selectElement.style.display = "inline-block";
+                    } else {
+                        sentenceElement.contentEditable = false;
+                        sentenceElement.classList.remove("editing");
+                    }
+                }).catch(error => {
+                    alert("Failed to update sentence.");
+                    console.error("Error updating sentence:", error);
+                });
+            } else {
+                // Edit logic
+                this.classList.add("editing");
+                this.style.background = "url('/static/pic/save_button.svg') no-repeat center center";
+
+                if (selectElement) {
+                    const selectedOption = selectElement.selectedOptions[0];
+                    const sentenceText = selectedOption.getAttribute("data-sentence");
+                    const input = document.createElement("input");
+                    input.type = "text";
+                    input.value = sentenceText;
+                    input.className = "report__input";
+                    container.insertBefore(input, selectElement);
+                    selectElement.style.display = "none";
+                } else {
+                    sentenceElement.contentEditable = true;
+                    sentenceElement.classList.add("editing");
+                }
+            }
+        });
+    });
+
+    /**
+     * Логика для кнопки "Edit" в параграфах.
+     */
+    document.querySelectorAll(".icon-btn--edit-paragraph").forEach(button => {
+        button.addEventListener("click", function() {
+            const paragraphElement = this.closest("li").querySelector(".paragraph_title");
+
+            // Проверка на null
+            if (!paragraphElement) {
+                console.error("Paragraph element not found.");
+                return;
+            }
+
+            const paragraphId = paragraphElement.getAttribute("data-paragraph-id");
+
+            if (this.classList.contains("editing")) {
+                // Save logic for paragraph
+                const newParagraphValue = paragraphElement.innerText;
+
+                // Отправляем запрос на сервер с использованием sendRequest
+                sendRequest({
+                    url: "/working_with_reports/update_paragraph",
+                    method: "POST",
+                    data: {
+                        paragraph_id: paragraphId,
+                        new_value: newParagraphValue
+                    }
+                }).then(() => {
+                    this.classList.remove("editing");
+                    paragraphElement.contentEditable = false;
+                    paragraphElement.classList.remove("editing");
+                    this.style.background = "url('/static/pic/edit_button.svg') no-repeat center center";
+                }).catch(error => {
+                    alert("Failed to update paragraph.");
+                    console.error("Error updating paragraph:", error);
+                });
+            } else {
+                // Edit logic for paragraph
+                this.classList.add("editing");
+                paragraphElement.contentEditable = true;
+                paragraphElement.classList.add("editing");
+                this.style.background = "url('/static/pic/save_button.svg') no-repeat center center";
+            }
+        });
+    });
+});
+
+
+// "Copy to clipboard" button logic
+document.getElementById("copyButton").addEventListener("click", async function() {
     // Собираем текст из правой части экрана
     const textToCopy = collectTextFromRightSide();
 
-    navigator.clipboard.writeText(textToCopy.trim()).then(function() {
+    try {
+        await navigator.clipboard.writeText(textToCopy.trim());
         alert("Text copied to clipboard");
 
         // После успешного копирования выполняем отправку данных
         const paragraphsData = collectParagraphsData();
-        sendParagraphsToServer(paragraphsData);
 
-    }).catch(function(err) {
-        console.error("Failed to copy text: ", err);
-    });
+        // Отправляем запрос на сервер, используя sendRequest
+        const response = await sendRequest({
+            url: "/working_with_reports/new_sentence_adding",
+            method: "POST",
+            data: {
+                paragraphs: paragraphsData
+            }
+        });
+
+        // Если запрос успешен, отображаем обработанные абзацы
+        displayProcessedParagraphs(response.processed_paragraphs);
+        
+    } catch (error) {
+        console.error("Error processing paragraphs:", error);
+        alert(error.message || "Failed to process paragraphs.");
+    }
 });
 
-// "Export to word" button logic
-document.getElementById("exportButton").addEventListener("click", function() {
+// "Export to Word" button logic
+document.getElementById("exportButton").addEventListener("click", async function() {
     // Собираем текст из правой части экрана для экспорта в Word
     const textToExport = collectTextFromRightSide();
     // Формируем данные параграфов и предложений
     const paragraphsData = collectParagraphsData();
 
-    // Отправляем данные параграфов на сервер
-    sendParagraphsToServer(paragraphsData);
+    try {
+        // Отправляем данные абзацев на сервер, используя sendRequest
+        const response = await sendRequest({
+            url: "/working_with_reports/new_sentence_adding",
+            method: "POST",
+            data: {
+                paragraphs: paragraphsData
+            }
+        });
 
-    const name = document.getElementById("patient-name").value;
-    const birthdate = document.getElementById("patient-birthdate").value;
-    const reportnumber = document.getElementById("report-number").value;
-    const subtype = "{{ subtype }}";
-    const reportType = "{{ report_type }}";
-    const scanParam = "{{ report.comment }}";
-    const reportSideElement = document.getElementById("report-side");
-    const reportSide = reportSideElement ? reportSideElement.value : "";
+        // Отображаем обработанные параграфы, если запрос успешен
+        displayProcessedParagraphs(response.processed_paragraphs);
 
-    fetch("{{ url_for('working_with_reports.export_to_word') }}", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            text: textToExport,
-            name: name,
-            birthdate: birthdate,
-            subtype: subtype,
-            report_type: reportType,
-            reportnumber: reportnumber,
-            scanParam: scanParam,
-            side: reportSide
-        })
-    }).then(response => {
-        if (response.ok) {
-            response.blob().then(blob => {
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.style.display = "none";
-                a.href = url;
-                a.download = `${name}_${subtype}.docx`;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-            });
+    } catch (error) {
+        console.error("Error processing paragraphs:", error);
+        alert(error.message || "Failed to process paragraphs.");
+        return; // Прекращаем выполнение, если отправка абзацев не удалась
+    }
+
+    // Если отправка абзацев успешна, выполняем экспорт в Word
+    try {
+        const name = document.getElementById("patient-name").value;
+        const birthdate = document.getElementById("patient-birthdate").value;
+        const reportnumber = document.getElementById("report-number").value;
+        // Извлекаем значения из data-атрибутов
+        const exportForm = document.getElementById("exportForm");
+        const subtype = exportForm.getAttribute("data-subtype");
+        const reportType = exportForm.getAttribute("data-report-type");
+        const scanParam = exportForm.getAttribute("data-comment");
+
+        const reportSideElement = document.getElementById("report-side");
+        const reportSide = reportSideElement ? reportSideElement.value : "";
+
+        // Отправляем запрос на экспорт в Word, используя sendRequest и получаем Blob
+        const blob = await sendRequest({
+            url: "/working_with_reports/export_to_word",
+            method: "POST",
+            data: {
+                text: textToExport,
+                name: name,
+                birthdate: birthdate,
+                subtype: subtype,
+                report_type: reportType,
+                reportnumber: reportnumber,
+                scanParam: scanParam,
+                side: reportSide
+            },
+            responseType: "blob"
+        });
+
+        // Обрабатываем Blob для загрузки файла
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        const currentDate = new Date();
+        const day = currentDate.getDate();
+        const month = currentDate.getMonth() + 1;
+        const year = currentDate.getFullYear();
+        const formattedDate = `${day.toString().padStart(2, '0')}.${month.toString().padStart(2, '0')}.${year}`;
+
+        let fileReportSide;
+        if (reportSide === "right") {
+            fileReportSide = "_правая сторона";
+        } else if (reportSide === "left") {
+            fileReportSide = "_левая сторона";
         } else {
-            alert("Failed to export to Word.");
+            fileReportSide = "";
         }
-    });
+
+        a.style.display = "none";
+        a.href = url;
+        a.download = `${name}_${reportType}_${subtype}${fileReportSide}_${formattedDate}.docx`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+
+    } catch (error) {
+        console.error("Error exporting to Word:", error);
+        alert(error.message || "Failed to export to Word.");
+    }
 });
 
-// Логика добавления предложения после нажания на кнопку +
+
+// Логика добавления предложения при нажатии на кнопку "+"
 document.addEventListener("DOMContentLoaded", function() {
-    // Функция для создания инпута для добавления нового предложения
+    /**
+     * Создает поле ввода для нового предложения.
+     * @param {HTMLElement} buttonElement - Кнопка, перед которой будет вставлено поле ввода.
+     */
     function createInputForNewSentence(buttonElement) {
         // Удаляем все активные элементы (селекты или инпуты)
         document.querySelectorAll(".dynamic-select, .dynamic-input").forEach(el => el.remove());
@@ -630,15 +794,16 @@ document.addEventListener("DOMContentLoaded", function() {
                 const customSentence = inputElement.value.trim();
                 if (customSentence) {
                     const newSentenceElement = createEditableSentenceElement(customSentence);
-
                     buttonElement.parentNode.insertBefore(newSentenceElement, buttonElement);
-                    inputElement.remove();  
+                    inputElement.remove();
                 }
             }
         });
     }
 
-    // Основная логика при нажатии на кнопку "+"
+    /**
+     * Логика при нажатии на кнопку "+". Создает выпадающий список или поле ввода для добавления предложения.
+     */
     document.querySelectorAll(".icon-btn--add-sentence").forEach(button => {
         button.addEventListener("click", function() {
             const paragraphId = this.getAttribute("data-paragraph-id");
@@ -646,18 +811,15 @@ document.addEventListener("DOMContentLoaded", function() {
 
             // Удаляем предыдущие выпадающие списки или поля ввода, если они уже существуют
             document.querySelectorAll(".dynamic-select, .dynamic-input").forEach(el => el.remove());
-            
+
             // Получаем предложения с индексом 0 для этого параграфа
-            fetch("{{ url_for('working_with_reports.get_sentences_with_index_zero') }}", {
+            sendRequest({
+                url: "/working_with_reports/get_sentences_with_index_zero",
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    paragraph_id: paragraphId  // Передаем ID параграфа
-                })
-            }).then(response => response.json())
-            .then(data => {
+                data: {
+                    paragraph_id: paragraphId
+                }
+            }).then(data => {
                 if (data.sentences && data.sentences.length > 0) {
                     // Создаем выпадающий список (select) с предложениями
                     const selectElement = document.createElement("select");
@@ -665,14 +827,14 @@ document.addEventListener("DOMContentLoaded", function() {
 
                     // Добавляем первое пустое поле, значение пустое, а текст — "Введите предложение"
                     const startOption = document.createElement("option");
-                    startOption.value = "";  // Пустое значение для выбора
-                    startOption.textContent = "Выберете предложение для добавления";  // Текст, который видит пользователь
+                    startOption.value = "";
+                    startOption.textContent = "Выберите предложение для добавления";
                     selectElement.appendChild(startOption);
 
-                    // Добавляем первое пустое поле, значение пустое, а текст — "Введите предложение"
+                    // Добавляем поле для ввода своего предложения
                     const emptyOption = document.createElement("option");
-                    emptyOption.value = "";  // Пустое значение для выбора
-                    emptyOption.textContent = "Введите свое предложение";  // Текст, который видит пользователь
+                    emptyOption.value = "";
+                    emptyOption.textContent = "Введите свое предложение";
                     selectElement.appendChild(emptyOption);
 
                     // Добавляем остальные предложения с индексом 0
@@ -684,8 +846,6 @@ document.addEventListener("DOMContentLoaded", function() {
                     });
                     selectElement.value = "";
 
-                    
-
                     // Добавляем выпадающий список перед кнопкой
                     buttonElement.parentNode.insertBefore(selectElement, buttonElement);
 
@@ -693,7 +853,6 @@ document.addEventListener("DOMContentLoaded", function() {
                     selectElement.addEventListener("change", function() {
                         if (selectElement.value === "") {
                             // Если выбрано пустое поле, вызываем функцию для инпута
-                            
                             createInputForNewSentence(buttonElement);
                             selectElement.remove();  // Удаляем выпадающий список
                         } else {
@@ -701,7 +860,7 @@ document.addEventListener("DOMContentLoaded", function() {
                             const selectedSentence = selectElement.options[selectElement.selectedIndex].textContent;
                             const newSentenceElement = createEditableSentenceElement(selectedSentence);
                             buttonElement.parentNode.insertBefore(newSentenceElement, buttonElement);
-                            selectElement.remove();  
+                            selectElement.remove();
                         }
                     });
 
