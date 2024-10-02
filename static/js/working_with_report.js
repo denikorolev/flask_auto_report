@@ -169,9 +169,9 @@ function collectTextFromRightSide() {
  */
 function displayProcessedParagraphs(paragraphs) {
     const container = document.getElementById('sentenceAddingRequestContainer');
-    container.innerHTML = ''; // Clear the container before adding new data
+    container.innerHTML = ''; // Очищаем контейнер перед добавлением новых данных
 
-    // Check if there is data to process
+    // Проверка, есть ли данные для обработки
     if (!paragraphs || !Array.isArray(paragraphs)) {
         console.error("Invalid paragraphs data:", paragraphs);
         return;
@@ -184,38 +184,73 @@ function displayProcessedParagraphs(paragraphs) {
         const paragraphText = paragraph.paragraph_text || `Paragraph: ${paragraph.paragraph_id}`;
         paragraphDiv.textContent = `Paragraph: ${paragraphText}`;
 
-        // Check for an array of sentences
+        // Проверка на массив предложений
         if (Array.isArray(paragraph.sentences)) {
             paragraph.sentences.forEach(sentence => {
                 const sentenceDiv = document.createElement('div');
                 sentenceDiv.classList.add('sentence-container');
                 sentenceDiv.textContent = sentence;
 
-                // Add "Add" button for each sentence
+                // Добавляем кнопку "Добавить" для каждого предложения
                 const addButton = document.createElement('button');
                 addButton.textContent = 'Добавить';
                 addButton.classList.add('add-sentence-btn');
                 addButton.addEventListener('click', function() {
-                    // Send the sentence to the server
-                    addSentenceToDatabase(paragraph.paragraph_id, sentence);
+                    // Используем sendRequest для отправки предложения на сервер
+                    sendRequest({
+                        url: "/working_with_reports/add_sentence_to_paragraph",
+                        method: "POST",
+                        data: {
+                            paragraph_id: paragraph.paragraph_id,
+                            sentence_text: sentence
+                        }
+                    })
+                    .then(response => {
+                        if (response) {
+                            // Используем сообщение от сервера
+                            toastr.success(response.message || 'Operation completed successfully!', 'Success');
+                        }
+                    })
+                    .catch(error => {
+                        console.error("Failed to add sentence:", error);
+                        alert("Failed to add sentence.");
+                    });
                 });
 
-                sentenceDiv.appendChild(addButton); // Add the button to the sentence
+                sentenceDiv.appendChild(addButton);
                 paragraphDiv.appendChild(sentenceDiv);
             });
         } else if (typeof paragraph.sentence === 'string') {
-            // If a single sentence is passed as a string
+            // Если предложение передано как строка (единичное предложение)
             const sentenceDiv = document.createElement('div');
             sentenceDiv.classList.add('sentence-container');
             sentenceDiv.textContent = paragraph.sentence;
 
-            // Add "Add" button for the sentence
+            // Добавляем кнопку "Добавить" для предложения
             const addButton = document.createElement('button');
             addButton.textContent = 'Добавить';
             addButton.classList.add('add-sentence-btn');
             addButton.addEventListener('click', function() {
-                // Send the sentence to the server
-                addSentenceToDatabase(paragraph.paragraph_id, paragraph.sentence);
+                // Используем sendRequest для отправки предложения на сервер
+                sendRequest({
+                    url: "/working_with_reports/add_sentence_to_paragraph",
+                    method: "POST",
+                    data: {
+                        paragraph_id: paragraph.paragraph_id,
+                        sentence_text: paragraph.sentence
+                    }
+                })
+                .then(response => {
+                    if (response) {
+                        console.log(response)
+                        // Используем сообщение от сервера
+                        toastr.success(response.message || 'Sentence added successfully!', 'Success');
+                    }
+                })
+                .catch(error => {
+                    console.error("Failed to add sentence:", error);
+                    alert("Failed to add sentence.");
+                });
             });
 
             sentenceDiv.appendChild(addButton);
@@ -226,33 +261,6 @@ function displayProcessedParagraphs(paragraphs) {
 
         container.appendChild(paragraphDiv);
     });
-}
-
-
-/**
- * Sends a request to add a sentence to the database.
- * 
- * @param {number} paragraphId - The ID of the paragraph to which the sentence belongs.
- * @param {string} sentenceText - The text of the sentence to be added.
- */
-async function addSentenceToDatabase(paragraphId, sentenceText) {
-    try {
-        const response = await sendRequest({
-            url: "/working_with_reports/add_sentence_to_paragraph",
-            method: "POST",
-            data: {
-                paragraph_id: paragraphId,
-                sentence_text: sentenceText
-            }
-        });
-
-        if (response.message) {
-            alert(response.message); // Show success or error message
-        }
-    } catch (error) {
-        console.error("Error adding sentence:", error);
-        alert("Failed to add sentence.");
-    }
 }
 
 
@@ -654,7 +662,7 @@ document.getElementById("copyButton").addEventListener("click", async function()
 
     try {
         await navigator.clipboard.writeText(textToCopy.trim());
-        alert("Text copied to clipboard");
+        toastr.success("Text copied to clipboard successfully", "Success");
 
         // После успешного копирования выполняем отправку данных
         const paragraphsData = collectParagraphsData();

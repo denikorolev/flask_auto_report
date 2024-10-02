@@ -25,24 +25,29 @@ function sendRequest({ url, method = "POST", data = {}, responseType = "json" })
     return fetch(url, fetchOptions)
         .then(response => {
             if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
+                // If HTTP status is not OK, handle as an error
+                return response.json().then(errorData => {
+                    throw new Error(errorData.message || `HTTP error! Status: ${response.status}`);
+                });
             }
+
             // Process response based on responseType
             return responseType === "blob" ? response.blob() : response.json();
         })
         .then(data => {
-            // If responseType is "json", check the status
-            if (responseType === "json" && data.hasOwnProperty('status')) {
+            // Check if the response contains a status field
+            if (responseType === "json" && data.status) {
                 if (data.status !== "success") {
                     throw new Error(data.message || "Request failed");
                 }
             }
 
-            // Return the data
+            // Return the data if status is success
             return data;
         })
         .catch(error => {
+            // Centralized error handling
             console.error("Error:", error);
-            throw error;
+            throw error; // Re-throw the error for the caller to handle
         });
 }

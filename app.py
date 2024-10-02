@@ -16,7 +16,7 @@ from report_settings import report_settings_bp
 from new_report_creation import new_report_creation_bp
 from editing_report import editing_report_bp
 
-version = "0.3.1"
+version = "0.3.2"
 
 app = Flask(__name__)
 app.config.from_object(get_config()) # Load configuration from file config.py
@@ -120,7 +120,7 @@ def set_profile(profile_id):
         flash(f"Profile '{profile.profile_name}' set as current.", "success")
     else:
         flash("Profile not found.", "danger")
-    return redirect(url_for('index'))
+    return redirect(url_for("working_with_reports.choosing_report"))
 
 
 # Логика для того, чтобы сделать данные профиля доступными в любом месте программы
