@@ -413,6 +413,33 @@ function cleanAndFormatText(element) {
 }
 
 
+// Логика для кнопки "Next"
+document.addEventListener("DOMContentLoaded", function() {
+    const nextReportButton = document.querySelector(".icon-btn--next-report");
+
+    nextReportButton.addEventListener("click", function() {
+        // Получаем текущий номер протокола и вычисляем новый номер
+        let reportNumber = document.getElementById("report-number").value.trim();
+        const maxReportNumber = getMaxReportNumber(reportNumber);
+        const newReportNumber = maxReportNumber.toString();
+
+        // Формируем URL для перехода на страницу choosing_report с новым номером протокола
+        const url = `choosing_report?report_number=${encodeURIComponent(newReportNumber)}`;
+
+        // Переходим на страницу choosing_report и ставим фокус на поле фамилии
+        window.location.href = url;
+
+        // Устанавливаем таймер, чтобы поставить фокус на поле после загрузки страницы
+        setTimeout(() => {
+            const surnameField = document.getElementById("patient-surname");
+            if (surnameField) {
+                surnameField.focus();
+            }
+        }, 1000); // Настройте время таймера по необходимости
+    });
+});
+
+
 // Логика для обновления правой части при изменении данных на левой стороне
 document.getElementById("left-paragraph-list").addEventListener("change", function(event) {
     if (event.target.tagName === "SELECT") {

@@ -175,3 +175,21 @@ document.addEventListener("DOMContentLoaded", function () {
     // Инициализация начальных событий
     addReportLinkEventListeners();
 });
+
+// Устанавливаем фокус на поле "Surname" после загрузки страницы
+document.addEventListener("DOMContentLoaded", function() {
+    const surnameField = document.getElementById("patient-surname");
+
+    if (surnameField) {
+        // Проверяем, что элемент видим
+        const isVisible = surnameField.offsetWidth > 0 && surnameField.offsetHeight > 0;
+
+        if (isVisible) {
+            surnameField.focus();
+        } else {
+            console.log("Поле 'patient-surname' существует, но невидимо.");
+        }
+    } else {
+        console.log("Поле 'patient-surname' не найдено на странице.");
+    }
+});
