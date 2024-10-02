@@ -776,20 +776,20 @@ document.getElementById("exportButton").addEventListener("click", async function
         const day = currentDate.getDate();
         const month = currentDate.getMonth() + 1;
         const year = currentDate.getFullYear();
-        const formattedDate = `${day.toString().padStart(2, '0')}.${month.toString().padStart(2, '0')}.${year}`;
+        const formattedDate = `${day.toString().padStart(2, '0')}${month.toString().padStart(2, '0')}${year}`;
 
         let fileReportSide;
         if (reportSide === "right") {
-            fileReportSide = "_правая сторона";
+            fileReportSide = " правая сторона";
         } else if (reportSide === "left") {
-            fileReportSide = "_левая сторона";
+            fileReportSide = " левая сторона";
         } else {
             fileReportSide = "";
         }
 
         a.style.display = "none";
         a.href = url;
-        a.download = `${name}_${reportType}_${subtype}${fileReportSide}_${formattedDate}.docx`;
+        a.download = `${name} ${reportType} ${subtype}${fileReportSide} ${formattedDate}.docx`;
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
@@ -811,16 +811,13 @@ document.addEventListener("DOMContentLoaded", function() {
         // Удаляем все активные элементы (селекты или инпуты)
         document.querySelectorAll(".dynamic-select, .dynamic-input").forEach(el => el.remove());
 
-        // Создаем инпут для нового предложения
+        // Создаем инпут для нового предложения и добавляем его перед кнопкой +
         const inputElement = document.createElement("input");
         inputElement.type = "text";
         inputElement.classList.add("dynamic-input");
         inputElement.placeholder = "Введите предложение";
-
-        // Добавляем поле ввода перед кнопкой
         buttonElement.parentNode.insertBefore(inputElement, buttonElement);
 
-        // Устанавливаем фокус на поле ввода
         inputElement.focus();
 
         // Обработка нажатия Enter для добавления предложения
@@ -831,6 +828,8 @@ document.addEventListener("DOMContentLoaded", function() {
                     const newSentenceElement = createEditableSentenceElement(customSentence);
                     buttonElement.parentNode.insertBefore(newSentenceElement, buttonElement);
                     inputElement.remove();
+                }else {
+                    inputElement.remove(); // Удаляем пустой инпут, если поле пустое
                 }
             }
         });
