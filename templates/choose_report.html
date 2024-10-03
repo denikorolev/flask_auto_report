@@ -46,9 +46,7 @@
     <div class="flex_column" id="reports-container">
         <label class="report_label__item" for="report_subtype">Choose report subtype:</label>
         <select class="report__select" id="report_subtype" name="report_subtype" required>
-            {% for rst in report_subtypes %}
                 <!-- Подтипы будут динамически обновляться с помощью JS -->
-            {% endfor %}
         </select>
     </div>
     <button class="btn report__btn" type="button" id="select_report_type_subtype" name="select_report_type_subtype">Show reports</button>

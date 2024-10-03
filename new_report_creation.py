@@ -24,13 +24,14 @@ def create_report():
     page_title = "List of the reports"
     menu = current_app.config['MENU']
     # Geting report types and subtypes 
-    report_types = ReportType.query.all()  
-    report_subtypes = ReportSubtype.query.all() 
-    # Convert objects to dictionary
-    report_subtypes_dict = [
-        {'id': rst.id, 'type_id': rst.type, 'subtype': rst.subtype, "subtype_type_name": rst.report_type_rel.type}
-        for rst in report_subtypes
-    ]
+    report_types_and_subtypes = ReportType.get_types_with_subtypes(current_user.id)
+    # report_types = ReportType.query.all()  
+    # report_subtypes = ReportSubtype.query.all() 
+    # # Convert objects to dictionary
+    # report_subtypes_dict = [
+    #     {'id': rst.id, 'type_id': rst.type, 'subtype': rst.subtype, "subtype_type_name": rst.report_type_rel.type}
+    #     for rst in report_subtypes
+    # ]
     profile_id = g.current_profile.id
     
     # IF part
@@ -69,8 +70,7 @@ def create_report():
             return render_template("create_report.html",
                            title=page_title,
                            menu=menu,
-                           report_types=report_types,
-                           report_subtypes=report_subtypes_dict,
+                           report_types_and_subtypes=report_types_and_subtypes,
                            user_reports_list=user_reports)
             
         elif action == 'file':
@@ -138,8 +138,7 @@ def create_report():
     return render_template("create_report.html",
                            title=page_title,
                            menu=menu,
-                           report_types=report_types, 
-                           report_subtypes=report_subtypes_dict
+                           report_types_and_subtypes=report_types_and_subtypes
                            )
     
 @new_report_creation_bp.route('/select_existing_report', methods=['POST'])

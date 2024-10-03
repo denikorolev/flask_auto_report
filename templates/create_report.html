@@ -37,15 +37,15 @@
         </div>
         <div class="flex_column">
             <label class="report_label__item" for="report_type">Report Type:</label>
-            <select class="report__select report__select--type form-control" id="report_type" name="report_type" required>
-                {% for rt in report_types %}
-                    <option value="{{ rt.id }}">{{ rt.type }}</option>
+            <select class="report__select" id="report_type" name="report_type" required>
+                {% for rt in report_types_and_subtypes %}
+                    <option value="{{ rt.type_id }}">{{ rt.type_text }}</option>
                 {% endfor %}
             </select>
         </div>
         <div class="flex_column">
             <label class="report_label__item" for="report_subtype">Report Subtype:</label>
-            <select class="report__select report__select--type form-control" id="report_subtype" name="report_subtype" required>
+            <select class="report__select" id="report_subtype" name="report_subtype" required>
                <!-- Empty, will be filled dynamically -->
             </select>
         </div>
@@ -82,49 +82,14 @@
 </div>
 {% endif %}
 <!-- Hidden element to pass subtype data -->
-<script id="allSubtypesData" type="application/json">{{ report_subtypes|tojson }}</script>
-
-<script>
-
-    /* логика необходимая для правильного сопоставления типов и подтипов 
-    в выпадающих списках а также визуализации полей связанных с выбором 
-    файла или протокола при его создании */
-    document.addEventListener("DOMContentLoaded", function() {
-        const reportTypeSelect = document.getElementById("report_type");
-        const reportSubtypeSelect = document.getElementById("report_subtype");
-        const actionSelect = document.getElementById("action");
-        const fileUploadContainer = document.getElementById("file-upload-container");
-        const allSubtypes = JSON.parse(document.getElementById("allSubtypesData").textContent);
-    
-        // Update subtypes based on report type selection
-        reportTypeSelect.addEventListener("change", function() {
-            const selectedTypeId = this.value;
-            reportSubtypeSelect.innerHTML = '';
-    
-            allSubtypes.forEach(subtype => {
-                if (subtype.type_id == selectedTypeId) {
-                    const option = document.createElement("option");
-                    option.value = subtype.id;
-                    option.textContent = subtype.subtype;
-                    reportSubtypeSelect.appendChild(option);
-                }
-            });
-        });
-    
-        reportTypeSelect.dispatchEvent(new Event("change"));
-    
-        // Show or hide file upload field based on action selection
-        actionSelect.addEventListener("change", function() {
-            if (this.value === "file") {
-                fileUploadContainer.style.display = "flex";
-            } else {
-                fileUploadContainer.style.display = "none";
-            }
-        });
-    
-        actionSelect.dispatchEvent(new Event("change"));
-    });
-
+<script id="report-types-data" type="application/json">
+    {{ report_types_and_subtypes|tojson }}
 </script>
 
+
 {% endblock container %}
+
+{% block scripts %}
+    <script src="{{ url_for('static', filename='js/create_report.js') }}"></script>
+{% endblock scripts %}
+

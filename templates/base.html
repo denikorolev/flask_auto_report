@@ -17,7 +17,7 @@
 <!-- Общая шапка и меню -->
 {% block menu %}
 <div class="header">
-    <img class="header__logo" src="{{ url_for("static", filename="pic/favi.webp")}}" alt="logo ">
+    <img class="header__logo" src="{{ url_for("static", filename="pic/favi2.png")}}" alt="logo ">
     <ul class="header__menu">
         {% if g.current_profile %}
             {% for m in menu %}
@@ -79,7 +79,7 @@
 <!-- Общие скрипты -->
 
 
-
+<script src="{{ url_for('static', filename='js/utils.js') }}"></script>
 <script src="/static/js/api.js"></script>
 <!-- Блок для специфичных JS-скриптов -->
 {% block scripts %}

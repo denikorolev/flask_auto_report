@@ -19,45 +19,49 @@ document.addEventListener("DOMContentLoaded", function () {
     if (birthdate) document.getElementById("patient-birthdate").value = birthdate;
     if (reportNumber) document.getElementById("report-number").value = reportNumber;
     
-    // Далее идет формирование тип\подтип списков
-    // Чтение данных из скрытого тега <script>
-    const reportTypesDataScript = document.getElementById("report-types-data");
-    const reportTypesAndSubtypes = JSON.parse(reportTypesDataScript.textContent);
+    // Инициализируем логику типа и подтипа через utils.js
+    initializeSubtypeLogic("report_type", "report_subtype", "report-types-data");
 
-    const reportTypeSelect = document.getElementById("report_type");
-    const reportSubtypeSelect = document.getElementById("report_subtype");
-    const allSubtypes = {};
+    
+    // // Далее идет формирование тип\подтип списков
+    // // Чтение данных из скрытого тега <script>
+    // const reportTypesDataScript = document.getElementById("report-types-data");
+    // const reportTypesAndSubtypes = JSON.parse(reportTypesDataScript.textContent);
 
-    // Проходим по каждому типу и сохраняем его подтипы
-    reportTypesAndSubtypes.forEach(type => {
-        allSubtypes[type.type_id] = type.subtypes;
-    });
+    // const reportTypeSelect = document.getElementById("report_type");
+    // const reportSubtypeSelect = document.getElementById("report_subtype");
+    // const allSubtypes = {};
 
-    // Функция для обновления подтипов на основе выбранного типа
-    function updateSubtypes() {
-        const selectedTypeId = reportTypeSelect.value.trim(); // Убедитесь, что значение без пробелов
-        reportSubtypeSelect.innerHTML = ''; // Очистить текущие опции
+    // // Проходим по каждому типу и сохраняем его подтипы
+    // reportTypesAndSubtypes.forEach(type => {
+    //     allSubtypes[type.type_id] = type.subtypes;
+    // });
 
-        const subtypes = allSubtypes[selectedTypeId] || [];
+    // // Функция для обновления подтипов на основе выбранного типа
+    // function updateSubtypes() {
+    //     const selectedTypeId = reportTypeSelect.value.trim(); // Убедитесь, что значение без пробелов
+    //     reportSubtypeSelect.innerHTML = ''; // Очистить текущие опции
 
-        subtypes.forEach(subtype => {
-            const option = document.createElement("option");
-            option.value = subtype.subtype_id;
-            option.textContent = subtype.subtype_text;
-            reportSubtypeSelect.appendChild(option);
-        });
+    //     const subtypes = allSubtypes[selectedTypeId] || [];
 
-        // Установить первую опцию как выбранную, если есть подтипы
-        if (subtypes.length > 0) {
-            reportSubtypeSelect.selectedIndex = 0;
-        }
-    }
+    //     subtypes.forEach(subtype => {
+    //         const option = document.createElement("option");
+    //         option.value = subtype.subtype_id;
+    //         option.textContent = subtype.subtype_text;
+    //         reportSubtypeSelect.appendChild(option);
+    //     });
 
-    // Добавление обработчика события для изменения типа
-    reportTypeSelect.addEventListener("change", updateSubtypes);
+    //     // Установить первую опцию как выбранную, если есть подтипы
+    //     if (subtypes.length > 0) {
+    //         reportSubtypeSelect.selectedIndex = 0;
+    //     }
+    // }
 
-    // Вызов функции для установки начального состояния при загрузке страницы
-    updateSubtypes();
+    // // Добавление обработчика события для изменения типа
+    // reportTypeSelect.addEventListener("change", updateSubtypes);
+
+    // // Вызов функции для установки начального состояния при загрузке страницы
+    // updateSubtypes();
 });
 
 
