@@ -23,15 +23,7 @@ def allowed_file(filename):
 def create_report():
     page_title = "List of the reports"
     menu = current_app.config['MENU']
-    # Geting report types and subtypes 
     report_types_and_subtypes = ReportType.get_types_with_subtypes(current_user.id)
-    # report_types = ReportType.query.all()  
-    # report_subtypes = ReportSubtype.query.all() 
-    # # Convert objects to dictionary
-    # report_subtypes_dict = [
-    #     {'id': rst.id, 'type_id': rst.type, 'subtype': rst.subtype, "subtype_type_name": rst.report_type_rel.type}
-    #     for rst in report_subtypes
-    # ]
     profile_id = g.current_profile.id
     
     # IF part
@@ -110,7 +102,9 @@ def create_report():
                             paragraph_index=idx,
                             report_id=new_report.id,
                             paragraph=paragraph['title'],
-                            paragraph_visible=True
+                            paragraph_visible=True,
+                            title_paragraph=False,
+                            bold_paragraph=False
                         )
                         for sidx, sentence in enumerate(paragraph['sentences'], start=1):
                             Sentence.create(
@@ -174,7 +168,10 @@ def select_existing_report():
             paragraph_index=paragraph.paragraph_index,
             report_id=new_report.id,
             paragraph=paragraph.paragraph,
-            paragraph_visible=paragraph.paragraph_visible
+            paragraph_visible=paragraph.paragraph_visible,
+            title_paragraph=paragraph.title_paragraph,  
+            bold_paragraph=paragraph.bold_paragraph 
+            
         )
         for sentence in paragraph.sentences:
             Sentence.create(

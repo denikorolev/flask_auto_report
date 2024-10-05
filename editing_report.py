@@ -1,5 +1,4 @@
 # editing_report.py
-#v0.2.1
 
 from flask import Blueprint, render_template, request, current_app, jsonify
 from flask_login import current_user, login_required
@@ -68,7 +67,9 @@ def edit_report():
                         paragraph_index=paragraph_index,
                         report_id=report.id,
                         paragraph="insert your text",
-                        paragraph_visible=paragraph_visible
+                        paragraph_visible=paragraph_visible,
+                        title_paragraph=False,
+                        bold_paragraph=False
                     )
                     return jsonify(success=True, message="Paragraph added successfully")
                 except Exception as e:

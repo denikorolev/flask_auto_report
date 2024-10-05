@@ -1,5 +1,4 @@
 # models.py
-#v0.2.0
 
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -269,8 +268,8 @@ class ReportParagraph(BaseModel):
     report_id = db.Column(db.BigInteger, db.ForeignKey("reports.id"), nullable=False)
     paragraph = db.Column(db.String(255), nullable=False)
     paragraph_visible = db.Column(db.Boolean, default=False, nullable=False)
-    title_paragraph = db.Column(db.Boolean, default=False, nullable=True)
-    bold_paragraph = db.Column(db.Boolean, default=False, nullable=True)
+    title_paragraph = db.Column(db.Boolean, default=False, nullable=False)
+    bold_paragraph = db.Column(db.Boolean, default=False, nullable=False)
     comment = db.Column(db.String(255), nullable=True) 
 
     sentences = db.relationship('Sentence', backref='paragraph', cascade="all, delete-orphan", overlaps="paragraph,sentences")
