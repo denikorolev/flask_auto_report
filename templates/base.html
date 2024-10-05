@@ -22,7 +22,7 @@
         {% if g.current_profile %}
             {% for m in menu %}
                 <li class="header__menu_item">
-                    <a href="{{ url_for(m.url) }}">{{ m.name }}</a>
+                    <a href="{{ m.url }}">{{ m.name }}</a>
                 </li>
             {% endfor %}
         {% endif %}

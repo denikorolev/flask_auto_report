@@ -10,7 +10,15 @@
         <h2>Select a profile:</h2>
         <ul>
             {% for profile in user_profiles %}
-                <li><a href="{{ url_for('set_profile', profile_id=profile.id) }}">{{ profile.profile_name }}</a></li>
+            <li>
+                <a href="{{ url_for('set_profile', profile_id=profile.id) }}">{{ profile.profile_name }}</a>
+                <!-- Кнопка для перехода к настройкам профиля -->
+                <a class="btn" href="{{ url_for('profile_settings.profile_settings', profile_id=profile.id) }}">Edit</a>
+                <!-- Форма для удаления профиля -->
+                <form method="POST" action="{{ url_for('delete_profile', profile_id=profile.id) }}" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this profile?');">
+                    <button class="btn" type="submit">Delete</button>
+                </form>
+            </li>
             {% endfor %}
             <!-- Добавляем ссылку для создания нового профиля -->
             <li><a href="{{ url_for('create_profile') }}">Create a new profile</a></li>

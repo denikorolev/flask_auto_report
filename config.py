@@ -1,8 +1,8 @@
 # config.py
-#v0.2.1
 # Все переменные настроек пользователя сохранены в базе данных в 
 # таблице app_config их можно добавлять через AppConfig класс в models.py
 
+from flask import url_for, session, g
 from flask_login import current_user
 import os
 from dotenv import load_dotenv
@@ -23,13 +23,26 @@ class Config:
     OPENAI_MODEL = os.getenv("OPENAI_MODEL")
     
     # Menu configuration
-    MENU = [
-        {"name": "main", "url": "index"},
-        {"name": "report", "url": "working_with_reports.choosing_report"},
-        {"name": "my reports", "url": "my_reports.reports_list"},
-        {"name": "new report", "url": "new_report_creation.create_report"},
-        {"name": "settings", "url": "report_settings.report_settings"}
-    ]
+    @staticmethod
+    def get_menu():
+        """Формирует меню с учетом текущего профиля"""
+        menu = [
+            {"name": "main", "url": url_for("index")},
+            {"name": "report", "url": url_for("working_with_reports.choosing_report")},
+            {"name": "my reports", "url": url_for("my_reports.reports_list")},
+            {"name": "new report", "url": url_for("new_report_creation.create_report")},
+            {"name": "settings", "url": url_for("report_settings.report_settings")},
+        ]
+        
+        # Добавляем настройки профиля, если профиль выбран
+        if g.current_profile:
+            menu.append({
+                "name": "profile settings",
+                "url": url_for("profile_settings.profile_settings", profile_id=g.current_profile.id)
+            })
+        
+        return menu
+
 
     @staticmethod
     def load_user_config(user_id):

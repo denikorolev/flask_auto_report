@@ -1,0 +1,21 @@
+<!-- templates/profile_settings.html -->
+{% extends "base.html" %}
+
+{% block container %}
+    <h2>Profile Settings</h2>
+    <form method="POST" action="{{ url_for('profile_settings.update_profile_settings') }}">
+        <input type="hidden" name="profile_id" value="{{ profile.id }}">
+        <div>
+            <label for="profile_name">Profile Name:</label>
+            <input type="text" id="profile_name" name="profile_name" value="{{ profile.profile_name }}" required>
+        </div>
+        <div>
+            <label for="description">Description:</label>
+            <textarea id="description" name="description">{{ profile.description }}</textarea>
+        </div>
+        <button type="submit">Save Changes</button>
+    </form>
+    <form method="POST" action="{{ url_for('delete_profile', profile_id=profile.id) }}" onsubmit="return confirm('Are you sure you want to delete this profile?');">
+        <button type="submit">Delete Profile</button>
+    </form>
+{% endblock container %}

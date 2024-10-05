@@ -2,7 +2,7 @@
 
 from flask import Flask, redirect, url_for, flash, render_template, request, session, g
 from flask_login import LoginManager, login_required, current_user
-from config import get_config
+from config import get_config, Config
 from flask_migrate import Migrate
 from auth import auth_bp  
 from models import db, User, UserProfile, ReportParagraph
@@ -15,8 +15,9 @@ from my_reports import my_reports_bp
 from report_settings import report_settings_bp  
 from new_report_creation import new_report_creation_bp
 from editing_report import editing_report_bp
+from profile_settings import profile_settings_bp
 
-version = "0.3.4"
+version = "0.3.5"
 
 app = Flask(__name__)
 app.config.from_object(get_config()) # Load configuration from file config.py
@@ -39,6 +40,7 @@ app.register_blueprint(my_reports_bp, url_prefix="/my_reports")
 app.register_blueprint(report_settings_bp, url_prefix="/report_settings")
 app.register_blueprint(editing_report_bp, url_prefix="/editing_report")
 app.register_blueprint(new_report_creation_bp, url_prefix="/new_report_creation")
+app.register_blueprint(profile_settings_bp, url_prefix="/profile_settings")
 
 # Load user callback
 @login_manager.user_loader
@@ -46,8 +48,7 @@ def load_user(user_id):
     with db.session() as session:
         return session.get(User, int(user_id))
 
-# Use menu from config
-menu = app.config['MENU']
+
 
 # Functions 
 
@@ -61,8 +62,6 @@ def test_db_connection():
         flash(f"Database connection failed: {e}", "error")
         return False
 
-
-from models import ReportParagraph, db
 
 def set_title_paragraph_false_for_all():
     """Обновляет поле title_paragraph на False для всех параграфов, где оно не заполнено или имеет некорректное значение."""
@@ -118,9 +117,35 @@ def update_bold_paragraph_flags():
 
 # Routs
 
+# Логика для того, чтобы сделать данные профиля доступными в любом месте программы
+@app.before_request
+def load_current_profile():
+    # Проверяем, установлена ли сессия пользователя и находится ли он на странице, требующей профиля
+    if current_user.is_authenticated:  # Убедимся, что пользователь вошел в систему
+        if 'profile_id' in session:
+            # Устанавливаем текущий профиль
+            g.current_profile = UserProfile.find_by_id(session['profile_id'])
+            
+            if not g.current_profile or g.current_profile.user_id != current_user.id:
+                # Если профиль не найден или не принадлежит текущему пользователю, удаляем его из сессии
+                session.pop('profile_id', None)
+                g.current_profile = None
+        else:
+            g.current_profile = None
+        
+        # Если профиль отсутствует, но пользователь аутентифицирован, и запрос не относится к выбору профиля, перенаправляем
+        if not g.current_profile and request.endpoint not in ['create_profile', 'set_profile', 'index', 'auth.logout']:
+            flash('Please select a profile before proceeding.', 'warning')
+            return redirect(url_for('create_profile'))
+        app.config['MENU'] = Config.get_menu()
+    else:
+        # Если пользователь не авторизован, очищаем меню
+        app.config['MENU'] = []
+
 @app.route("/", methods=['POST', 'GET'])
 @login_required
 def index():
+    menu = app.config['MENU']
     # Проверяем подключение к базе данных
     if not test_db_connection():
         return "Database connection failed", 500
@@ -182,28 +207,25 @@ def set_profile(profile_id):
     return redirect(url_for("working_with_reports.choosing_report"))
 
 
-# Логика для того, чтобы сделать данные профиля доступными в любом месте программы
-@app.before_request
-def load_current_profile():
-    # Проверяем, установлена ли сессия пользователя и находится ли он на странице, требующей профиля
-    if current_user.is_authenticated:  # Убедимся, что пользователь вошел в систему
-        if 'profile_id' in session:
-            # Устанавливаем текущий профиль
-            g.current_profile = UserProfile.find_by_id(session['profile_id'])
-            if not g.current_profile or g.current_profile.user_id != current_user.id:
-                # Если профиль не найден или не принадлежит текущему пользователю, удаляем его из сессии
-                session.pop('profile_id', None)
-                g.current_profile = None
-        else:
-            g.current_profile = None
-        
-        # Если профиль отсутствует, но пользователь аутентифицирован, и запрос не относится к выбору профиля, перенаправляем
-        if not g.current_profile and request.endpoint not in ['create_profile', 'set_profile', 'index', 'auth.logout']:
-            flash('Please select a profile before proceeding.', 'warning')
-            return redirect(url_for('create_profile'))
+# Маршрут для удаления профиля
+@app.route('/delete_profile/<int:profile_id>', methods=['POST'])
+@login_required
+def delete_profile(profile_id):
+    profile = UserProfile.find_by_id_and_user(profile_id, current_user.id)
+    if profile:
+        db.session.delete(profile)
+        db.session.commit()
+        flash('Profile deleted successfully!', 'success')
+    else:
+        flash('Profile not found or you do not have permission to delete it.', 'danger')
+
+    return redirect(url_for('index'))
+
+
 
             
-            
+
+
 # Это обязательная часть для разрыва сессии базы данных после каждого обращения
 @app.teardown_appcontext 
 def close_db(error):
