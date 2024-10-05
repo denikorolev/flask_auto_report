@@ -185,12 +185,23 @@ def set_profile(profile_id):
 # Логика для того, чтобы сделать данные профиля доступными в любом месте программы
 @app.before_request
 def load_current_profile():
-    # Проверяем, установлен ли профиль в сессии
-    if 'profile_id' in session:
-        g.current_profile = UserProfile.find_by_id(session['profile_id'])
-    else:
-        # Профиль не установлен, используем None
-        g.current_profile = None
+    # Проверяем, установлена ли сессия пользователя и находится ли он на странице, требующей профиля
+    if current_user.is_authenticated:  # Убедимся, что пользователь вошел в систему
+        if 'profile_id' in session:
+            # Устанавливаем текущий профиль
+            g.current_profile = UserProfile.find_by_id(session['profile_id'])
+            if not g.current_profile or g.current_profile.user_id != current_user.id:
+                # Если профиль не найден или не принадлежит текущему пользователю, удаляем его из сессии
+                session.pop('profile_id', None)
+                g.current_profile = None
+        else:
+            g.current_profile = None
+        
+        # Если профиль отсутствует, но пользователь аутентифицирован, и запрос не относится к выбору профиля, перенаправляем
+        if not g.current_profile and request.endpoint not in ['create_profile', 'set_profile', 'index', 'auth.logout']:
+            flash('Please select a profile before proceeding.', 'warning')
+            return redirect(url_for('create_profile'))
+
             
             
 # Это обязательная часть для разрыва сессии базы данных после каждого обращения

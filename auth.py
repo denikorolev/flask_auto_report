@@ -3,7 +3,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, current_app as app
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import login_user, login_required, logout_user, current_user
-from models import db, User
+from models import db, User, UserProfile
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -45,14 +45,24 @@ def signup():
         user_email = request.form["email"]
         user_name = request.form["username"]
         password = request.form["password"]
+        
+        # Проверка наличия пользователя с таким email
         if User.query.filter_by(user_email=user_email).first():
             flash("Email already exists", "error")
             return redirect(url_for("auth.signup"))
-        # Create object of class user and then create pass-hash
+        
+        # Создание нового пользователя
         user = User(user_email=user_email, user_name=user_name, user_role=user_role)
         user.set_password(password)
         db.session.add(user)
         db.session.commit()
+        
+        # Создание профиля "Default" для нового пользователя
+        default_profile_name = "Default"
+        default_description = "default"
+        UserProfile.create(user_id=user.id, profile_name=default_profile_name, description=default_description)
+        
         flash("Account created successfully", "success")
         return redirect(url_for("auth.login"))
+    
     return render_template("signup.html", title="SignUp")
