@@ -9,6 +9,7 @@ from file_processing import save_to_word
 from calculating import calculate_age
 from sentence_processing import split_sentences, get_new_sentences, group_keywords
 from errors_processing import print_object_structure
+from utils import ensure_list
 
 from openai import OpenAI 
 
@@ -182,19 +183,32 @@ def new_sentence_adding():
 def add_sentence_to_paragraph():
     try:
         data = request.get_json()
-        paragraph_id = data.get("paragraph_id")
-        sentence_text = data.get("sentence_text")
+        sentence_for_adding = data.get("sentence_for_adding", [])
 
-        if not paragraph_id or not sentence_text:
-            return jsonify({"status": "error", "message": "Missing required data."}), 400
+        if not sentence_for_adding:
+            return jsonify({"status": "error", "message": "Отсутствуют данные абзацев."}), 400
 
-        # Добавляем новое предложение в БД с индексом 0, весом 1, пустым комментарием
-        Sentence.create(paragraph_id=paragraph_id, index=0, weight=1, comment="", sentence=sentence_text)
+        # Перебираем каждый элемент списка абзацев
+        for paragraph in sentence_for_adding:
+            paragraph_id = paragraph.get("paragraph_id")
+            sentences = paragraph.get("sentences")
 
-        return jsonify({"status": "success", "message": "Sentence added successfully!"}), 200
+            if not paragraph_id or not sentences:
+                continue  # Пропускаем, если отсутствуют необходимые данные
+
+            # Используем ensure_list, чтобы всегда иметь список предложений
+            sentences_list = ensure_list(sentences)
+
+            # Перебираем список предложений и добавляем их в базу данных
+            for sentence_text in sentences_list:
+                if sentence_text:
+                    Sentence.create(paragraph_id=paragraph_id, index=0, weight=1, comment="", sentence=sentence_text)
+
+        db.session.commit()  # Сохраняем все изменения в базе данных
+
+        return jsonify({"status": "success", "message": "Все предложения успешно добавлены!"}), 200
     except Exception as e:
-        return jsonify({"status": "error", "message": f"Failed to add sentence: {e}"}), 500
-
+        return jsonify({"status": "error", "message": f"Не удалось добавить предложения: {e}"}), 500
 
 
 @working_with_reports_bp.route("/export_to_word", methods=["POST"])

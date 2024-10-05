@@ -169,7 +169,7 @@ function collectTextFromRightSide() {
  */
 function displayProcessedParagraphs(paragraphs) {
     const container = document.getElementById('sentenceAddingRequestContainer');
-    container.innerHTML = ''; // Очищаем контейнер перед добавлением новых данных
+    container.innerHTML = ''; // Clear the container before adding new data
 
     // Проверка, есть ли данные для обработки
     if (!paragraphs || !Array.isArray(paragraphs)) {
@@ -177,6 +177,83 @@ function displayProcessedParagraphs(paragraphs) {
         return;
     }
 
+    // Внутренняя функция для отправки данных на сервер
+    function sendSentences(dataToSend) {
+        sendRequest({
+            url: "/working_with_reports/add_sentence_to_paragraph",
+            method: "POST",
+            data: dataToSend
+        })
+        .then(response => {
+            if (response) {
+                toastr.success(response.message || 'Operation completed successfully!', 'Success');
+            }
+        })
+        .catch(error => {
+            console.error("Failed to send sentences:", error);
+            alert("Failed to send sentences.");
+        });
+    }
+
+    // Внутренняя функция для создания предложения и кнопки "Добавить"
+    function createSentenceElement(paragraphId, sentence) {
+        const sentenceDiv = document.createElement('div');
+        sentenceDiv.classList.add('sentence-container');
+        sentenceDiv.textContent = sentence;
+
+        // Добавляем кнопку "Добавить"
+        const addButton = document.createElement('button');
+        addButton.textContent = 'Добавить';
+        addButton.classList.add('add-sentence-btn');
+        addButton.addEventListener('click', function() {
+            const dataToSend = {
+                sentence_for_adding: [
+                    {
+                        paragraph_id: paragraphId,
+                        sentences: [sentence]
+                    }
+                ]
+            };
+
+            // Используем внутреннюю функцию для отправки данных
+            sendSentences(dataToSend);
+        });
+
+        sentenceDiv.appendChild(addButton);
+        return sentenceDiv;
+    }
+
+    // Создаем кнопку "Отправить все"
+    const sendAllButton = document.createElement('button');
+    sendAllButton.textContent = 'Отправить все';
+    sendAllButton.classList.add('send-all-btn');
+    sendAllButton.addEventListener('click', function() {
+        const allSentences = [];
+
+        // Собираем все предложения для отправки
+        paragraphs.forEach(paragraph => {
+            const sentences = Array.isArray(paragraph.sentences) ? paragraph.sentences : [paragraph.sentence];
+            if (sentences) {
+                allSentences.push({
+                    paragraph_id: paragraph.paragraph_id,
+                    sentences: sentences
+                });
+            }
+        });
+
+        // Формируем данные для отправки
+        const dataToSend = {
+            sentence_for_adding: allSentences
+        };
+
+        // Используем внутреннюю функцию для отправки данных
+        sendSentences(dataToSend);
+    });
+
+    // Добавляем кнопку "Отправить все" в контейнер
+    container.appendChild(sendAllButton);
+
+    // Создаем и добавляем элементы предложений в контейнер
     paragraphs.forEach(paragraph => {
         const paragraphDiv = document.createElement('div');
         paragraphDiv.classList.add('paragraph-container');
@@ -187,74 +264,13 @@ function displayProcessedParagraphs(paragraphs) {
         // Проверка на массив предложений
         if (Array.isArray(paragraph.sentences)) {
             paragraph.sentences.forEach(sentence => {
-                const sentenceDiv = document.createElement('div');
-                sentenceDiv.classList.add('sentence-container');
-                sentenceDiv.textContent = sentence;
-
-                // Добавляем кнопку "Добавить" для каждого предложения
-                const addButton = document.createElement('button');
-                addButton.textContent = 'Добавить';
-                addButton.classList.add('add-sentence-btn');
-                addButton.addEventListener('click', function() {
-                    // Используем sendRequest для отправки предложения на сервер
-                    sendRequest({
-                        url: "/working_with_reports/add_sentence_to_paragraph",
-                        method: "POST",
-                        data: {
-                            paragraph_id: paragraph.paragraph_id,
-                            sentence_text: sentence
-                        }
-                    })
-                    .then(response => {
-                        if (response) {
-                            // Используем сообщение от сервера
-                            toastr.success(response.message || 'Operation completed successfully!', 'Success');
-                        }
-                    })
-                    .catch(error => {
-                        console.error("Failed to add sentence:", error);
-                        alert("Failed to add sentence.");
-                    });
-                });
-
-                sentenceDiv.appendChild(addButton);
-                paragraphDiv.appendChild(sentenceDiv);
+                const sentenceElement = createSentenceElement(paragraph.paragraph_id, sentence);
+                paragraphDiv.appendChild(sentenceElement);
             });
         } else if (typeof paragraph.sentence === 'string') {
             // Если предложение передано как строка (единичное предложение)
-            const sentenceDiv = document.createElement('div');
-            sentenceDiv.classList.add('sentence-container');
-            sentenceDiv.textContent = paragraph.sentence;
-
-            // Добавляем кнопку "Добавить" для предложения
-            const addButton = document.createElement('button');
-            addButton.textContent = 'Добавить';
-            addButton.classList.add('add-sentence-btn');
-            addButton.addEventListener('click', function() {
-                // Используем sendRequest для отправки предложения на сервер
-                sendRequest({
-                    url: "/working_with_reports/add_sentence_to_paragraph",
-                    method: "POST",
-                    data: {
-                        paragraph_id: paragraph.paragraph_id,
-                        sentence_text: paragraph.sentence
-                    }
-                })
-                .then(response => {
-                    if (response) {
-                        console.log(response)
-                        // Используем сообщение от сервера
-                        toastr.success(response.message || 'Sentence added successfully!', 'Success');
-                    }
-                })
-                .catch(error => {
-                    console.error("Failed to add sentence:", error);
-                    alert("Failed to add sentence.");
-                });
-            });
-
-            sentenceDiv.appendChild(addButton);
-            paragraphDiv.appendChild(sentenceDiv);
+            const sentenceElement = createSentenceElement(paragraph.paragraph_id, paragraph.sentence);
+            paragraphDiv.appendChild(sentenceElement);
         } else {
             console.error('No valid sentences found for paragraph:', paragraph);
         }
@@ -262,6 +278,8 @@ function displayProcessedParagraphs(paragraphs) {
         container.appendChild(paragraphDiv);
     });
 }
+
+
 
 
 /**
