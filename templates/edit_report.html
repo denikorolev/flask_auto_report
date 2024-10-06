@@ -11,7 +11,7 @@
 {% block container %}
 {{ super() }}
 
-<div class="container">
+<div class="container" data-report-id="{{ report.id }}">
     {% if report %}
     <h3>Editing Report</h3>
     <div>
@@ -54,13 +54,23 @@
                 <!-- Уровень параграфа -->
                 {% if report_paragraphs %}
                     {% for paragraph in report_paragraphs %}
-                        <div class="flex_column">
-                            <form class="edit-paragraph-form" method="POST" action="{{ url_for('editing_report.edit_report', report_id=report.id) }}">
+                        <div class="flex_column" data-paragraph-id="{{ paragraph.id }}">
+                            <form class="flex edit-paragraph-form" method="POST" action="{{ url_for('editing_report.edit_report', report_id=report.id) }}">
                                 <input type="hidden" id="paragraph_id" name="paragraph_id" value="{{ paragraph.id }}">
                                 <input class="report_input__item report_input__item--index" type="text" id="paragraph_index" name="paragraph_index" value="{{ paragraph.paragraph_index }}">
                                 <input class="report_input__item report_input__item--name" type="text" id="paragraph" name="paragraph" value="{{ paragraph.paragraph }}">
-                                <label for="paragraph_visible">Visible:</label>
-                                <input type="checkbox" id="paragraph_visible" name="paragraph_visible" value="True" {% if paragraph.paragraph_visible %} checked {% endif %}>
+                                <!-- Чекбоксы -->
+                                <div class="form-group">
+                                    <label for="paragraph_visible">Visible:</label>
+                                    <input type="checkbox" id="paragraph_visible" name="paragraph_visible" {% if paragraph.paragraph_visible %}checked{% endif %}>
+                                
+                                    <label for="title_paragraph">Title:</label>
+                                    <input type="checkbox" id="title_paragraph" name="title_paragraph" {% if paragraph.title_paragraph %}checked{% endif %}>
+                                
+                                    <label for="bold_paragraph">Bold:</label>
+                                    <input type="checkbox" id="bold_paragraph" name="bold_paragraph" {% if paragraph.bold_paragraph %}checked{% endif %}>
+                                </div>
+
                                 <button class="btn report__btn delete-paragraph-btn" type="button" id="delete_paragraph" data-paragraph-id="{{ paragraph.id }}" value="delete_paragraph" name="delete_paragraph">Delete </button>
                                 <button class="btn report__btn" type="submit" id="edit_paragraph" value="edit_paragraph" name="edit_paragraph">Edit</button>
                                 <button type="button" class="btn report__btn toggle-sentences" data-paragraph-id="{{ paragraph.id }}">
@@ -84,7 +94,7 @@
                                     {% endfor %}
                                 {% endif %}
                                 <li>
-                                    <form method="POST" action="{{ url_for('editing_report.edit_report', report_id=report.id) }}" class="add-sentence-form">
+                                    <form method="POST" data-paragraph-id="{{ paragraph.id }}" action="{{ url_for('editing_report.edit_report', report_id=report.id) }}" class="add-sentence-form">
                                         <input type="hidden" id="sentence_paragraph" name="add_sentence_paragraph" value="{{ paragraph.id }}">
                                         <button class="btn report__btn" type="submit" id="add_sentence" value="Add Sentence" name="add_sentence">Add Sentence</button>
                                     </form>
@@ -107,206 +117,9 @@
     <!-- List of tables and buttons for editing -->
     {% endif %}
 </div>
-
-<script>
-
-    // Функция обработки ответа сервера
-    function handleResponse(response) {
-        response.json().then(data => {
-            if (response.ok) {
-                window.location.reload();  
-            } else {
-                alert(`Error: ${data.message}`);
-            }
-        }).catch(error => {
-            console.error("Failed to parse response:", error);
-            alert("Something went wrong.");
-        });
-    }
-    
-
-    document.addEventListener("DOMContentLoaded", function() {
-        // Обработка кнопки Expand/Save
-        const toggleButtons = document.querySelectorAll(".toggle-sentences");
-        toggleButtons.forEach(button => {
-            button.addEventListener("click", function() {
-                const paragraphId = this.getAttribute("data-paragraph-id");
-                const sentenceList = document.getElementById(`sentences-${paragraphId}`);
-
-                // Логика кнопки Expand/Save
-                if (this.textContent.includes("Expand")) {
-                    sentenceList.style.display = "block";
-                    this.textContent = "Save";
-                } else if (this.textContent.includes("Save")) {
-                    this.textContent = `Expand (${sentenceList.children.length - 1})`; // Обновляем текст обратно на Expand
-                    sentenceList.style.display = "none";
-
-                    // Сбор данных для всех предложений в списке
-                    const sentenceForms = sentenceList.querySelectorAll(".edit-sentence-form");
-                    const sentenceData = [];
-
-                    sentenceForms.forEach(form => {
-                        const formData = new FormData(form);
-                        const jsonData = Object.fromEntries(formData.entries());
-                        sentenceData.push(jsonData);
-                    });
-
-                    // Отправляем данные предложений на сервер
-                    fetch("{{ url_for('editing_report.edit_sentences_bulk') }}", {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json"
-                        },
-                        body: JSON.stringify({sentences: sentenceData })
-                    }).then(response => {
-                        if (response.ok) {
-                            window.location.reload(); // Обновляем страницу после успешного сохранения
-                        } else {
-                            alert("Failed to save sentences.");
-                        }
-                    });
-                }
-            });
-        });
-
-        // Добавление нового предложения без отправки на сервер
-        document.querySelectorAll(".add-sentence-form").forEach(form => {
-            form.addEventListener("submit", function(event) {
-                event.preventDefault();
-    
-                const paragraphId = form.querySelector('input[name="add_sentence_paragraph"]').value;
-                const sentenceList = document.getElementById(`sentences-${paragraphId}`);
-    
-                // Находим максимальный индекс среди предложений
-                let maxIndex = 0;
-                sentenceList.querySelectorAll("input[name='sentence_index']").forEach(input => {
-                    const index = parseInt(input.value, 10);
-                    if (index > maxIndex) {
-                        maxIndex = index;
-                    }
-                });
-    
-                // Назначаем новый индекс
-                const newSentenceIndex = maxIndex + 1;
-    
-                // Создаем новый элемент предложения
-                const newSentenceLi = document.createElement("li");
-                const newSentenceForm = document.createElement("form");
-                newSentenceForm.classList.add("edit-sentence-form");
-    
-                newSentenceForm.innerHTML = `
-                    <input type="hidden" name="sentence_id" value="new">
-                    <input type="hidden" name="add_sentence_paragraph" value="${paragraphId}">
-                    <input class="report_input__item" type="text" name="sentence_sentence" value="New sentence">
-                    <input class="report_input__item" type="text" name="sentence_index" value="${newSentenceIndex}">
-                    <input class="report_input__item" type="text" name="sentence_weight" value="1">
-                    <input class="report_input__item" type="text" name="sentence_comment" value="">
-                    <button class="btn report__btn delete-sentence-btn" type="button" data-sentence-id="new">Delete Sentence</button>
-                `;
-    
-                newSentenceLi.appendChild(newSentenceForm);
-                sentenceList.appendChild(newSentenceLi);
-                sentenceList.style.display = "block"; // Открываем список предложений, если он был скрыт
-
-                // Добавляем обработчик для удаления нового предложения
-                newSentenceForm.querySelector(".delete-sentence-btn").addEventListener("click", function() {
-                newSentenceLi.remove();  // Удаляем элемент из DOM
-            });
-            });
-        });
-    
-        // Update report
-        document.getElementById("update-report-btn").addEventListener("click", function(event) {
-            event.preventDefault();
-            const form = document.getElementById("edit-report-form");
-            const formData = new FormData(form);
-            const jsonData = Object.fromEntries(formData.entries());
-            fetch("{{ url_for('editing_report.edit_report', report_id=report.id) }}", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({report_update: true, ...jsonData})
-            }).then(handleResponse);
-        });
-    
-        // Edit paragraph
-        document.querySelectorAll(".edit-paragraph-form").forEach(form => {
-            form.addEventListener("submit", function(event) {
-                event.preventDefault();
-                const formData = new FormData(this);
-                const jsonData = Object.fromEntries(formData.entries());
-                jsonData.paragraph_visible = form.querySelector('input[name="paragraph_visible"]').checked; // Добавлено извлечение значения чекбокса
-                fetch("{{ url_for('editing_report.edit_report', report_id=report.id) }}", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({edit_paragraph: true, ...jsonData})
-                }).then(handleResponse);
-            });
-        });
-    
-        // New paragraph
-        document.querySelectorAll(".new-paragraph-form").forEach(form => {
-            form.addEventListener("submit", function(event) {
-                event.preventDefault();
-                const formData = new FormData(this);
-                const jsonData = Object.fromEntries(formData.entries());
-                fetch("{{ url_for('editing_report.edit_report', report_id=report.id) }}", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({new_paragraph: true, ...jsonData})
-                }).then(handleResponse);
-            });
-        });
-    
-        // Delete sentence
-        document.querySelectorAll(".delete-sentence-btn").forEach(button => {
-            button.addEventListener("click", function() {
-                const sentenceId = this.getAttribute("data-sentence-id");
-        
-                fetch("{{ url_for('editing_report.edit_report', report_id=report.id) }}", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        delete_sentence: true,
-                        sentence_id: sentenceId
-                    })
-                }).then(response => {
-                    if (response.ok) {
-                        alert("Sentence deleted successfully!");
-                        this.closest("li").remove(); // Удаляем элемент из DOM
-                    } else {
-                        alert("Failed to delete sentence.");
-                    }
-                });
-            });
-        });
-    });
-
-    // Delete paragraph
-    document.querySelectorAll(".delete-paragraph-btn").forEach(button => {
-        button.addEventListener("click", function() {
-            const paragraphId = this.getAttribute("data-paragraph-id");
-
-            fetch("{{ url_for('editing_report.edit_report', report_id=report.id) }}", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    delete_paragraph: true,
-                    paragraph_id: paragraphId
-                })
-            }).then(handleResponse);
-        });
-    });
-    </script>
-    
     
 {% endblock container %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/edit_report.js') }}"></script>
+{% endblock scripts %}

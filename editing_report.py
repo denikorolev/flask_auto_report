@@ -62,14 +62,17 @@ def edit_report():
                     paragraph_index += paragraph_length
 
                 paragraph_visible = data.get("paragraph_visible") == "True"
+                title_paragraph = data.get("title_paragraph") == "True"
+                bold_paragraph = data.get("bold_paragraph") == "True"
+                
                 try:
                     ReportParagraph.create(
                         paragraph_index=paragraph_index,
                         report_id=report.id,
                         paragraph="insert your text",
                         paragraph_visible=paragraph_visible,
-                        title_paragraph=False,
-                        bold_paragraph=False
+                        title_paragraph=title_paragraph,
+                        bold_paragraph=bold_paragraph
                     )
                     return jsonify(success=True, message="Paragraph added successfully")
                 except Exception as e:
@@ -87,6 +90,8 @@ def edit_report():
                 paragraph_for_edit.paragraph_index = data["paragraph_index"]
                 paragraph_for_edit.paragraph = data["paragraph"]
                 paragraph_for_edit.paragraph_visible = data["paragraph_visible"]
+                paragraph_for_edit.title_paragraph = data["title_paragraph"]
+                paragraph_for_edit.bold_paragraph = data["bold_paragraph"]
                 try:
                     paragraph_for_edit.save()
                     return jsonify(success=True, message="Paragraph changed successfully")
