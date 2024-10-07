@@ -97,12 +97,14 @@ document.addEventListener("DOMContentLoaded", function() {
         const form = document.getElementById("edit-report-form");
         const formData = new FormData(form);
         const jsonData = Object.fromEntries(formData.entries());
+        jsonData.report_id = reportId;
+
         sendRequest({
-            url: `/editing_report/edit_report?report_id=${reportId}`,
-            data: { report_update: true, ...jsonData }
+            url: `/editing_report/update_report`,
+            data:jsonData
         }).then(response => {
-            if (response.success) {
-                window.location.reload();
+            if (response.status === "success") {
+                toastr.success(response.message);
             } else {
                 alert(response.message);
             }
@@ -118,13 +120,12 @@ document.addEventListener("DOMContentLoaded", function() {
             jsonData.paragraph_visible = form.querySelector('input[name="paragraph_visible"]').checked;
             jsonData.title_paragraph = form.querySelector('input[name="title_paragraph"]').checked;
             jsonData.bold_paragraph = form.querySelector('input[name="bold_paragraph"]').checked;
-
             sendRequest({
-                url: `/editing_report/edit_report?report_id=${reportId}`,
-                data: { edit_paragraph: true, ...jsonData }
+                url: `/editing_report/edit_paragraph`,
+                data: jsonData
             }).then(response => {
-                if (response.success) {
-                    window.location.reload();
+                if (response.status === "success") {
+                    toastr.success(response.message);
                 } else {
                     alert(response.message);
                 }
@@ -138,11 +139,13 @@ document.addEventListener("DOMContentLoaded", function() {
             event.preventDefault();
             const formData = new FormData(this);
             const jsonData = Object.fromEntries(formData.entries());
+            jsonData.report_id = reportId;
+
             sendRequest({
-                url: `/editing_report/edit_report?report_id=${reportId}`,
-                data: { new_paragraph: true, ...jsonData }
+                url: `/editing_report/new_paragraph`,
+                data: jsonData
             }).then(response => {
-                if (response.success) {
+                if (response.status === "success") {
                     window.location.reload();
                 } else {
                     alert(response.message);
@@ -157,39 +160,39 @@ document.addEventListener("DOMContentLoaded", function() {
             const sentenceId = this.getAttribute("data-sentence-id");
     
             sendRequest({
-                url: `/editing_report/edit_report?report_id=${reportId}`,
+                url: `/editing_report/delete_sentence`,
                 data: {
-                    delete_sentence: true,
                     sentence_id: sentenceId
                 }
             }).then(response => {
-                if (response.success) {
-                    alert(response.message);
+                if (response.status === "success") {
+                    toastr.success(response.message);
                     this.closest("li").remove();
                 } else {
                     alert(response.message);
                 }
         });
     });
-});
 
-// Delete paragraph
-document.querySelectorAll(".delete-paragraph-btn").forEach(button => {
-    button.addEventListener("click", function() {
-        const paragraphId = this.getAttribute("data-paragraph-id");
-        sendRequest({
-            url: `/editing_report/edit_report?report_id=${reportId}`,
-            data: {
-                delete_paragraph: true,
-                paragraph_id: paragraphId
-            }
-        }).then(response => {
-            if (response.success) {
-                window.location.reload();
-            } else {
-                alert(response.message);
-            }
+    // Delete paragraph
+    document.querySelectorAll(".delete-paragraph-btn").forEach(button => {
+        button.addEventListener("click", function() {
+            const paragraphId = this.getAttribute("data-paragraph-id");
+            sendRequest({
+                url: `/editing_report/delete_paragraph`,
+                data: {
+                    paragraph_id: paragraphId
+                }
+            }).then(response => {
+                if (response.status === "success") {
+                    window.location.reload();
+                } else {
+                    alert(response.message);
+                }
+            });
         });
     });
+    });
+    
 });
-});
+

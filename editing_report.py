@@ -37,12 +37,12 @@ def edit_report():
         if request.is_json:  # Проверка, если данные запроса в формате JSON
             data = request.get_json()  # Получение данных JSON из запроса
 
-            if "delete_sentence" in data:
-                try:
-                    Sentence.delete_by_id(data["sentence_id"])
-                    return jsonify(success=True, message="Sentence deleted successfully")
-                except Exception as e:
-                    return jsonify(success=False, message=f"Can't delete sentence. error code: {e}")
+            # if "delete_sentence" in data:
+            #     try:
+            #         Sentence.delete_by_id(data["sentence_id"])
+            #         return jsonify(success=True, message="Sentence deleted successfully")
+            #     except Exception as e:
+            #         return jsonify(success=False, message=f"Can't delete sentence. error code: {e}")
 
             if "report_update" in data:
                 report.report_name = data["report_name"]
@@ -55,48 +55,48 @@ def edit_report():
                 except Exception as e:
                     return jsonify(success=False, message=f"Can't update report. Error code: {e}")
 
-            if "new_paragraph" in data:
-                paragraph_index = 1
-                if report_paragraphs:
-                    paragraph_length = len(report_paragraphs)
-                    paragraph_index += paragraph_length
+            # if "new_paragraph" in data:
+            #     paragraph_index = 1
+            #     if report_paragraphs:
+            #         paragraph_length = len(report_paragraphs)
+            #         paragraph_index += paragraph_length
 
-                paragraph_visible = data.get("paragraph_visible") == "True"
-                title_paragraph = data.get("title_paragraph") == "True"
-                bold_paragraph = data.get("bold_paragraph") == "True"
+            #     paragraph_visible = data.get("paragraph_visible") == "True"
+            #     title_paragraph = data.get("title_paragraph") == "True"
+            #     bold_paragraph = data.get("bold_paragraph") == "True"
                 
-                try:
-                    ReportParagraph.create(
-                        paragraph_index=paragraph_index,
-                        report_id=report.id,
-                        paragraph="insert your text",
-                        paragraph_visible=paragraph_visible,
-                        title_paragraph=title_paragraph,
-                        bold_paragraph=bold_paragraph
-                    )
-                    return jsonify(success=True, message="Paragraph added successfully")
-                except Exception as e:
-                    return jsonify(success=False, message=f"Something went wrong. error code: {e}")
+            #     try:
+            #         ReportParagraph.create(
+            #             paragraph_index=paragraph_index,
+            #             report_id=report.id,
+            #             paragraph="insert your text",
+            #             paragraph_visible=paragraph_visible,
+            #             title_paragraph=title_paragraph,
+            #             bold_paragraph=bold_paragraph
+            #         )
+            #         return jsonify(success=True, message="Paragraph added successfully")
+            #     except Exception as e:
+            #         return jsonify(success=False, message=f"Something went wrong. error code: {e}")
 
-            if "delete_paragraph" in data:
-                try:
-                    ReportParagraph.delete_by_id(data["paragraph_id"])
-                    return jsonify(success=True, message="Paragraph deleted successfully")
-                except Exception as e:
-                    return jsonify(success=False, message="Paragraph not found")
+            # if "delete_paragraph" in data:
+            #     try:
+            #         ReportParagraph.delete_by_id(data["paragraph_id"])
+            #         return jsonify(success=True, message="Paragraph deleted successfully")
+            #     except Exception as e:
+            #         return jsonify(success=False, message="Paragraph not found")
 
-            if "edit_paragraph" in data:
-                paragraph_for_edit = ReportParagraph.query.get(data["paragraph_id"])
-                paragraph_for_edit.paragraph_index = data["paragraph_index"]
-                paragraph_for_edit.paragraph = data["paragraph"]
-                paragraph_for_edit.paragraph_visible = data["paragraph_visible"]
-                paragraph_for_edit.title_paragraph = data["title_paragraph"]
-                paragraph_for_edit.bold_paragraph = data["bold_paragraph"]
-                try:
-                    paragraph_for_edit.save()
-                    return jsonify(success=True, message="Paragraph changed successfully")
-                except Exception as e:
-                    return jsonify(success=False, message=f"Something went wrong. error code {e}")
+            # if "edit_paragraph" in data:
+            #     paragraph_for_edit = ReportParagraph.query.get(data["paragraph_id"])
+            #     paragraph_for_edit.paragraph_index = data["paragraph_index"]
+            #     paragraph_for_edit.paragraph = data["paragraph"]
+            #     paragraph_for_edit.paragraph_visible = data["paragraph_visible"]
+            #     paragraph_for_edit.title_paragraph = data["title_paragraph"]
+            #     paragraph_for_edit.bold_paragraph = data["bold_paragraph"]
+            #     try:
+            #         paragraph_for_edit.save()
+            #         return jsonify(success=True, message="Paragraph changed successfully")
+            #     except Exception as e:
+            #         return jsonify(success=False, message=f"Something went wrong. error code {e}")
 
 
     return render_template('edit_report.html', 
@@ -107,9 +107,118 @@ def edit_report():
                            )
 
 
+@editing_report_bp.route('/update_report', methods=['POST'])
+@login_required
+def update_report():
+    if not request.is_json:
+        return jsonify({"status": "error", "message": "Invalid request format"}), 400
+
+    data = request.get_json()
+    report_id = data.get("report_id")
+    report = Report.query.get(report_id)
+
+    if not report or report.userid != current_user.id:
+        return jsonify({"status": "error", "message": "Report not found or you don't have permission to edit it"}), 403
+
+    try:
+        report.report_name = data.get("report_name")
+        report.comment = data.get("comment")
+        report_side_value = data.get("report_side")
+        report.report_side = True if report_side_value == "true" else False if report_side_value == "false" else False
+        report.save()
+        return jsonify({"status": "success", "message": "Report updated successfully"}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": f"Can't update report. Error code: {e}"}), 400
+
+
+
+@editing_report_bp.route('/new_paragraph', methods=['POST'])
+@login_required
+def new_paragraph():
+    if not request.is_json:
+        return jsonify({"status": "error", "message": "Invalid request format"}), 400
+
+    data = request.get_json()
+    report_id = data.get("report_id")
+    report = Report.query.get(report_id)
+
+    if not report or report.userid != current_user.id:
+        return jsonify({"status": "error", "message": "Report not found or you don't have permission to edit it"}), 403
+
+    try:
+        paragraph_index = len(report.report_paragraphs) + 1
+        paragraph_visible = data.get("paragraph_visible") == "True"
+        title_paragraph = data.get("title_paragraph") == "True"
+        bold_paragraph = data.get("bold_paragraph") == "True"
+        
+        ReportParagraph.create(
+            paragraph_index=paragraph_index,
+            report_id=report.id,
+            paragraph="insert your text",
+            paragraph_visible=paragraph_visible,
+            title_paragraph=title_paragraph,
+            bold_paragraph=bold_paragraph
+        )
+        return jsonify({"status": "success", "message": "Paragraph added successfully"}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": f"Something went wrong. Error code: {e}"}), 400
+
+
+@editing_report_bp.route('/edit_paragraph', methods=['POST'])
+@login_required
+def edit_paragraph():
+    if not request.is_json:
+        return jsonify({"status": "error", "message": "Invalid request format"}), 400
+
+    data = request.get_json()
+    paragraph_id = data.get("paragraph_id")
+    paragraph_for_edit = ReportParagraph.query.get(paragraph_id)
+
+    if not paragraph_for_edit:
+        return jsonify({"status": "error", "message": "Paragraph not found"}), 404
+
+    if paragraph_for_edit.report.userid != current_user.id:
+        return jsonify({"status": "error", "message": "You don't have permission to edit this paragraph"}), 403
+
+    try:
+        paragraph_for_edit.paragraph_index = data.get("paragraph_index")
+        paragraph_for_edit.paragraph = data.get("paragraph")
+        paragraph_for_edit.paragraph_visible = data.get("paragraph_visible")
+        paragraph_for_edit.title_paragraph = data.get("title_paragraph")
+        paragraph_for_edit.bold_paragraph = data.get("bold_paragraph")
+        paragraph_for_edit.save()
+        return jsonify({"status": "success", "message": "Paragraph updated successfully"}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": f"Something went wrong. Error code: {e}"}), 400
+
+
+@editing_report_bp.route('/delete_paragraph', methods=['POST'])
+@login_required
+def delete_paragraph():
+    if not request.is_json:
+        return jsonify({"status": "error", "message": "Invalid request format"}), 400
+
+    data = request.get_json()
+    paragraph_id = data.get("paragraph_id")
+    paragraph = ReportParagraph.query.get(paragraph_id)
+
+    if not paragraph:
+        return jsonify({"status": "error", "message": "Paragraph not found"}), 404
+
+    if paragraph.report.userid != current_user.id:
+        return jsonify({"status": "error", "message": "You don't have permission to delete this paragraph"}), 403
+
+    try:
+        ReportParagraph.delete_by_id(paragraph_id)
+        return jsonify({"status": "success", "message": "Paragraph deleted successfully"}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": f"Failed to delete paragraph. Error code: {e}"}), 400
+
+
 @editing_report_bp.route('/edit_sentences_bulk', methods=['POST'])
 @login_required
 def edit_sentences_bulk():
+
     if not request.is_json:
         return jsonify(success=False, message="Invalid request format"), 400
 
@@ -142,3 +251,30 @@ def edit_sentences_bulk():
     except Exception as e:
         print(f"Error: {e}")
         return jsonify(success=False, message=f"Something went wrong. error code: {e}")
+    
+    
+@editing_report_bp.route('/delete_sentence', methods=['POST'])
+@login_required
+def delete_sentence():
+    if not request.is_json:
+        return jsonify({"status": "error", "message": "Invalid request format"}), 400
+
+    data = request.get_json()
+    sentence_id = data.get("sentence_id")
+    sentence = Sentence.query.get(sentence_id)
+
+    if not sentence:
+        return jsonify({"status": "error", "message": "Sentence not found"}), 404
+
+    if sentence.paragraph.report.userid != current_user.id:
+        return jsonify({"status": "error", "message": "You don't have permission to delete this sentence"}), 403
+
+    try:
+        Sentence.delete_by_id(sentence_id)
+        return jsonify({"status": "success", "message": "Sentence deleted successfully"}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": f"Failed to delete sentence. Error code: {e}"}), 400
+
+
+
+
