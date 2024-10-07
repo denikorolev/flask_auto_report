@@ -237,15 +237,24 @@ html {
 
 .report__paragraph--visible {
     margin-bottom: 5px;
-    font-weight: bold;
 }
 
 .report__paragraph--invisible {
     display: none;
 }
 
-.bold-paragraph {
+.report__paragraph--title{
+    display: block;
+}
+
+.report__paragraph--untitle{
+    display: inline;
+}
+
+.report__paragraph--bold {
     font-weight: bold;
+    text-transform: uppercase;
+
 }
 
 .indented-paragraph {

@@ -135,7 +135,14 @@ function collectTextFromRightSide() {
         // Add paragraph text if it is visible
         if (isElementVisible(paragraph)) {
             const paragraphText = paragraph.innerText.trim();
-            collectedText += paragraphText + " ";
+            collectedText += paragraphText;
+            // Check if the paragraph is a title paragraph
+            const isTitleParagraph = paragraph.getAttribute("data-title-paragraph") === "True";
+            if (isTitleParagraph) {
+                collectedText += "\n";  // Add a newline after title paragraphs
+            } else {
+                collectedText += " "; // Add a space after non-title paragraphs
+            }
         }
 
         let hasSentences = false;  // Flag to check for the presence of sentences
