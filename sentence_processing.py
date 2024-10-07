@@ -1,13 +1,110 @@
 # sentence_processing.py
-#v0.1.4
 
 from flask_login import current_user
 import re
+from docx import Document
 from models import Sentence, ReportParagraph, KeyWordsGroup, Report, User
 from collections import defaultdict
+from errors_processing import print_object_structure
+
+
+def extract_paragraphs_and_sentences(file_path):
+    """
+    Extracts paragraphs and sentences from a Word document, including additional paragraph attributes.
+
+    This function processes a Word document (docx) and identifies paragraphs
+    that start with bold text as section titles. Each title can include additional attributes
+    specified within double parentheses `(( ))` (e.g., `**` for invisible, `==` for bold, `++` for title).
+    Sentences within the paragraphs can be split by the '!!' character to create additional sentences
+    with the same index but incremented weight.
+
+    Args:
+        file_path (str): The file path of the Word document to be processed.
+
+    Returns:
+        list: A list of dictionaries, each representing a paragraph in the document.
+              Each dictionary contains:
+              - 'title' (str): The title of the paragraph (bold text).
+              - 'sentences' (list): A list of sentences (str or list) belonging to that paragraph.
+                                    If a sentence contains '!!', it will be represented as a list
+                                    of sentences for further processing.
+              - 'visible' (bool): Visibility of the paragraph (default is True).
+              - 'bold' (bool): Whether the paragraph title is bold (default is False).
+              - 'is_title' (bool): Whether the paragraph is marked as a title (default is False).
+    
+    Example:
+        [
+            {
+                'title': 'Section 1',
+                'sentences': ['Sentence 1.', ['Sentence 2.', 'Sentence 2 alternative.']],
+                'visible': True,
+                'bold': False,
+                'is_title': True
+            }
+        ]
+    """
+    document = Document(file_path)
+    paragraphs_from_file = []
+    current_paragraph = None
+
+    for para in document.paragraphs:
+        # Check if paragraph has bold text indicating it's a new section
+        if para.runs and para.runs[0].bold:
+            # Handle previous paragraph before moving to the next one
+            if current_paragraph:
+                paragraphs_from_file.append(current_paragraph)
+            
+            # Extract flags and title text
+            title_text = para.text.strip()
+            visible = True
+            bold = False
+            is_title = False
+
+            # Check for the presence of flags in the format: ((**)), ((==)), ((++))
+            if title_text.startswith("((") and "))" in title_text:
+                # Extract the flags from the double parentheses
+                flags = title_text[2:title_text.find("))")].split(',')
+                for flag in flags:
+                    if flag.strip() == "**":
+                        visible = False
+                    elif flag.strip() == "==":
+                        bold = True
+                    elif flag.strip() == "++":
+                        is_title = True
+                
+                # Remove the flag part from the title text
+                title_text = title_text[title_text.find("))") + 2:].strip()
+            
+            # Create a new paragraph entry with the extracted attributes
+            current_paragraph = {
+                'title': title_text,
+                'sentences': [],
+                'visible': visible,
+                'bold': bold,
+                'is_title': is_title
+            }
+        else:
+            # Append sentences to the current paragraph
+            if current_paragraph:
+                sentences = para.text.strip().split('!!')
+                # If there are multiple parts, store them as a nested list
+                if len(sentences) > 1:
+                    current_paragraph['sentences'].append([s.strip() for s in sentences])
+                else:
+                    current_paragraph['sentences'].append(sentences[0].strip())
+
+    # Append the last paragraph
+    if current_paragraph:
+        paragraphs_from_file.append(current_paragraph)
+
+    return paragraphs_from_file
+
+
+
+
 
 def clean_text(sentence, key_words):
-    """ Функция очистки текста от пробелов, знаков припенания и 
+    """ Функция очистки текста от пробелов, знаков припенания, цифр и 
     ключевых слов с приведением всех слов предложения к нижнему 
     регистру """
     # Приводим текст к строчным буквам
@@ -47,6 +144,7 @@ def split_sentences(paragraphs):
         })
 
     return split_paragraphs
+
 
 def get_new_sentences(processed_paragraphs):
     """ Получаем только новые предложения, игнорируя те, что уже 
@@ -88,6 +186,7 @@ def get_new_sentences(processed_paragraphs):
                 })
 
     return new_sentences
+
 
 def sort_key_words_group(unsorted_key_words_group):
     """

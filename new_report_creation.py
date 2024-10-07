@@ -1,11 +1,10 @@
 # new_report_creation.py
-#v0.1.1
 # Includes create_report route
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, session, g
 from flask_login import current_user, login_required
 from models import db, User, Report, ReportType, ReportSubtype, ReportParagraph, Sentence  
-from file_processing import extract_paragraphs_and_sentences
+from sentence_processing import extract_paragraphs_and_sentences
 from werkzeug.utils import secure_filename
 import os
 import shutil 
@@ -102,18 +101,31 @@ def create_report():
                             paragraph_index=idx,
                             report_id=new_report.id,
                             paragraph=paragraph['title'],
-                            paragraph_visible=True,
-                            title_paragraph=False,
-                            bold_paragraph=False
-                        )
-                        for sidx, sentence in enumerate(paragraph['sentences'], start=1):
-                            Sentence.create(
-                                paragraph_id=new_paragraph.id,
-                                index=sidx,
-                                weight=1,
-                                comment='',
-                                sentence=sentence
+                            paragraph_visible=paragraph.get('visible', True),
+                            title_paragraph=paragraph.get('is_title', False),
+                            bold_paragraph=paragraph.get('bold', False)
                             )
+                        # Process sentences, including those split by '!!'
+                        for sentence_index, sentence_data in enumerate(paragraph['sentences'], start=1):
+                            # If the sentence is a list (split by '!!'), handle it accordingly
+                            if isinstance(sentence_data, list):
+                                for weight, split_sentence in enumerate(sentence_data, start=1):
+                                    Sentence.create(
+                                        paragraph_id=new_paragraph.id,
+                                        index=sentence_index,
+                                        weight=weight,
+                                        comment='',
+                                        sentence=split_sentence.strip()
+                                    )
+                            else:
+                                # Process a single sentence (not split by '!!')
+                                Sentence.create(
+                                    paragraph_id=new_paragraph.id,
+                                    index=sentence_index,
+                                    weight=1,
+                                    comment='',
+                                    sentence=sentence_data.strip()
+                                )
                             
                     # После успешной обработки удаляем временную папку и её содержимое
                     if os.path.exists(user_temp_folder):

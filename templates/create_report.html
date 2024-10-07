@@ -83,6 +83,12 @@
 </script>
 
 
+<p style="width: 400px; margin-top: 20px;"> This function processes a Word document (docx) and identifies paragraphs
+    that start with bold text as section titles. Each title can include additional attributes
+    specified within double parentheses `(( ))` (e.g., `**` for invisible, `==` for bold, `++` for title).
+    Sentences within the paragraphs can be split by the '!!' character to create additional sentences
+    with the same index but incremented weight.</p>
+
 {% endblock container %}
 
 {% block scripts %}
