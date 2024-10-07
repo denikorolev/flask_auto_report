@@ -1,9 +1,8 @@
 # report_settings.py
-#v0.3.1
 
 from flask import Blueprint, render_template, request, redirect, flash, current_app, jsonify
 from flask_login import login_required, current_user
-from models import db, ReportType, ReportSubtype, KeyWordsGroup, Report 
+from models import db, ReportType, ReportSubtype, KeyWordsGroup, Report, ParagraphType 
 from itertools import chain
 from file_processing import file_uploader
 from sentence_processing import group_keywords, sort_key_words_group
@@ -41,6 +40,9 @@ def report_settings():
     
     # Get subtypes
     user_subtypes = ReportSubtype.find_by_user(current_user.id)
+    
+    # Get all paragraph types
+    paragraph_types = ParagraphType.query.all() 
     
     # Prepare global key words
     global_user_key_words = KeyWordsGroup.find_without_reports(current_user.id)
@@ -126,7 +128,8 @@ def report_settings():
                            report_key_words=report_key_words,
                            user_reports=user_reports,
                            user_types=user_types,
-                           user_subtypes=user_subtypes 
+                           user_subtypes=user_subtypes,
+                           paragraph_types=paragraph_types 
                            )
 
 # Маршрут для добавления группы ключевых слов
@@ -280,4 +283,23 @@ def edit_keywords():
     db.session.commit()
 
     return jsonify({"status": "success", "message": "Keywords updated successfully"}), 200
+
+
+@report_settings_bp.route('/add_paragraph_type', methods=['POST'])
+@login_required
+def add_paragraph_type():
+    data = request.get_json()
+    new_type_name = data.get('new_paragraph_type', '').strip()
+    
+    if not new_type_name:
+        return jsonify({"status": "error", "message": "Paragraph type name cannot be empty."}), 400
+
+    # Проверяем, что тип с таким именем еще не существует
+    existing_type = ParagraphType.query.filter_by(type_name=new_type_name).first()
+    if existing_type:
+        return jsonify({"status": "error", "message": "A paragraph type with this name already exists."}), 400
+
+    # Создаем новый тип параграфа
+    ParagraphType.create(type_name=new_type_name)
+    return jsonify({"status": "success", "message": "New paragraph type created successfully."}), 200
 

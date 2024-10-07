@@ -55,6 +55,17 @@
                                 <input type="hidden" id="paragraph_id" name="paragraph_id" value="{{ paragraph.id }}">
                                 <input class="report_input__item report_input__item--index" type="text" id="paragraph_index" name="paragraph_index" value="{{ paragraph.paragraph_index }}">
                                 <input class="report_input__item report_input__item--name" type="text" id="paragraph" name="paragraph" value="{{ paragraph.paragraph }}">
+                                
+                                <!-- Dropdown for paragraph type -->
+                                <div class="form-group">
+                                    <label for="paragraph_type">Type:</label>
+                                    <select id="paragraph_type" name="paragraph_type">
+                                        {% for type in paragraph_types %}
+                                            <option value="{{ type.id }}" {% if paragraph.type_paragraph_id == type.id %}selected{% endif %}>{{ type.type_name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                
                                 <!-- Чекбоксы -->
                                 <div class="form-group">
                                     <label for="paragraph_visible">Visible:</label>

@@ -293,7 +293,6 @@ class ReportParagraph(BaseModel):
         db.session.commit()
         return new_paragraph
 
-
 class ParagraphType(db.Model):
     __tablename__ = "paragraph_types"
     id = db.Column(db.Integer, primary_key=True)
@@ -302,10 +301,11 @@ class ParagraphType(db.Model):
     @classmethod
     def create(cls, type_name):
         """Creates a new paragraph type."""
-        new_type = cls(type_name="text")
+        new_type = cls(type_name=type_name)
         db.session.add(new_type)
         db.session.commit()
         return new_type
+
 class Sentence(BaseModel):
     __tablename__ = "sentences"
     paragraph_id = db.Column(db.BigInteger, db.ForeignKey("report_paragraphs.id"), nullable=False)

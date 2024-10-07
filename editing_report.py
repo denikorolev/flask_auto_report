@@ -2,7 +2,7 @@
 
 from flask import Blueprint, render_template, request, current_app, jsonify
 from flask_login import current_user, login_required
-from models import db, Report, ReportParagraph, Sentence  
+from models import db, Report, ReportParagraph, Sentence, ParagraphType
 
 
 editing_report_bp = Blueprint('editing_report', __name__)
@@ -33,13 +33,15 @@ def edit_report():
             sentence.show_separator = previous_index is not None and previous_index != sentence.index
             previous_index = sentence.index
             
+    paragraph_types = ParagraphType.query.all()
 
 
     return render_template('edit_report.html', 
                            title=page_title, 
                            menu=menu, 
                            report=report,
-                           report_paragraphs=report_paragraphs
+                           report_paragraphs=report_paragraphs,
+                           paragraph_types=paragraph_types
                            )
 
 
@@ -87,13 +89,20 @@ def new_paragraph():
         title_paragraph = data.get("title_paragraph") == "True"
         bold_paragraph = data.get("bold_paragraph") == "True"
         
+        
+        # Найти тип параграфа "text" в базе данных и получить его ID
+        default_paragraph_type = ParagraphType.query.filter_by(type_name="text").first()
+        if not default_paragraph_type:
+            return jsonify({"status": "error", "message": "Default paragraph type 'text' not found."}), 400
+        
         ReportParagraph.create(
             paragraph_index=paragraph_index,
             report_id=report.id,
             paragraph="insert your text",
             paragraph_visible=paragraph_visible,
             title_paragraph=title_paragraph,
-            bold_paragraph=bold_paragraph
+            bold_paragraph=bold_paragraph,
+            type_paragraph_id=default_paragraph_type.id
         )
         return jsonify({"status": "success", "message": "Paragraph added successfully"}), 200
     except Exception as e:
@@ -122,6 +131,8 @@ def edit_paragraph():
         paragraph_for_edit.paragraph_visible = data.get("paragraph_visible")
         paragraph_for_edit.title_paragraph = data.get("title_paragraph")
         paragraph_for_edit.bold_paragraph = data.get("bold_paragraph")
+        paragraph_for_edit.type_paragraph_id = data.get("paragraph_type_id")
+        
         paragraph_for_edit.save()
         return jsonify({"status": "success", "message": "Paragraph updated successfully"}), 200
     except Exception as e:

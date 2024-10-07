@@ -78,6 +78,28 @@
                 <button type="button">Upload</button>
             </form>
         </div>
+
+        <!-- Новый раздел для работы с типами параграфов -->
+        <div class="paragraph-types">
+            <h3>Paragraph Types</h3>
+            
+            <!-- Список существующих типов параграфов -->
+            <ul id="paragraph-types-list">
+                {% for paragraph_type in paragraph_types %}
+                    <li>{{ paragraph_type.type_name }}</li>
+                {% endfor %}
+            </ul>
+            
+            <div class="report_borderline"></div>
+
+            <!-- Форма для добавления нового типа параграфа -->
+            <form id="paragraph-type-form" class="flex">
+                <label for="new_paragraph_type" class="report_label__item">New Paragraph Type:</label>
+                <input class="report_input__item" type="text" id="new_paragraph_type" name="new_paragraph_type" required>
+                <button class="btn report__btn" type="submit">Add Paragraph Type</button>
+            </form>
+        </div>
+
     </div>
    
     

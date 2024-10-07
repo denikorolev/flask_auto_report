@@ -3,7 +3,7 @@
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, session, g
 from flask_login import current_user, login_required
-from models import db, User, Report, ReportType, ReportSubtype, ReportParagraph, Sentence  
+from models import db, User, Report, ReportType, ReportSubtype, ReportParagraph, Sentence, ParagraphType  
 from sentence_processing import extract_paragraphs_and_sentences
 from werkzeug.utils import secure_filename
 import os
@@ -97,13 +97,18 @@ def create_report():
 
                     # Add paragraphs and sentences to the report
                     for idx, paragraph in enumerate(paragraphs_from_file, start=1):
+                        # Find paragraph type ID based on 'type_paragraph' extracted from the file
+                        paragraph_type = paragraph.get('type_paragraph', 'text')
+                        paragraph_type_obj = ParagraphType.query.filter_by(type_name=paragraph_type).first()
+                        
                         new_paragraph = ReportParagraph.create(
                             paragraph_index=idx,
                             report_id=new_report.id,
                             paragraph=paragraph['title'],
                             paragraph_visible=paragraph.get('visible', True),
                             title_paragraph=paragraph.get('is_title', False),
-                            bold_paragraph=paragraph.get('bold', False)
+                            bold_paragraph=paragraph.get('bold', False),
+                            type_paragraph_id=paragraph_type_obj.id
                             )
                         # Process sentences, including those split by '!!'
                         for sentence_index, sentence_data in enumerate(paragraph['sentences'], start=1):
