@@ -270,14 +270,14 @@ class ReportParagraph(BaseModel):
     paragraph_visible = db.Column(db.Boolean, default=False, nullable=False)
     title_paragraph = db.Column(db.Boolean, default=False, nullable=False)
     bold_paragraph = db.Column(db.Boolean, default=False, nullable=False)
-    type_paragraph_id = db.Column(db.Integer, db.ForeignKey('paragraph_types.id'), nullable=True)
+    type_paragraph_id = db.Column(db.Integer, db.ForeignKey('paragraph_types.id'), nullable=False)
     comment = db.Column(db.String(255), nullable=True) 
 
     sentences = db.relationship('Sentence', backref='paragraph', cascade="all, delete-orphan", overlaps="paragraph,sentences")
     type_paragraph = db.relationship('ParagraphType', backref='paragraphs', lazy=True)
     
     @classmethod
-    def create(cls, paragraph_index, report_id, paragraph, paragraph_visible=False, title_paragraph=False, bold_paragraph=False, comment=None):
+    def create(cls, paragraph_index, report_id, paragraph, paragraph_visible, title_paragraph, bold_paragraph, type_paragraph_id, comment=None):
         new_paragraph = cls(
             paragraph_index=paragraph_index,
             report_id=report_id,
@@ -285,6 +285,7 @@ class ReportParagraph(BaseModel):
             paragraph_visible = paragraph_visible,
             title_paragraph=title_paragraph,
             bold_paragraph=bold_paragraph,
+            type_paragraph_id=type_paragraph_id,
             comment=comment
             
         )

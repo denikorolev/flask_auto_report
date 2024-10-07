@@ -17,7 +17,7 @@ from new_report_creation import new_report_creation_bp
 from editing_report import editing_report_bp
 from profile_settings import profile_settings_bp
 
-version = "0.3.6"
+version = "0.3.7"
 
 app = Flask(__name__)
 app.config.from_object(get_config()) # Load configuration from file config.py
@@ -61,59 +61,6 @@ def test_db_connection():
     except Exception as e:
         flash(f"Database connection failed: {e}", "error")
         return False
-
-
-def set_title_paragraph_false_for_all():
-    """Обновляет поле title_paragraph на False для всех параграфов, где оно не заполнено или имеет некорректное значение."""
-    try:
-        # Запрашиваем только те параграфы, у которых title_paragraph равно None или имеет некорректное значение
-        paragraphs = ReportParagraph.query.filter(
-            (ReportParagraph.title_paragraph.is_(None)) | 
-            (ReportParagraph.title_paragraph.notin_([True, False]))
-        ).all()
-
-        # Проверяем, есть ли такие параграфы
-        if paragraphs:
-            # Обновляем поле title_paragraph на False для отфильтрованных параграфов
-            for paragraph in paragraphs:
-                paragraph.title_paragraph = False
-
-            # Сохраняем изменения в базе данных
-            db.session.commit()
-            print("Successfully updated title_paragraph for relevant paragraphs.")
-        else:
-            print("No paragraphs found that require updating.")
-            
-    except Exception as e:
-        db.session.rollback()
-        print(f"Failed to update title_paragraph: {e}")
-
-
-def update_bold_paragraph_flags():
-    """Обновляет поле bold_paragraph на False для всех параграфов, где оно не заполнено или имеет некорректное значение."""
-    try:
-        # Запрашиваем параграфы, у которых поле bold_paragraph равно None или имеет некорректное значение
-        paragraphs = ReportParagraph.query.filter(
-            (ReportParagraph.bold_paragraph.is_(None)) | 
-            (ReportParagraph.bold_paragraph.notin_([True, False]))
-        ).all()
-
-        # Проверяем, есть ли такие параграфы
-        if paragraphs:
-            # Обновляем поле bold_paragraph на False для отфильтрованных параграфов
-            for paragraph in paragraphs:
-                paragraph.bold_paragraph = False
-
-            # Сохраняем изменения в базе данных
-            db.session.commit()
-            print("Successfully updated bold_paragraph for relevant paragraphs.")
-        else:
-            print("No paragraphs found that require updating bold_paragraph.")
-            
-    except Exception as e:
-        db.session.rollback()
-        print(f"Failed to update bold_paragraph: {e}")
-
 
 
 def migrate_paragraph_types():
@@ -173,8 +120,7 @@ def index():
     if not test_db_connection():
         return "Database connection failed", 500
     
-    set_title_paragraph_false_for_all()
-    update_bold_paragraph_flags()
+    
     migrate_paragraph_types()
     
     if 'profile_id' in session:
