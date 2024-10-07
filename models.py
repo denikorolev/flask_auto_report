@@ -270,10 +270,12 @@ class ReportParagraph(BaseModel):
     paragraph_visible = db.Column(db.Boolean, default=False, nullable=False)
     title_paragraph = db.Column(db.Boolean, default=False, nullable=False)
     bold_paragraph = db.Column(db.Boolean, default=False, nullable=False)
+    type_paragraph_id = db.Column(db.Integer, db.ForeignKey('paragraph_types.id'), nullable=True)
     comment = db.Column(db.String(255), nullable=True) 
 
     sentences = db.relationship('Sentence', backref='paragraph', cascade="all, delete-orphan", overlaps="paragraph,sentences")
-
+    type_paragraph = db.relationship('ParagraphType', backref='paragraphs', lazy=True)
+    
     @classmethod
     def create(cls, paragraph_index, report_id, paragraph, paragraph_visible=False, title_paragraph=False, bold_paragraph=False, comment=None):
         new_paragraph = cls(
@@ -290,6 +292,19 @@ class ReportParagraph(BaseModel):
         db.session.commit()
         return new_paragraph
 
+
+class ParagraphType(db.Model):
+    __tablename__ = "paragraph_types"
+    id = db.Column(db.Integer, primary_key=True)
+    type_name = db.Column(db.String(50), nullable=False, unique=True)
+
+    @classmethod
+    def create(cls, type_name):
+        """Creates a new paragraph type."""
+        new_type = cls(type_name="text")
+        db.session.add(new_type)
+        db.session.commit()
+        return new_type
 class Sentence(BaseModel):
     __tablename__ = "sentences"
     paragraph_id = db.Column(db.BigInteger, db.ForeignKey("report_paragraphs.id"), nullable=False)

@@ -5,7 +5,7 @@ from flask_login import LoginManager, login_required, current_user
 from config import get_config, Config
 from flask_migrate import Migrate
 from auth import auth_bp  
-from models import db, User, UserProfile, ReportParagraph
+from models import db, User, UserProfile, ReportParagraph, ParagraphType
 import os
 import logging
 
@@ -115,6 +115,29 @@ def update_bold_paragraph_flags():
         print(f"Failed to update bold_paragraph: {e}")
 
 
+
+def migrate_paragraph_types():
+    # Находим тип "text" (или создаем его, если он не существует)
+    text_type = ParagraphType.query.filter_by(type_name="text").first()
+    if not text_type:
+        text_type = ParagraphType.create(type_name="text")
+    
+    # Проверяем, есть ли записи с пустым type_paragraph_id
+    paragraphs_to_update = ReportParagraph.query.filter_by(type_paragraph_id=None).all()
+    if not paragraphs_to_update:
+        print("No paragraphs found with empty 'type_paragraph_id'. Migration not required.")
+        return
+    
+    # Обновляем записи с пустым type_paragraph_id
+    for paragraph in paragraphs_to_update:
+        paragraph.type_paragraph_id = text_type.id
+    
+    # Сохраняем изменения
+    db.session.commit()
+    print(f"Successfully updated {len(paragraphs_to_update)} paragraphs with 'type_paragraph_id'.")
+
+
+
 # Routs
 
 # Логика для того, чтобы сделать данные профиля доступными в любом месте программы
@@ -152,6 +175,7 @@ def index():
     
     set_title_paragraph_false_for_all()
     update_bold_paragraph_flags()
+    migrate_paragraph_types()
     
     if 'profile_id' in session:
         # Проверяем, принадлежит ли профиль текущему пользователю

@@ -14,9 +14,9 @@ def extract_paragraphs_and_sentences(file_path):
 
     This function processes a Word document (docx) and identifies paragraphs
     that start with bold text as section titles. Each title can include additional attributes
-    specified within double parentheses `(( ))` (e.g., `**` for invisible, `==` for bold, `++` for title).
-    Sentences within the paragraphs can be split by the '!!' character to create additional sentences
-    with the same index but incremented weight.
+    specified within double parentheses `(( ))`, such as paragraph type (`text`, `scanparam`, etc.)
+    and flags (`**` for invisible, `==` for bold, `++` for title). Sentences within the paragraphs
+    can be split by the '!!' character to create additional sentences with the same index but incremented weight.
 
     Args:
         file_path (str): The file path of the Word document to be processed.
@@ -31,6 +31,7 @@ def extract_paragraphs_and_sentences(file_path):
               - 'visible' (bool): Visibility of the paragraph (default is True).
               - 'bold' (bool): Whether the paragraph title is bold (default is False).
               - 'is_title' (bool): Whether the paragraph is marked as a title (default is False).
+              - 'type_paragraph' (str): Type of the paragraph, extracted from double parentheses `(( ))`.
     
     Example:
         [
@@ -39,13 +40,17 @@ def extract_paragraphs_and_sentences(file_path):
                 'sentences': ['Sentence 1.', ['Sentence 2.', 'Sentence 2 alternative.']],
                 'visible': True,
                 'bold': False,
-                'is_title': True
+                'is_title': True,
+                'type_paragraph': 'text'
             }
         ]
     """
     document = Document(file_path)
     paragraphs_from_file = []
     current_paragraph = None
+
+    # Valid types for paragraphs
+    valid_types = {"text", "impression", "clincontext", "scanparam", "custom"}
 
     for para in document.paragraphs:
         # Check if paragraph has bold text indicating it's a new section
@@ -54,34 +59,45 @@ def extract_paragraphs_and_sentences(file_path):
             if current_paragraph:
                 paragraphs_from_file.append(current_paragraph)
             
-            # Extract flags and title text
+            # Extract flags, paragraph type, and title text
             title_text = para.text.strip()
             visible = True
             bold = False
             is_title = False
+            type_paragraph = "text"  # Default type
 
-            # Check for the presence of flags in the format: ((**)), ((==)), ((++))
+            # Check for the presence of flags and paragraph type in the format: ((type, flags))
             if title_text.startswith("((") and "))" in title_text:
-                # Extract the flags from the double parentheses
-                flags = title_text[2:title_text.find("))")].split(',')
-                for flag in flags:
-                    if flag.strip() == "**":
+                # Extract the content inside double parentheses
+                content = title_text[2:title_text.find("))")].split(',')
+                # Identify the paragraph type if the first item matches a valid type
+                potential_type = content[0].strip().lower()
+                if potential_type in valid_types:
+                    type_paragraph = potential_type
+                    # Remove the type from content list to process the rest as flags
+                    content = content[1:]
+                
+                # Process remaining flags in content
+                for flag in content:
+                    flag = flag.strip()
+                    if flag == "**":
                         visible = False
-                    elif flag.strip() == "==":
+                    elif flag == "==":
                         bold = True
-                    elif flag.strip() == "++":
+                    elif flag == "++":
                         is_title = True
                 
-                # Remove the flag part from the title text
+                # Remove the entire ((...)) block from the title text
                 title_text = title_text[title_text.find("))") + 2:].strip()
-            
+
             # Create a new paragraph entry with the extracted attributes
             current_paragraph = {
                 'title': title_text,
                 'sentences': [],
                 'visible': visible,
                 'bold': bold,
-                'is_title': is_title
+                'is_title': is_title,
+                'type_paragraph': type_paragraph
             }
         else:
             # Append sentences to the current paragraph
@@ -98,8 +114,6 @@ def extract_paragraphs_and_sentences(file_path):
         paragraphs_from_file.append(current_paragraph)
 
     return paragraphs_from_file
-
-
 
 
 
