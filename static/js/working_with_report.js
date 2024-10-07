@@ -223,35 +223,45 @@ function displayProcessedParagraphs(paragraphs) {
         return sentenceDiv;
     }
 
+    // Collect total number of sentences to be added
+    let totalSentences = 0;
+    paragraphs.forEach(paragraph => {
+        const sentences = Array.isArray(paragraph.sentences) ? paragraph.sentences : [paragraph.sentence];
+        totalSentences += sentences.length;
+    });
+    
     // Создаем кнопку "Отправить все"
-    const sendAllButton = document.createElement('button');
-    sendAllButton.textContent = 'Отправить все';
-    sendAllButton.classList.add('send-all-btn');
-    sendAllButton.addEventListener('click', function() {
-        const allSentences = [];
+    if (totalSentences >= 2) {
+        // Create "Send All" button
+        const sendAllButton = document.createElement('button');
+        sendAllButton.textContent = 'Отправить все';
+        sendAllButton.classList.add('send-all-btn');
+        sendAllButton.addEventListener('click', function() {
+            const allSentences = [];
 
-        // Собираем все предложения для отправки
-        paragraphs.forEach(paragraph => {
-            const sentences = Array.isArray(paragraph.sentences) ? paragraph.sentences : [paragraph.sentence];
-            if (sentences) {
-                allSentences.push({
-                    paragraph_id: paragraph.paragraph_id,
-                    sentences: sentences
-                });
-            }
+            // Собираем все предложения для отправки
+            paragraphs.forEach(paragraph => {
+                const sentences = Array.isArray(paragraph.sentences) ? paragraph.sentences : [paragraph.sentence];
+                if (sentences) {
+                    allSentences.push({
+                        paragraph_id: paragraph.paragraph_id,
+                        sentences: sentences
+                    });
+                }
+            });
+
+            // Формируем данные для отправки
+            const dataToSend = {
+                sentence_for_adding: allSentences
+            };
+
+            // Используем внутреннюю функцию для отправки данных
+            sendSentences(dataToSend);
         });
 
-        // Формируем данные для отправки
-        const dataToSend = {
-            sentence_for_adding: allSentences
-        };
-
-        // Используем внутреннюю функцию для отправки данных
-        sendSentences(dataToSend);
-    });
-
-    // Добавляем кнопку "Отправить все" в контейнер
-    container.appendChild(sendAllButton);
+        // Добавляем кнопку "Отправить все" в контейнер
+        container.appendChild(sendAllButton);
+    }
 
     // Создаем и добавляем элементы предложений в контейнер
     paragraphs.forEach(paragraph => {
@@ -278,7 +288,6 @@ function displayProcessedParagraphs(paragraphs) {
         container.appendChild(paragraphDiv);
     });
 }
-
 
 
 
