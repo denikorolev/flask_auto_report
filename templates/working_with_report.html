@@ -59,8 +59,16 @@
             {% for item in paragraph_data %}
                 <li class="flex_column report__paragraph" data-paragraph-id="{{ item.paragraph.id }}">
                     <div class="flex">
-                        <p contenteditable="false" data-paragraph-id="{{ item.paragraph.id }}"
-                        class="paragraph_title {% if item.paragraph.paragraph_visible %}report__paragraph--bold{% else %}indented-paragraph{% endif %}"
+                        <p contenteditable="false" 
+                        data-paragraph-id="{{ item.paragraph.id }}"
+                        data-title-paragraph="{{ item.paragraph.title_paragraph }}" 
+                        data-bold-paragraph="{{ item.paragraph.bold_paragraph }}" 
+                        data-visible-paragraph="{{ item.paragraph.paragraph_visible }}" 
+
+                        class="paragraphTitle 
+                        {% if item.paragraph.paragraph_visible %}report__paragraph--visible{% else %}report__paragraph--invisible{% endif %}
+                        {% if item.paragraph.bold_paragraph %} report__paragraph--bold{% endif %}
+                        {% if item.paragraph.title_paragraph %} report__paragraph--title{% else %} report__paragraph--untitle{% endif %}"
                         >
                             {{ item.paragraph.paragraph }}
                         </p>
@@ -143,10 +151,11 @@
                     data-bold-paragraph="{{ item.paragraph.bold_paragraph }}" 
                     data-visible-paragraph="{{ item.paragraph.paragraph_visible }}" 
 
-                    class="paragraph_title 
-                    {% if item.paragraph.paragraph_visible %}report__paragraph--visible{% else %}report__paragraph--invisible{% endif %}
+                    class="paragraphTitle 
+                    {% if item.paragraph.paragraph_visible %}report__paragraph--visible
                     {% if item.paragraph.bold_paragraph %} report__paragraph--bold{% endif %}
-                    {% if item.paragraph.title_paragraph %} report__paragraph--title{% else %} report__paragraph--untitle{% endif %}"
+                    {% if item.paragraph.title_paragraph %} report__paragraph--title{% else %} report__paragraph--untitle{% endif %}
+                    {% else %}report__paragraph--invisible{% endif %}"
                     >
                         {{ item.paragraph.paragraph }}
                     </p>

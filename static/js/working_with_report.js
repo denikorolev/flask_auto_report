@@ -596,7 +596,7 @@ document.addEventListener("DOMContentLoaded", function() {
     /**
      * Логика для разворачивания по клику на текст параграфа
      */
-    document.querySelectorAll(".paragraph_title").forEach(paragraph => {
+    document.querySelectorAll(".paragraphTitle").forEach(paragraph => {
         paragraph.addEventListener("click", function() {
             const expandButton = this.closest(".report__paragraph").querySelector(".icon-btn--expand");
             toggleSentenceList(expandButton); // Используем ту же логику, что и для кнопки
@@ -673,7 +673,7 @@ document.addEventListener("DOMContentLoaded", function() {
      */
     document.querySelectorAll(".icon-btn--edit-paragraph").forEach(button => {
         button.addEventListener("click", function() {
-            const paragraphElement = this.closest("li").querySelector(".paragraph_title");
+            const paragraphElement = this.closest("li").querySelector(".paragraphTitle");
 
             // Проверка на null
             if (!paragraphElement) {

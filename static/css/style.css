@@ -237,10 +237,13 @@ html {
 
 .report__paragraph--visible {
     margin-bottom: 5px;
+    font-weight: bold;
+    cursor: pointer;
 }
 
 .report__paragraph--invisible {
     display: none;
+    padding-left: 20px;
 }
 
 .report__paragraph--title{
@@ -252,14 +255,10 @@ html {
 }
 
 .report__paragraph--bold {
-    font-weight: bold;
     text-transform: uppercase;
 
 }
 
-.indented-paragraph {
-    padding-left: 20px; /* Indent using padding or margin */
-}
 
 
 .icon-btn {
@@ -314,9 +313,7 @@ html {
     text-indent: 0;
 }
 
-.paragraph_title {
-    cursor: pointer; /* Изменяет курсор на указатель при наведении */
-}
+
 
 
 .footer {
