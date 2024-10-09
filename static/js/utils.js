@@ -94,12 +94,13 @@ function initializeSubtypeLogic(reportTypeSelectId, reportSubtypeSelectId, subty
  */
 function filterReportsByType(reportTypeSelect, existingReportList) {
     const selectedType = reportTypeSelect.value;  // Получаем выбранный тип
-    const reports = existingReportList.querySelectorAll("li");  // Получаем все отчеты
+    const reports = existingReportList.querySelectorAll("li, .report_form__item");  // Получаем все отчеты
 
     reports.forEach(report => {
         const reportType = report.getAttribute("data-report-type");  // Получаем тип отчета
-        if (reportType === selectedType) {
-            report.style.display = "block";  // Отображаем отчет, если тип совпадает
+        // Если выбран тип "" (All) или тип совпадает с атрибутом отчета, показываем его
+        if (selectedType === "" || reportType === selectedType) {
+            report.style.display = "flex";  // Отображаем отчет, если тип совпадает или выбрано "All"
         } else {
             report.style.display = "none";  // Скрываем отчет, если тип не совпадает
         }

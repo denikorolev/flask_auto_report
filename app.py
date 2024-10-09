@@ -17,7 +17,7 @@ from new_report_creation import new_report_creation_bp
 from editing_report import editing_report_bp
 from profile_settings import profile_settings_bp
 
-version = "0.3.8"
+version = "0.3.9"
 
 app = Flask(__name__)
 app.config.from_object(get_config()) # Load configuration from file config.py
