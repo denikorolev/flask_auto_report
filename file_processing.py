@@ -1,5 +1,4 @@
 # file_processing.py
-#v0.2.0
 
 from flask import current_app
 from flask_login import current_user

@@ -5,27 +5,11 @@
 {% block container %}
 {{ super() }}
 
-{% if user_reports_list %}
-    <div class="container">
-        <h2>Select an Existing Report</h2>
-        <form method="POST" action="{{ url_for('new_report_creation.select_existing_report') }}">
-            <ul class="report__list">
-                {% for report in user_reports_list %}
-                    <li class="report__item">
-                        <span>{{ report.report_name }}</span>
-                        <button class="btn report__btn" type="submit" name="existing_report_id" value="{{ report.id }}">Take it</button>
-                    </li>
-                {% endfor %}
-            </ul>
-        </form>
-    </div>
-
-{% else %}
 
 <!-- New report master -->
 <div class="container">
     <h2>Create a New Report</h2>
-    <form method="POST" class="flex" enctype="multipart/form-data">
+    <form id="report-creation-form" class="flex" enctype="multipart/form-data">
         <!-- Fields for creating report -->
         <div class="flex_column">
             <label class="report_label__item" for="report_name">Report Name:</label>
@@ -73,10 +57,27 @@
             <input class="report_input__item form-control" type="file" id="report_file" name="report_file" accept=".doc, .docx">
         </div>
         
-        <button class="btn report__btn" type="submit" name="report_creation">Create Report</button>
+        <button class="btn report__btn" type="button" name="report_creation">Create Report</button>
+
+
+        
+
     </form>
+
+    <div id="existing-report-container" style="display: none;">
+        <h3>Select an Existing Report</h3>
+        <ul id="existing-report-list">
+            {% for report in user_reports %}
+            <li data-report-type="{{ report.report_type }}">
+                <input type="checkbox" id="report_{{ report.id }}" name="existing_report_id" value="{{ report.id }}">
+                <label for="report_{{ report.id }}">{{ report.report_name }}</label>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    
 </div>
-{% endif %}
+
 <!-- Hidden element to pass subtype data -->
 <script id="report-types-data" type="application/json">
     {{ report_types_and_subtypes|tojson }}

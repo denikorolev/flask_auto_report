@@ -1,3 +1,5 @@
+// api.js
+
 /**
  * Sends a JSON or FormData request to the server.
  * 

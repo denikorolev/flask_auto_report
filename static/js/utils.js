@@ -83,3 +83,25 @@ function initializeSubtypeLogic(reportTypeSelectId, reportSubtypeSelectId, subty
     // Initial update of subtypes
     updateSubtypes(reportTypeSelectId, reportSubtypeSelectId, allSubtypes);
 }
+
+
+
+/**
+ * Filters the list of reports based on the selected report type.
+ * 
+ * @param {HTMLElement} reportTypeSelect - The select element containing report types.
+ * @param {HTMLElement} existingReportList - The list element containing the reports to be filtered.
+ */
+function filterReportsByType(reportTypeSelect, existingReportList) {
+    const selectedType = reportTypeSelect.value;  // Получаем выбранный тип
+    const reports = existingReportList.querySelectorAll("li");  // Получаем все отчеты
+
+    reports.forEach(report => {
+        const reportType = report.getAttribute("data-report-type");  // Получаем тип отчета
+        if (reportType === selectedType) {
+            report.style.display = "block";  // Отображаем отчет, если тип совпадает
+        } else {
+            report.style.display = "none";  // Скрываем отчет, если тип не совпадает
+        }
+    });
+}

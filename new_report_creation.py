@@ -1,7 +1,7 @@
 # new_report_creation.py
 # Includes create_report route
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, session, g
+from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, session, g, jsonify
 from flask_login import current_user, login_required
 from models import db, User, Report, ReportType, ReportSubtype, ReportParagraph, Sentence, ParagraphType  
 from sentence_processing import extract_paragraphs_and_sentences
@@ -20,184 +20,207 @@ def allowed_file(filename):
 @new_report_creation_bp.route('/create_report', methods=['GET', 'POST'])
 @login_required
 def create_report():
-    page_title = "List of the reports"
+    page_title = "New report creation"
     menu = current_app.config['MENU']
     report_types_and_subtypes = ReportType.get_types_with_subtypes(current_user.id)
-    profile_id = g.current_profile.id
+    user_reports = Report.find_by_user(current_user.id)
+            
     
-    # IF part
-    if request.method == 'POST':
-        # Button 'create' report had been pressed
-        action = request.form.get('action')
+    return render_template("create_report.html",
+                           title=page_title,
+                           menu=menu,
+                           user_reports=user_reports,
+                           report_types_and_subtypes=report_types_and_subtypes
+                           )
+    
+    
+@new_report_creation_bp.route('/create_manual_report', methods=['POST'])
+@login_required
+def create_manual_report():
+    """
+    This route handles manual report creation.
+    """
+    try:
         report_name = request.form.get('report_name')
         report_type = request.form.get('report_type')
         report_subtype = request.form.get('report_subtype')
         comment = request.form.get('comment')
         report_side = request.form.get('report_side') == 'true'
-        
-        if action == 'manual':
-            # If user press button "create new report we created new report and redirect to page for editing new report"
-            new_report = Report.create(
-                userid=current_user.id,
-                report_name=report_name,
-                report_type=report_type,
-                report_subtype=report_subtype,
-                profile_id=profile_id,
-                comment=comment,
-                report_side=report_side,
-            )
-            flash("Report created successfully", "success")
-            return redirect(url_for("editing_report.edit_report", report_id=new_report.id))
-        
-        elif action == 'existing':
-            # Save data from form to the session
-            session['report_name'] = report_name
-            session['report_type'] = report_type
-            session['report_subtype'] = report_subtype
-            session['comment'] = comment
-            session['report_side'] = report_side
-            # Geting all user's reports which have the same type with form
-            user_reports = Report.query.filter_by(userid=current_user.id, report_type=report_type).all()
-            return render_template("create_report.html",
-                           title=page_title,
-                           menu=menu,
-                           report_types_and_subtypes=report_types_and_subtypes,
-                           user_reports_list=user_reports)
-            
-        elif action == 'file':
-            user_temp_folder = f"{current_user.id}_temp"
-            if 'report_file' not in request.files:
-                flash('No file part', 'error')
-                return redirect(request.url)
-            file = request.files['report_file']
-            if file.filename == '':
-                flash('No selected file', 'error')
-                return redirect(request.url)
-            if file and allowed_file(file.filename):
-                filename = secure_filename(file.filename)
-                filepath = os.path.join(user_temp_folder, filename)
-                if not os.path.exists(user_temp_folder):
-                    os.makedirs(user_temp_folder)
-                file.save(filepath)
-                
-                try:
-                    # Extract content from the file
-                    paragraphs_from_file = extract_paragraphs_and_sentences(filepath)
+        profile_id = g.current_profile.id
 
-                    # Create new report
-                    new_report = Report.create(
-                        userid=current_user.id,
-                        report_name=report_name,  
-                        report_type=report_type,  
-                        report_subtype=report_subtype,
-                        profile_id=profile_id,  
-                        comment=comment,  
-                        report_side=report_side
+        # Create new report
+        new_report = Report.create(
+            userid=current_user.id,
+            report_name=report_name,
+            report_type=report_type,
+            report_subtype=report_subtype,
+            profile_id=profile_id,
+            comment=comment,
+            report_side=report_side
+        )
+        return jsonify({"status": "success", "message": "report was created succesfully", "report_id": new_report.id}), 200
+
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500    
+
+    
+
+@new_report_creation_bp.route('/create_report_from_file', methods=['POST'])
+@login_required
+def create_report_from_file():
+    """
+    This route handles report creation from a file.
+    """
+    try:
+        report_name = request.form.get('report_name')
+        report_type = request.form.get('report_type')
+        report_subtype = request.form.get('report_subtype')
+        comment = request.form.get('comment')
+        report_side = request.form.get('report_side') == 'true'
+        profile_id = g.current_profile.id
+
+        # Обрабатываем загруженный файл
+        user_temp_folder = f"{current_user.id}_temp"
+        if 'report_file' not in request.files:
+            return jsonify({"status": "error", "message": "No file part in the request"}), 400
+
+        file = request.files['report_file']
+        if file.filename == '':
+            return jsonify({"status": "error", "message": "No selected file"}), 400
+
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            filepath = os.path.join(user_temp_folder, filename)
+            if not os.path.exists(user_temp_folder):
+                os.makedirs(user_temp_folder)
+            file.save(filepath)
+
+            try:
+                # Извлекаем содержимое файла
+                paragraphs_from_file = extract_paragraphs_and_sentences(filepath)
+
+                # Создаем новый отчет
+                new_report = Report.create(
+                    userid=current_user.id,
+                    report_name=report_name,
+                    report_type=report_type,
+                    report_subtype=report_subtype,
+                    profile_id=profile_id,
+                    comment=comment,
+                    report_side=report_side
+                )
+
+                # Добавляем абзацы и предложения в отчет
+                for idx, paragraph in enumerate(paragraphs_from_file, start=1):
+                    paragraph_type = paragraph.get('type_paragraph', 'text')
+                    paragraph_type_obj = ParagraphType.query.filter_by(type_name=paragraph_type).first()
+
+                    new_paragraph = ReportParagraph.create(
+                        paragraph_index=idx,
+                        report_id=new_report.id,
+                        paragraph=paragraph['title'],
+                        paragraph_visible=paragraph.get('visible', True),
+                        title_paragraph=paragraph.get('is_title', False),
+                        bold_paragraph=paragraph.get('bold', False),
+                        type_paragraph_id=paragraph_type_obj.id
                     )
 
-                    # Add paragraphs and sentences to the report
-                    for idx, paragraph in enumerate(paragraphs_from_file, start=1):
-                        # Find paragraph type ID based on 'type_paragraph' extracted from the file
-                        paragraph_type = paragraph.get('type_paragraph', 'text')
-                        paragraph_type_obj = ParagraphType.query.filter_by(type_name=paragraph_type).first()
-                        
-                        new_paragraph = ReportParagraph.create(
-                            paragraph_index=idx,
-                            report_id=new_report.id,
-                            paragraph=paragraph['title'],
-                            paragraph_visible=paragraph.get('visible', True),
-                            title_paragraph=paragraph.get('is_title', False),
-                            bold_paragraph=paragraph.get('bold', False),
-                            type_paragraph_id=paragraph_type_obj.id
-                            )
-                        # Process sentences, including those split by '!!'
-                        for sentence_index, sentence_data in enumerate(paragraph['sentences'], start=1):
-                            # If the sentence is a list (split by '!!'), handle it accordingly
-                            if isinstance(sentence_data, list):
-                                for weight, split_sentence in enumerate(sentence_data, start=1):
-                                    Sentence.create(
-                                        paragraph_id=new_paragraph.id,
-                                        index=sentence_index,
-                                        weight=weight,
-                                        comment='',
-                                        sentence=split_sentence.strip()
-                                    )
-                            else:
-                                # Process a single sentence (not split by '!!')
+                    # Обрабатываем предложения, включая те, которые разделены '!!'
+                    for sentence_index, sentence_data in enumerate(paragraph['sentences'], start=1):
+                        if isinstance(sentence_data, list):
+                            for weight, split_sentence in enumerate(sentence_data, start=1):
                                 Sentence.create(
                                     paragraph_id=new_paragraph.id,
                                     index=sentence_index,
-                                    weight=1,
+                                    weight=weight,
                                     comment='',
-                                    sentence=sentence_data.strip()
+                                    sentence=split_sentence.strip()
                                 )
-                            
-                    # После успешной обработки удаляем временную папку и её содержимое
-                    if os.path.exists(user_temp_folder):
-                        shutil.rmtree(user_temp_folder)  # Удаляет папку и все файлы в ней
+                        else:
+                            Sentence.create(
+                                paragraph_id=new_paragraph.id,
+                                index=sentence_index,
+                                weight=1,
+                                comment='',
+                                sentence=sentence_data.strip()
+                            )
 
-                    flash("Report created from file successfully", "success")
-                    return redirect(url_for("editing_report.edit_report", report_id=new_report.id))
-                
-                except Exception as e:
-                    # Если произошла ошибка, удаляем временную папку и её содержимое
-                    if os.path.exists(user_temp_folder):
-                        shutil.rmtree(user_temp_folder)
-                    flash(f"Error occurred during file processing: {str(e)}", "error")
-                    return redirect(request.url)
-    
-    return render_template("create_report.html",
-                           title=page_title,
-                           menu=menu,
-                           report_types_and_subtypes=report_types_and_subtypes
-                           )
-    
-@new_report_creation_bp.route('/select_existing_report', methods=['POST'])
+                # Удаляем временную папку после успешной обработки
+                if os.path.exists(user_temp_folder):
+                    shutil.rmtree(user_temp_folder)
+
+                return jsonify({"status": "success", "report_id": new_report.id}), 200
+
+            except Exception as e:
+                if os.path.exists(user_temp_folder):
+                    shutil.rmtree(user_temp_folder)
+                return jsonify({"status": "error", "message": str(e)}), 500
+
+        else:
+            return jsonify({"status": "error", "message": "Invalid file type"}), 400
+
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@new_report_creation_bp.route('/create_report_from_existing_report', methods=['POST'])
 @login_required
-def select_existing_report():
-    existing_report_id = request.form.get('existing_report_id')
-    profile_id = g.current_profile.id
-    if not existing_report_id:
-        flash('No report selected', 'error')
-        return redirect(url_for('new_report_creation.create_report'))
+def create_report_from_existing_report():
+    """
+    This route handles report creation based on an existing report.
+    """
+    try:
+        existing_report_id = request.form.get('existing_report_id')
+        if not existing_report_id:
+            return jsonify({"status": "error", "message": "No report selected"}), 400
 
-    # Get the saved form data from the session
-    report_name = session.get('report_name')
-    report_type = session.get('report_type')
-    report_subtype = session.get('report_subtype')
-    comment = session.get('comment')
-    report_side = session.get('report_side')
+        # Получаем данные для нового отчета
+        report_name = request.form.get('report_name')
+        report_type = request.form.get('report_type')
+        report_subtype = request.form.get('report_subtype')
+        comment = request.form.get('comment')
+        report_side = request.form.get('report_side') == 'true'
+        profile_id = g.current_profile.id
 
-    # Create a new report
-    new_report = Report.create(
-        userid=current_user.id,
-        report_name=report_name,
-        report_type=report_type,
-        report_subtype=report_subtype,
-        profile_id=profile_id,
-        comment=comment,
-        report_side=report_side
-    )
-    # Copy paragraphs and sentences from the existing report
-    existing_report = Report.query.get(existing_report_id)
-    for paragraph in existing_report.report_paragraphs:
-        new_paragraph = ReportParagraph.create(
-            paragraph_index=paragraph.paragraph_index,
-            report_id=new_report.id,
-            paragraph=paragraph.paragraph,
-            paragraph_visible=paragraph.paragraph_visible,
-            title_paragraph=paragraph.title_paragraph,  
-            bold_paragraph=paragraph.bold_paragraph 
-            
+        # Получаем существующий отчет
+        existing_report = Report.query.get(existing_report_id)
+        if not existing_report:
+            return jsonify({"status": "error", "message": "Report not found"}), 404
+
+        # Создаем новый отчет на основе существующего
+        new_report = Report.create(
+            userid=current_user.id,
+            report_name=report_name,
+            report_type=report_type,
+            report_subtype=report_subtype,
+            profile_id=profile_id,
+            comment=comment,
+            report_side=report_side
         )
-        for sentence in paragraph.sentences:
-            Sentence.create(
-                paragraph_id=new_paragraph.id,
-                index=sentence.index,
-                weight=sentence.weight,
-                comment=sentence.comment,
-                sentence=sentence.sentence
+
+        # Копируем абзацы и предложения из существующего отчета в новый
+        for paragraph in existing_report.report_paragraphs:
+            new_paragraph = ReportParagraph.create(
+                paragraph_index=paragraph.paragraph_index,
+                report_id=new_report.id,
+                paragraph=paragraph.paragraph,
+                paragraph_visible=paragraph.paragraph_visible,
+                title_paragraph=paragraph.title_paragraph,
+                bold_paragraph=paragraph.bold_paragraph,
+                type_paragraph_id=paragraph.type_paragraph_id
             )
 
-    flash("Report created from existing report successfully", "success")
-    return redirect(url_for("editing_report.edit_report", report_id=new_report.id))
+            for sentence in paragraph.sentences:
+                Sentence.create(
+                    paragraph_id=new_paragraph.id,
+                    index=sentence.index,
+                    weight=sentence.weight,
+                    comment=sentence.comment,
+                    sentence=sentence.sentence
+                )
+
+        return jsonify({"status": "success", "message": "Report created from existing report successfully", "report_id": new_report.id}), 200
+
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
