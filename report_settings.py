@@ -4,64 +4,14 @@ from flask import Blueprint, render_template, request, redirect, flash, current_
 from flask_login import login_required, current_user
 from models import db, ReportType, ReportSubtype, KeyWordsGroup, Report, ParagraphType 
 from itertools import chain
-from file_processing import file_uploader
-from sentence_processing import group_keywords, sort_key_words_group
+from file_processing import file_uploader, allowed_file
+from sentence_processing import group_keywords, sort_key_words_group, process_keywords, check_existing_keywords, extract_keywords_from_doc
 from errors_processing import print_object_structure
-from utils import ensure_list
+from utils import ensure_list, get_max_index
 
 report_settings_bp = Blueprint('report_settings', __name__)
 
 # Functions
-
-def process_keywords(key_word_input):
-    """Обрабатываем строку ключевых слов, разделенных запятой, 
-    и возвращаем список"""
-    
-    key_words = []
-    for word in key_word_input.split(','):
-        stripped_word = word.strip()
-        if stripped_word:
-            key_words.append(stripped_word)
-    return key_words
-
-
-def check_existing_keywords(key_words, user_id):
-    """
-    Проверяет, какие ключевые слова уже существуют у пользователя и возвращает информацию
-    о том, являются ли они глобальными или привязаны к отчетам.
-    
-    Args:
-        key_words (list): Список новых ключевых слов.
-        user_id (int): ID текущего пользователя.
-
-    Returns:
-        dict: Словарь с информацией о существующих ключевых словах. Ключ - название отчета или "global",
-              значение - список ключевых слов.
-    """
-    # Получаем все ключевые слова пользователя
-    user_key_words = KeyWordsGroup.find_by_user(user_id)
-
-    # Создаем словарь для хранения результатов
-    existing_keywords = {}
-
-    # Проходим по всем ключевым словам пользователя
-    for kw in user_key_words:
-        key_word_lower = kw.key_word.lower()
-        if key_word_lower in [kw.lower() for kw in key_words]:
-            # Проверяем, связаны ли ключевые слова с отчетами
-            if kw.key_word_reports:
-                for report in kw.key_word_reports:
-                    report_name = report.report_name
-                    if report_name not in existing_keywords:
-                        existing_keywords[report_name] = []
-                    existing_keywords[report_name].append(kw.key_word)
-            else:
-                # Если слово не связано с отчетом, оно является глобальным
-                if "global" not in existing_keywords:
-                    existing_keywords["global"] = []
-                existing_keywords["global"].append(kw.key_word)
-    
-    return existing_keywords
 
 
 # Routs
@@ -207,10 +157,8 @@ def add_keywords():
         message = "The following keywords already exist:\n" + "\n".join(existing_keywords_message)
         return {"status": "error", "message": message}, 400
     
-     # Определяем максимальный group_index чтобы понять какой индекс присвоить новой группе
-    user_key_words = KeyWordsGroup.find_by_user(current_user.id)
-    max_group_index = max([kw.group_index for kw in user_key_words], default=0)
-    new_group_index = max_group_index + 1
+    # Определяем максимальный group_index чтобы понять какой индекс присвоить новой группе
+    new_group_index = get_max_index(KeyWordsGroup, current_user.id, KeyWordsGroup.group_index)
     
     for i, key_word in enumerate(key_words):
         KeyWordsGroup.create(
@@ -223,6 +171,51 @@ def add_keywords():
 
     return {"status": "success"}, 200
     
+# Маршрут для добавления групп ключевых слов из файла word
+@login_required
+@report_settings_bp.route('/upload_keywords_from_word', methods=['POST'])
+def upload_keywords_from_word():
+    if 'file' not in request.files:
+        return jsonify({"status": "error", "message": "No file part"}), 400
+
+    file = request.files['file']
+
+    if file.filename == '':
+        return jsonify({"status": "error", "message": "No selected file"}), 400
+
+    # Загружаем файл с помощью функции file_uploader
+    upload_result, file_path = file_uploader(file, "doc")
+    if "successfully" not in upload_result:
+        return jsonify({"status": "error", "message": upload_result}), 400
+
+    if not file_path:
+        return jsonify({"status": "error", "message": "File upload failed. No valid file path."}), 400
+
+    # Получаем все отчеты пользователя
+    user_reports = Report.find_by_user(current_user.id)
+
+    # Извлекаем ключевые слова из документа
+    keywords = extract_keywords_from_doc(file_path, user_reports)
+
+    # Добавляем ключевые слова в базу данных
+    for group in keywords:
+        report_id = group['report_id']
+        key_words = group['key_words']
+
+        # Определяем максимальный group_index для новой группы
+        new_group_index = get_max_index(KeyWordsGroup, current_user.id, KeyWordsGroup.group_index)
+
+        for i, key_word in enumerate(key_words):
+            KeyWordsGroup.create(
+                group_index=new_group_index,
+                index=i,
+                key_word=key_word,
+                user_id=current_user.id,
+                reports=[report_id] if report_id else []  # Привязываем к отчету, если указан report_id
+            )
+
+    return jsonify({"status": "success", "message": "Keywords from Word document successfully uploaded"}), 200
+
 # Маршрут для добавления одного или нескольких ключевых слов в уже существующую группу
 @report_settings_bp.route('/add_word_to_exist_group', methods=['POST'])
 @login_required

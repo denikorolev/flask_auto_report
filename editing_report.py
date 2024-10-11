@@ -129,9 +129,10 @@ def edit_paragraph():
         # Получаем предлагаемый тип параграфа
         new_type_paragraph_id = int(data.get("paragraph_type"))
         current_report_id = paragraph_for_edit.report_id
-
+        # Список типов параграфов, которые могут быть не уникальными
+        allowed_paragraph_types = [ParagraphType.find_by_name("text"), ParagraphType.find_by_name("custom"), ParagraphType.find_by_name("title")]
         # Сначала проверим, если предлагаемый тип не 'text' и не 'custom'
-        if new_type_paragraph_id not in [ParagraphType.find_by_name('text'), ParagraphType.find_by_name('custom')]:
+        if new_type_paragraph_id not in allowed_paragraph_types:
             # Проверим, существует ли уже параграф с таким типом для данного отчета
             existing_paragraph = ReportParagraph.query.filter_by(
                 report_id=current_report_id,

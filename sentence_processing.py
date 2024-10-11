@@ -8,6 +8,102 @@ from collections import defaultdict
 from errors_processing import print_object_structure
 
 
+
+def extract_keywords_from_doc(file_path, user_reports):
+    """
+    Извлекает ключевые слова из Word документа, группируя их по протоколам или глобально.
+    
+    Каждая строка в документе соответствует группе ключевых слов, а ключевые слова в строке разделены запятыми.
+    Жирный текст в документе указывает на привязку ключевых слов к протоколу. Если текст жирным не совпадает с именем 
+    протокола, ключевые слова считаются глобальными.
+    
+    Args:
+        file_path (str): Путь к файлу документа Word.
+        user_reports (list): Список протоколов пользователя для привязки ключевых слов.
+
+    Returns:
+        list: Список словарей, где каждый словарь содержит 'report_id' (ID протокола или None для глобальных ключевых слов) 
+              и 'key_words' (список ключевых слов).
+    """
+    doc = Document(file_path)
+    keywords = []
+    current_protocol = None  # Текущий протокол (если жирным текстом обозначено имя протокола)
+
+    # Получаем имена всех протоколов пользователя
+    report_names = {report.report_name: report.id for report in user_reports}
+
+    for para in doc.paragraphs:
+        if para.runs and para.runs[0].bold:  # Если параграф содержит жирный текст
+            potential_report_name = para.text.strip()
+            if potential_report_name in report_names:
+                current_protocol = report_names[potential_report_name]  # Запоминаем ID протокола
+            else:
+                current_protocol = None  # Сброс, так как это глобальные ключевые слова
+
+        else:
+            # Разделяем ключевые слова по запятой
+            key_words = process_keywords(para.text)
+            if key_words:
+                keywords.append({
+                    'report_id': current_protocol,  # Если current_protocol = None, это глобальные ключевые слова
+                    'key_words': key_words
+                })
+
+    return keywords
+
+
+def process_keywords(key_word_input):
+    """Обрабатываем строку ключевых слов, разделенных запятой, 
+    и возвращаем список"""
+    
+    key_words = []
+    for word in key_word_input.split(','):
+        stripped_word = word.strip()
+        if stripped_word:
+            key_words.append(stripped_word)
+    return key_words
+
+
+
+def check_existing_keywords(key_words, user_id):
+    """
+    Проверяет, какие ключевые слова уже существуют у пользователя и возвращает информацию
+    о том, являются ли они глобальными или привязаны к отчетам.
+    
+    Args:
+        key_words (list): Список новых ключевых слов.
+        user_id (int): ID текущего пользователя.
+
+    Returns:
+        dict: Словарь с информацией о существующих ключевых словах. Ключ - название отчета или "global",
+              значение - список ключевых слов.
+    """
+    # Получаем все ключевые слова пользователя
+    user_key_words = KeyWordsGroup.find_by_user(user_id)
+
+    # Создаем словарь для хранения результатов
+    existing_keywords = {}
+
+    # Проходим по всем ключевым словам пользователя
+    for kw in user_key_words:
+        key_word_lower = kw.key_word.lower()
+        if key_word_lower in [kw.lower() for kw in key_words]:
+            # Проверяем, связаны ли ключевые слова с отчетами
+            if kw.key_word_reports:
+                for report in kw.key_word_reports:
+                    report_name = report.report_name
+                    if report_name not in existing_keywords:
+                        existing_keywords[report_name] = []
+                    existing_keywords[report_name].append(kw.key_word)
+            else:
+                # Если слово не связано с отчетом, оно является глобальным
+                if "global" not in existing_keywords:
+                    existing_keywords["global"] = []
+                existing_keywords["global"].append(kw.key_word)
+    
+    return existing_keywords
+
+
 def extract_paragraphs_and_sentences(file_path):
     """
     Extracts paragraphs and sentences from a Word document, including additional paragraph attributes.
@@ -50,7 +146,7 @@ def extract_paragraphs_and_sentences(file_path):
     current_paragraph = None
 
     # Valid types for paragraphs
-    valid_types = {"text", "impression", "clincontext", "scanparam", "custom"}
+    valid_types = {"text", "impression", "clincontext", "scanparam", "custom", "dinamics", "scanlimits", "title"}
 
     for para in document.paragraphs:
         # Check if paragraph has bold text indicating it's a new section

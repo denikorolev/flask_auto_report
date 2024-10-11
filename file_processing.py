@@ -24,9 +24,9 @@ def allowed_file(file_name, file_type):
 
 
 # Function for saving word_template on server
-def file_uploader (file, file_type):
+def file_uploader(file, file_type):
     if file.filename == "":
-            return "The file name is empty"
+        return "The file name is empty", None
     if allowed_file(file.filename, file_type):
         name, ext = os.path.splitext(file.filename)
         name = "word_template"
@@ -37,11 +37,11 @@ def file_uploader (file, file_type):
         file_path = os.path.join(upload_folder, filename_with_date)
         try:
             file.save(file_path)
-            return "The file was uploaded successfully"
+            return "The file was uploaded successfully", file_path
         except Exception as e:
-            return f"The file wasn't uploaded due to the following error: {e}"
+            return f"The file wasn't uploaded due to the following error: {e}", None
     else:
-        return "The file name or extension is not allowed"
+        return "The file name or extension is not allowed", None
     
     
 # Function for file saving in the docx format 

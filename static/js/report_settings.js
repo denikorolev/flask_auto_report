@@ -173,6 +173,39 @@ function updateDirectoryPath() {
     document.getElementById('directory-path').value = path.split('/')[0];
 }
 
+// Логика получения новых ключевых слов при нажатии на кнопку upload в секции upload word file with key words
+document.getElementById('upload-word-btn').addEventListener('click', function(event) {
+    event.preventDefault(); // Останавливаем стандартное поведение формы
+
+    // Получаем файл из input
+    const fileInput = document.getElementById('word-file-input');
+    const file = fileInput.files[0];
+
+    if (!file) {
+        alert('Please select a file.');
+        return;
+    }
+
+    // Создаем объект FormData для отправки файла
+    const formData = new FormData();
+    formData.append('file', file);
+
+    // Отправляем запрос на сервер
+    sendRequest({
+        url: "/report_settings/upload_keywords_from_word",  // Маршрут загрузки
+        data: formData,
+        // processData: false,  // Отключаем обработку данных
+        // contentType: false,  // Отключаем установку заголовка Content-Type, т.к. FormData сам его установит
+    })
+    .then(response => {
+        location.reload();  // Обновляем страницу после успешной загрузки
+    })
+    .catch(error => {
+        alert(error.message);
+    });
+});
+
+
 // Показываем или скрываем список отчетов при выборе чекбокса
 document.getElementById('link_reports_checkbox').addEventListener('change', function() {
     const reportCheckboxesContainer = document.getElementById('report-checkboxes-container');
