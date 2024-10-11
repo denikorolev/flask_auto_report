@@ -8,6 +8,7 @@ from file_processing import file_uploader, allowed_file
 from sentence_processing import group_keywords, sort_key_words_group, process_keywords, check_existing_keywords, extract_keywords_from_doc
 from errors_processing import print_object_structure
 from utils import ensure_list, get_max_index
+from db_processing import add_keywords_to_db
 
 report_settings_bp = Blueprint('report_settings', __name__)
 
@@ -129,6 +130,7 @@ def add_keywords():
     data = request.get_json()
     key_word_input = data.get('key_word_input').strip()
     report_ids = data.get('report_ids', [])  # Получаем список отчетов или пустой список
+    ignore_unique_check = data.get('ignore_unique_check', False)
     
     if not key_word_input:
         return {"status": "error", 
@@ -140,34 +142,17 @@ def add_keywords():
         return {"status": "error", 
                 "message": "Invalid keywords format."}, 400
     
-    # Проверяем, какие ключевые слова уже существуют у пользователя
-    existing_keywords = check_existing_keywords(key_words, current_user.id)
-    
-    # Если хотя бы одно ключевое слово уже существует, возвращаем ошибку с перечислением этих слов
-    if existing_keywords:
-        # Формируем сообщение об ошибке
-        existing_keywords_message = []
-        for key, words in existing_keywords.items():
-            words_list = ", ".join(words)
-            if key == "global":
-                existing_keywords_message.append(f"global: {words_list}")
-            else:
-                existing_keywords_message.append(f"{key}: {words_list}")
+    # Если флаг игнорирования уникальности не установлен, выполняем проверку
+    if not ignore_unique_check:
+        # Проверяем, какие ключевые слова уже существуют у пользователя
+        existing_keywords_message = check_existing_keywords(key_words)
         
-        message = "The following keywords already exist:\n" + "\n".join(existing_keywords_message)
-        return {"status": "error", "message": message}, 400
+        # Если хотя бы одно ключевое слово уже существует, возвращаем ошибку
+        if existing_keywords_message:
+            return {"status": "error", "message": existing_keywords_message}, 400
     
-    # Определяем максимальный group_index чтобы понять какой индекс присвоить новой группе
-    new_group_index = get_max_index(KeyWordsGroup, current_user.id, KeyWordsGroup.group_index)
-    
-    for i, key_word in enumerate(key_words):
-        KeyWordsGroup.create(
-            group_index=new_group_index,
-            index=i,
-            key_word=key_word,
-            user_id=current_user.id,
-            reports=report_ids
-        )
+    # Добавляем ключевые слова в базу данных
+    add_keywords_to_db(key_words, report_ids)
 
     return {"status": "success"}, 200
     
@@ -175,46 +160,47 @@ def add_keywords():
 @login_required
 @report_settings_bp.route('/upload_keywords_from_word', methods=['POST'])
 def upload_keywords_from_word():
+    
+    # Логика загрузки файла
     if 'file' not in request.files:
         return jsonify({"status": "error", "message": "No file part"}), 400
-
     file = request.files['file']
-
     if file.filename == '':
         return jsonify({"status": "error", "message": "No selected file"}), 400
-
-    # Загружаем файл с помощью функции file_uploader
+    # Загружаем файл с помощью функции file_uploader и получаем сразу 2 переменные ответ и путь
     upload_result, file_path = file_uploader(file, "doc")
     if "successfully" not in upload_result:
         return jsonify({"status": "error", "message": upload_result}), 400
-
     if not file_path:
         return jsonify({"status": "error", "message": "File upload failed. No valid file path."}), 400
 
-    # Получаем все отчеты пользователя
-    user_reports = Report.find_by_user(current_user.id)
-
+    # Остальная логика
+    ignore_unique_check = request.form.get('ignore_unique_check', 'false').lower() == 'true'
     # Извлекаем ключевые слова из документа
-    keywords = extract_keywords_from_doc(file_path, user_reports)
+    keywords = extract_keywords_from_doc(file_path)
+
+    all_keywords = []
+    for group in keywords:
+        all_keywords.extend(group['key_words'])
+        
+    # Если флаг игнорирования уникальности не установлен, выполняем проверку
+    if not ignore_unique_check:
+        # Проверяем, какие ключевые слова уже существуют у пользователя
+        existing_keywords_message = check_existing_keywords(all_keywords)
+
+        # Если есть дублирующиеся ключевые слова, возвращаем сообщение об ошибке
+        if existing_keywords_message:
+            return jsonify({"status": "error", "message": existing_keywords_message}), 400
 
     # Добавляем ключевые слова в базу данных
     for group in keywords:
-        report_id = group['report_id']
+        report_ids = ensure_list(group['report_id'])
         key_words = group['key_words']
 
-        # Определяем максимальный group_index для новой группы
-        new_group_index = get_max_index(KeyWordsGroup, current_user.id, KeyWordsGroup.group_index)
-
-        for i, key_word in enumerate(key_words):
-            KeyWordsGroup.create(
-                group_index=new_group_index,
-                index=i,
-                key_word=key_word,
-                user_id=current_user.id,
-                reports=[report_id] if report_id else []  # Привязываем к отчету, если указан report_id
-            )
+        add_keywords_to_db(key_words, report_ids)
 
     return jsonify({"status": "success", "message": "Keywords from Word document successfully uploaded"}), 200
+
 
 # Маршрут для добавления одного или нескольких ключевых слов в уже существующую группу
 @report_settings_bp.route('/add_word_to_exist_group', methods=['POST'])

@@ -108,18 +108,16 @@
         <form id="keywords-form">
             <label for="key_word_input" class="report_label__item">New Key Words (comma-separated):</label>
             <input type="text" id="key_word_input" name="key_word_input" required>
-            <!-- Чекбокс для выбора связывания с отчетом -->
+            <!-- Чекбокс для привязки к отчету -->
             <div>
                 <label for="link_reports_checkbox" class="report_label__item">Link to Reports:</label>
                 <input type="checkbox" id="link_reports_checkbox" name="link_reports_checkbox">
             </div>
 
+            <!-- Чекбокс для игнорирования проверки на уникальность -->
             <div>
-                <h3>Upload Word File with Key Words</h3>
-                <form id="upload-word-form">
-                    <input type="file" id="word-file-input" name="file" accept=".doc,.docx" required>
-                    <button type="button" id="upload-word-btn" class="btn report__btn">Upload</button>
-                </form>
+                <label for="ignore_unique_check" class="report_label__item">Ignore uniqueness check:</label>
+                <input type="checkbox" id="ignore_unique_check" name="ignore_unique_check">
             </div>
 
             <!-- Список reports пользователя -->
@@ -135,6 +133,14 @@
                 </div>
             </div>
             <button type="submit" class="btn report__btn">Add Key Words Group</button>
+
+            <div>
+                <h3>Upload Word File with Key Words</h3>
+                <form id="upload-word-form">
+                    <input type="file" id="word-file-input" name="file" accept=".doc,.docx">
+                    <button type="button" id="upload-word-btn" class="btn report__btn">Upload</button>
+                </form>
+            </div>
         </form>
         <div class="container">
 

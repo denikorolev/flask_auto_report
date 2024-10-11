@@ -9,7 +9,7 @@ from errors_processing import print_object_structure
 
 
 
-def extract_keywords_from_doc(file_path, user_reports):
+def extract_keywords_from_doc(file_path):
     """
     Извлекает ключевые слова из Word документа, группируя их по протоколам или глобально.
     
@@ -19,7 +19,6 @@ def extract_keywords_from_doc(file_path, user_reports):
     
     Args:
         file_path (str): Путь к файлу документа Word.
-        user_reports (list): Список протоколов пользователя для привязки ключевых слов.
 
     Returns:
         list: Список словарей, где каждый словарь содержит 'report_id' (ID протокола или None для глобальных ключевых слов) 
@@ -28,7 +27,7 @@ def extract_keywords_from_doc(file_path, user_reports):
     doc = Document(file_path)
     keywords = []
     current_protocol = None  # Текущий протокол (если жирным текстом обозначено имя протокола)
-
+    user_reports = Report.find_by_user(current_user.id)
     # Получаем имена всех протоколов пользователя
     report_names = {report.report_name: report.id for report in user_reports}
 
@@ -64,20 +63,19 @@ def process_keywords(key_word_input):
     return key_words
 
 
-
-def check_existing_keywords(key_words, user_id):
+def check_existing_keywords(key_words):
     """
-    Проверяет, какие ключевые слова уже существуют у пользователя и возвращает информацию
-    о том, являются ли они глобальными или привязаны к отчетам.
+    Проверяет, какие ключевые слова уже существуют у текущего пользователя и возвращает сообщение об ошибке
+    в случае дублирования, или None, если ключевые слова уникальны.
     
     Args:
         key_words (list): Список новых ключевых слов.
-        user_id (int): ID текущего пользователя.
 
     Returns:
-        dict: Словарь с информацией о существующих ключевых словах. Ключ - название отчета или "global",
-              значение - список ключевых слов.
+        string or None: Сообщение об ошибке, если дублирующиеся ключевые слова найдены, или None, если ключевые слова уникальны.
     """
+    user_id = current_user.id  # Получаем ID текущего пользователя
+
     # Получаем все ключевые слова пользователя
     user_key_words = KeyWordsGroup.find_by_user(user_id)
 
@@ -100,8 +98,21 @@ def check_existing_keywords(key_words, user_id):
                 if "global" not in existing_keywords:
                     existing_keywords["global"] = []
                 existing_keywords["global"].append(kw.key_word)
-    
-    return existing_keywords
+
+    # Если дублирующиеся ключевые слова найдены, формируем сообщение
+    if existing_keywords:
+        existing_keywords_message = []
+        for key, words in existing_keywords.items():
+            words_list = ", ".join(words)
+            if key == "global":
+                existing_keywords_message.append(f"global: {words_list}")
+            else:
+                existing_keywords_message.append(f"{key}: {words_list}")
+
+        message = "The following keywords already exist:\n" + "\n".join(existing_keywords_message)
+        return message
+
+    return None
 
 
 def extract_paragraphs_and_sentences(file_path):

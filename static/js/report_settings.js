@@ -173,9 +173,49 @@ function updateDirectoryPath() {
     document.getElementById('directory-path').value = path.split('/')[0];
 }
 
+
+
+
+// Показываем или скрываем список отчетов при выборе чекбокса
+document.getElementById('link_reports_checkbox').addEventListener('change', function() {
+    const reportCheckboxesContainer = document.getElementById('report-checkboxes-container');
+    if (this.checked) {
+        reportCheckboxesContainer.style.display = 'block';
+    } else {
+        reportCheckboxesContainer.style.display = 'none';
+    }
+});
+
+// Добавление новой группы ключевых слов на сервер
+document.getElementById("keywords-form").addEventListener("submit", function(event) {
+    event.preventDefault();
+
+    const keyWordInput = document.getElementById("key_word_input").value;
+    const linkReportsCheckbox = document.getElementById("link_reports_checkbox").checked;
+    const ignoreUniqueCheck = document.getElementById("ignore_unique_check").checked;
+
+    // Собираем выбранные отчеты, если чекбокс отмечен
+    let reportIds = [];
+    if (linkReportsCheckbox) {
+        const reportCheckboxes = document.querySelectorAll('input[name="report_ids"]:checked');
+        reportCheckboxes.forEach(checkbox => reportIds.push(checkbox.value));
+    }
+
+    sendRequest({
+        url: "/report_settings/add_keywords",
+        method: "POST",
+        data: {
+            key_word_input: keyWordInput,
+            ignore_unique_check: ignoreUniqueCheck,
+            report_ids: reportIds  // Передаем выбранные отчеты
+        }
+    }).then(() => location.reload()).catch(error => console.error("Error:", error));
+});
+
 // Логика получения новых ключевых слов при нажатии на кнопку upload в секции upload word file with key words
 document.getElementById('upload-word-btn').addEventListener('click', function(event) {
     event.preventDefault(); // Останавливаем стандартное поведение формы
+    const ignoreUniqueCheck = document.getElementById("ignore_unique_check").checked ? "true" : "false";
 
     // Получаем файл из input
     const fileInput = document.getElementById('word-file-input');
@@ -189,56 +229,18 @@ document.getElementById('upload-word-btn').addEventListener('click', function(ev
     // Создаем объект FormData для отправки файла
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('ignore_unique_check', ignoreUniqueCheck);
 
     // Отправляем запрос на сервер
     sendRequest({
         url: "/report_settings/upload_keywords_from_word",  // Маршрут загрузки
         data: formData,
-        // processData: false,  // Отключаем обработку данных
-        // contentType: false,  // Отключаем установку заголовка Content-Type, т.к. FormData сам его установит
     })
     .then(response => {
-        location.reload();  // Обновляем страницу после успешной загрузки
-    })
+        location.reload(); 
+        })
     .catch(error => {
-        alert(error.message);
     });
-});
-
-
-// Показываем или скрываем список отчетов при выборе чекбокса
-document.getElementById('link_reports_checkbox').addEventListener('change', function() {
-    const reportCheckboxesContainer = document.getElementById('report-checkboxes-container');
-    if (this.checked) {
-        reportCheckboxesContainer.style.display = 'block';
-    } else {
-        reportCheckboxesContainer.style.display = 'none';
-    }
-});
-
-// Добавление нового ключевого слова на страницу
-document.getElementById("keywords-form").addEventListener("submit", function(event) {
-    event.preventDefault();
-
-    const keyWordInput = document.getElementById("key_word_input").value;
-    const linkReportsCheckbox = document.getElementById("link_reports_checkbox").checked;
-
-    // Собираем выбранные отчеты, если чекбокс отмечен
-    let reportIds = [];
-    if (linkReportsCheckbox) {
-        const reportCheckboxes = document.querySelectorAll('input[name="report_ids"]:checked');
-        reportCheckboxes.forEach(checkbox => reportIds.push(checkbox.value));
-    }
-
-    // Отправляем данные на сервер
-    sendRequest({
-        url: "/report_settings/add_keywords",
-        method: "POST",
-        data: {
-            key_word_input: keyWordInput,
-            report_ids: reportIds  // Передаем выбранные отчеты
-        }
-    }).then(() => location.reload()).catch(error => console.error("Error:", error));
 });
 
 // Загрузка файла шаблона для word на сервер
