@@ -24,6 +24,46 @@ def process_keywords(key_word_input):
             key_words.append(stripped_word)
     return key_words
 
+
+def check_existing_keywords(key_words, user_id):
+    """
+    Проверяет, какие ключевые слова уже существуют у пользователя и возвращает информацию
+    о том, являются ли они глобальными или привязаны к отчетам.
+    
+    Args:
+        key_words (list): Список новых ключевых слов.
+        user_id (int): ID текущего пользователя.
+
+    Returns:
+        dict: Словарь с информацией о существующих ключевых словах. Ключ - название отчета или "global",
+              значение - список ключевых слов.
+    """
+    # Получаем все ключевые слова пользователя
+    user_key_words = KeyWordsGroup.find_by_user(user_id)
+
+    # Создаем словарь для хранения результатов
+    existing_keywords = {}
+
+    # Проходим по всем ключевым словам пользователя
+    for kw in user_key_words:
+        key_word_lower = kw.key_word.lower()
+        if key_word_lower in [kw.lower() for kw in key_words]:
+            # Проверяем, связаны ли ключевые слова с отчетами
+            if kw.key_word_reports:
+                for report in kw.key_word_reports:
+                    report_name = report.report_name
+                    if report_name not in existing_keywords:
+                        existing_keywords[report_name] = []
+                    existing_keywords[report_name].append(kw.key_word)
+            else:
+                # Если слово не связано с отчетом, оно является глобальным
+                if "global" not in existing_keywords:
+                    existing_keywords["global"] = []
+                existing_keywords["global"].append(kw.key_word)
+    
+    return existing_keywords
+
+
 # Routs
 # Главный маршрут страницы
 @report_settings_bp.route('/report_settings', methods=['GET', 'POST'])
@@ -150,10 +190,25 @@ def add_keywords():
         return {"status": "error", 
                 "message": "Invalid keywords format."}, 400
     
-    # Получаем все ключевые слова пользователя
+    # Проверяем, какие ключевые слова уже существуют у пользователя
+    existing_keywords = check_existing_keywords(key_words, current_user.id)
+    
+    # Если хотя бы одно ключевое слово уже существует, возвращаем ошибку с перечислением этих слов
+    if existing_keywords:
+        # Формируем сообщение об ошибке
+        existing_keywords_message = []
+        for key, words in existing_keywords.items():
+            words_list = ", ".join(words)
+            if key == "global":
+                existing_keywords_message.append(f"global: {words_list}")
+            else:
+                existing_keywords_message.append(f"{key}: {words_list}")
+        
+        message = "The following keywords already exist:\n" + "\n".join(existing_keywords_message)
+        return {"status": "error", "message": message}, 400
+    
+     # Определяем максимальный group_index чтобы понять какой индекс присвоить новой группе
     user_key_words = KeyWordsGroup.find_by_user(current_user.id)
-
-    # Определяем максимальный group_index чтобы понять какой индекс присвоить новой группе
     max_group_index = max([kw.group_index for kw in user_key_words], default=0)
     new_group_index = max_group_index + 1
     

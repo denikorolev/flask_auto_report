@@ -120,17 +120,11 @@ document.addEventListener("DOMContentLoaded", function() {
             jsonData.paragraph_visible = form.querySelector('input[name="paragraph_visible"]').checked;
             jsonData.title_paragraph = form.querySelector('input[name="title_paragraph"]').checked;
             jsonData.bold_paragraph = form.querySelector('input[name="bold_paragraph"]').checked;
-            jsonData.paragraph_type_id = form.querySelector('select[name="paragraph_type"]').value;
+            // jsonData.paragraph_type_id = form.querySelector('select[name="paragraph_type"]').value;
             
             sendRequest({
                 url: `/editing_report/edit_paragraph`,
                 data: jsonData
-            }).then(response => {
-                if (response.status === "success") {
-                    toastr.success(response.message);
-                } else {
-                    alert(response.message);
-                }
             });
         });
     });

@@ -126,15 +126,44 @@ def edit_paragraph():
         return jsonify({"status": "error", "message": "You don't have permission to edit this paragraph"}), 403
 
     try:
+        # Получаем предлагаемый тип параграфа
+        new_type_paragraph_id = int(data.get("paragraph_type"))
+        current_report_id = paragraph_for_edit.report_id
+
+        # Сначала проверим, если предлагаемый тип не 'text' и не 'custom'
+        if new_type_paragraph_id not in [ParagraphType.find_by_name('text'), ParagraphType.find_by_name('custom')]:
+            # Проверим, существует ли уже параграф с таким типом для данного отчета
+            existing_paragraph = ReportParagraph.query.filter_by(
+                report_id=current_report_id,
+                type_paragraph_id=new_type_paragraph_id
+            ).first()
+
+            if existing_paragraph and existing_paragraph.id != paragraph_for_edit.id:
+                # Если существует другой параграф с этим типом, не обновляем тип
+                # Сохраняем остальные изменения
+                paragraph_for_edit.paragraph_index = data.get("paragraph_index")
+                paragraph_for_edit.paragraph = data.get("paragraph")
+                paragraph_for_edit.paragraph_visible = data.get("paragraph_visible")
+                paragraph_for_edit.title_paragraph = data.get("title_paragraph")
+                paragraph_for_edit.bold_paragraph = data.get("bold_paragraph")
+
+                paragraph_for_edit.save()
+                return jsonify({
+                    "status": "success",
+                    "message": "Paragraph updated successfully, but the type was not changed because a paragraph with this type already exists."
+                }), 200
+
+        # Если тип 'text', 'custom' или такого типа еще нет, сохраняем все изменения, включая тип
         paragraph_for_edit.paragraph_index = data.get("paragraph_index")
         paragraph_for_edit.paragraph = data.get("paragraph")
         paragraph_for_edit.paragraph_visible = data.get("paragraph_visible")
         paragraph_for_edit.title_paragraph = data.get("title_paragraph")
         paragraph_for_edit.bold_paragraph = data.get("bold_paragraph")
-        paragraph_for_edit.type_paragraph_id = data.get("paragraph_type_id")
-        
+        paragraph_for_edit.type_paragraph_id = new_type_paragraph_id
+
         paragraph_for_edit.save()
         return jsonify({"status": "success", "message": "Paragraph updated successfully"}), 200
+
     except Exception as e:
         return jsonify({"status": "error", "message": f"Something went wrong. Error code: {e}"}), 400
 

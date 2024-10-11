@@ -110,11 +110,32 @@ def create_report_from_file():
                     report_side=report_side
                 )
 
+                # Флаг для отслеживания первого вхождения impression
+                impression_exists = False
+                replacement_notifications = []
+
+                # ID типов параграфов
+                impression_type_id = ParagraphType.find_by_name("impression")
+                text_type_id = ParagraphType.find_by_name("text")
+
                 # Добавляем абзацы и предложения в отчет
                 for idx, paragraph in enumerate(paragraphs_from_file, start=1):
                     paragraph_type = paragraph.get('type_paragraph', 'text')
-                    paragraph_type_obj = ParagraphType.query.filter_by(type_name=paragraph_type).first()
+                    paragraph_type_id = ParagraphType.find_by_name(paragraph_type)
 
+                    # Если это тип "impression" и такой параграф уже был создан, меняем на "text"
+                    if paragraph_type == "impression":
+                        if impression_exists:
+                            # Заменяем на тип "text"
+                            paragraph_type_id = text_type_id
+                            replacement_notifications.append(
+                                f"Paragraph {idx} with type 'impression' was replaced by 'text' because an 'impression' paragraph already exists."
+                            )
+                        else:
+                            # Первый параграф с типом "impression"
+                            impression_exists = True
+
+                    # Создаем новый параграф
                     new_paragraph = ReportParagraph.create(
                         paragraph_index=idx,
                         report_id=new_report.id,
@@ -122,10 +143,10 @@ def create_report_from_file():
                         paragraph_visible=paragraph.get('visible', True),
                         title_paragraph=paragraph.get('is_title', False),
                         bold_paragraph=paragraph.get('bold', False),
-                        type_paragraph_id=paragraph_type_obj.id
+                        type_paragraph_id=paragraph_type_id
                     )
 
-                    # Обрабатываем предложения, включая те, которые разделены '!!'
+                    # Обрабатываем предложения
                     for sentence_index, sentence_data in enumerate(paragraph['sentences'], start=1):
                         if isinstance(sentence_data, list):
                             for weight, split_sentence in enumerate(sentence_data, start=1):
@@ -149,7 +170,8 @@ def create_report_from_file():
                 if os.path.exists(user_temp_folder):
                     shutil.rmtree(user_temp_folder)
 
-                return jsonify({"status": "success", "report_id": new_report.id}), 200
+                # Формируем ответ с уведомлениями о замене
+                return jsonify({"status": "success", "report_id": new_report.id, "message": "report was created successfully", "notifications": replacement_notifications}), 200
 
             except Exception as e:
                 if os.path.exists(user_temp_folder):

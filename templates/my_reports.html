@@ -6,6 +6,7 @@
 <div class="container">
     {% if user_reports_rel %}
     <h3>List of reports</h3>
+    
     <!-- Form for filtering by report type -->
     <div class="form-group">
         <label for="filter_type">Filter by Type:</label>
@@ -17,43 +18,43 @@
         </select>
     </div>
     
+    <!-- Header list to represent column titles -->
+    <ul class="report_grid report_header">
+        <li><strong>Modalities</strong></li>
+        <li><strong>Subtypes</strong></li>
+        <li><strong>Report Names</strong></li>
+        <li><strong>Comments</strong></li>
+        <li><strong>Actions</strong></li>
+    </ul>
+    
     <!-- Reports list as an unordered list with list items -->
-    <ul  id="reports_list">
+    <ul id="reports_list">
         {% for report in user_reports_rel %}
-            <li class="flex report_form__item" data-report-type="{{ report.report_type }}">
-                <form class="flex" method="POST" action="{{ url_for("my_reports.reports_list") }}">
+            <li data-report-type="{{ report.report_type }}">
+                <form method="POST" action="{{ url_for("my_reports.reports_list") }}">
                     <input type="hidden" name="report_id" value="{{ report.id }}">
                     
-                    <div class="flex_column">
-                        {% if loop.first %}
-                            <label class="report_label__item" for="type">Modalities:</label>
-                        {% endif %}
-                        <input class="report_input__item" value="{{ report.report_type_rel.type }}" name="type" id="type" readonly>
-                    </div>
-
-                    <div class="flex_column">
-                        {% if loop.first %}
-                            <label class="report_label__item" for="subtype">Subtypes:</label>
-                        {% endif %}
-                        <input class="report_input__item" value="{{ report.report_subtype_rel.subtype }}" name="subtype" id="subtype" readonly>
-                    </div>
-
-                    <div class="flex_column">
-                        {% if loop.first %}
-                            <label class="report_label__item" for="report_name">Report names:</label>
-                        {% endif %}
-                        <input class="report_input__item" value="{{ report.report_name }}" name="report_name" id="report_name" readonly>
-                    </div>
-
-                    <div class="flex_column">
-                        {% if loop.first %}
-                            <label class="report_label__item" for="comment">Comments:</label>
-                        {% endif %}
-                        <input class="report_input__item" value="{{ report.comment }}" name="comment" id="comment" readonly>
-                    </div>
-
-                    <button class="btn report__btn" type="submit" name="report_delete">Delete</button>
-                    <a class="btn report__btn" href="{{ url_for("editing_report.edit_report", report_id=report.id) }}">Edit</a>
+                    <ul class="report_grid">
+                        <li>
+                            <input class="report_input__item" value="{{ report.report_type_rel.type }}" name="type" id="type" readonly>
+                        </li>
+                        <li>
+                            <input class="report_input__item" value="{{ report.report_subtype_rel.subtype }}" name="subtype" id="subtype" readonly>
+                        </li>
+                        <li>
+                            <input class="report_input__item" value="{{ report.report_name }}" name="report_name" id="report_name" readonly>
+                        </li>
+                        <li>
+                            <input class="report_input__item" value="{{ report.comment }}" name="comment" id="comment" readonly>
+                        </li>
+                        <!-- Interaction buttons as list items -->
+                        <li>
+                            <button class="btn report__btn" type="submit" name="report_delete">Delete</button>
+                        </li>
+                        <li>
+                            <a class="btn report__btn" href="{{ url_for("editing_report.edit_report", report_id=report.id) }}">Edit</a>
+                        </li>
+                    </ul>
                 </form>
             </li>
         {% endfor %}
@@ -63,8 +64,6 @@
         <p>No reports available</p>
     {% endif %}
 </div>
-
-
 
 {% endblock container %}
 

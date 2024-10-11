@@ -1,5 +1,3 @@
-// api.js
-
 /**
  * Sends a JSON or FormData request to the server.
  * 
@@ -10,7 +8,7 @@
  * @param {string} [options.responseType="json"] - The type of response expected ("json" or "blob").
  * @returns {Promise<Object|Blob>} - The response data as a JSON object or Blob.
  */
-function sendRequest({ url, method = "POST", data = {}, responseType = "json" }) {
+async function sendRequest({ url, method = "POST", data = {}, responseType = "json" }) {
     const fetchOptions = {
         method: method,
         headers: {}
@@ -24,32 +22,38 @@ function sendRequest({ url, method = "POST", data = {}, responseType = "json" })
         fetchOptions.body = JSON.stringify(data);  // Convert data to JSON for normal requests
     }
 
-    return fetch(url, fetchOptions)
-        .then(response => {
-            if (!response.ok) {
-                // If HTTP status is not OK, handle as an error
-                return response.json().then(errorData => {
-                    throw new Error(errorData.message || `HTTP error! Status: ${response.status}`);
-                });
+    try {
+        const response = await fetch(url, fetchOptions);
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || `HTTP error! Status: ${response.status}`);
+        }
+
+        const data = responseType === "blob" ? await response.blob() : await response.json();
+
+        if (responseType === "json" && data.status) {
+            if (data.status !== "success") {
+                throw new Error(data.message || "Request failed");
             }
 
-            // Process response based on responseType
-            return responseType === "blob" ? response.blob() : response.json();
-        })
-        .then(data => {
-            // Check if the response contains a status field
-            if (responseType === "json" && data.status) {
-                if (data.status !== "success") {
-                    throw new Error(data.message || "Request failed");
-                }
-            }
+            // Combine the main message and notifications
+            let alertMessage = data.message || "Request completed successfully.";
 
-            // Return the data if status is success
-            return data;
-        })
-        .catch(error => {
-            // Centralized error handling
-            console.error("Error:", error);
-            throw error; // Re-throw the error for the caller to handle
-        });
+            // Check for notifications and append them to the message
+            if (data.notifications && Array.isArray(data.notifications)) {
+                const notificationMessage = data.notifications.join('\n');
+                alertMessage += `\n\nNotifications:\n${notificationMessage}`;
+            }
+            toastr.success(alertMessage);
+        }
+        
+        console.log(data);
+        return data;
+
+    } catch (error) {
+        alert(error.message);
+        console.error("Error:", error);
+        throw error;
+    }
 }

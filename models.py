@@ -147,6 +147,31 @@ class Report(BaseModel):
     def find_by_user(cls, user_id):
         """Возвращает все отчеты, связанные с данным пользователем."""
         return cls.query.filter_by(userid=user_id).all()
+    
+    def get_impression(self):
+        """
+        Возвращает заключение (impression) по отчету.
+        Ищет параграф с типом 'impression' в связанных параграфах отчета.
+        
+        Returns:
+            str: Текст параграфа с типом 'impression' или None, если такого параграфа нет.
+        """
+        # Ищем тип параграфа 'impression'
+        impression_type = ParagraphType.query.filter_by(type_name="impression").first()
+
+        if not impression_type:
+            # Если тип 'impression' не найден, возвращаем None
+            return None
+
+        # Ищем параграф с этим типом для данного отчета
+        impression_paragraph = ReportParagraph.query.filter_by(
+            report_id=self.id, 
+            type_paragraph_id=impression_type.id
+        ).first()
+
+        # Возвращаем текст параграфа, если найден
+        return impression_paragraph.paragraph if impression_paragraph else None
+    
 
 class ReportType(BaseModel):
     __tablename__ = 'report_type'
@@ -305,6 +330,19 @@ class ParagraphType(db.Model):
         db.session.add(new_type)
         db.session.commit()
         return new_type
+    
+    
+    @classmethod
+    def find_by_name(cls, name):
+        """
+        Возвращает ID типа параграфа по его имени.
+        Args:
+            name (str): Имя типа параграфа.
+        Returns:
+            int: ID типа параграфа или None, если не найден.
+        """
+        paragraph_type = cls.query.filter_by(type_name=name).first()
+        return paragraph_type.id if paragraph_type else None
 
 class Sentence(BaseModel):
     __tablename__ = "sentences"
