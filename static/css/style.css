@@ -270,7 +270,7 @@ html {
 /* Создаем сетку для заголовков и строк */
 .report_grid {
     display: grid;
-    grid-template-columns: 0.5fr 1fr 1fr 2fr 0.2fr 0.2fr; /* Настраиваем ширину каждого столбца */
+    grid-template-columns: 0.3fr 0.8fr 0.8fr 1.5fr 0.3fr 0.3fr; /* Настраиваем ширину каждого столбца */
     gap: 10px;
     align-items: center;
 }

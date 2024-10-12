@@ -28,30 +28,30 @@
     </ul>
     
     <!-- Reports list as an unordered list with list items -->
-    <ul id="reports_list">
+    <ul style="display: grid;" id="reports_list">
         {% for report in user_reports_rel %}
             <li data-report-type="{{ report.report_type }}">
                 <form method="POST" action="{{ url_for("my_reports.reports_list") }}">
                     <input type="hidden" name="report_id" value="{{ report.id }}">
                     
-                    <ul class="report_grid">
-                        <li>
+                    <ul class="report_grid" data-report-type = "{{report.report_type}}">
+                        <li class="report_form_item" data-report-type="{{ report.report_type }}">
                             <input class="report_input__item" value="{{ report.report_type_rel.type }}" name="type" id="type" readonly>
-                        </li>
-                        <li>
+                        </li data-report-type="{{ report.report_type }}">
+                        <li class="report_form_item" data-report-type="{{ report.report_type }}">
                             <input class="report_input__item" value="{{ report.report_subtype_rel.subtype }}" name="subtype" id="subtype" readonly>
                         </li>
-                        <li>
+                        <li class="report_form_item" data-report-type="{{ report.report_type }}">
                             <input class="report_input__item" value="{{ report.report_name }}" name="report_name" id="report_name" readonly>
                         </li>
-                        <li>
+                        <li class="report_form_item" data-report-type="{{ report.report_type }}">
                             <input class="report_input__item" value="{{ report.comment }}" name="comment" id="comment" readonly>
                         </li>
                         <!-- Interaction buttons as list items -->
-                        <li>
+                        <li class="report_form_item" data-report-type="{{ report.report_type }}">
                             <button class="btn report__btn" type="submit" name="report_delete">Delete</button>
                         </li>
-                        <li>
+                        <li class="report_form_item" data-report-type="{{ report.report_type }}">
                             <a class="btn report__btn" href="{{ url_for("editing_report.edit_report", report_id=report.id) }}">Edit</a>
                         </li>
                     </ul>

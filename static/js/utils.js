@@ -98,9 +98,17 @@ function filterReportsByType(reportTypeSelect, existingReportList) {
 
     reports.forEach(report => {
         const reportType = report.getAttribute("data-report-type");  // Получаем тип отчета
+        
+        // Определяем стиль отображения родительского элемента
+        const parentDisplayStyle = getComputedStyle(existingReportList).display;
+
         // Если выбран тип "" (All) или тип совпадает с атрибутом отчета, показываем его
         if (selectedType === "" || reportType === selectedType) {
-            report.style.display = "flex";  // Отображаем отчет, если тип совпадает или выбрано "All"
+            if (parentDisplayStyle === "grid") {
+                report.style.display = "grid";  // Используем grid, если у родителя grid
+            } else {
+                report.style.display = "flex";  // Используем flex в остальных случаях
+            }
         } else {
             report.style.display = "none";  // Скрываем отчет, если тип не совпадает
         }
