@@ -8,7 +8,7 @@
  * @param {string} [options.responseType="json"] - The type of response expected ("json" or "blob").
  * @returns {Promise<Object|Blob>} - The response data as a JSON object or Blob.
  */
-async function sendRequest({ url, method = "POST", data = {}, responseType = "json" }) {
+function sendRequest({ url, method = "POST", data = {}, responseType = "json" }) {
     const fetchOptions = {
         method: method,
         headers: {}
@@ -22,38 +22,39 @@ async function sendRequest({ url, method = "POST", data = {}, responseType = "js
         fetchOptions.body = JSON.stringify(data);  // Convert data to JSON for normal requests
     }
 
-    try {
-        const response = await fetch(url, fetchOptions);
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || `HTTP error! Status: ${response.status}`);
-        }
-
-        const data = responseType === "blob" ? await response.blob() : await response.json();
-
-        if (responseType === "json" && data.status) {
-            if (data.status !== "success") {
-                throw new Error(data.message || "Request failed");
+    return fetch(url, fetchOptions)
+        .then(response => {
+            if (!response.ok) {
+                // Parse error message from the response
+                return response.json().then(errorData => {
+                    throw new Error(errorData.message || `HTTP error! Status: ${response.status}`);
+                });
             }
+            // Handle different response types
+            return responseType === "blob" ? response.blob() : response.json();
+        })
+        .then(data => {
+            // If it's JSON and has a status field, handle it
+            if (responseType === "json" && data.status) {
+                if (data.status !== "success") {
+                    throw new Error(data.message || "Request failed");
+                }
 
-            // Combine the main message and notifications
-            let alertMessage = data.message || "Request completed successfully.";
+                // Combine the main message and notifications
+                let alertMessage = data.message || "Request completed successfully.";
 
-            // Check for notifications and append them to the message
-            if (data.notifications && Array.isArray(data.notifications)) {
-                const notificationMessage = data.notifications.join('\n');
-                alertMessage += `\n\nNotifications:\n${notificationMessage}`;
+                // Check for notifications and append them to the message
+                if (data.notifications && Array.isArray(data.notifications)) {
+                    const notificationMessage = data.notifications.join('\n');
+                    alertMessage += `\n\nNotifications:\n${notificationMessage}`;
+                }
+                toastr.success(alertMessage);
             }
-            toastr.success(alertMessage);
-        }
-        
-        console.log(data);
-        return data;
-
-    } catch (error) {
-        alert(error.message);
-        console.error("Error:", error);
-        throw error;
-    }
+            return data;
+        })
+        .catch(error => {
+            alert(error.message);
+            console.error("Error:", error);
+            throw error;
+        });
 }

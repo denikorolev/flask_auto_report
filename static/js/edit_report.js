@@ -170,25 +170,25 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     });
 
-    // Delete paragraph
-    document.querySelectorAll(".delete-paragraph-btn").forEach(button => {
+});
+});
+
+// удаление параграфа
+document.addEventListener("DOMContentLoaded", function() {
+    const deleteButtons = document.querySelectorAll('.delete-paragraph-btn');
+    
+    deleteButtons.forEach(button => {
         button.addEventListener("click", function() {
             const paragraphId = this.getAttribute("data-paragraph-id");
+            
             sendRequest({
                 url: `/editing_report/delete_paragraph`,
-                data: {
-                    paragraph_id: paragraphId
-                }
+                data: { paragraph_id: paragraphId }
             }).then(response => {
-                if (response.status === "success") {
-                    window.location.reload();
-                } else {
-                    alert(response.message);
-                }
+                window.location.reload();
+            }).catch(error => {
+                alert("Ошибка удаления параграфа.");
             });
         });
     });
-    });
-    
 });
-
