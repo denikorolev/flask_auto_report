@@ -11,6 +11,9 @@ services:
       - DB_HOST=db  # Переопределяем переменную DB_HOST для Docker, чтобы подключаться к контейнеру базы данных
       - DATABASE_URL=postgresql://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_NAME}
       - SECRET_KEY=${SECRET_KEY}
+      - UPLOAD_FOLDER=/uploads
+    volumes:
+      - uploads_data:/uploads
     command: gunicorn --log-level=info --bind 0.0.0.0:5000 --timeout 120 app:app
     depends_on:
       - db
@@ -50,3 +53,4 @@ services:
 
 volumes:
   pgdata:
+  uploads_data:

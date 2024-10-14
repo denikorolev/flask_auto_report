@@ -102,16 +102,6 @@ def report_settings():
                 flash("You don't have permission to edit this subtype")
             return redirect(request.url)
         
-        # Handling file upload
-        if 'file' in request.files:
-            file = request.files['file']
-            result = file_uploader(file, "doc")
-            if "successfully" in result:
-                flash(result, 'success')
-            else:
-                flash(result, 'error')
-            return redirect(request.url)
-        
     return render_template('report_settings.html', 
                            title = page_title,
                            menu = menu,
@@ -122,6 +112,40 @@ def report_settings():
                            user_subtypes=user_subtypes,
                            paragraph_types=paragraph_types 
                            )
+
+
+
+@report_settings_bp.route('/upload_template', methods=['POST'])
+@login_required
+def upload_template():
+    """
+    Обрабатывает загрузку шаблона Word файла.
+    """
+    if 'file' not in request.files:
+        return jsonify({"status": "error", "message": "No file part"}), 400
+    file = request.files['file']
+    file_type = request.form.get('file_type')
+    
+    # Устанавливаем имя файла в зависимости от типа
+    if file_type == "template":
+        file_name = "word_template"
+        file_ext = "doc"
+        folder_name = "word_template"
+    elif file_type == "signature":
+        file_name = "signatura"
+        file_ext = "jpg"
+        folder_name = "signatura"
+    else:
+        return jsonify({"status": "error", "message": "Invalid file type"}), 400
+    
+    # Загружаем файл с помощью функции file_uploader в папку "templates"
+    upload_result = file_uploader(file, file_ext, folder_name, file_name=file_name)
+    if "successfully" not in upload_result:
+        return jsonify({"status": "error", "message": upload_result}), 400
+    
+    return jsonify({"status": "success", "message": upload_result}), 200
+
+
 
 # Маршрут для добавления группы ключевых слов
 @report_settings_bp.route('/add_keywords', methods=['POST'])

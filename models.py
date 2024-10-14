@@ -108,6 +108,51 @@ class UserProfile(BaseModel):
         """Ищет профиль по его ID и ID пользователя."""
         return cls.query.filter_by(id=profile_id, user_id=user_id).first()
 
+
+class FileMetadata(BaseModel):
+    __tablename__ = "file_metadata"
+    
+    profile_id = db.Column(db.BigInteger, db.ForeignKey("user_profiles.id"), nullable=False)  # Связь с профилем
+    file_name = db.Column(db.String(255), nullable=False)  # Имя файла
+    file_path = db.Column(db.String(500), nullable=False)  # Путь к файлу
+    file_type = db.Column(db.String(50), nullable=False)  # Тип файла (например, "docx", "jpg")
+    uploaded_at = db.Column(db.DateTime, default=db.func.now(), nullable=False)  # Время загрузки файла
+    file_description = db.Column(db.String(500), nullable=False)
+    # Связь с профилем, к которому привязан файл
+    profile = db.relationship("UserProfile", backref=db.backref("files", cascade="all, delete-orphan"))
+
+    @classmethod
+    def create(cls, profile_id, file_name, file_path, file_type, file_description):
+        new_file = cls(
+            profile_id=profile_id,
+            file_name=file_name,
+            file_path=file_path,
+            file_type=file_type,
+            file_description=file_description
+        )
+        db.session.add(new_file)
+        db.session.commit()
+        return new_file
+    
+    @classmethod
+    def get_file_by_description(cls, profile_id, file_description):
+        """
+        Возвращает полный путь к файлу, который относится к данному профилю, на основе его описания.
+        
+        Args:
+            profile_id (int): ID профиля.
+            file_description (str): Описание файла.
+        
+        Returns:
+            str: Путь к файлу, если найден, иначе None.
+        """
+        file = cls.query.filter_by(profile_id=profile_id, file_description=file_description).first()
+        if file:
+            return file.file_path
+        else:
+            return None
+
+
 class Report(BaseModel):
     __tablename__ = "reports"
     userid = db.Column(db.BigInteger, db.ForeignKey('users.id'), nullable=False)

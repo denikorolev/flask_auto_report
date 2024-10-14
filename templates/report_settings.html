@@ -71,13 +71,23 @@
             </ul>
         </div>
 
-        <div class="container">
-            <h3>Upload word template file</h3>
-            <form id="file-upload-form">
-                <input type="file" name="file" id="file-input">
-                <button type="button">Upload</button>
-            </form>
-        </div>
+        <form id="file-upload-form">
+            <input type="file" name="file" id="file-input" required>
+            
+            <!-- Опции для выбора загрузки -->
+            <div>
+                <label>
+                    <input type="radio" name="file_type" value="template" checked>
+                    Загрузить шаблон для файлов Word
+                </label>
+                <label>
+                    <input type="radio" name="file_type" value="signature">
+                    Загрузить подпись
+                </label>
+            </div>
+            
+            <button type="submit">Upload</button>
+        </form>
 
         <!-- Новый раздел для работы с типами параграфов -->
         <div class="paragraph-types">

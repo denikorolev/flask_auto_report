@@ -166,16 +166,6 @@ document.querySelectorAll(".add-report-keywords-btn").forEach(button => {
 });
 
 
-// File directory logic
-function updateDirectoryPath() {
-    var input = document.getElementById('file-input');
-    var path = input.files[0].webkitRelativePath;
-    document.getElementById('directory-path').value = path.split('/')[0];
-}
-
-
-
-
 // Показываем или скрываем список отчетов при выборе чекбокса
 document.getElementById('link_reports_checkbox').addEventListener('change', function() {
     const reportCheckboxesContainer = document.getElementById('report-checkboxes-container');
@@ -243,30 +233,6 @@ document.getElementById('upload-word-btn').addEventListener('click', function(ev
     });
 });
 
-// Загрузка файла шаблона для word на сервер
-document.getElementById("file-upload-form").addEventListener("submit", function(event) {
-    event.preventDefault();
-    
-    const formData = new FormData();
-    const fileInput = document.getElementById("file-input");
-    formData.append("file", fileInput.files[0]);
-
-    // Используем sendRequest для отправки файла
-    sendRequest({
-        url: "{{ url_for('report_settings.upload_template') }}",
-        method: "POST",
-        data: formData  // Отправляем объект FormData
-    })
-    .then(() => {
-        alert("File uploaded successfully");
-        location.reload();
-    })
-    .catch(error => {
-        console.error("Error:", error);
-        alert("File upload failed: " + error.message);
-    });
-});
-
 // Логика для добавления нового типа параграфа
 document.getElementById('paragraph-type-form').addEventListener('submit', async function(event) {
     event.preventDefault(); // Prevent form submission and page reload
@@ -302,4 +268,24 @@ document.getElementById('paragraph-type-form').addEventListener('submit', async 
         // Handle the error returned by sendRequest
         alert(error.message || 'An error occurred while adding the paragraph type.');
     }
+});
+
+
+// Загрузка файла шаблона для word на сервер
+document.getElementById("file-upload-form").addEventListener("submit", function(event) {
+    event.preventDefault();
+    
+    const formData = new FormData();
+    const fileInput = document.getElementById("file-input");
+    formData.append("file", fileInput.files[0]);
+    const fileType = document.querySelector('input[name="file_type"]:checked').value;
+    formData.append("file_type", fileType);
+
+    // Используем sendRequest для отправки файла
+    sendRequest({
+        url: "/report_settings/upload_template",  // Обновленный маршрут
+        data: formData  // Отправляем объект FormData
+    })
+    .then(() => {fileInput.value = "";})
+    .catch(error => {fileInput.value = "";});
 });

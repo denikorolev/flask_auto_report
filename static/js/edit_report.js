@@ -68,15 +68,15 @@ document.addEventListener("DOMContentLoaded", function() {
             // Создаем новый элемент предложения
             const newSentenceLi = document.createElement("li");
             const newSentenceForm = document.createElement("form");
-            newSentenceForm.classList.add("edit-sentence-form");
+            newSentenceForm.classList.add("flex");
 
             newSentenceForm.innerHTML = `
                 <input type="hidden" name="sentence_id" value="new">
                 <input type="hidden" name="add_sentence_paragraph" value="${paragraphId}">
-                <input class="report_input__item" type="text" name="sentence_sentence" value="New sentence">
-                <input class="report_input__item" type="text" name="sentence_index" value="${newSentenceIndex}">
-                <input class="report_input__item" type="text" name="sentence_weight" value="1">
-                <input class="report_input__item" type="text" name="sentence_comment" value="">
+                <input class="report_input__item report_input__item--index" type="text" name="sentence_index" value="${newSentenceIndex}">
+                <input class="report_input__item report_input__item--index" type="text" name="sentence_weight" value="1">
+                <input class="report_input__item report_input__item--index" type="text" name="sentence_comment" value="">
+                <input class="report_input__item report_input__item--name temporary_wide" type="text" name="sentence_sentence" value="New sentence">
                 <button class="btn report__btn delete-sentence-btn" type="button" data-sentence-id="new">Delete Sentence</button>
             `;
 
