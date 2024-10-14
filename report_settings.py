@@ -139,7 +139,7 @@ def upload_template():
         return jsonify({"status": "error", "message": "Invalid file type"}), 400
     
     # Загружаем файл с помощью функции file_uploader в папку "templates"
-    upload_result = file_uploader(file, file_ext, folder_name, file_name=file_name)
+    upload_result, filepath = file_uploader(file, file_ext, folder_name, file_name=file_name)
     if "successfully" not in upload_result:
         return jsonify({"status": "error", "message": upload_result}), 400
     

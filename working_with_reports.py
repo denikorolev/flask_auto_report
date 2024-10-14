@@ -95,7 +95,6 @@ def working_with_reports():
             "paragraph": paragraph,
             "grouped_sentences": grouped_sentences
         })
-    print_object_structure(paragraph_data)
     return render_template(
         "working_with_report.html", 
         title=report.report_name,

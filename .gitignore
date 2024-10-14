@@ -41,6 +41,5 @@ deploy.sh
 start.sh
 
 # My folders
-/uploads/korolevdg_1/reports*/
+uploads/
 backups/
-processed_files/

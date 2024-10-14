@@ -2,11 +2,12 @@
 
 from flask import g
 from flask_login import current_user
+from werkzeug.datastructures import FileStorage
 from docx import Document
 import os
 from unidecode import unidecode
 from datetime import datetime
-import glob
+import tempfile
 from docx.shared import Pt, Inches
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from docx.enum.table import WD_ALIGN_VERTICAL
@@ -24,6 +25,36 @@ def allowed_file(file_name, file_type):
         return '.' in file_name and file_name.rsplit('.', 1)[1].lower() in {"jpg", "jpeg", "png"}
     else:
         return False
+
+# Преобразование пути к файлу в объект файла
+def create_filestorage_from_path(file_path):
+    """
+    Преобразует файл с диска в объект FileStorage, который Flask использует для загруженных файлов.
+    
+    :param file_path: Путь к файлу на диске.
+    :return: Объект FileStorage.
+    """
+    try:
+        # Открываем файл в режиме чтения
+        file = open(file_path, "rb")
+        # Создаем объект FileStorage, передавая файл и его имя
+        file_storage = FileStorage(file, filename=os.path.basename(file_path))
+        return file_storage
+    except Exception as e:
+        print(f"Error while creating FileStorage: {e}")
+        return None
+
+def sanitize_filename(filename):
+    """
+    Удаляет пробелы, тире и выполняет транслитерацию имени файла.
+    
+    :param filename: Исходное имя файла.
+    :return: Обработанное имя файла.
+    """
+    # Заменяем пробелы и тире на подчеркивания
+    sanitized_name = filename.replace(" ", "_").replace("-", "_")
+    # Выполняем транслитерацию (убираем специальные символы)
+    return unidecode(sanitized_name)
 
 
 def sync_profile_files(profile_id):
@@ -67,26 +98,32 @@ def sync_profile_files(profile_id):
         return f"Error during file synchronization: {e}"
 
 
-
 def file_uploader(file, file_type, folder_name, file_name=None, file_description=None):
     """
     Uploads a file to the server in the folder corresponding to the user's profile and specified folder name,
     and saves metadata to the database.
     
-    :param file: файл, который загружается
+    :param file: файл, который загружается или путь к файлу
     :param file_type: тип файла (например, "doc" или "jpg")
     :param folder_name: имя папки, в которую будет загружен файл (например, "templates" или "word_reports")
     :param file_name: имя файла (если не передано, используется имя папки)
     :param file_description: описание файла для записи в базу данных
     
-    :return: сообщение об успехе или ошибке.
+    :return: сообщение об успехе или ошибке и путь к файлу.
     """
-    if file.filename == "":
-        return "The file name is empty"
+    # Проверяем, является ли file строкой, если да, то это путь к файлу
+    if isinstance(file, str):
+        file = create_filestorage_from_path(file)
+        if not file:
+            return "Failed to convert file path to FileStorage", None
+
+    # Проверка, есть ли у файла атрибут filename
+    if not hasattr(file, "filename") or file.filename == "":
+        return "The file name is empty", None
 
     # Проверка допустимого расширения файла
     if not allowed_file(file.filename, file_type):
-        return "The file name or extension is not allowed"
+        return "The file name or extension is not allowed", None
     
     # Получаем расширение файла
     name, ext = os.path.splitext(file.filename)
@@ -94,19 +131,19 @@ def file_uploader(file, file_type, folder_name, file_name=None, file_description
     # Если имя файла не передано, используем имя папки в качестве имени файла
     if not file_name:
         file_name = folder_name
-    
+    sanitized_name = sanitize_filename(file_name)
     # Формируем строку с текущей датой и временем
     date_str = datetime.now().strftime("%d_%m_%y")
     time_str = datetime.now().strftime("%H_%M")
     
     # Создаем имя файла с датой и временем
-    filename_with_date_time = f"{file_name}_{date_str}_{time_str}{ext}"
+    filename_with_date_time = f"{sanitized_name}_{date_str}_{time_str}{ext}"
     
     # Получаем путь к папке пользователя с учетом текущего профиля
     try:
         user_folder = get_config().get_user_upload_folder()
     except Exception as e:
-        return f"Failed to get user folder: {e}"
+        return f"Failed to get user folder: {e}", None
     
     # Путь к папке, соответствующей folder_name и текущей дате
     target_folder = os.path.join(user_folder, folder_name, f"{folder_name}_{date_str}")
@@ -134,16 +171,14 @@ def file_uploader(file, file_type, folder_name, file_name=None, file_description
                 file_description=file_description
             )
         except Exception as e:
-            return f"Can't adding data to file metadata: {e}"
+            return f"Can't add data to file metadata: {e}", None
         
-        return "The file was uploaded successfully and metadata saved"
+        return "The file was uploaded successfully and metadata saved", file_path
     
     except Exception as e:
-        return f"The file wasn't uploaded due to the following error: {e}"
+        return f"The file wasn't uploaded due to the following error: {e}", None
 
-    
-    
-# Function for file saving in the docx format 
+
 def save_to_word(text, name, subtype, report_type, birthdate, reportnumber, scanParam, side=""):
     # Убираем лишние пробелы и проверяем на пустые строки
     name = name.strip() or "NoName"
@@ -160,17 +195,16 @@ def save_to_word(text, name, subtype, report_type, birthdate, reportnumber, scan
     except:
         modified_birthdate = "unknown"
     try:
-            
-        signatura_metadata = FileMetadata.get_file_by_description("signatura")
-        if not signatura_metadata:
-            raise Exception("Signature image not found in the database.")
-        signatura_path = signatura_metadata.file_path
-
-        template_metadata = FileMetadata.get_file_by_description("word_template")
+        profile_id = g.current_profile.id
+        signatura_metadata = FileMetadata.get_file_by_description(profile_id, "signatura")
+        template_metadata = FileMetadata.get_file_by_description(profile_id, "word_template")
+        
         if not template_metadata:
             raise Exception("Word template not found in the database.")
-        template_path = template_metadata.file_path
         
+        signatura_path = signatura_metadata.file_path
+        template_path = template_metadata.file_path
+
         document = Document(template_path)
         
         def set_font_size(doc, size):
@@ -222,7 +256,7 @@ def save_to_word(text, name, subtype, report_type, birthdate, reportnumber, scan
         
         document.add_paragraph(text)
 
-    # Create a table with one row and three columns
+        # Create a table with one row and three columns
         table = document.add_table(rows=1, cols=3)
         table.autofit = False
         
@@ -261,13 +295,23 @@ def save_to_word(text, name, subtype, report_type, birthdate, reportnumber, scan
         
 
         # Генерация имени файла
-        utf_filename = f"{name.replace(' ', '_').replace('-', '_')}_{report_type.replace(' ', '_').replace('-', '_')}_{subtype.replace(' ', '_').replace('-', '_')}_{date_str}.docx"
-        new_filename = unidecode(utf_filename)
-
-        # Сохранение документа с использованием функции file_uploader
-        folder_name = "reports_word"  # Указание имени папки для протоколов Word
-        result, saved_file_path = file_uploader(document, "doc", folder_name, new_filename)
+        filename = f"{name}_{report_type}_{subtype}"
         
+
+        # Сохраняем документ во временный файл
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".docx") as tmp_file:
+            temp_file_path = tmp_file.name
+            document.save(temp_file_path)  # Сохраняем файл в эту временную директорию
+
+        
+        folder_name = "reports_word"
+          
+        result, saved_file_path = file_uploader(temp_file_path, "doc", folder_name, filename)
+        
+        # Удаляем временный файл после загрузки
+        if os.path.exists(temp_file_path):
+            os.remove(temp_file_path)
+            
         if "successfully" in result:
             print(f"File saved at: {saved_file_path}")
             return saved_file_path

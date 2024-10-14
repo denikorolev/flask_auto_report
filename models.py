@@ -148,7 +148,7 @@ class FileMetadata(BaseModel):
         """
         file = cls.query.filter_by(profile_id=profile_id, file_description=file_description).first()
         if file:
-            return file.file_path
+            return file
         else:
             return None
 

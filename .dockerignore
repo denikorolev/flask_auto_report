@@ -28,3 +28,7 @@ nginx_test.conf
 .env
 docker-compose.yml
 *.log
+
+# My folders
+uploads/
+backups/
