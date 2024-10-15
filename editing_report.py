@@ -3,6 +3,7 @@
 from flask import Blueprint, render_template, request, current_app, jsonify
 from flask_login import current_user, login_required
 from models import db, Report, ReportParagraph, Sentence, ParagraphType
+from errors_processing import print_object_structure
 
 
 editing_report_bp = Blueprint('editing_report', __name__)
@@ -200,6 +201,7 @@ def edit_sentences_bulk():
         return jsonify(success=False, message="Invalid request format"), 400
 
     data = request.get_json()
+    print_object_structure(data)
     try:
         for sentence_data in data["sentences"]:
             print(sentence_data)

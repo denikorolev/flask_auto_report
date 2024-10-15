@@ -9,7 +9,8 @@ document.addEventListener("DOMContentLoaded", function() {
         button.addEventListener("click", function() {
             const paragraphId = this.getAttribute("data-paragraph-id");
             const sentenceList = document.getElementById(`sentences-${paragraphId}`);
-
+            
+            
             // Логика кнопки Expand/Save
             if (this.textContent.includes("Expand")) {
                 sentenceList.style.display = "block";
@@ -35,12 +36,8 @@ document.addEventListener("DOMContentLoaded", function() {
                 }).then(response => {
                     if (response.success) {
                         window.location.reload();
-                    } else {
-                        alert(response.message);
-                    }
-                }).catch(() => {
-                    alert("Failed to save sentences.");
-                });
+                    } 
+                })
             }
         });
     });
@@ -68,7 +65,7 @@ document.addEventListener("DOMContentLoaded", function() {
             // Создаем новый элемент предложения
             const newSentenceLi = document.createElement("li");
             const newSentenceForm = document.createElement("form");
-            newSentenceForm.classList.add("flex");
+            newSentenceForm.classList.add("flex","edit-sentence-form");
 
             newSentenceForm.innerHTML = `
                 <input type="hidden" name="sentence_id" value="new">
@@ -102,13 +99,7 @@ document.addEventListener("DOMContentLoaded", function() {
         sendRequest({
             url: `/editing_report/update_report`,
             data:jsonData
-        }).then(response => {
-            if (response.status === "success") {
-                toastr.success(response.message);
-            } else {
-                alert(response.message);
-            }
-        });
+        })
     });
 
     // Edit paragraph
@@ -162,11 +153,8 @@ document.addEventListener("DOMContentLoaded", function() {
                 }
             }).then(response => {
                 if (response.status === "success") {
-                    toastr.success(response.message);
                     this.closest("li").remove();
-                } else {
-                    alert(response.message);
-                }
+                } 
         });
     });
 
