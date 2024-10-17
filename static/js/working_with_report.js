@@ -106,7 +106,7 @@ function cleanSelectText(element) {
     });
 
     // Remove all HTML tags except text
-    text = text.replace(/<[^>]*>?/gm, '').trim();
+    text = text.replace(/<[^>]*>/gm, '').trim();
 
     // Use a DOM parser to replace entities
     const tempElement = document.createElement("textarea");
