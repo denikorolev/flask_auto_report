@@ -42,6 +42,7 @@ function getMaxReportNumber(reportNumber) {
 function createEditableSentenceElement(sentenceText) {
     const newSentenceElement = document.createElement("span");
     newSentenceElement.classList.add("report__sentence");
+    newSentenceElement.dataset.index = "right-side-{{ item.paragraph.id }}-{{ index }}"
     newSentenceElement.textContent = sentenceText;
 
     // Make the content editable
@@ -361,7 +362,6 @@ function highlightKeyWords(text, keyWordsGroups) {
  * Функция для обновления текста справа и выделения ключевых слов
  */
 function updateRightSideText() {
-    // Используем глобальную переменную, переданную из HTML
     const rightParagraphList = document.getElementById("right-paragraph-list");
 
     rightParagraphList.querySelectorAll("p, span").forEach(paragraph => {
@@ -415,35 +415,6 @@ function collectParagraphsData() {
 
     return paragraphsData;
 }
-
-
-// /**
-//  * Очищает и форматирует текст перед использованием в функциях копирования и экспорта
-//  * @param {HTMLElement} element - Элемент, содержащий текст для очистки
-//  * @returns {string} - Очищенный и отформатированный текст
-//  */
-// function cleanAndFormatText(element) {
-//     let formattedText = element.innerHTML;
-
-//     // Проходим по каждому select и заменяем его на выбранный текст
-//     element.querySelectorAll("select").forEach(function(select) {
-//         const selectedOption = select.options[select.selectedIndex].textContent;
-//         formattedText = formattedText.replace(select.outerHTML, selectedOption);
-//     });
-
-//     // Убираем все теги <span> и оставляем только текст внутри них
-//     formattedText = formattedText.replace(/<span[^>]*>(.*?)<\/span>/gi, function(match, p1) {
-//         return p1.trim(); // Возвращаем текст внутри span, удаляя лишние пробелы
-//     });
-
-//     // Удаляем лишние пробелы, табуляции и новые строки
-//     formattedText = formattedText.replace(/\s+/g, " ").trim();
-
-//     // Убираем лишние пробелы и пустые строки между абзацами
-//     formattedText = formattedText.replace(/\s*\n\s*/g, "\n").trim();
-
-//     return formattedText;
-// }
 
 
 // Логика для кнопки "Next"
@@ -813,6 +784,7 @@ document.addEventListener("DOMContentLoaded", function() {
                             const newSentenceElement = createEditableSentenceElement(selectedSentence);
                             buttonElement.parentNode.insertBefore(newSentenceElement, buttonElement);
                             selectElement.remove();
+                            updateRightSideText();
                         }
                     });
 
