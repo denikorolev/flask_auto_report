@@ -16,8 +16,9 @@ from report_settings import report_settings_bp
 from new_report_creation import new_report_creation_bp
 from editing_report import editing_report_bp
 from profile_settings import profile_settings_bp
+from openai_api import openai_api_bp
 
-version = "0.4.1"
+version = "0.4.2"
 
 app = Flask(__name__)
 app.config.from_object(get_config()) # Load configuration from file config.py
@@ -41,8 +42,9 @@ app.register_blueprint(report_settings_bp, url_prefix="/report_settings")
 app.register_blueprint(editing_report_bp, url_prefix="/editing_report")
 app.register_blueprint(new_report_creation_bp, url_prefix="/new_report_creation")
 app.register_blueprint(profile_settings_bp, url_prefix="/profile_settings")
+app.register_blueprint(openai_api_bp, url_prefix="/openai_api")
 
-# Load user callback
+# Load user callback 
 @login_manager.user_loader
 def load_user(user_id):
     with db.session() as session:

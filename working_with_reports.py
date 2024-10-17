@@ -1,17 +1,13 @@
 #working_with_reports.py
-#v0.3.1
 
 from flask import Blueprint, render_template, request, current_app, jsonify, send_file, session, url_for
 from flask_login import login_required, current_user
 import os
 from models import db, Report, ReportType, ReportParagraph, Sentence, KeyWordsGroup
 from file_processing import save_to_word
-from calculating import calculate_age
 from sentence_processing import split_sentences, get_new_sentences, group_keywords
 from errors_processing import print_object_structure
 from utils import ensure_list
-
-from openai import OpenAI 
 
 
 working_with_reports_bp = Blueprint('working_with_reports', __name__)
@@ -242,63 +238,6 @@ def export_to_word():
         return jsonify({"status": "error", "message": f"Failed to export to Word: {e}"}), 500
 
 
-@working_with_reports_bp.route("/generate_impression", methods=['POST'])
-@login_required
-def generate_impression():
-    try:
-        data = request.get_json()
-        text = data.get("text")
-        birthdate_str = data.get("birthdate")
-        gender = data.get("gender", "Нет данных")
-        report_type = data.get("report_type")
 
-        if not text or not birthdate_str or not report_type:
-            return jsonify({"message": "Missing required information."}), 400
-        age = calculate_age(birthdate_str)
-        if not age:
-            return jsonify({"message": "Invalid birthdate format. Expected format: YYYY-MM-DD"}), 400
-
-        # Подготовка промпта для GPT
-        user_prompt = (
-            f"Пациент: {gender}, возраст: {age} лет.\n"
-            f"Тип отчета: {report_type}.\n"
-            f"Протокол исследования:\n{text}"
-        )
-        
-        system_prompt = (f"You are a professional radiologist speaking only Russian. Your role is to assist users in creating impressions based on provided MRI descriptions. You focus on making concise impressions for MRI reports. Your responses should be formal, clear, and precise, adhering to medical terminology standards. If there are several possible diagnoses or syndromes based on the provided descriptions, you should first mention the most likely one and then list the others in parentheses, separated by commas. When formulating a diagnosis or syndrome, adhere to the following probability classification: for 'almost certain,' state the diagnosis directly; for 'very likely,' use 'MRI findings are suggestive of...'; for 'likely,' use 'MRI findings may correspond to...'; and for '50/50' use 'MRI findings could indicate...'. Do not repeat anything from the provided description in your response, and avoid mentioning normal findings or detailed descriptions of abnormalities. Only include diagnoses or syndromes that belong in the 'Impression' section of the report.")
-
-        # Установка API ключа и модели
-        api_key = current_app.config.get('OPENAI_API_KEY')
-        api_model = current_app.config.get('OPENAI_MODEL')
-        # api_assistant = "asst_IpRMfZnbJXW0IalVVslKin17" check it later
-
-        if not api_key:
-            return jsonify({"message": "OpenAI API key is not configured."}), 500
-
-        # Вызов OpenAI API
-        client = OpenAI(api_key=api_key)
-        
-        chat_completion = client.chat.completions.create(
-            messages=[
-                {
-            "role": "user", "content": user_prompt,
-        },
-                {
-                    "role": "system", "content": system_prompt
-                }
-              ],  model=api_model
-        )
-
-       
-        # Извлечение первого (и единственного) выбора
-        first_choice = chat_completion.choices[0]
-
-        # Извлечение текста сообщения
-        message_content = first_choice.message.content
-        return jsonify({"impression": message_content}), 200
-
-    except Exception as e:
-        current_app.logger.error(f"Unexpected error: {e}")
-        return jsonify({"message": f"Unexpected error: {e}"}), 500
     
 

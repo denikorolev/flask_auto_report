@@ -204,7 +204,7 @@ document.getElementById("keywords-form").addEventListener("submit", function(eve
 
 // Логика получения новых ключевых слов при нажатии на кнопку upload в секции upload word file with key words
 document.getElementById('upload-word-btn').addEventListener('click', function(event) {
-    event.preventDefault(); // Останавливаем стандартное поведение формы
+    event.preventDefault(); 
     const ignoreUniqueCheck = document.getElementById("ignore_unique_check").checked ? "true" : "false";
 
     // Получаем файл из input
@@ -221,10 +221,9 @@ document.getElementById('upload-word-btn').addEventListener('click', function(ev
     formData.append('file', file);
     formData.append('ignore_unique_check', ignoreUniqueCheck);
 
-    // Отправляем запрос на сервер
     sendRequest({
-        url: "/report_settings/upload_keywords_from_word",  // Маршрут загрузки
-        data: formData,
+        url: "/report_settings/upload_keywords_from_word",  
+        data: formData
     })
     .then(response => {
         location.reload(); 
@@ -284,7 +283,7 @@ document.getElementById("file-upload-form").addEventListener("submit", function(
     // Используем sendRequest для отправки файла
     sendRequest({
         url: "/report_settings/upload_template",  // Обновленный маршрут
-        data: formData  // Отправляем объект FormData
+        data: formData  
     })
     .then(() => {fileInput.value = "";})
     .catch(error => {fileInput.value = "";});

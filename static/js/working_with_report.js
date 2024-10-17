@@ -297,7 +297,6 @@ function displayProcessedParagraphs(paragraphs) {
 }
 
 
-
 /**
  * Функция для переключения видимости списка предложений
  * @param {HTMLElement} button - Кнопка, которая была нажата
@@ -418,33 +417,33 @@ function collectParagraphsData() {
 }
 
 
-/**
- * Очищает и форматирует текст перед использованием в функциях копирования и экспорта
- * @param {HTMLElement} element - Элемент, содержащий текст для очистки
- * @returns {string} - Очищенный и отформатированный текст
- */
-function cleanAndFormatText(element) {
-    let formattedText = element.innerHTML;
+// /**
+//  * Очищает и форматирует текст перед использованием в функциях копирования и экспорта
+//  * @param {HTMLElement} element - Элемент, содержащий текст для очистки
+//  * @returns {string} - Очищенный и отформатированный текст
+//  */
+// function cleanAndFormatText(element) {
+//     let formattedText = element.innerHTML;
 
-    // Проходим по каждому select и заменяем его на выбранный текст
-    element.querySelectorAll("select").forEach(function(select) {
-        const selectedOption = select.options[select.selectedIndex].textContent;
-        formattedText = formattedText.replace(select.outerHTML, selectedOption);
-    });
+//     // Проходим по каждому select и заменяем его на выбранный текст
+//     element.querySelectorAll("select").forEach(function(select) {
+//         const selectedOption = select.options[select.selectedIndex].textContent;
+//         formattedText = formattedText.replace(select.outerHTML, selectedOption);
+//     });
 
-    // Убираем все теги <span> и оставляем только текст внутри них
-    formattedText = formattedText.replace(/<span[^>]*>(.*?)<\/span>/gi, function(match, p1) {
-        return p1.trim(); // Возвращаем текст внутри span, удаляя лишние пробелы
-    });
+//     // Убираем все теги <span> и оставляем только текст внутри них
+//     formattedText = formattedText.replace(/<span[^>]*>(.*?)<\/span>/gi, function(match, p1) {
+//         return p1.trim(); // Возвращаем текст внутри span, удаляя лишние пробелы
+//     });
 
-    // Удаляем лишние пробелы, табуляции и новые строки
-    formattedText = formattedText.replace(/\s+/g, " ").trim();
+//     // Удаляем лишние пробелы, табуляции и новые строки
+//     formattedText = formattedText.replace(/\s+/g, " ").trim();
 
-    // Убираем лишние пробелы и пустые строки между абзацами
-    formattedText = formattedText.replace(/\s*\n\s*/g, "\n").trim();
+//     // Убираем лишние пробелы и пустые строки между абзацами
+//     formattedText = formattedText.replace(/\s*\n\s*/g, "\n").trim();
 
-    return formattedText;
-}
+//     return formattedText;
+// }
 
 
 // Логика для кнопки "Next"
@@ -716,18 +715,131 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 
 
+// Логика добавления предложения при нажатии на кнопку "+"
+document.addEventListener("DOMContentLoaded", function() {
+    /**
+     * Создает поле ввода для нового предложения.
+     * @param {HTMLElement} buttonElement - Кнопка, перед которой будет вставлено поле ввода.
+     */
+    function createInputForNewSentence(buttonElement) {
+        // Удаляем все активные элементы (селекты или инпуты)
+        document.querySelectorAll(".dynamic-select, .dynamic-input").forEach(el => el.remove());
+
+        // Создаем инпут для нового предложения и добавляем его перед кнопкой +
+        const inputElement = document.createElement("input");
+        inputElement.type = "text";
+        inputElement.classList.add("dynamic-input");
+        inputElement.placeholder = "Введите предложение";
+        buttonElement.parentNode.insertBefore(inputElement, buttonElement);
+
+        inputElement.focus();
+
+        // Обработка нажатия Enter для добавления предложения
+        inputElement.addEventListener("keydown", function(event) {
+            if (event.key === "Enter") {
+                const customSentence = inputElement.value.trim();
+                if (customSentence) {
+                    const newSentenceElement = createEditableSentenceElement(customSentence);
+                    buttonElement.parentNode.insertBefore(newSentenceElement, buttonElement);
+                    inputElement.remove();
+                    
+                    updateRightSideText();
+                }else {
+                    inputElement.remove(); 
+                }
+            }
+            
+        });
+        
+    }
+
+    /**
+     * Логика при нажатии на кнопку "+". Создает выпадающий список или поле ввода для добавления предложения.
+     */
+    document.querySelectorAll(".icon-btn--add-sentence").forEach(button => {
+        button.addEventListener("click", function() {
+            const paragraphId = this.getAttribute("data-paragraph-id");
+            const buttonElement = this;
+
+            // Удаляем предыдущие выпадающие списки или поля ввода, если они уже существуют
+            document.querySelectorAll(".dynamic-select, .dynamic-input").forEach(el => el.remove());
+
+            // Получаем предложения с индексом 0 для этого параграфа
+            sendRequest({
+                url: "/working_with_reports/get_sentences_with_index_zero",
+                method: "POST",
+                data: {
+                    paragraph_id: paragraphId
+                }
+            }).then(data => {
+                if (data.sentences && data.sentences.length > 0) {
+                    // Создаем выпадающий список (select) с предложениями
+                    const selectElement = document.createElement("select");
+                    selectElement.classList.add("dynamic-select");
+
+                    // Добавляем первое пустое поле, значение пустое, а текст — "Введите предложение"
+                    const startOption = document.createElement("option");
+                    startOption.value = "";
+                    startOption.textContent = "Выберите предложение для добавления";
+                    selectElement.appendChild(startOption);
+
+                    // Добавляем поле для ввода своего предложения
+                    const emptyOption = document.createElement("option");
+                    emptyOption.value = "";
+                    emptyOption.textContent = "Введите свое предложение";
+                    selectElement.appendChild(emptyOption);
+
+                    // Добавляем остальные предложения с индексом 0
+                    data.sentences.forEach(sentence => {
+                        const option = document.createElement("option");
+                        option.value = sentence.id;
+                        option.textContent = sentence.sentence;
+                        selectElement.appendChild(option);
+                    });
+                    selectElement.value = "";
+
+                    // Добавляем выпадающий список перед кнопкой
+                    buttonElement.parentNode.insertBefore(selectElement, buttonElement);
+
+                    // Обработка выбора предложения
+                    selectElement.addEventListener("change", function() {
+                        if (selectElement.value === "") {
+                            // Если выбрано пустое поле, вызываем функцию для инпута
+                            createInputForNewSentence(buttonElement);
+                            selectElement.remove();  // Удаляем выпадающий список
+                        } else {
+                            // Если выбрано предложение из списка, добавляем его в текст
+                            const selectedSentence = selectElement.options[selectElement.selectedIndex].textContent;
+                            const newSentenceElement = createEditableSentenceElement(selectedSentence);
+                            buttonElement.parentNode.insertBefore(newSentenceElement, buttonElement);
+                            selectElement.remove();
+                        }
+                    });
+
+                } else {
+                    // Если предложений нет, вызываем функцию для инпута
+                    createInputForNewSentence(buttonElement);
+                }
+            }).catch(error => {
+                console.error("Error:", error);
+            });
+        });
+    });
+});
+
+
 // "Copy to clipboard" button logic
 document.getElementById("copyButton").addEventListener("click", async function() {
     // Собираем текст из правой части экрана
     const textToCopy = collectTextFromRightSide();
-
+    console.log(textToCopy)
     try {
         await navigator.clipboard.writeText(textToCopy.trim());
         toastr.success("Text copied to clipboard successfully", "Success");
 
         // После успешного копирования выполняем отправку данных
         const paragraphsData = collectParagraphsData();
-
+        console.log(paragraphsData)
         // Отправляем запрос на сервер, используя sendRequest
         const response = await sendRequest({
             url: "/working_with_reports/new_sentence_adding",
@@ -835,110 +947,18 @@ document.getElementById("exportButton").addEventListener("click", async function
 });
 
 
-// Логика добавления предложения при нажатии на кнопку "+"
-document.addEventListener("DOMContentLoaded", function() {
-    /**
-     * Создает поле ввода для нового предложения.
-     * @param {HTMLElement} buttonElement - Кнопка, перед которой будет вставлено поле ввода.
-     */
-    function createInputForNewSentence(buttonElement) {
-        // Удаляем все активные элементы (селекты или инпуты)
-        document.querySelectorAll(".dynamic-select, .dynamic-input").forEach(el => el.remove());
-
-        // Создаем инпут для нового предложения и добавляем его перед кнопкой +
-        const inputElement = document.createElement("input");
-        inputElement.type = "text";
-        inputElement.classList.add("dynamic-input");
-        inputElement.placeholder = "Введите предложение";
-        buttonElement.parentNode.insertBefore(inputElement, buttonElement);
-
-        inputElement.focus();
-
-        // Обработка нажатия Enter для добавления предложения
-        inputElement.addEventListener("keydown", function(event) {
-            if (event.key === "Enter") {
-                const customSentence = inputElement.value.trim();
-                if (customSentence) {
-                    const newSentenceElement = createEditableSentenceElement(customSentence);
-                    buttonElement.parentNode.insertBefore(newSentenceElement, buttonElement);
-                    inputElement.remove();
-                }else {
-                    inputElement.remove(); // Удаляем пустой инпут, если поле пустое
-                }
-            }
-        });
+// "Generate expression" button logic
+document.getElementById("generateImpression").addEventListener("click", async function(){
+    const textToCopy = collectTextFromRightSide();
+    const assistantNames = [
+        "airadiologist"
+    ];
+    try {
+        const aiResponse = await generateImpressionRequest(textToCopy, assistantNames);
+        document.getElementById("aiResponse").textContent = aiResponse;
+    } catch(error) {
+        console.log(error);
+        document.getElementById("aiResponse").textContent = "An error occurred. Please try again.";
     }
 
-    /**
-     * Логика при нажатии на кнопку "+". Создает выпадающий список или поле ввода для добавления предложения.
-     */
-    document.querySelectorAll(".icon-btn--add-sentence").forEach(button => {
-        button.addEventListener("click", function() {
-            const paragraphId = this.getAttribute("data-paragraph-id");
-            const buttonElement = this;
-
-            // Удаляем предыдущие выпадающие списки или поля ввода, если они уже существуют
-            document.querySelectorAll(".dynamic-select, .dynamic-input").forEach(el => el.remove());
-
-            // Получаем предложения с индексом 0 для этого параграфа
-            sendRequest({
-                url: "/working_with_reports/get_sentences_with_index_zero",
-                method: "POST",
-                data: {
-                    paragraph_id: paragraphId
-                }
-            }).then(data => {
-                if (data.sentences && data.sentences.length > 0) {
-                    // Создаем выпадающий список (select) с предложениями
-                    const selectElement = document.createElement("select");
-                    selectElement.classList.add("dynamic-select");
-
-                    // Добавляем первое пустое поле, значение пустое, а текст — "Введите предложение"
-                    const startOption = document.createElement("option");
-                    startOption.value = "";
-                    startOption.textContent = "Выберите предложение для добавления";
-                    selectElement.appendChild(startOption);
-
-                    // Добавляем поле для ввода своего предложения
-                    const emptyOption = document.createElement("option");
-                    emptyOption.value = "";
-                    emptyOption.textContent = "Введите свое предложение";
-                    selectElement.appendChild(emptyOption);
-
-                    // Добавляем остальные предложения с индексом 0
-                    data.sentences.forEach(sentence => {
-                        const option = document.createElement("option");
-                        option.value = sentence.id;
-                        option.textContent = sentence.sentence;
-                        selectElement.appendChild(option);
-                    });
-                    selectElement.value = "";
-
-                    // Добавляем выпадающий список перед кнопкой
-                    buttonElement.parentNode.insertBefore(selectElement, buttonElement);
-
-                    // Обработка выбора предложения
-                    selectElement.addEventListener("change", function() {
-                        if (selectElement.value === "") {
-                            // Если выбрано пустое поле, вызываем функцию для инпута
-                            createInputForNewSentence(buttonElement);
-                            selectElement.remove();  // Удаляем выпадающий список
-                        } else {
-                            // Если выбрано предложение из списка, добавляем его в текст
-                            const selectedSentence = selectElement.options[selectElement.selectedIndex].textContent;
-                            const newSentenceElement = createEditableSentenceElement(selectedSentence);
-                            buttonElement.parentNode.insertBefore(newSentenceElement, buttonElement);
-                            selectElement.remove();
-                        }
-                    });
-
-                } else {
-                    // Если предложений нет, вызываем функцию для инпута
-                    createInputForNewSentence(buttonElement);
-                }
-            }).catch(error => {
-                console.error("Error:", error);
-            });
-        });
-    });
 });

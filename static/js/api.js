@@ -58,3 +58,31 @@ function sendRequest({ url, method = "POST", data = {}, responseType = "json" })
             throw error;
         });
 }
+
+
+/**
+ * Sends a request to the server to generate an impression based on the input text and assistant list.
+ *
+ * @param {string} text - The input text to be sent to the server.
+ * @param {Array<string>} assistantList - A list of assistant names to be included in the request.
+ * @returns {Promise<string>} - Returns a promise that resolves with the server's response message or error.
+ */
+function generateImpressionRequest(text, assistantList) {
+    // Формируем данные для отправки
+    const jsonData = {
+        text: text,
+        assistants: assistantList // передаем список ассистентов
+    };
+
+    // Отправляем запрос на сервер с помощью sendRequest
+    return sendRequest({   
+        url: "/openai_api/generate_impression",
+        data: jsonData
+    }).then(data => {
+        if (data.status === "success") {
+            return data.data; // Возвращаем успешный ответ от сервера
+        } else {
+            return data.message; // Возвращаем сообщение об ошибке, если запрос не успешен
+        }
+    });
+}

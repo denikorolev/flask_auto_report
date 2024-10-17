@@ -21,6 +21,9 @@ class Config:
     # OpenAI API configuration
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
     OPENAI_MODEL = os.getenv("OPENAI_MODEL")
+    OPENAI_ORGANIZATION = os.getenv("OPENAI_ORGANIZATION")
+    OPENAI_PROJECT = os.getenv("OPENAI_PROJECT")
+    OPENAI_ASSISTANT = os.getenv("OPENAI_ASSISTANT")
     
     # Menu configuration
     @staticmethod
@@ -32,6 +35,7 @@ class Config:
             {"name": "my reports", "url": url_for("my_reports.reports_list")},
             {"name": "new report", "url": url_for("new_report_creation.create_report")},
             {"name": "settings", "url": url_for("report_settings.report_settings")},
+            {"name": "API", "url":url_for("openai_api.start_openai_api")}
         ]
         
         # Добавляем настройки профиля, если профиль выбран

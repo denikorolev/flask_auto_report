@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block container %}
+{{ super() }}
+
+<form>
+    <label for="inputai">Введите запрос</label>
+    <input type="text" id="inputai" name="inputai">
+    <button id="btn" class="btn report_btn"> Отправить </button>
+    <div class="shift"></div>
+    <div id="answer" class="answer"></div>
+</form>
+
+
+{% endblock container %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/openai_api.js') }}"></script>
+{% endblock scripts %}
