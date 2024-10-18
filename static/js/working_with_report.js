@@ -1,6 +1,7 @@
 // working_with_report.js
 
 
+
 /**
  * Extracts the maximum number from the protocol number and increments it by 1.
  * 
@@ -42,7 +43,7 @@ function getMaxReportNumber(reportNumber) {
 function createEditableSentenceElement(sentenceText) {
     const newSentenceElement = document.createElement("span");
     newSentenceElement.classList.add("report__sentence");
-    newSentenceElement.dataset.index = "right-side-{{ item.paragraph.id }}-{{ index }}"
+    newSentenceElement.dataset.index = "right-side-{{ paragraphId }}-{{ index }}"
     newSentenceElement.textContent = sentenceText;
 
     // Make the content editable
@@ -416,6 +417,189 @@ function collectParagraphsData() {
     return paragraphsData;
 }
 
+/**
+ * Отображает кружок "+" рядом с предложением.
+ * 
+ * @param {number} x - Координата X курсора.
+ * @param {number} y - Координата Y курсора.
+ * @param {HTMLElement} target - Элемент, для которого отображаем кружок.
+ */
+function showPlusCircle(x, y, target) {
+    activeSentence = target;
+    plusCircle.style.left = `${x - 0}px`; // Чуть левее курсора
+    plusCircle.style.top = `${y + 0}px`; // Чуть ниже курсора
+    plusCircle.style.display = 'flex';
+}
+
+/**
+ * Скрывает кружок "+" с небольшой задержкой.
+ */
+function hidePlusCircle() {
+    hideTimeout = setTimeout(() => {
+        plusCircle.style.display = 'none';
+    }, 800); // Задержка в 500 мс перед скрытием
+}
+
+/**
+ * Отображает всплывающее окно с предложениями для замены.
+ * 
+ * @param {number} x - Координата X для отображения окна.
+ * @param {number} y - Координата Y для отображения окна.
+ * @param {Array} sentenceList - Список предложений для выбора.
+ */
+function showPopup(x, y, sentenceList) {
+    popupList.innerHTML = ''; // Очищаем старые предложения
+
+    sentenceList.forEach(sentence => {
+        const li = document.createElement("li");
+        li.textContent = sentence.sentence; // Используем текст предложения
+        popupList.appendChild(li);
+
+        // Обработка клика по предложению
+        li.addEventListener("click", function() {
+            if (activeSentence) {
+                activeSentence.textContent = sentence.sentence; // Заменяем текст предложения
+                hidePopup(); // Закрываем всплывающее окно после выбора
+
+                // Запускаем функцию обновления текста
+                updateRightSideText();
+            }
+        });
+    });
+
+    popup.style.left = `${x}px`;
+    popup.style.top = `${y + 10}px`; // Отображаем окно чуть ниже кружка
+    popup.style.display = 'block';
+}
+
+/**
+ * Скрывает всплывающее окно с предложениями.
+ */
+function hidePopup() {
+    popup.style.display = 'none';
+}
+
+/**
+ * Связывает предложения на странице с данными из reportData и связывает их с подходящими предложениями.
+ */
+function linkSentences() {
+    // Находим все предложения на странице
+    const sentencesOnPage = document.querySelectorAll(".report__sentence");
+
+    // Проходим по каждому предложению на странице
+    sentencesOnPage.forEach(sentenceElement => {
+        const paragraphId = sentenceElement.getAttribute("data-paragraph-id");
+        const index = sentenceElement.getAttribute("data-index");
+        const sentenceId = sentenceElement.getAttribute("data-id");
+
+        // Ищем параграф с соответствующим ID и совпадающим index в reportData
+        const paragraphData = reportData.paragraphs.find(p => p.id === parseInt(paragraphId));
+
+        if (paragraphData && paragraphData.sentences[index]) {
+            // Фильтруем предложения, исключая текущее видимое предложение по его ID
+            const filteredSentences = paragraphData.sentences[index].filter(sentence => {
+                return sentence.id.toString() !== sentenceId; // Сравнение по ID
+            });
+
+            // Связываем видимое предложение с отфильтрованными предложениями из reportData
+            sentenceElement.linkedSentences = filteredSentences;
+
+            // Если есть связанные предложения, озеленяем текущее предложение
+            if (sentenceElement.linkedSentences.length > 0) {
+                highlightSentence(sentenceElement);
+            }
+        }
+    });
+}
+
+/**
+ * Изменяет стиль предложения.
+ * 
+ * @param {HTMLElement} sentenceElement - Элемент предложения для изменения цвета.
+ */
+function highlightSentence(sentenceElement) {
+    sentenceElement.classList.add("highlighted-sentence");
+}
+
+// Стартуем всю логику связанную с кружком + при загрузке страницы
+document.addEventListener("DOMContentLoaded", function() {
+    let hoverTimeout; // Объявляем переменную для хранения таймера
+    let hideTimeout;  // Объявляем переменную для хранения таймера скрытия кружка
+    let activeSentence = null;  // Для отслеживания активного предложения
+
+    linkSentences(); // Связываем предложения с данными
+    setupHoverAndClickLogic(); // Настраиваем логику отображения кружка и всплывающего окна
+});
+
+
+/**
+ * Настраивает логику наведения мыши и клика по предложениям для отображения кружка и списка предложений.
+ */
+function setupHoverAndClickLogic() {
+    const sentencesOnPage = document.querySelectorAll(".report__sentence");
+
+    sentencesOnPage.forEach(sentenceElement => {
+        // Наведение на предложение
+        sentenceElement.addEventListener("mouseenter", function(event) {
+            if (!sentenceElement.classList.contains("editing")) { // Проверяем, что предложение не в режиме редактирования
+                hoverTimeout = setTimeout(() => {
+                    showPlusCircle(event.pageX, event.pageY, sentenceElement);
+                }, 800);
+            }
+        });
+
+        sentenceElement.addEventListener("mouseleave", function() {
+            clearTimeout(hoverTimeout); // Отменяем показ кружка, если мышь ушла
+            hidePlusCircle(); // Скроем кружок с небольшой задержкой
+        });
+
+        // Добавляем обработку фокуса (когда предложение редактируется)
+        sentenceElement.addEventListener("focus", function() {
+            sentenceElement.classList.add("editing"); // Добавляем класс для режима редактирования
+            hidePlusCircle(); // Скрываем кружок, если предложение редактируется
+        });
+
+        // Добавляем обработку потери фокуса (когда предложение больше не редактируется)
+        sentenceElement.addEventListener("blur", function() {
+            sentenceElement.classList.remove("editing"); // Убираем класс режима редактирования
+        });
+
+    });
+
+    // Клик по кружку "+"
+    plusCircle.addEventListener("click", function(event) {
+        if (activeSentence && activeSentence.linkedSentences) {
+            showPopup(event.pageX, event.pageY, activeSentence.linkedSentences);
+        } else {
+            console.error('No linked sentences or linked sentences is not an array');
+        }
+    });
+
+    // Добавляем обработку событий для наведения на кружок
+    plusCircle.addEventListener("mouseenter", function() {
+        clearTimeout(hideTimeout); // Останавливаем таймер скрытия, если мышь над кружком
+    });
+
+    plusCircle.addEventListener("mouseleave", function() {
+        hidePlusCircle(); // Скрываем кружок, если мышь ушла
+    });
+
+    // Скрываем всплывающее окно при клике вне его
+    document.addEventListener("click", function(event) {
+        if (!popup.contains(event.target) && !plusCircle.contains(event.target)) {
+            hidePopup();
+        }
+    });
+}
+
+
+
+
+
+
+
+
+
 
 // Логика для кнопки "Next"
 document.addEventListener("DOMContentLoaded", function() {
@@ -441,27 +625,6 @@ document.addEventListener("DOMContentLoaded", function() {
             }
         }, 1000); // Настройте время таймера по необходимости
     });
-});
-
-
-// Логика для обновления правой части при изменении данных на левой стороне
-document.getElementById("left-paragraph-list").addEventListener("change", function(event) {
-    if (event.target.tagName === "SELECT") {
-        const index = event.target.getAttribute("data-index");
-        const selectedOption = event.target.selectedOptions[0];
-        const selectedSentence = selectedOption.getAttribute("data-sentence");
-        const correspondingIndex = index.replace("left-side", "right-side");
-        const correspondingParagraph = document.querySelector('[data-index="' + correspondingIndex + '"]');
-
-        // Проверяем, найден ли соответствующий параграф на правой стороне
-        if (correspondingParagraph) {
-            correspondingParagraph.innerText = selectedSentence;
-            // После обновления текста выделяем ключевые слова
-            updateRightSideText();
-        } else {
-            console.error("Corresponding paragraph not found for index: " + correspondingIndex);
-        }
-    }
 });
 
 
@@ -528,51 +691,6 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 
 
-// Логика для переключения видимости кнопок редактирования а 
-// также разворачивания списков при нажатии кнопки expand или имени параграфа
-document.addEventListener("DOMContentLoaded", function() {
-    /**
-     * Логика переключения видимости кнопок редактирования
-     */
-    document.querySelector(".icon-btn--show-edit-groups").addEventListener("click", function() {
-        const editGroups = document.querySelectorAll(".edit-group");
-
-        // Переключение между видимостью "none" и "inline-block" у элементов с классом .edit-group
-        editGroups.forEach(group => {
-            if (group.style.display === "none" || group.style.display === "") {
-                group.style.display = "inline-block";
-            } else {
-                group.style.display = "none";
-            }
-        });
-
-        // Изменение текста кнопки в зависимости от состояния
-        if (this.textContent === "Show Edit Options") {
-            this.textContent = "Hide Edit Options";
-        } else {
-            this.textContent = "Show Edit Options";
-        }
-    });
-
-    /**
-     * Логика для кнопки "expand"
-     */
-    document.querySelectorAll(".icon-btn--expand").forEach(button => {
-        button.addEventListener("click", function() {
-            toggleSentenceList(this);
-        });
-    });
-
-    /**
-     * Логика для разворачивания по клику на текст параграфа
-     */
-    document.querySelectorAll(".paragraphTitle").forEach(paragraph => {
-        paragraph.addEventListener("click", function() {
-            const expandButton = this.closest(".report__paragraph").querySelector(".icon-btn--expand");
-            toggleSentenceList(expandButton); // Используем ту же логику, что и для кнопки
-        });
-    });
-});
 
 // Логика редактирования предложений и параграфов
 document.addEventListener("DOMContentLoaded", function() {
@@ -804,14 +922,12 @@ document.addEventListener("DOMContentLoaded", function() {
 document.getElementById("copyButton").addEventListener("click", async function() {
     // Собираем текст из правой части экрана
     const textToCopy = collectTextFromRightSide();
-    console.log(textToCopy)
     try {
         await navigator.clipboard.writeText(textToCopy.trim());
         toastr.success("Text copied to clipboard successfully", "Success");
 
         // После успешного копирования выполняем отправку данных
         const paragraphsData = collectParagraphsData();
-        console.log(paragraphsData)
         // Отправляем запрос на сервер, используя sendRequest
         const response = await sendRequest({
             url: "/working_with_reports/new_sentence_adding",

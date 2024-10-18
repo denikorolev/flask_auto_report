@@ -123,27 +123,10 @@ document.addEventListener("DOMContentLoaded", function () {
                 const fullname = `${surname} ${name} ${patronymic}`;
                 const reportId = this.getAttribute("data-report-id");
 
-                // Отправляем данные на сервер через sendRequest
-                sendRequest({
-                    url: "/working_with_reports/working_with_reports",
-                    method: "POST",
-                    data: {
-                        fullname,
-                        birthdate,
-                        reportNumber,
-                        reportId
-                    }
-                })
-                .then(data => {
-                    if (data.redirect_url) {
-                        window.location.href = data.redirect_url;
-                    } else {
-                        alert("Failed to prepare report.");
-                    }
-                })
-                .catch(error => {
-                    console.error("Error:", error);
-                });
+                // Формируем URL с параметрами
+            const url = `/working_with_reports/working_with_reports?fullname=${encodeURIComponent(fullname)}&birthdate=${encodeURIComponent(birthdate)}&reportNumber=${encodeURIComponent(reportNumber)}&reportId=${reportId}`;
+            window.location.href = url;
+
             });
         });
     }

@@ -302,6 +302,83 @@ html {
 }
 
 
+/* Блок PopUp */
+
+/* Основной стиль для всплывающего окна */
+.popup {
+    position: absolute;  /* Позволяет динамически задавать координаты через JS */
+    background-color: #fff;  /* Белый фон */
+    border: 1px solid #ccc;  /* Легкая рамка */
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);  /* Тень для красивого эффекта */
+    padding: 10px;  /* Отступы внутри окна */
+    z-index: 1000;  /* Устанавливаем высокий z-index, чтобы окно было поверх других элементов */
+    display: none;  /* Изначально скрыто */
+    max-width: 900px; /* Ограничение на ширину */
+    overflow-y: auto; /* Скроллинг, если список предложений слишком длинный */
+}
+
+/* Стили для списка внутри попапа */
+.popup ul {
+    list-style-type: none;  /* Убираем стандартные маркеры списка */
+    margin: 0;
+    padding: 0;
+}
+
+.popup ul li {
+    padding: 5px 10px;
+    cursor: pointer;  /* Указываем, что элементы списка можно кликать */
+    border-bottom: 1px solid #eee;  /* Разделяем предложения линией */
+}
+
+.popup ul li:hover {
+    background-color: #f0f0f0;  /* Подсветка при наведении */
+}
+
+
+/* Блок кружочка */
+
+/* Основной стиль для кружка "+" */
+.plusCircle {
+    position: absolute;  /* Позволяет позиционировать кружок относительно курсора */
+    background-color: var(--main-btn-color);  /* Используем переменную для цвета кнопки */
+    border-radius: 50%;  /* Круглая форма */
+    width: 20px;  /* Размер кружка */
+    height: 20px;  /* Размер кружка */
+    display: none;  /* Скрыт по умолчанию */
+    align-items: center;  /* Центрируем "+" внутри */
+    justify-content: center;
+    z-index: 1000;  /* Поверх всех элементов */
+    cursor: pointer;  /* Меняем курсор на указатель (как при наведении на ссылку) */
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);  /* Легкая тень */
+    transition: transform 0.2s ease;  /* Плавная анимация при наведении */
+}
+
+/* Стили для внутреннего текста (знак "+") */
+.plusCircle::before {
+    content: "+";  /* Текст внутри кружка */
+    font-size: 24px;
+    color: white;  /* Белый цвет знака "+" */
+    display: block;
+}
+
+/* Эффект при наведении на кружок */
+.plusCircle:hover {
+    transform: scale(1.1);  /* Легкое увеличение кружка при наведении */
+    cursor: pointer;  /* Меняем курсор на "указатель", как при наведении на ссылку */
+}
+
+
+.sentence {
+    /* box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);   */
+    border-radius: 4px; 
+    padding: 2px 4px; 
+}
+
+/* Блок стиля предложений у которых есть всплывающие предложения */
+.highlighted-sentence {
+    background-color: #edf8f8;  
+    
+}
 
 
 
@@ -348,9 +425,9 @@ html {
     appearance: none; /* Убираем стандартный стиль select */
     -webkit-appearance: none; /* Для Safari */
     -moz-appearance: none; /* Для Firefox */
-    background: white; 
+    background:transparent; 
     border: none; 
-    color: red; 
+    color: rgb(191, 50, 50); 
     font-weight: bold; 
     cursor: pointer;
     padding: 0; 

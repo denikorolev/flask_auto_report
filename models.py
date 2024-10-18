@@ -216,7 +216,85 @@ class Report(BaseModel):
 
         # Возвращаем текст параграфа, если найден
         return impression_paragraph.paragraph if impression_paragraph else None
-    
+
+    @classmethod
+    def get_report_data(cls, report_id, user_id):
+        """
+        Возвращает отчет с указанными связанными данными в виде словаря.
+        
+        Args:
+            report_id (int): ID отчета.
+            user_id (int): ID пользователя (для проверки безопасности).
+        
+        Returns:
+            dict: Данные отчета, включая параграфы, предложения и ключевые слова.
+        """
+        # Ищем отчет по ID и пользователю
+        report = cls.query.filter_by(id=report_id, userid=user_id).first()
+        
+        if not report:
+            return None  # Если отчет не найден или принадлежит другому пользователю
+        
+        # Получаем параграфы и предложения
+        paragraphs = ReportParagraph.query.filter_by(report_id=report_id).order_by(ReportParagraph.paragraph_index).all()
+
+        # Преобразуем параграфы и предложения в словари
+        paragraph_data = []
+        for paragraph in paragraphs:
+            sentences = Sentence.query.filter_by(paragraph_id=paragraph.id).order_by(Sentence.index, Sentence.weight).all()
+            
+            grouped_sentences = {}
+            for sentence in sentences:
+                index = sentence.index
+                if index not in grouped_sentences:
+                    grouped_sentences[index] = []
+                grouped_sentences[index].append({
+                    "id": sentence.id,
+                    "index": sentence.index,
+                    "weight": sentence.weight,
+                    "comment": sentence.comment,
+                    "sentence": sentence.sentence
+                })
+            
+            paragraph_data.append({
+                "id": paragraph.id,
+                "paragraph_index": paragraph.paragraph_index,
+                "paragraph": paragraph.paragraph,
+                "paragraph_visible": paragraph.paragraph_visible,
+                "title_paragraph": paragraph.title_paragraph,
+                "bold_paragraph": paragraph.bold_paragraph,
+                "sentences": grouped_sentences
+            })
+        
+        # Получаем ключевые слова, связанные с отчетом
+        key_words = KeyWordsGroup.get_keywords_for_report(user_id, report_id)
+
+        keywords_data = []
+        for key_word in key_words:
+            keywords_data.append({
+                "group_index": key_word.group_index,
+                "index": key_word.index,
+                "key_word": key_word.key_word,
+                "key_word_comment": key_word.key_word_comment
+            })
+
+        # Формируем структуру данных для отчета
+        report_data = {
+            "report": {
+                "id": report.id,
+                "report_name": report.report_name,
+                "report_type": report.report_type_rel.type,
+                "report_subtype": report.report_subtype_rel.subtype,
+                "comment": report.comment,
+                "report_side": report.report_side,
+                "user_id": report.userid,
+            },
+            "paragraphs": paragraph_data,
+            "keywords": keywords_data
+        }
+
+        return report_data
+
 
 class ReportType(BaseModel):
     __tablename__ = 'report_type'

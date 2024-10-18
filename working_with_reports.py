@@ -51,54 +51,33 @@ def choosing_report():
 @login_required
 def working_with_reports(): 
     menu = current_app.config['MENU']
-    current_report_id = request.args.get("report_id")
+    current_report_id = request.args.get("reportId")
+    full_name = request.args.get("fullname")
+    birthdate = request.args.get("birthdate")
+    report_number = request.args.get("reportNumber")
+    
+    print(f"current_report_id: {current_report_id}")
+    report_data = Report.get_report_data(current_report_id, current_user.id)
+    print(report_data)
+    if not report_data:
+        print("there is no report_data")
+        
+    
+    
     # Получаем ключевые слова для текущего пользователя
     
     key_words_obj = KeyWordsGroup.get_keywords_for_report(current_user.id, current_report_id)
     key_words_group = group_keywords(key_words_obj)
 
-        
-    if request.method == "POST":
-        data = request.get_json()
-        full_name = data.get("fullname", "")
-        birthdate = data.get("birthdate", "")
-        report_number = data.get("reportNumber", "")
-        report_id = data.get("reportId")
-        if report_id:
-            return jsonify({"status": "success", "redirect_url": url_for('working_with_reports.working_with_reports', report_id=report_id, full_name=full_name, birthdate=birthdate, reportNumber=report_number)})
-        else:
-            return jsonify({"status": "error", "message": "Invalid report ID."}), 400
-        
-    report = Report.query.get(current_report_id) 
-    full_name = request.args.get("full_name", "")
-    birthdate = request.args.get("birthdate", "")
-    report_number = request.args.get("reportNumber", "")
-    paragraphs = ReportParagraph.query.filter_by(report_id=report.id).order_by(ReportParagraph.paragraph_index).all()
-    subtype = report.report_subtype_rel.subtype
-    report_type = report.report_type_rel.type
-    paragraph_data = []
-    for paragraph in paragraphs:
-        sentences = Sentence.query.filter_by(paragraph_id=paragraph.id).order_by(Sentence.index, Sentence.weight).all()
-        
-        grouped_sentences = {}
-        for sentence in sentences:
-            index = sentence.index
-            if index not in grouped_sentences:
-                grouped_sentences[index] = []
-            grouped_sentences[index].append(sentence)
-            
-        paragraph_data.append({
-            "paragraph": paragraph,
-            "grouped_sentences": grouped_sentences
-        })
+    
+    
+    print(full_name, birthdate, current_report_id, key_words_group)
+    
     return render_template(
         "working_with_report.html", 
-        title=report.report_name,
+        title=report_data["report"]["report_name"],
         menu=menu,
-        report=report,
-        paragraph_data=paragraph_data,
-        subtype=subtype,
-        report_type=report_type,
+        report_data=report_data,
         full_name=full_name,
         birthdate=birthdate,
         report_number=report_number,

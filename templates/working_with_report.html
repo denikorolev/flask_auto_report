@@ -1,5 +1,4 @@
-<!-- working_with_report.html -->
- 
+
 {% extends "base.html" %}
 
 
@@ -8,7 +7,7 @@
 
 
 <!-- Pre-filled form for the second page -->
-<form class="flex" id="exportForm" data-report-type="{{ report_type }}" data-subtype="{{ subtype }}" data-comment="{{ report.comment }}" data-key-words="{{ key_words | tojson | safe }}">
+<form class="flex" id="exportForm" data-report-type="{{ report_data.report.report_type }}" data-subtype="{{ report_data.report.report_subtype }}" data-comment="{{ report_data.report.comment }}" data-key-words="{{ key_words | tojson | safe }}">
     <div>
         <label for="patient-name">Name:</label>
         <input style="margin-right: 10px;" type="text" id="patient-name" name="patient_name" value="{{ full_name }}"readonly>
@@ -23,7 +22,7 @@
     </div>
 
     <!-- Контейнер для поля выбора стороны, скрыт по умолчанию -->
-    {% if report.report_side == True %}
+    {% if report_data.report.report_side == True %}
     <div>
         <label for="report-side">Side:</label>
         <select id="report-side" name="report_side">
@@ -53,124 +52,43 @@
 </form>
 
 <div class="flex">
-    <!-- Left side -->
-    <div class="report_side__list">
-        <ul class="report_paragraph__list" id="left-paragraph-list">
-            {% for item in paragraph_data %}
-                <li class="flex_column report__paragraph" data-paragraph-id="{{ item.paragraph.id }}">
-                    <div class="flex">
-                        <p contenteditable="false" 
-                        data-paragraph-id="{{ item.paragraph.id }}"
-                        data-title-paragraph="{{ item.paragraph.title_paragraph }}" 
-                        data-bold-paragraph="{{ item.paragraph.bold_paragraph }}" 
-                        data-visible-paragraph="{{ item.paragraph.paragraph_visible }}" 
-
-                        class="paragraphTitle 
-                        {% if item.paragraph.paragraph_visible %}report__paragraph--visible{% else %}report__paragraph--invisible{% endif %}
-                        {% if item.paragraph.bold_paragraph %} report__paragraph--bold{% endif %}
-                        {% if item.paragraph.title_paragraph %} report__paragraph--title{% else %} report__paragraph--untitle{% endif %}"
-                        >
-                            {{ item.paragraph.paragraph }}
-                        </p>
-                        {% if item.grouped_sentences %}
-                            <button class="icon-btn icon-btn--expand" type="button"
-                            style="background: url('{{ url_for('static', filename='pic/expand_button.svg') }}') no-repeat center center;"
-                            title="Expand">
-                            </button>
-                        {% endif %}
-                        <div class="flex edit-group" style="display: none;">
-                            <button class="icon-btn icon-btn--edit-paragraph" type="button"
-                            style="background: url('{{ url_for('static', filename='pic/edit_button.svg') }}') no-repeat center center;"
-                            title="Edit Paragraph">
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <ul class="sentence-list" style="display: none;">
-                        <li class="">
-                            {% if item.grouped_sentences %}
-                                {% for index, sentences in item.grouped_sentences.items() %}
-                                    
-                                        {% if sentences|length == 1 %}
-                                            {% if sentences[0].index != 0 %}
-                                                <div class="flex edit-container" sentence-index = "{{ sentences[0].index}}">
-                                                    <p class="report__sentence" data-sentence-id="{{ sentences[0].id }}">{{ sentences[0].sentence }}</p>
-                                                    <!-- button group -->
-                                                    <div class="flex edit-group" style="display: none;">
-                                                        <button class="icon-btn icon-btn--edit" type="button"
-                                                        style="background: url('{{ url_for('static', filename='pic/edit_button.svg') }}') no-repeat center center;"
-                                                        title="Edit">
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            {% endif %}
-                                        {% else %}
-                                            {% if sentences[0].index != 0 %}    
-                                                <div class="flex edit-container">
-                                                    <select class="report__select sentences_select" sentence-index = "{{ sentences[0].index}}" data-index="left-side-{{ item.paragraph.id }}-{{ index }}">
-                                                        {% for sentence in sentences %}
-                                                            <option value="{{ sentence.id }}" data-sentence="{{ sentence.sentence }}">{{ sentence.sentence }}</option>
-                                                        {% endfor %}
-                                                    </select>
-                                                    
-                                                    <!-- button group -->
-                                                    <div class="flex edit-group" style="display: none;">
-                                                        <button class="icon-btn icon-btn--edit" type="button"
-                                                        style="background: url('{{ url_for('static', filename='pic/edit_button.svg') }}') no-repeat center center;"
-                                                        title="Edit">
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            {% endif %}
-                                        {% endif %}
-                                    
-                                {% endfor %}
-                            {% endif %}
-                        </li>
-                    </ul>
-                </li>
-            {% endfor %}
-        </ul>
-        <!-- Кнопка Edit для редактирования отчета -->
-        <a href="/editing_report/edit_report?report_id={{ report.id }}" target="_blank" class="btn report__btn icon-btn--edit-paragraph"
-        title="Open this report for editing in new window">
-        Edit this report
-        </a>
-        <!-- Новая кнопка для отображения элементов с классом .edit-group -->
-        <button class="btn report__btn icon-btn--show-edit-groups" type="button" title="Show Edit Options">Show Edit Options</button>
-    </div>
     
     <!-- Right side -->
-    <div class="report_side__list report_side--right">
+    <div class=" report_side--right">
         <ul class="" id="right-paragraph-list">
-            {% for item in paragraph_data %}
+            {% for paragraph in report_data.paragraphs %}
                 <li class="report__paragraph">
                     <p contenteditable="true" 
-                    data-paragraph-id="{{ item.paragraph.id }}" 
-                    data-title-paragraph="{{ item.paragraph.title_paragraph }}" 
-                    data-bold-paragraph="{{ item.paragraph.bold_paragraph }}" 
-                    data-visible-paragraph="{{ item.paragraph.paragraph_visible }}" 
+                    data-paragraph-id="{{ paragraph.id }}" 
+                    data-title-paragraph="{{ paragraph.title_paragraph }}" 
+                    data-bold-paragraph="{{ paragraph.bold_paragraph }}" 
+                    data-visible-paragraph="{{ paragraph.paragraph_visible }}" 
 
                     class="paragraphTitle 
-                    {% if item.paragraph.paragraph_visible %}report__paragraph--visible
-                    {% if item.paragraph.bold_paragraph %} report__paragraph--bold{% endif %}
-                    {% if item.paragraph.title_paragraph %} report__paragraph--title{% else %} report__paragraph--untitle{% endif %}
+                    {% if paragraph.paragraph_visible %}report__paragraph--visible
+                    {% if paragraph.bold_paragraph %} report__paragraph--bold{% endif %}
+                    {% if paragraph.title_paragraph %} report__paragraph--title{% else %} report__paragraph--untitle{% endif %}
                     {% else %}report__paragraph--invisible{% endif %}"
                     >
-                        {{ item.paragraph.paragraph }}
+                        {{ paragraph.paragraph }}
                     </p>
                     <ul class="">
                         <li class="">
-                            {% if item.grouped_sentences %}
-                                <p>
-                                {% for index, sentences in item.grouped_sentences.items() %}
-                                    {% if sentences[0].index != 0 %}
-                                        <span contenteditable="true" class="report__sentence" data-index="right-side-{{ item.paragraph.id }}-{{ index }}"> {{ sentences[0].sentence }} </span>
+                           
+                            {% if paragraph.sentences %}
+                                {% for index, sentence_group in paragraph.sentences.items() %}
+                                    {% if sentence_group[0].index != 0 %}
+                                        <span contenteditable="true"
+                                            class="report__sentence sentence" 
+                                            data-paragraph-id="{{ paragraph.id }}" 
+                                            data-index="{{ index }}"
+                                            data-id="{{ sentence_group[0].id }}"> 
+                                            {{ sentence_group[0].sentence }} 
+                                        </span>
                                         <!-- Кнопка "+" для добавления предложения -->
-                                        <button class="icon-btn icon-btn--add-sentence" type="button" title="Add Sentence" data-paragraph-id="{{ item.paragraph.id }}">+</button>
+                                        <button class="icon-btn icon-btn--add-sentence" type="button" title="Add Sentence" data-paragraph-id="{{ paragraph.id }}">+</button>
                                     {% endif %}
                                 {% endfor %}
-                                </p>
                             {% endif %}
                         </li>
                     </ul>
@@ -194,16 +112,25 @@
     <!-- Здесь будет отображаться обработанный текст -->
     <p id="processedText"></p>
 </div>
+        <a href="/editing_report/edit_report?report_id={{ report_data.report.id }}" target="_blank" class="btn report__btn icon-btn--edit-paragraph"
+            title="Open this report for editing in new window">
+            Edit this report
+        </a>
 
+        <!-- Кружок с + для отображения дополнительных предложений -->
+        <div id="plusCircle" class="plusCircle"></div>
+        <div id="popup" class="popup">
+            <ul id="popupList"></ul>
+        </div>
 
 
 {% endblock container %}
-
 {% block scripts %}
 
 <script>
     // Передаем ключевые слова как глобальную переменную JavaScript
     const keyWordsGroups = {{ key_words | tojson | safe }};
+    const reportData = {{ report_data | tojson | safe }};
 </script>
     
 <script src="{{ url_for('static', filename='js/working_with_report.js') }}"></script>
