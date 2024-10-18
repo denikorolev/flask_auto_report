@@ -4,9 +4,64 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
+    <style>
+        /* Стиль для кружка с "+" */
+        .plus-circle {
+            width: 20px;
+            height: 20px;
+            background-color: #007bff;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: absolute;
+            cursor: pointer;
+            visibility: hidden;
+            transition: visibility 0.3s;
+        }
+
+        /* Стиль для всплывающего окна */
+        .popup {
+            position: absolute;
+            background-color: white;
+            border: 1px solid #ccc;
+            padding: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            display: none;
+        }
+
+        .popup ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .popup ul li {
+            cursor: pointer;
+            padding: 5px;
+        }
+
+        .popup ul li:hover {
+            background-color: #f0f0f0;
+        }
+    </style>
 </head>
 <body>
-    <script src="/static/js/test.js"></script>
+
+<p contenteditable="true" id="sentence1">Это будут разные тестовые предложения</p>
+<p contenteditable="true" id="sentence2">Delta compression using up to 10 threads</p>
+<p contenteditable="true" id="sentence3">Writing objects: 100% (6/6), 520 bytes | 520.00 KiB/s, done.</p>
+<p contenteditable="true" id="sentence4">remote: Resolving deltas: 100% (5/5), completed with 5 local objects.</p>
+
+<!-- Кружок "+" -->
+<div class="plus-circle" id="plusCircle">+</div>
+
+<!-- Всплывающее окно для выбора предложения -->
+<div class="popup" id="popup">
+    <ul id="popupList"></ul>
+</div>
+
+<script src="/static/js/test.js"></script>
 </body>
 </html>
-
