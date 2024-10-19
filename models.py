@@ -263,6 +263,8 @@ class Report(BaseModel):
                 "paragraph_visible": paragraph.paragraph_visible,
                 "title_paragraph": paragraph.title_paragraph,
                 "bold_paragraph": paragraph.bold_paragraph,
+                "paragraph_type": paragraph.type_paragraph.type_name,
+                "paragraph_comment": paragraph.comment,
                 "sentences": grouped_sentences
             })
         

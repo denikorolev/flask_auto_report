@@ -121,54 +121,6 @@ function cleanSelectText(element) {
 }
 
 
-/**
- * Collects text from the right side of the screen for further processing.
- * 
- * @returns {string} - The collected and cleaned text.
- */
-function collectTextFromRightSide() {
-    const rightParagraphList = document.getElementById("right-paragraph-list");
-    let collectedText = "";
-
-    // Iterate through each paragraph
-    rightParagraphList.querySelectorAll(".report__paragraph").forEach(paragraphElement => {
-        const paragraph = paragraphElement.querySelector("p");
-
-        // Add paragraph text if it is visible
-        if (isElementVisible(paragraph)) {
-            const paragraphText = paragraph.innerText.trim();
-            collectedText += paragraphText;
-            // Check if the paragraph is a title paragraph
-            const isTitleParagraph = paragraph.getAttribute("data-title-paragraph") === "True";
-            if (isTitleParagraph) {
-                collectedText += "\n";  // Add a newline after title paragraphs
-            } else {
-                collectedText += " "; // Add a space after non-title paragraphs
-            }
-        }
-
-        let hasSentences = false;  // Flag to check for the presence of sentences
-
-        // Iterate through each sentence within the paragraph
-        paragraphElement.querySelectorAll(".report__sentence").forEach(sentenceElement => {
-            // Check if the sentence is visible
-            if (isElementVisible(sentenceElement)) {
-                const sentenceText = cleanSelectText(sentenceElement);  // Use the function to clean the text
-                if (sentenceText) {
-                    collectedText += sentenceText + " ";
-                    hasSentences = true;  // Set the flag indicating that there are sentences
-                }
-            }
-        });
-
-        // If there are sentences, add a newline
-        if (hasSentences) {
-            collectedText += "\n";  // Separate paragraphs if there were sentences
-        }
-    });
-
-    return collectedText.trim();  // Remove extra spaces and return the text
-}
 
 
 /**
@@ -360,45 +312,58 @@ function highlightKeyWords(text, keyWordsGroups) {
 }
 
 /**
- * Функция для обновления текста справа и выделения ключевых слов
+ * Функция для обновления текста абзацев с классом core-paragraph-list и выделения ключевых слов.
  */
-function updateRightSideText() {
-    const rightParagraphList = document.getElementById("right-paragraph-list");
+function updateCoreParagraphText() {
+    const coreParagraphLists = document.querySelectorAll(".core-paragraph-list");
 
-    rightParagraphList.querySelectorAll("p, span").forEach(paragraph => {
-        const currentIndex = paragraph.getAttribute("data-index");
+    coreParagraphLists.forEach(paragraphList => {
+        paragraphList.querySelectorAll("p, span").forEach(paragraph => {
+            const currentIndex = paragraph.getAttribute("data-index");
 
-        if (!currentIndex) {
-            return;
-        }
+            if (!currentIndex) {
+                return;
+            }
 
-        let plainText = paragraph.innerText || paragraph.textContent;
+            let plainText = paragraph.innerText || paragraph.textContent;
 
-        if (!paragraph.querySelector("select")) {
-            const highlightedText = highlightKeyWords(plainText, keyWordsGroups);
-            paragraph.innerHTML = highlightedText;
-        }
+            if (!paragraph.querySelector("select")) {
+                const highlightedText = highlightKeyWords(plainText, keyWordsGroups);
+                paragraph.innerHTML = highlightedText;
+            }
 
-        paragraph.setAttribute("data-index", currentIndex);
+            paragraph.setAttribute("data-index", currentIndex);
+        });
     });
 }
 
 
+
 /**
- * Собирает данные параграфов и предложений для отправки на сервер
- * @returns {Array} Массив с данными параграфов и предложений
+ * Собирает данные абзацев и предложений для отправки на сервер.
+ * @returns {Array} Массив с данными абзацев и предложений.
  */
 function collectParagraphsData() {
-    const rightParagraphList = document.getElementById("right-paragraph-list");
+    const coreParagraphLists = document.querySelectorAll(".core-paragraph-list"); // Ищем списки с классом core-paragraph-list
     const paragraphsData = [];
 
-    rightParagraphList.querySelectorAll(".report__paragraph").forEach(paragraphElement => {
-        const paragraph = paragraphElement.querySelector("p");
-        const paragraphId = paragraph.getAttribute("data-paragraph-id");
-        const paragraphText = paragraph.innerText.trim();
+    coreParagraphLists.forEach(paragraphList => {
+        // Находим элемент абзаца внутри текущего списка (core-paragraph-list)
+        const paragraphElement = paragraphList.querySelector(".report__paragraph > p");
+        console.log("This is the paragraphElement:    " + paragraphElement)
+
+        // Проверяем, что элемент абзаца существует
+        if (!paragraphElement) {
+            console.error("Paragraph element not found in core-paragraph-list.");
+            return;
+        }
+
+        const paragraphId = paragraphElement.getAttribute("data-paragraph-id");
+        const paragraphText = paragraphElement.innerText.trim();
         const sentences = [];
 
-        paragraphElement.querySelectorAll(".report__sentence").forEach(sentenceElement => {
+        // Находим все предложения внутри текущего абзаца
+        paragraphList.querySelectorAll(".report__sentence").forEach(sentenceElement => {
             const sentenceText = cleanSelectText(sentenceElement);
             if (sentenceText) {
                 sentences.push(sentenceText);
@@ -413,9 +378,70 @@ function collectParagraphsData() {
             });
         }
     });
+    console.log("This is the coreParagraphLists:    " + coreParagraphLists)
+    console.log("This is the paragraphsData:    " + paragraphsData)
 
     return paragraphsData;
 }
+
+
+
+/**
+ * Собирает текст из всех абзацев с классом core-paragraph-list для дальнейшей обработки.
+ * 
+ * @returns {string} - Собранный и очищенный текст.
+ */
+function collectTextFromCoreParagraphs() {
+    const coreParagraphLists = document.querySelectorAll(".core-paragraph-list"); // Ищем только списки с классом core-paragraph-list
+    let collectedText = "";
+
+    coreParagraphLists.forEach(paragraphList => {
+        // Находим элемент абзаца
+        const paragraphElement = paragraphList.querySelector(".report__paragraph > p");
+        
+        if (!paragraphElement) {
+            console.error("Paragraph element not found in core-paragraph-list.");
+            return;
+        }
+
+        // Добавляем текст абзаца, если он виден
+        if (isElementVisible(paragraphElement)) {
+            const paragraphText = paragraphElement.innerText.trim();
+            collectedText += paragraphText;
+
+            // Проверяем, является ли абзац заголовком
+            const isTitleParagraph = paragraphElement.getAttribute("data-title-paragraph") === "True";
+            if (isTitleParagraph) {
+                collectedText += "\n";  // Добавляем новую строку после заголовков
+            } else {
+                collectedText += " "; // Добавляем пробел после обычных абзацев
+            }
+        }
+
+        let hasSentences = false;  // Флаг для проверки наличия предложений
+
+        // Проходим по предложениям внутри абзаца
+        paragraphList.querySelectorAll(".report__sentence").forEach(sentenceElement => {
+            if (isElementVisible(sentenceElement)) {
+                const sentenceText = cleanSelectText(sentenceElement);
+                if (sentenceText) {
+                    collectedText += sentenceText + " ";
+                    hasSentences = true;
+                }
+            }
+        });
+
+        // Если предложения были найдены, добавляем новую строку
+        if (hasSentences) {
+            collectedText += "\n";
+        }
+    });
+
+    return collectedText.trim();  // Убираем лишние пробелы и возвращаем текст
+}
+
+
+
 
 /**
  * Отображает кружок "+" рядом с предложением.
@@ -426,8 +452,8 @@ function collectParagraphsData() {
  */
 function showPlusCircle(x, y, target) {
     activeSentence = target;
-    plusCircle.style.left = `${x - 0}px`; // Чуть левее курсора
-    plusCircle.style.top = `${y + 0}px`; // Чуть ниже курсора
+    plusCircle.style.left = `${x + 7}px`; // Чуть правее курсора
+    plusCircle.style.top = `${y + 7}px`; // Чуть ниже курсора
     plusCircle.style.display = 'flex';
 }
 
@@ -437,7 +463,7 @@ function showPlusCircle(x, y, target) {
 function hidePlusCircle() {
     hideTimeout = setTimeout(() => {
         plusCircle.style.display = 'none';
-    }, 800); // Задержка в 500 мс перед скрытием
+    }, 800); 
 }
 
 /**
@@ -462,7 +488,7 @@ function showPopup(x, y, sentenceList) {
                 hidePopup(); // Закрываем всплывающее окно после выбора
 
                 // Запускаем функцию обновления текста
-                updateRightSideText();
+                updateCoreParagraphText();
             }
         });
     });
@@ -541,10 +567,10 @@ function setupHoverAndClickLogic() {
     sentencesOnPage.forEach(sentenceElement => {
         // Наведение на предложение
         sentenceElement.addEventListener("mouseenter", function(event) {
-            if (!sentenceElement.classList.contains("editing")) { // Проверяем, что предложение не в режиме редактирования
+            if (!sentenceElement.classList.contains("editing") && sentenceElement.linkedSentences.length > 0) { // Проверяем, что предложение не в режиме редактирования
                 hoverTimeout = setTimeout(() => {
                     showPlusCircle(event.pageX, event.pageY, sentenceElement);
-                }, 800);
+                }, 700);
             }
         });
 
@@ -623,7 +649,7 @@ document.addEventListener("DOMContentLoaded", function() {
             if (surnameField) {
                 surnameField.focus();
             }
-        }, 1000); // Настройте время таймера по необходимости
+        }, 600); // Настройте время таймера по необходимости
     });
 });
 
@@ -657,7 +683,7 @@ document.addEventListener("DOMContentLoaded", function() {
 // логика ключевых слов, по сути здесь просто запускается эта логика 
 // при старте страницы
 document.addEventListener("DOMContentLoaded", function() {
-    updateRightSideText(); // Запускает выделение ключевых слов при загрузке страницы
+    updateCoreParagraphText(); // Запускает выделение ключевых слов при загрузке страницы
 });
 
 
@@ -832,7 +858,7 @@ document.addEventListener("DOMContentLoaded", function() {
                     buttonElement.parentNode.insertBefore(newSentenceElement, buttonElement);
                     inputElement.remove();
                     
-                    updateRightSideText();
+                    updateCoreParagraphText();
                 }else {
                     inputElement.remove(); 
                 }
@@ -902,7 +928,7 @@ document.addEventListener("DOMContentLoaded", function() {
                             const newSentenceElement = createEditableSentenceElement(selectedSentence);
                             buttonElement.parentNode.insertBefore(newSentenceElement, buttonElement);
                             selectElement.remove();
-                            updateRightSideText();
+                            updateCoreParagraphText();
                         }
                     });
 
@@ -921,14 +947,18 @@ document.addEventListener("DOMContentLoaded", function() {
 // "Copy to clipboard" button logic
 document.getElementById("copyButton").addEventListener("click", async function() {
     // Собираем текст из правой части экрана
-    const textToCopy = collectTextFromRightSide();
+    const textToCopy = collectTextFromCoreParagraphs();
+    console.log("This is textToCopy from clipboard logic:    " + textToCopy)
     try {
         await navigator.clipboard.writeText(textToCopy.trim());
         toastr.success("Text copied to clipboard successfully", "Success");
 
         // После успешного копирования выполняем отправку данных
         const paragraphsData = collectParagraphsData();
-        // Отправляем запрос на сервер, используя sendRequest
+        console.log("This is paragraphsData from clipboard logic:    " + paragraphsData)
+       
+        console.log("This is paragraphsData from server in clipboard logic:    " + paragraphsData)
+
         const response = await sendRequest({
             url: "/working_with_reports/new_sentence_adding",
             method: "POST",
@@ -936,9 +966,10 @@ document.getElementById("copyButton").addEventListener("click", async function()
                 paragraphs: paragraphsData
             }
         });
-
+        console.log("This is response from server in clipboard logic:    " + response.processed_paragraphs)
         // Если запрос успешен, отображаем обработанные абзацы
         displayProcessedParagraphs(response.processed_paragraphs);
+
         
     } catch (error) {
         console.error("Error processing paragraphs:", error);
@@ -949,7 +980,7 @@ document.getElementById("copyButton").addEventListener("click", async function()
 // "Export to Word" button logic
 document.getElementById("exportButton").addEventListener("click", async function() {
     // Собираем текст из правой части экрана для экспорта в Word
-    const textToExport = collectTextFromRightSide();
+    const textToExport = collectTextFromCoreParagraphs();
     // Формируем данные параграфов и предложений
     const paragraphsData = collectParagraphsData();
 
@@ -1037,7 +1068,7 @@ document.getElementById("exportButton").addEventListener("click", async function
 
 // "Generate expression" button logic
 document.getElementById("generateImpression").addEventListener("click", async function(){
-    const textToCopy = collectTextFromRightSide();
+    const textToCopy = collectTextFromCoreParagraphs();
     const assistantNames = [
         "airadiologist"
     ];

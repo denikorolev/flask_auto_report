@@ -32,3 +32,43 @@
     <button class="btn report__btn delete-sentence-btn" type="button" data-sentence-id="{{ sentence.id }}">delete_sentence</button>
 </div>
 {% endmacro %}
+
+
+{% macro render_paragraph_and_sentence(paragraph) %}
+<li class="report__paragraph">
+    <p contenteditable="true" 
+    data-paragraph-id="{{ paragraph.id }}" 
+    data-title-paragraph="{{ paragraph.title_paragraph }}" 
+    data-bold-paragraph="{{ paragraph.bold_paragraph }}" 
+    data-visible-paragraph="{{ paragraph.paragraph_visible }}"
+    data-paragraph-type="{{ paragraph.paragraph_type}}" 
+
+    class="paragraphTitle 
+    {% if paragraph.paragraph_visible %}report__paragraph--visible
+    {% if paragraph.bold_paragraph %} report__paragraph--bold{% endif %}
+    {% if paragraph.title_paragraph %} report__paragraph--title{% else %} report__paragraph--untitle{% endif %}
+    {% else %}report__paragraph--invisible{% endif %}"
+    >
+        {{ paragraph.paragraph }}
+    </p>
+    <ul class="">
+        <li class="">
+            {% if paragraph.sentences %}
+                {% for index, sentence_group in paragraph.sentences.items() %}
+                    {% if sentence_group[0].index != 0 %}
+                        <span contenteditable="true"
+                            class="report__sentence sentence" 
+                            data-paragraph-id="{{ paragraph.id }}" 
+                            data-index="{{ index }}"
+                            data-id="{{ sentence_group[0].id }}"> 
+                            {{ sentence_group[0].sentence }} 
+                        </span>
+                        <!-- Кнопка "+" для добавления предложения -->
+                        <button class="icon-btn icon-btn--add-sentence" type="button" title="Add Sentence" data-paragraph-id="{{ paragraph.id }}">+</button>
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
+        </li>
+    </ul>
+</li>
+{% endmacro %}

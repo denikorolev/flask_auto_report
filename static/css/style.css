@@ -147,14 +147,14 @@ html {
     margin-top: 5px;
 }
 
-.report_side__list {
-    width: 50%;
+.report-container {
+    width: 75%;
 }
 
-.report_side--right {
-    border-radius: 6px;
-    background-color: #fff;
+.right-side-container {
+    width: 24%;
 }
+
 
 .sentence-select{
     max-width: 100%;
@@ -188,7 +188,8 @@ html {
 .report__btn {
     margin-right: 10px;
     margin-bottom: 10px;
-    min-width: 50px;
+    padding-left: 5px;
+    max-width: 140px;
     border-style: solid;
     border-color: var(--main-border-color);
     border-width: 1px;
@@ -291,7 +292,7 @@ html {
 }
 
 .btn {
-    padding: 5px 10px;
+    padding: 5px 5px;
     cursor: pointer;
 }
 
@@ -338,7 +339,7 @@ html {
 /* Блок кружочка */
 
 /* Основной стиль для кружка "+" */
-.plusCircle {
+.plus-circle {
     position: absolute;  /* Позволяет позиционировать кружок относительно курсора */
     background-color: var(--main-btn-color);  /* Используем переменную для цвета кнопки */
     border-radius: 50%;  /* Круглая форма */
@@ -354,7 +355,7 @@ html {
 }
 
 /* Стили для внутреннего текста (знак "+") */
-.plusCircle::before {
+.plus-circle::before {
     content: "+";  /* Текст внутри кружка */
     font-size: 24px;
     color: white;  /* Белый цвет знака "+" */
@@ -362,7 +363,7 @@ html {
 }
 
 /* Эффект при наведении на кружок */
-.plusCircle:hover {
+.plus-circle:hover {
     transform: scale(1.1);  /* Легкое увеличение кружка при наведении */
     cursor: pointer;  /* Меняем курсор на "указатель", как при наведении на ссылку */
 }
@@ -376,7 +377,7 @@ html {
 
 /* Блок стиля предложений у которых есть всплывающие предложения */
 .highlighted-sentence {
-    background-color: #edf8f8;  
+    background-color: #daf7f7;  
     
 }
 
@@ -449,4 +450,8 @@ html {
 .red-highlight {
     color: red;
     font-weight: bold;
+}
+
+.push-down {
+    margin-bottom: 50px;
 }
