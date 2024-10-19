@@ -340,18 +340,18 @@ html {
 
 /* Основной стиль для кружка "+" */
 .plus-circle {
-    position: absolute;  /* Позволяет позиционировать кружок относительно курсора */
-    background-color: var(--main-btn-color);  /* Используем переменную для цвета кнопки */
-    border-radius: 50%;  /* Круглая форма */
-    width: 20px;  /* Размер кружка */
-    height: 20px;  /* Размер кружка */
-    display: none;  /* Скрыт по умолчанию */
-    align-items: center;  /* Центрируем "+" внутри */
+    position: absolute;  
+    background-color: var(--main-btn-color);  
+    border-radius: 50%;  
+    width: 20px;  
+    height: 20px;  
+    display: none;  
+    align-items: center;  
     justify-content: center;
-    z-index: 1000;  /* Поверх всех элементов */
-    cursor: pointer;  /* Меняем курсор на указатель (как при наведении на ссылку) */
-    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);  /* Легкая тень */
-    transition: transform 0.2s ease;  /* Плавная анимация при наведении */
+    z-index: 1000;  
+    cursor: pointer;  
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);  
+    transition: transform 0.2s ease;  
 }
 
 /* Стили для внутреннего текста (знак "+") */

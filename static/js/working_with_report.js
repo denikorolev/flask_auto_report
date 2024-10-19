@@ -160,6 +160,7 @@ function displayProcessedParagraphs(paragraphs) {
     function createSentenceElement(paragraphId, sentence) {
         const sentenceDiv = document.createElement('div');
         sentenceDiv.classList.add('sentence-container');
+        
         sentenceDiv.textContent = sentence;
 
         // Добавляем кнопку "Добавить"
@@ -350,7 +351,7 @@ function collectParagraphsData() {
     coreParagraphLists.forEach(paragraphList => {
         // Находим элемент абзаца внутри текущего списка (core-paragraph-list)
         const paragraphElement = paragraphList.querySelector(".report__paragraph > p");
-        console.log("This is the paragraphElement:    " + paragraphElement)
+        
 
         // Проверяем, что элемент абзаца существует
         if (!paragraphElement) {
@@ -378,8 +379,7 @@ function collectParagraphsData() {
             });
         }
     });
-    console.log("This is the coreParagraphLists:    " + coreParagraphLists)
-    console.log("This is the paragraphsData:    " + paragraphsData)
+    
 
     return paragraphsData;
 }
@@ -387,20 +387,21 @@ function collectParagraphsData() {
 
 
 /**
- * Собирает текст из всех абзацев с классом core-paragraph-list для дальнейшей обработки.
+ * Собирает текст из абзацев на основе указанного класса.
  * 
+ * @param {string} paragraphClass - Класс, по которому будут собираться данные.
  * @returns {string} - Собранный и очищенный текст.
  */
-function collectTextFromCoreParagraphs() {
-    const coreParagraphLists = document.querySelectorAll(".core-paragraph-list"); // Ищем только списки с классом core-paragraph-list
+function collectTextFromParagraphs(paragraphClass) {
+    const paragraphLists = document.querySelectorAll(`.${paragraphClass}`); // Ищем списки по указанному классу
     let collectedText = "";
 
-    coreParagraphLists.forEach(paragraphList => {
+    paragraphLists.forEach(paragraphList => {
         // Находим элемент абзаца
         const paragraphElement = paragraphList.querySelector(".report__paragraph > p");
         
         if (!paragraphElement) {
-            console.error("Paragraph element not found in core-paragraph-list.");
+            console.error("Paragraph element not found in", paragraphClass);
             return;
         }
 
@@ -619,6 +620,34 @@ function setupHoverAndClickLogic() {
 }
 
 
+
+
+// "Add Impression to Report" button logic
+document.getElementById("addImpressionToReportButton").addEventListener("click", function() {
+    // Получаем текст ответа ИИ
+    const aiResponseText = document.getElementById("aiResponse").innerText.trim();
+
+    if (!aiResponseText) {
+        alert("AI response is empty. Please generate an impression first.");
+        return;
+    }
+
+    // Ищем первый видимый элемент предложения в impression-paragraph-list
+    const impressionParagraphs = document.querySelectorAll(".impression-paragraph-list .report__sentence");
+    let foundVisibleSentence = false;
+
+    impressionParagraphs.forEach(sentenceElement => {
+        if (isElementVisible(sentenceElement) && !foundVisibleSentence) {
+            // Заменяем текст первого видимого предложения на ответ ИИ
+            sentenceElement.textContent = aiResponseText;
+            foundVisibleSentence = true;  // Останавливаем поиск после первого найденного
+        }
+    });
+
+    if (!foundVisibleSentence) {
+        alert("No visible impression sentence found.");
+    }
+});
 
 
 
@@ -946,9 +975,15 @@ document.addEventListener("DOMContentLoaded", function() {
 
 // "Copy to clipboard" button logic
 document.getElementById("copyButton").addEventListener("click", async function() {
-    // Собираем текст из правой части экрана
-    const textToCopy = collectTextFromCoreParagraphs();
-    console.log("This is textToCopy from clipboard logic:    " + textToCopy)
+
+    // Собираем текст из параграфов: initial, core, impression
+    const initialText = collectTextFromParagraphs("initial-paragraph-list");
+    const coreText = collectTextFromParagraphs("core-paragraph-list");
+    const impressionText = collectTextFromParagraphs("impression-paragraph-list");
+
+    // Соединяем все части с пустой строкой между ними
+    const textToCopy = `${initialText}\n\n${coreText}\n\n${impressionText}`.trim();
+
     try {
         await navigator.clipboard.writeText(textToCopy.trim());
         toastr.success("Text copied to clipboard successfully", "Success");
@@ -979,8 +1014,17 @@ document.getElementById("copyButton").addEventListener("click", async function()
 
 // "Export to Word" button logic
 document.getElementById("exportButton").addEventListener("click", async function() {
-    // Собираем текст из правой части экрана для экспорта в Word
-    const textToExport = collectTextFromCoreParagraphs();
+
+    // Собираем текст из initial, core и impression
+    const initialText = collectTextFromParagraphs("initial-paragraph-list");
+    const coreText = collectTextFromParagraphs("core-paragraph-list");
+    const impressionText = collectTextFromParagraphs("impression-paragraph-list");
+    
+    // Текст для экспорта в Word: initial идет в scanParam, core + impression идут в text
+    const textToExport = `${coreText}\n\n${impressionText}`.trim();
+    const scanParam = initialText.trim();  // Вставляем initial в scanParam
+    
+    
     // Формируем данные параграфов и предложений
     const paragraphsData = collectParagraphsData();
 
@@ -1012,7 +1056,6 @@ document.getElementById("exportButton").addEventListener("click", async function
         const exportForm = document.getElementById("exportForm");
         const subtype = exportForm.getAttribute("data-subtype");
         const reportType = exportForm.getAttribute("data-report-type");
-        const scanParam = exportForm.getAttribute("data-comment");
 
         const reportSideElement = document.getElementById("report-side");
         const reportSide = reportSideElement ? reportSideElement.value : "";
@@ -1068,7 +1111,7 @@ document.getElementById("exportButton").addEventListener("click", async function
 
 // "Generate expression" button logic
 document.getElementById("generateImpression").addEventListener("click", async function(){
-    const textToCopy = collectTextFromCoreParagraphs();
+    const textToCopy = collectTextFromParagraphs("core-paragraph-list");
     const assistantNames = [
         "airadiologist"
     ];

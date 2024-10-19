@@ -18,7 +18,7 @@ from editing_report import editing_report_bp
 from profile_settings import profile_settings_bp
 from openai_api import openai_api_bp
 
-version = "0.5.0"
+version = "0.5.1"
 
 app = Flask(__name__)
 app.config.from_object(get_config()) # Load configuration from file config.py

@@ -67,6 +67,11 @@
                     {{ macros.render_paragraph_and_sentence(paragraph) }}
                 </ul>
             {% endif %}
+            {% if paragraph.paragraph_type == "impression" %}
+                <ul class="impression-paragraph-list" id="impression-paragraph-list-{{ paragraph.id }}">
+                    {{ macros.render_paragraph_and_sentence(paragraph) }}
+                </ul>
+            {% endif %}
         {% endfor %}
         
         
@@ -95,8 +100,8 @@
         </div>
 
         <!-- Место вывода предложений для добавления -->
-        <div class="sentence_adding_reques-container" id="sentenceAddingRequestContainer">
-            <p id="processedText"></p>
+        <div  class="sentence_adding_reques-container" id="sentenceAddingRequestContainer">
+            <p contenteditable="true" id="processedText"></p>
         </div>
 
 
@@ -104,7 +109,7 @@
         
         <div class="">
             <p>Ответ ИИ</p>
-            <p class="" id="aiResponse"></p>
+            <p contenteditable="true" class="" id="aiResponse"></p>
             <button class="btn report__btn" id="addImpressionToReportButton">Add to report</button>
         </div>
 
