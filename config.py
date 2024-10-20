@@ -35,7 +35,8 @@ class Config:
             {"name": "my reports", "url": url_for("my_reports.reports_list")},
             {"name": "new report", "url": url_for("new_report_creation.create_report")},
             {"name": "settings", "url": url_for("report_settings.report_settings")},
-            {"name": "API", "url":url_for("openai_api.start_openai_api")}
+            {"name": "API", "url":url_for("openai_api.start_openai_api")},
+            {"name": "key words", "url":url_for("key_words.key_words")}
         ]
         
         # Добавляем настройки профиля, если профиль выбран

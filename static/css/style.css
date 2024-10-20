@@ -46,6 +46,8 @@ html {
   }
   
   body {
+    margin-right: 25px;
+    margin-left: 25px;
     min-width: 320px;
     width: 100%;
     background-color: azure;
@@ -78,7 +80,7 @@ html {
 .section {
     display: flex;
     flex-direction: column;
-    margin: 0 25px 25px 25px;
+    margin: 0 25px 25px 0;
 }
 
 .container {
@@ -454,4 +456,9 @@ html {
 
 .push-down {
     margin-bottom: 50px;
+}
+
+.edit_delete_buttons_group {
+    display: flex;
+    margin: 0 25px 0 25px;
 }

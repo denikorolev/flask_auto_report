@@ -1,0 +1,134 @@
+<!-- key_words.html-->
+
+{% extends "base.html" %}
+
+
+{% block container %}
+
+{{ super() }}
+
+<!-- Работа с ключевыми словами -->
+<section class="key-word">
+    <form class="key-word__form key-word__form--add" id="keywords-form">
+        <label for="key_word_input" class="report_label__item key-word-label">New Key Words (comma-separated):</label>
+        <input class="key-word__input" type="text" id="key_word_input" name="key_word_input" required>
+        <!-- Чекбокс для привязки к отчету -->
+        <div>
+            <label for="link_reports_checkbox" class="report_label__item key-word__label">Link to Reports:</label>
+            <input class="key-word__input-checkbox" type="checkbox" id="link_reports_checkbox" name="link_reports_checkbox">
+        </div>
+
+        <!-- Чекбокс для игнорирования проверки на уникальность -->
+        <div class="key-word__checkbox-container">
+            <label for="ignore_unique_check" class="report_label__item key-word__label">Ignore uniqueness check:</label>
+            <input class="key-word__input-checkbox" type="checkbox" id="ignore_unique_check" name="ignore_unique_check">
+        </div>
+
+        <!-- Список reports пользователя -->
+        <div class="key-word__report-list" id="report-checkboxes-container" style="display: none;">
+            <label class="report_label__item key-word__label">Select Reports:</label>
+            <div>
+                {% for report in user_reports %}
+                    <label>
+                        <input class="key-word__input-checkbox" type="checkbox" name="report_ids" value="{{ report.id }}">
+                        {{ report.report_name }}
+                    </label><br>
+                {% endfor %}
+            </div>
+        </div>
+        <button type="submit" class="btn report__btn key-word__btn key-word__btn--submit">Add Key Words Group</button>
+
+        <div class="key-word__upload-section">
+            <h3>Upload Word File with Key Words</h3>
+            <form class="key-word__form key-word__form--upload" id="upload-word-form">
+                <input class="key-word__input-file" type="file" id="word-file-input" name="file" accept=".doc,.docx">
+                <button class="key-word__btn key-word__btn--upload" type="button" id="upload-word-btn" class="btn report__btn">Upload</button>
+            </form>
+        </div>
+    </form>
+
+
+    <div class="key-word__container">
+
+        <!-- Блок глобальных ключевых слов -->
+        <h3>Global Key Words</h3>
+        <div class="key-word__groups">
+            {% if global_key_words %}
+                {% for group in global_key_words %}
+
+                        <!-- Группа глобальных ключевых слов -->
+                    <div class="key-word__group flex">
+                        <div class="key-word__list flex" data-group="{{ group.group_index }}">
+                            {% for word in group.key_words %}
+                                <span  class="key-word__item" data-id="{{ word.id }}" data-group="{{ group.group_index }}">
+                                    {{ word.word }}{% if not loop.last %}, {% endif %}
+                                </span>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Кнопки для редактирования и добавления глобальных ключевых слов -->
+                         <div class="key-word__actions">
+                            <button class="btn report__btn key-word__btn key-word__btn--delete" data-group="{{ group.group_index }}">Delete</button>
+                            <button class="btn report__btn key-word__btn key-word__btn--edit" data-group="{{ group.group_index }}">Edit</button>
+                            <button class="btn report__btn key-word__btn--add" data-group="{{ group.group_index }}">Add Word</button>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p>No global key words found.</p>
+            {% endif %}
+        </div>
+    </div>
+    
+
+    <!-- Новый блок для ключевых слов, привязанных к отчетам -->
+    <div class="key-word__container">
+        <h3>Report-specific Key Words</h3>
+
+        <div>
+            {% if report_key_words %}
+            {% set ns = namespace(last_report_id=None) %}  <!-- Используем namespace для хранения значения переменной -->
+            {% for report in report_key_words %}
+                {% if report.key_words %}
+                        <div class="key-word__group">
+                            {% if ns.last_report_id != report.report_id %}
+                                <h4>Report: {{ report.report_name }} </h4>
+                                {% set ns.last_report_id = report.report_id %} <!-- Меняем значение переменной для отслеживания ID текущего протокола вывода -->
+                            {% endif %}
+
+                            <!-- Группа ключевых слов привязанных к отчету-->
+                            
+                            <div class="key-word__list flex" data-report="{{ report.report_id }}" data-group="{{ report.group_index }}">
+                                {% for word in report.key_words %}
+                                    <span class="key-word__item" data-id="{{ word.id }}" data-group="{{ report.group_index }}" data-report="{{ report.report_id }} ">
+                                        {{ word.word }}{% if not loop.last %},  {% endif %}
+                                    </span>
+                                {% endfor %}
+                                
+
+                                <!-- Кнопки для редактирования и добавления ключевых слов привязанных к отчетам -->
+                                <div class="key-word__actions">
+                                    <button class="btn report__btn key-word__btn key-word__btn--delete" data-report="{{ report.report_id }}" data-group="{{ report.group_index }}">Delete</button>
+                                    <button class="btn report__btn key-word__btn key-word__btn--edit-plus-report" data-report="{{ report.report_id }}" data-group="{{ report.group_index }}">Edit</button>
+                                    <button class="btn report__btn key-word__btn key-word__btn--unlink" data-report="{{ report.report_id }}" data-group="{{ report.group_index }}">Unlink</button>
+                                    <button class="btn report__btn key-word__btn key-word__btn--add" data-report="{{ report.report_id }}" data-group="{{ report.group_index }}">Add Word</button>
+                                </div>
+                            </div>
+                        </div>
+                       
+                    {% endif %}
+                {% endfor %}
+            {% else %}
+                <p>No report-specific key words found.</p>
+            {% endif %}
+        </div>
+    </div>
+
+
+</section>
+
+{% endblock container %}
+
+{% block scripts %}
+<script src="/static/js/key_words.js"></script>
+{% endblock scripts %}

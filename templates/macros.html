@@ -1,6 +1,6 @@
 <!-- macros.html -->
- <!-- v0.1.0 -->
   
+<!-- использую в report_editing -->
 {% macro render_sentence(sentence, is_first) %}
 <div class="flex">
     <input class="report_input__item report_input__item--index" type="hidden" id="sentence_id" name="sentence_id" value="{{ sentence.id }}" data-sentence-id="{{ sentence.id }}">
@@ -33,7 +33,7 @@
 </div>
 {% endmacro %}
 
-
+<!-- использую несколько раз в working_with_report -->
 {% macro render_paragraph_and_sentence(paragraph) %}
 <li class="report__paragraph">
     <p contenteditable="true" 
@@ -72,3 +72,4 @@
     </ul>
 </li>
 {% endmacro %}
+
