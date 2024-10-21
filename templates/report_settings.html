@@ -1,15 +1,14 @@
 <!-- report_settings.html -->
 
-
 {% extends "base.html" %}
 {% block container %}
 {{ super() }}
 
 
-<div class="flex">
+
     
         <!-- Types -->
-        <section class="report-section report-section--types">
+        <section class="section report-section report-section--types">
             <form class="report-section__form" id="type-form" method="POST">
                 <div class="flex">
                     <label for="new_type" class="report-section__label">New Type:</label>
@@ -40,7 +39,7 @@
         </section>
 
         <!-- Subtypes -->
-        <section class="report-section report-section--subtypes">
+        <section class="section report-section report-section--subtypes">
             <form id="subtype-form" method="POST" class="flex">
                 <label class="report_label__item" for="report_subtype_type">New Subtype:</label>
                 <select class="report__select report-section__select" id="report_subtype_type" name="report_subtype_type" required>
@@ -119,7 +118,7 @@
         </section>
 
     
-</div>
+
 {% endblock container %}
 
 {% block scripts %}

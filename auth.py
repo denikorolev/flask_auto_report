@@ -1,6 +1,6 @@
 # auth.py
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session, current_app as app
+from flask import Blueprint, render_template, request, redirect, url_for, session, current_app as app
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import login_user, login_required, logout_user, current_user
 from models import db, User, UserProfile
@@ -28,7 +28,7 @@ def login():
         else:
             app.logger.info(f"Incorrect password for user: {user.user_name}")
             
-        flash("Invalid credentials", "error")
+        print("Invalid credentials", "error")
     return render_template("login.html", title="LogIn")
 
 @auth_bp.route("/logout")
@@ -48,7 +48,7 @@ def signup():
         
         # Проверка наличия пользователя с таким email
         if User.query.filter_by(user_email=user_email).first():
-            flash("Email already exists", "error")
+            print("Email already exists", "error")
             return redirect(url_for("auth.signup"))
         
         # Создание нового пользователя
@@ -62,7 +62,7 @@ def signup():
         default_description = "default"
         UserProfile.create(user_id=user.id, profile_name=default_profile_name, description=default_description)
         
-        flash("Account created successfully", "success")
+        print("Account created successfully", "success")
         return redirect(url_for("auth.login"))
     
     return render_template("signup.html", title="SignUp")

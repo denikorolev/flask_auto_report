@@ -1,6 +1,6 @@
 # radiologary_user_profile.py 
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for
 from flask_login import login_required, current_user
 from models import User
 
@@ -13,7 +13,7 @@ profile_bp = Blueprint('profile', __name__)
 #         theme = request.form['theme']
 #         current_user.theme = theme
 #         current_user.save()
-#         flash("Theme updated successfully", "success")
+#         print("Theme updated successfully", "success")
 #         return redirect(url_for('profile.user_settings'))
 
 #     return render_template('user_settings.html', user=current_user)

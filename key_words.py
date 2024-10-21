@@ -1,6 +1,6 @@
 # key_words.py
 
-from flask import Blueprint, render_template, request, redirect, flash, current_app, jsonify
+from flask import Blueprint, render_template, request, redirect, current_app, jsonify
 from flask_login import login_required, current_user
 from models import db, ReportType, ReportSubtype, KeyWordsGroup, Report, ParagraphType 
 from itertools import chain

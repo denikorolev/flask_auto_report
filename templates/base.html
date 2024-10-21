@@ -18,15 +18,17 @@
 {% block menu %}
 <div class="header">
     <img class="header__logo" src="{{ url_for("static", filename="pic/favi2.png")}}" alt="logo ">
-    <ul class="header__menu">
-        {% if g.current_profile %}
-            {% for m in menu %}
-                <li class="header__menu_item">
-                    <a href="{{ m.url }}">{{ m.name }}</a>
-                </li>
-            {% endfor %}
-        {% endif %}
-    </ul>
+    <nav>
+        <ul class="header__menu">
+            {% if g.current_profile %}
+                {% for m in menu %}
+                    <li class="header__menu_item">
+                        <a href="{{ m.url }}">{{ m.name }}</a>
+                    </li>
+                {% endfor %}
+            {% endif %}
+        </ul>
+    </nav>
 
     <!-- Сообщение о версии программы -->
      {% if version %}
@@ -43,17 +45,9 @@
     <!-- Сообщение о текущем юзере -->
     <p>Hello, {{ current_user.user_role }}, {{ current_user.user_name }}!</p>
     <a href="{{ url_for("auth.logout") }}">Logout</a>
+
 </div>
- <!-- Блок с флэш сообщениями -->
-<div class="header__flash_massages">
-    {% with messages = get_flashed_messages() %}
-    {% if messages %}
-        {% for message in messages %}
-            <p class="text">{{ message }}</p>
-        {% endfor %}
-    {% endif %}
-    {% endwith %}
-</div>
+
 {% endblock menu %}
 
 <!-- Общий контент страниц -->

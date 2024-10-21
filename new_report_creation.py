@@ -1,7 +1,7 @@
 # new_report_creation.py
 # Includes create_report route
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, session, g, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, current_app, session, g, jsonify
 from flask_login import current_user, login_required
 from models import db, User, Report, ReportType, ReportSubtype, ReportParagraph, Sentence, ParagraphType  
 from sentence_processing import extract_paragraphs_and_sentences

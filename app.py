@@ -1,6 +1,6 @@
 # app.py
 
-from flask import Flask, redirect, url_for, flash, render_template, request, session, g
+from flask import Flask, redirect, url_for, render_template, request, session, g
 from flask_login import LoginManager, login_required, current_user
 from config import get_config, Config
 from flask_migrate import Migrate
@@ -60,10 +60,10 @@ def load_user(user_id):
 def test_db_connection():
     try:
         db.engine.connect()
-        flash("Database connection successful", "success")
+        print("Database connection successful", "success")
         return True
     except Exception as e:
-        flash(f"Database connection failed: {e}", "error")
+        print(f"Database connection failed: {e}", "error")
         return False
 
 
@@ -87,7 +87,7 @@ def load_current_profile():
         
         # Если профиль отсутствует, но пользователь аутентифицирован, и запрос не относится к выбору профиля, перенаправляем
         if not g.current_profile and request.endpoint not in ['create_profile', 'set_profile', 'index', 'auth.logout']:
-            flash('Please select a profile before proceeding.', 'warning')
+            print('Please select a profile before proceeding.', 'warning')
             return redirect(url_for('create_profile'))
         app.config['MENU'] = Config.get_menu()
     else:
@@ -116,7 +116,7 @@ def index():
     user_profiles = UserProfile.get_user_profiles(current_user.id)
     
     if not user_profiles:
-        flash("You do not have a profile. Please create one.", "warning")
+        print("You do not have a profile. Please create one.", "warning")
         
     return render_template('index.html', 
                            title="Main page Radiologary", 
@@ -137,10 +137,10 @@ def create_profile():
         if profile_name:
             # Создаем профиль пользователя
             UserProfile.create(current_user.id, profile_name, description)
-            flash("Profile created successfully!", "success")
+            print("Profile created successfully!", "success")
             return redirect(url_for('index'))
         else:
-            flash("Profile name is required.", "danger")
+            print("Profile name is required.", "danger")
 
     return render_template('create_profile.html', title="Create Profile")
 
@@ -151,9 +151,9 @@ def set_profile(profile_id):
     profile = UserProfile.find_by_id_and_user(profile_id, current_user.id)
     if profile:
         session['profile_id'] = profile.id
-        flash(f"Profile '{profile.profile_name}' set as current.", "success")
+        print(f"Profile '{profile.profile_name}' set as current.", "success")
     else:
-        flash("Profile not found.", "danger")
+        print("Profile not found.", "danger")
     return redirect(url_for("working_with_reports.choosing_report"))
 
 
@@ -165,9 +165,9 @@ def delete_profile(profile_id):
     if profile:
         db.session.delete(profile)
         db.session.commit()
-        flash('Profile deleted successfully!', 'success')
+        print('Profile deleted successfully!', 'success')
     else:
-        flash('Profile not found or you do not have permission to delete it.', 'danger')
+        print('Profile not found or you do not have permission to delete it.', 'danger')
 
     return redirect(url_for('index'))
 

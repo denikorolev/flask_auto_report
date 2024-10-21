@@ -1,7 +1,7 @@
 # my_reports.py
 #v0.1.0
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, current_app
 from flask_login import login_required, current_user
 from models import Report, ReportType, ReportSubtype
 
@@ -30,9 +30,9 @@ def reports_list():
         if "report_delete" in request.form:
             try:
                 Report.delete_by_id(request.form["report_id"])
-                flash("Report deleted successfully", "success")
+                print("Report deleted successfully", "success")
             except Exception as e:
-                flash(f"Report not found. error code: {e}", "error")
+                print(f"Report not found. error code: {e}", "error")
             return redirect(url_for("my_reports.reports_list"))
                 
     return render_template("my_reports.html", 

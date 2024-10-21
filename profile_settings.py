@@ -1,6 +1,6 @@
 # profile_settings.py
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, current_app
 from flask_login import login_required, current_user
 from models import UserProfile, db
 
@@ -20,7 +20,7 @@ def profile_settings(profile_id):
                                menu=menu,
                                profile=profile)
     else:
-        flash('Profile not found.', 'danger')
+        print('Profile not found.', 'danger')
         return redirect(url_for('index'))
 
 # Маршрут для обновления настроек профиля
@@ -36,8 +36,8 @@ def update_profile_settings():
         profile.profile_name = new_name
         profile.description = new_description
         db.session.commit()
-        flash('Profile updated successfully!', 'success')
+        print('Profile updated successfully!', 'success')
     else:
-        flash('Profile not found or you do not have permission to edit it.', 'danger')
+        print('Profile not found or you do not have permission to edit it.', 'danger')
 
     return redirect(url_for('index'))
