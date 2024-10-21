@@ -2,75 +2,73 @@
 
 
 {% extends "base.html" %}
-
-
 {% block container %}
-
 {{ super() }}
 
+
 <div class="flex">
-    <div class="report_side__list">
+    
         <!-- Types -->
-        <div class="types">
-            <form method="POST">
+        <section class="report-section report-section--types">
+            <form class="report-section__form" id="type-form" method="POST">
                 <div class="flex">
-                    <label for="new_type" class="report_label__item">New Type:</label>
-                    <input class="report_input__item" type="text" id="new_type" name="new_type">
-                    <button class="btn report__btn" type="submit" name="add_new_type_button">Add Type</button>
+                    <label for="new_type" class="report-section__label">New Type:</label>
+                    <input class="report-section__input" type="text" id="new_type" name="new_type">
+                    <button class="btn report__btn report-section__btn" type="submit" name="add_new_type_button">Add Type</button>
                 </div>
             </form>
+            
             <div class="report_borderline"></div>
-            <ul>
-                <li>
+
+            <ul class="report-section__list" id="types-list">
+                <li report-section__list-item>
                     <div class="type_list">
                         <label class="report_label__item" for="type_type">Edit Types:</label>
-                        <div>
-                        {% for type in user_types %}
-                            <form method="POST" class="flex">
-                                <input class="report_input__item" type="hidden" id="type_id" name="type_id" value="{{ type.id }}">
-                                <input class="report_input__item" type="text" id="type_type" name="type_type" value="{{ type.type }}">
-                                <button class="btn report__btn" type="submit" name="delete_type_button">Delete Type</button>
-                                <button class="btn report__btn" type="submit" name="edit_type_button">Edit Type</button>
-                            </form>
-                        {% endfor %}
-                        </div>
+                        <ul id="types-list" class="report-section__list">
+                            {% for type in user_types %}
+                                <li class="report-section__list">
+                                    <input class="report-section__input--type" type="text" id="type_type" name="type_type" value="{{ type.type }}">
+                                    <button class="btn report__btn report-section__btn--delete" type="button" name="delete_type_button" data-type-id="{{ type.id }}">Delete Type</button>
+                                    <button class="btn report__btn report-section__btn--edit" type="button" name="edit_type_button" data-type-id="{{ type.id }}">Edit Type</button>
+                                </li>
+                            {% endfor %}
+                        </ul>
                     </div>
                     <div class="report_borderline"></div>
                 </li>
             </ul>
-        </div>
+        </section>
 
         <!-- Subtypes -->
-        <div class="subtypes">
-            <form method="POST" class="flex">
+        <section class="report-section report-section--subtypes">
+            <form id="subtype-form" method="POST" class="flex">
                 <label class="report_label__item" for="report_subtype_type">New Subtype:</label>
-                <select class="report__select report__select--type" id="report_subtype_type" name="report_subtype_type" required>
+                <select class="report__select report-section__select" id="report_subtype_type" name="report_subtype_type" required>
                     {% for type in user_types %}
                         <option value="{{ type.id }}">{{ type.type }}</option>
                     {% endfor %}
                 </select>
-                <input class="report_input__item" type="text" id="new_subtype" name="new_subtype">
-                <button class="btn report__btn" type="submit" name="add_new_subtype_button">Add Subtype</button>
+                <label for="new_subtype" class="report-section__label">New Subtype:</label>
+                <input class="report-section__input" type="text" id="new_subtype" name="new_subtype">
+                <button class="btn report__btn report-section__btn" type="submit">Add Subtype</button>
             </form>
             <div class="report_borderline"></div>
-            <ul>
-                <li>
-                    <div class="subtype_list">
-                        <label class="report_label__item" for="subtype_subtype">Edit Subtypes:</label>
-                        {% for subtype in user_subtypes %}
-                            <form method="POST" class="flex">
-                                <input class="report_input__item" type="hidden" id="subtype_id" name="subtype_id" value="{{ subtype.id }}" readonly>
-                                <input class="report_input__item" type="text" id="subtype_subtype" name="subtype_subtype" value="{{ subtype.subtype }}">
-                                <input class="report_input__item" type="text" id="subtype_type" name="subtype_type" value="{{ subtype.report_type_rel.type }}" readonly>
-                                <button class="btn report__btn" type="submit" name="delete_subtype_button">Delete Subtype</button>
-                                <button class="btn report__btn" type="submit" name="edit_subtype_button">Edit Subtype</button>
-                            </form>
-                        {% endfor %}
-                    </div>
-                    <div class="report_borderline"></div>
-                </li>
+
+            <ul id="subtypes-list" class="report-section__list">
+                {% for subtype in user_subtypes %}
+                        <li class="flex report-section__list-item">
+                            
+                            <input class="report_input__item" type="text" id="subtype_type" name="subtype_type" value="{{ subtype.report_type_rel.type }}" readonly>
+                            <input class="report_input__item subtype-input" type="text" id="subtype_subtype" name="subtype_subtype" value="{{ subtype.subtype }}">
+                            <button class="btn report__btn delete-subtype-btn" type="submit" name="delete_subtype_button" data-subtype-id="{{ subtype.id }}">Delete Subtype</button>
+                            <button class="btn report__btn edit-subtype-btn" type="submit" name="edit_subtype_button" data-subtype-id="{{ subtype.id }}">Edit Subtype</button>
+                        </li>
+                {% endfor %}
+                    
+                <div class="report_borderline"></div>
+               
             </ul>
-        </div>
+        </section>
 
         <!-- Загрузка файла -->
         <section class="section file-upload">
@@ -120,13 +118,7 @@
             <div class="report_borderline"></div>
         </section>
 
-    </div>
-   
     
-    
-
-
-
 </div>
 {% endblock container %}
 

@@ -19,7 +19,7 @@ from profile_settings import profile_settings_bp
 from openai_api import openai_api_bp
 from key_words import key_words_bp
 
-version = "0.5.2"
+version = "0.5.3"
 
 app = Flask(__name__)
 app.config.from_object(get_config()) # Load configuration from file config.py

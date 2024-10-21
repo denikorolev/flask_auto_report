@@ -12,90 +12,21 @@ from db_processing import add_keywords_to_db
 
 report_settings_bp = Blueprint('report_settings', __name__)
 
-# Functions
-
 
 # Routs
 # Главный маршрут страницы
 @report_settings_bp.route('/report_settings', methods=['GET', 'POST'])
 @login_required
 def report_settings():
-    page_title = "Report settings"
-    # Get data from the config
     menu = current_app.config["MENU"]
-    # Get all user reports
-    user_reports = Report.find_by_user(current_user.id)
     
-    # Get types
     user_types = ReportType.find_by_user(current_user.id)
-    
-    # Get subtypes
     user_subtypes = ReportSubtype.find_by_user(current_user.id)
-    
-    # Get all paragraph types
     paragraph_types = ParagraphType.query.all() 
-    
-    
-    
-    # Processing type
-    if request.method == "POST":
-        if "add_new_type_button" in request.form:
-            ReportType.create(type=request.form["new_type"],user_id=current_user.id)
-            flash("New type was created successfully")
-            return redirect(request.url)
-        
-        if "delete_type_button" in request.form:
-            try:
-                ReportType.delete_by_id(request.form["type_id"])
-                flash("Type was deleted successfully")
-            except:
-                flash("It's impossible to delele the type because of existing of the reports with this type")
-            return redirect(request.url)
-        
-        if "edit_type_button" in request.form:
-            type_for_editing = ReportType.query.filter_by(id=request.form["type_id"], user_id=current_user.id).first()
-            
-            if not type_for_editing:
-                flash("You do not have permission to edit this type.", "error")
-                return redirect(request.url)
-            
-            type_for_editing.type = request.form["type_type"]
-            type_for_editing.save()
-            flash("Type edited successfully")
-            return redirect(request.url)
-        
-        # Processing subtype
-        if "add_new_subtype_button" in request.form:
-            ReportSubtype.create(type=request.form["report_subtype_type"], subtype=request.form["new_subtype"], user_id=current_user.id)
-            flash("New subtype was created successfully")
-            return redirect(request.url)
-        
-        if "delete_subtype_button" in request.form:
-            # Используем метод find_by_user для получения подтипов текущего пользователя
-            subtype_for_deletion = ReportSubtype.find_by_user(current_user.id)
-            subtype_for_deletion = next((st for st in subtype_for_deletion if st.id == int(request.form["subtype_id"])), None)
-
-            if subtype_for_deletion:
-                ReportSubtype.delete_by_id(subtype_for_deletion.id)
-                flash("Subtype deleted successfully")
-            else:
-                flash("You don't have permission to delete this subtype")
-            return redirect(request.url)
-        
-        if "edit_subtype_button" in request.form:
-            subtype_for_editing = ReportSubtype.query.filter_by(id=request.form["subtype_id"], user_id=current_user.id).first()
-            if subtype_for_editing:
-                subtype_for_editing.subtype = request.form["subtype_subtype"]
-                subtype_for_editing.save()
-                flash("Subtype edited successfully")
-            else:
-                flash("You don't have permission to edit this subtype")
-            return redirect(request.url)
         
     return render_template('report_settings.html', 
-                           title = page_title,
+                           title = "Report settings",
                            menu = menu,
-                           user_reports=user_reports,
                            user_types=user_types,
                            user_subtypes=user_subtypes,
                            paragraph_types=paragraph_types 
@@ -153,3 +84,125 @@ def add_paragraph_type():
     ParagraphType.create(type_name=new_type_name)
     return jsonify({"status": "success", "message": "New paragraph type created successfully."}), 200
 
+
+@report_settings_bp.route('/add_type', methods=['POST'])
+@login_required
+def add_type():
+    """Handles adding a new report type."""
+    data = request.get_json()
+    new_type = data.get("new_type", "").strip()
+
+    if not new_type:
+        return jsonify({"status": "error", "message": "Type name cannot be empty."}), 400
+
+    try:
+        ReportType.create(type=new_type, user_id=current_user.id)
+        return jsonify({"status": "success", "message": "New type was created successfully."}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": "New type wasn't created because of {e}."}), 400
+
+
+@report_settings_bp.route('/delete_type', methods=['POST'])
+@login_required
+def delete_type():
+    """Handles deleting a report type."""
+    data = request.get_json()
+    type_id = data.get("type_id")
+    print(type_id)
+
+    if not type_id:
+        return jsonify({"status": "error", "message": "Type ID is required."}), 400
+
+    try:
+        # Удаление типа из базы данных
+        ReportType.delete_by_id(type_id)
+        return jsonify({"status": "success", "message": "Type was deleted successfully."}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": f"Type wasn't deleted because of {str(e)}."}), 400
+
+
+@report_settings_bp.route('/edit_type', methods=['POST'])
+@login_required
+def edit_type():
+    """Handles editing a report type."""
+    data = request.get_json()
+    type_id = data.get("type_id")
+    new_type_name = data.get("new_type_name", "").strip()
+
+    if not type_id or not new_type_name:
+        return jsonify({"status": "error", "message": "Type ID and new type name are required."}), 400
+
+    try:
+        # Поиск типа по ID и обновление имени
+        type_for_editing = ReportType.query.filter_by(id=type_id, user_id=current_user.id).first()
+
+        if not type_for_editing:
+            return jsonify({"status": "error", "message": "You do not have permission to edit this type."}), 403
+
+        type_for_editing.type = new_type_name
+        type_for_editing.save()  # Сохранение изменений в базе данных
+        return jsonify({"status": "success", "message": "Type edited successfully."}), 200
+    except Exception as e:
+        return jsonify({"status": "error", f"message": "Type wasn't edited because of {str(e)}."}), 400
+
+
+@report_settings_bp.route('/add_subtype', methods=['POST'])
+@login_required
+def add_subtype():
+    """Handles adding a new report subtype."""
+    data = request.get_json()
+    report_type_id = data.get("report_type_id")
+    new_subtype_name = data.get("new_subtype_name", "").strip()
+
+    if not report_type_id or not new_subtype_name:
+        return jsonify({"status": "error", "message": "Both type ID and subtype name are required."}), 400
+
+    try:
+        # Создание нового подтипа
+        ReportSubtype.create(type=report_type_id, subtype=new_subtype_name, user_id=current_user.id)
+        return jsonify({"status": "success", "message": "New subtype was created successfully."}), 200
+    except Exception as e:
+        return jsonify({"status": "error", f"message": "Subtype wasn't created because of {str(e)}."}), 400
+
+
+@report_settings_bp.route('/delete_subtype', methods=['POST'])
+@login_required
+def delete_subtype():
+    """Handles deleting a report subtype."""
+    data = request.get_json()
+    subtype_id = data.get("subtype_id")
+
+    if not subtype_id:
+        return jsonify({"status": "error", "message": "Subtype ID is required."}), 400
+
+    try:
+        # Удаление подтипа из базы данных
+        ReportSubtype.delete_by_id(subtype_id)
+        return jsonify({"status": "success", "message": "Subtype was deleted successfully."}), 200
+    except Exception as e:
+        return jsonify({"status": "error", f"message": "Subtype wasn't deleted because of {str(e)}."}), 400
+    
+    
+@report_settings_bp.route('/edit_subtype', methods=['POST'])
+@login_required
+def edit_subtype():
+    """Handles editing a report subtype."""
+    data = request.get_json()
+    subtype_id = data.get("subtype_id")
+    new_subtype_name = data.get("new_subtype_name", "").strip()
+
+    if not subtype_id or not new_subtype_name:
+        return jsonify({"status": "error", "message": "Both subtype ID and new subtype name are required."}), 400
+
+    try:
+        # Поиск подтипа по ID и обновление имени
+        subtype_for_editing = ReportSubtype.query.filter_by(id=subtype_id, user_id=current_user.id).first()
+
+        if not subtype_for_editing:
+            return jsonify({"status": "error", "message": "You do not have permission to edit this subtype."}), 403
+
+        subtype_for_editing.subtype = new_subtype_name
+        subtype_for_editing.save()  # Сохранение изменений в базе данных
+        return jsonify({"status": "success", "message": "Subtype edited successfully."}), 200
+    except Exception as e:
+        return jsonify({"status": "error", f"message": "Subtype wasn't edited because of {str(e)}."}), 400
