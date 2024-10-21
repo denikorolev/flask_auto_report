@@ -12,64 +12,65 @@
 
     <title> {{ title }} </title>
 </head>
-<body>
+<body class="body">
 
-<!-- Общая шапка и меню -->
-{% block menu %}
-<div class="header">
-    <img class="header__logo" src="{{ url_for("static", filename="pic/favi2.png")}}" alt="logo ">
-    <nav>
-        <ul class="header__menu">
-            {% if g.current_profile %}
-                {% for m in menu %}
-                    <li class="header__menu_item">
-                        <a href="{{ m.url }}">{{ m.name }}</a>
-                    </li>
-                {% endfor %}
-            {% endif %}
-        </ul>
-    </nav>
-
-    <!-- Сообщение о версии программы -->
-     {% if version %}
-        <p>Application version {{ version }}</p>
-     {% endif %}
+    {% block menu %}
     
-    <!-- Сообщение о текущем профиле -->
-    {% if g.current_profile %}
-        <p>Current profile: {{ g.current_profile.profile_name }}</p>
-    {% else %}
-        <p>No profile selected!</p>
-    {% endif %}
+    <header class="header">
+        <div class="container container--header">
+            <img class="header__logo" src="{{ url_for("static", filename="pic/favi2.png")}}" alt="logo ">
+            
+            <nav class="header__nav">
+                <ul class="header__menu">
+                    {% if g.current_profile %}
+                        {% for m in menu %}
+                            <li class="header__menu-item">
+                                <a class="header__menu-link" href="{{ m.url }}">{{ m.name }}</a>
+                            </li>
+                        {% endfor %}
+                    {% endif %}
+                </ul>
+            </nav>
 
-    <!-- Сообщение о текущем юзере -->
-    <p>Hello, {{ current_user.user_role }}, {{ current_user.user_name }}!</p>
-    <a href="{{ url_for("auth.logout") }}">Logout</a>
+            <!-- Сообщение о версии программы -->
+            {% if version %}
+                <p class="header__paragraph header__paragraph--version">v.{{ version }}</p>
+            {% endif %}
+            
+            <!-- Сообщение о текущем профиле -->
+            {% if g.current_profile %}
+                <p class="header__paragraph">Профиль: {{ g.current_profile.profile_name }}</p>
+            {% else %}
+                <p class="header__paragraph">No profile selected!</p>
+            {% endif %}
 
+            <!-- Сообщение о текущем юзере -->
+            <p class="header__paragraph">Привет, {{ current_user.user_role }}, {{ current_user.user_name }}!</p>
+            <a class="header__link" href="{{ url_for("auth.logout") }}">Выйти</a>
+        </div>
+    </header>
+    {% endblock menu %}
+
+    <!-- Общий контент страниц -->
+    <main class="main">
+        <div class="container">
+            <div class="main__title">
+                <h1 class="main__heading">{{ title }}</h1>
+            </div>
+
+            <div class="main__body">
+                {% block container %}
+                {% endblock container %}
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p class="footer__paragraph">&copy; 2023-2024 Radiologary</p>
+        </div>
+    </footer>
 </div>
-
-{% endblock menu %}
-
-<!-- Общий контент страниц -->
-<div class="section">
-    <h1 class="title">{{ title }}</h1>
-</div>
-
-<div class="section">
-    {% block container %}
-    {% endblock container %}
-</div>
-
-<div class="section">
-    {% block tips %}
-    {% endblock tips %}
-</div>
-
-<!-- Футер -->
-<footer class="footer">
-    <p>&copy; 2023 Radiologary</p>
-</footer>
-
 <!-- Общие скрипты -->
 <noscript>please turn on JS!</noscript>
 <script src="/static/js/jquery.js"></script>

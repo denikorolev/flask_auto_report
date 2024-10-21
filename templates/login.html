@@ -1,27 +1,27 @@
+{% extends "login_base.html" %}
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title> {{ title }} </title>
-</head>
-<body>
-    <h1>Login</h1>
-    <form method="POST" action="{{ url_for("auth.login") }}">
-        
-        <div class="container">
-            <label for="email">E-mail:</label>
-            <input type="email" id="email" name="email" required><br>
-        </div>
-        <div class="container">
-        <label for="password">Password:</label>
-        <input type="password" id="password" name="password" required><br>
-        </div>
-        <button type="submit">Login</button>
-    </form>
+{% block container %}
+{{ super() }}
 
-    <p>Don't have an account? <a href="{{ url_for("auth.signup") }}">Sign up</a></p>
-        
-</body>
-</html>
+
+<h1 class="title title-auth">Авторизация</h1>
+<form class="flex_column" method="POST" action="{{ url_for("auth.login") }}">
+    
+    <div class="wrapper wrapper--auth">
+        <label class="label label--auth" for="email">E-mail:</label>
+        <input class="input input--auth" type="email" id="email" name="email" required><br>
+    </div>
+
+    <div class="wrapper wrapper--auth">
+        <label class="label label--auth" for="password">Password:</label>
+        <input class="input input--auth" type="password" id="password" name="password" required><br>
+    </div>
+
+    <button class="btn btn--auth" type="submit">Войти</button>
+</form>
+
+<p>Нет аккаунта? 
+    <a class="link--auth" href="{{ url_for("auth.signup") }}">Создать</a>
+</p>
+
+{% endblock container %}

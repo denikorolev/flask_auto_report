@@ -119,7 +119,7 @@ def index():
         print("You do not have a profile. Please create one.", "warning")
         
     return render_template('index.html', 
-                           title="Main page Radiologary", 
+                           title="Radiologary", 
                            menu=menu,
                            user_profiles=user_profiles,
                            version=version

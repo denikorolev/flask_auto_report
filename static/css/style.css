@@ -2,99 +2,64 @@
 
 /* variables */
 :root {
-    --main-bg-color: rgb(15, 30, 60);
-    --main-text-color: #000000;
-    --main-btn-color: #5db4ae;
-    --main-border-color: #1f1f73;
+    --main-text-color: rgb(58, 92, 102);
+    --main-btn-color: rgb(58, 92, 102);
+    --main-btn-color-hover: rgb(25, 39, 48);
+    --main-border-color: rgb(25, 39, 48);
+    --main-background-color: rgb(252, 252, 233);
+    --main-background-color-light: rgb(251, 251, 247);
+    --main-background-color-dark: rgb(202, 202, 191);
+    --main-text-block-height: 20px;
+    
   }
 
 /* default settings reset */
 
 html {
     box-sizing: border-box;
-  }
+}
   
-  *,
-  *::before,
-  *::after {
+*,
+*::before,
+*::after {
     box-sizing: inherit;
-  }
+}
 
-  a {
+a {
     color: inherit;
     text-decoration: none;
     font-style: inherit;
-  }
+}
 
-  p {
+p {
     margin: 0;
-  }
+}
 
-  ul {
+ul {
     margin: 0;
     padding: 0;
     list-style-type: none;
-  }
+}
 
-  li {
+li {
     margin: 0;
     padding: 0;
-  }
-  
-  img {
+}
+
+img {
     max-width: 100%;
-  }
-  
-  body {
-    margin-right: 25px;
-    margin-left: 25px;
+}
+
+body {
     min-width: 320px;
     width: 100%;
-    background-color: azure;
-  }
-
-  /* end of default settings reset */
-
-
-
-
-.container {
-    max-width: 1200px;   
-    width: 100%;         
-    padding-left: 15px;   
-    padding-right: 15px;
-    margin-left: auto;    
-    margin-right: auto;
 }
 
-.container__top {
-    font: 16px;
-}
+/* end of default settings reset */
 
 
-.container_row {
-    display: flex;
-    flex-direction: row;
-    gap: 20px;
-    width: 45%;
-}
+/* Универсальные стили (utility) */
 
-.box {
-    width: auto;
-}
-
-
-
-
-
-
-.btn {
-    max-height: 25px;
-    color: #fff;
-    background-color: var(--main-btn-color);
-    border-radius: 6px;
-    border-color: #007bff;
-}
 
 .flex_column {
     display: flex;
@@ -106,6 +71,257 @@ html {
     
 }
 
+/* Сбрасывает значения по умолчанию с сылки */
+.link-reset {
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0;
+    display: inline-block;
+}
+
+
+/* Общие стили элементов */
+
+.body {
+    display: flex;
+    flex-direction: column;
+    background-color: var(--main-background-color-light);
+}
+
+
+.title {
+    margin: 0;
+}
+
+.btn {
+    display: inline-block;
+    padding: 10px 20px;
+    background-color: var(--main-btn-color);
+    color: var(--main-background-color);
+    text-align: center;
+    border-radius: 5px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    transition: background-color 0.3s ease;
+}
+
+.btn:hover {
+    background-color: var(--main-btn-color-hover);
+}
+
+.label {
+    color: var(--main-text-color);
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.input {
+    height: var(--main-text-block-height);
+    border: none;
+    box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.1);
+    padding: 0 10px;
+    background-color: var(--main-background-color-light);
+    outline: 1px solid var(--main-background-color-dark);
+    border-radius: 5px;
+    width: 100%;
+}
+
+
+/* Контейнеры */
+
+.container {
+    width: 100%;    
+    height: 100%;
+    max-width: 1600px;     
+    margin-left: auto;    
+    margin-right: auto;
+    padding: 15px 15px;
+    background-color: transparent;
+}
+
+.wrapper {
+    padding: 5px;   /* Внутренние отступы */
+    margin: 0 auto;  /* Центрирование по горизонтали */
+}
+
+.card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-evenly;
+    gap: 10px;
+    width: 350px;
+    height: 350px;
+    background-color: rgba(255, 255, 239, 0.9); 
+    box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.2); 
+    border-radius: 5px; 
+    padding: 15px; 
+}
+
+
+/* блок авторизации */
+
+.card-auth {
+    transform: translateX(-27vw);
+    color: var(--main-text-color);
+}
+
+.wrapper--auth {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: inherit;
+}
+
+.title-auth {
+    margin: 0;
+    padding: 0;
+    color: inherit;
+}
+
+.label--auth {
+    width: 70px;
+    margin-right: 10px;
+}
+
+.btn--auth {
+    min-width: 70px;
+    margin-top: 20px;
+    margin-right: auto;
+    margin-left: auto;
+}
+
+.link--auth {
+    font-weight: bold;
+    text-decoration: underline;
+    margin-left: 10px;
+}
+
+.link--auth:hover {
+    color: var(--main-btn-color-hover);
+}
+
+.main-auth {
+    display: flex;
+    justify-content: center; 
+    align-items: center;  
+    background-image: url("/static/pic/radiologists.jpg"); 
+    background-size: cover;    
+    background-position: center; 
+    background-repeat: no-repeat; 
+    width: 100vw;                
+    height: 100vh;             
+}
+
+
+
+/* Блок header */
+.header {
+    width: 100%;
+    background-color: var(--main-background-color);
+    z-index: 1000;
+}
+
+.container--header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: var(--main-background-color);
+    z-index: 1000;
+}
+
+.header__logo {
+    width: auto;
+    height: 50px;
+}
+
+.header__nav {
+    flex-grow: 1;
+    margin-left: 20px;
+}
+
+.header__menu {
+    display: flex;            
+}
+
+.header__menu-item {
+    margin-right: 15px;         
+}
+
+.header__menu-link {
+    color: var(--main-btn-color);
+    font-weight: 500;            
+    transition: color 0.3s;     
+}
+
+.header__menu-link:hover {
+    color: var(--main-btn-color-hover);
+}
+
+.header__paragraph {
+    font-size: 14px;           
+    color: #343a40;             
+    margin-right: 15px;
+}
+
+.header__paragraph--version {
+    font-size: 12px;           
+}
+
+
+
+.header__link {
+    text-decoration: none;       
+    color: #dc3545;           
+    font-weight: 600;           
+    transition: color 0.3s;      
+}
+
+.header__link:hover {
+    color: #bd2130;     
+}
+
+
+
+/* Блок main */
+.main {
+    margin-bottom: 20px;
+} 
+
+
+.main__title {
+    margin-bottom: 20px;          
+             
+}
+
+.main__heading {
+    font-size: 2rem;            
+    color: var(--main-text-color);              
+    margin: 0;
+    line-height: 1.2;
+}
+
+
+
+/* Блок footer */
+
+.footer {
+    width: 100%;
+    background-color: var(--main-background-color);
+    z-index: 1000;
+}
+
+
+
+/* Остальные стили */
+
+
+
+
 
 .section {
     display: flex;
@@ -115,27 +331,6 @@ html {
 
 
 
-.header {
-    display: flex;
-    align-items: center;
-    margin: 0 25px 0 25px;
-    z-index: 1000;
-}
-
-.header__logo {
-    width: 50px;
-    height: 50px;
-}
-
-.header__menu {
-    display: flex;
-    align-content: center;
-    width: 100%;
-}
-
-.header__menu_item {
-    margin: 0 20px 0 0;
-}
 
 .report__list {
     display: flex;
@@ -401,10 +596,7 @@ html {
 
 
 
-.title {
-    margin: 0;
-    color: #333;
-}
+
 
 
 .temporary_wide {
@@ -438,14 +630,6 @@ html {
 }
 
 
-
-
-.footer {
-    display: flex;
-    align-items: center;
-    margin: 0 25px 0 25px;
-    z-index: 1000;
-}
 
 
 .red-highlight {

@@ -30,19 +30,19 @@ class Config:
     def get_menu():
         """Формирует меню с учетом текущего профиля"""
         menu = [
-            {"name": "main", "url": url_for("index")},
-            {"name": "report", "url": url_for("working_with_reports.choosing_report")},
-            {"name": "my reports", "url": url_for("my_reports.reports_list")},
-            {"name": "new report", "url": url_for("new_report_creation.create_report")},
-            {"name": "settings", "url": url_for("report_settings.report_settings")},
+            {"name": "Главная", "url": url_for("index")},
+            {"name": "Протокол", "url": url_for("working_with_reports.choosing_report")},
+            {"name": "Список протоколов", "url": url_for("my_reports.reports_list")},
+            {"name": "Новый протокол", "url": url_for("new_report_creation.create_report")},
+            {"name": "Настройки", "url": url_for("report_settings.report_settings")},
             {"name": "API", "url":url_for("openai_api.start_openai_api")},
-            {"name": "key words", "url":url_for("key_words.key_words")}
+            {"name": "Ключевые слова", "url":url_for("key_words.key_words")}
         ]
         
         # Добавляем настройки профиля, если профиль выбран
         if g.current_profile:
             menu.append({
-                "name": "profile settings",
+                "name": "Настройки профиля",
                 "url": url_for("profile_settings.profile_settings", profile_id=g.current_profile.id)
             })
         
