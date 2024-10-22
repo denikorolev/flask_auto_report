@@ -97,11 +97,48 @@ def load_current_profile():
 @app.route("/", methods=['POST', 'GET'])
 @login_required
 def index():
-    menu = app.config['MENU']
     # Проверяем подключение к базе данных
     if not test_db_connection():
-        return "Database connection failed", 500
+        print("db wasn't connected")
+        return redirect(url_for("error", message="db wasn't connected"))
     
+    if not "profile_id" in session:
+        user_profiles = UserProfile.get_user_profiles(current_user.id)
+        
+        if not user_profiles:
+            UserProfile.create(current_user.id, "Default", "Default")
+            profile = UserProfile.get_user_profiles(current_user.id)[0]
+            if profile:
+                session['profile_id'] = profile.id
+                return render_template("welcome_page.html",
+                                       title="welcome in radiologary",
+                                       user=current_user.name,
+                                       profile=profile)
+            else:
+                print("samething goes wrong with profiles of new user")
+                return redirect(url_for("error", message="samething goes wrong with profiles of new user"))
+        
+        if len(user_profiles) == 1:
+            print("there is only one profile")
+            profile = user_profiles[0]
+            if profile:
+                session['profile_id'] = profile.id
+                return redirect("/")
+            else:
+                print("samething goes wrong with profiles of seassoned user with only one profile")
+                return redirect(url_for("error", message="samething goes wrong with profiles of seassoned user with only one profile"))
+        
+        if len(user_profiles)>1:
+            print("here will be logic for check and choose default profile or show profiles list")
+            profile = user_profiles[0]
+            if profile:
+                session['profile_id'] = profile.id
+                return redirect("/")
+            else:
+                print("samething goes wrong with profiles of seassoned user with only one profile")
+                return redirect(url_for("error", message="samething goes wrong with profiles of seassoned user with only one profile"))
+    
+    menu = app.config['MENU']
     
     if 'profile_id' in session:
         # Проверяем, принадлежит ли профиль текущему пользователю
@@ -113,10 +150,8 @@ def index():
             session.pop('profile_id', None)
             g.current_profile = None
     # Проверяем, есть ли у пользователя профиль
-    user_profiles = UserProfile.get_user_profiles(current_user.id)
     
-    if not user_profiles:
-        print("You do not have a profile. Please create one.", "warning")
+    
         
     return render_template('index.html', 
                            title="Radiologary", 
@@ -172,8 +207,11 @@ def delete_profile(profile_id):
     return redirect(url_for('index'))
 
 
-
-            
+@app.route("/error", methods=["POST", "GET"])
+def error():
+    message = request.args.get("message")
+    return render_template("error.html",
+                           message=message)
 
 
 # Это обязательная часть для разрыва сессии базы данных после каждого обращения
@@ -189,5 +227,6 @@ if __name__ == "__main__":
     
     # Если приложение запущено не в режиме продакшена (например, локальная разработка), запускаем Flask встроенным сервером
     if os.getenv("FLASK_ENV") == "local":
-        app.run(debug=True, port=int(os.getenv("PORT", 5001)))  # Включаем отладку и указываем порт
+        app.run(debug=True, port=int(os.getenv("PORT", 5001)))
+        
 

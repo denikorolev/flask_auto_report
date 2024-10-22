@@ -3,8 +3,8 @@
 {% block container %}
 {{ super() }}
 
-<h1 class="title title-auth">Создать аккаунт</h1>
-<form class="flex_column" method="POST" action="{{ url_for("auth.signup") }}" enctype="multipart/form-data">
+<h1 class="title title-auth" id="signupForm">Создать аккаунт</h1>
+<form class="flex_column">
 
     <div class="wrapper wrapper--auth">
         <label class="label label--auth" for="email">Email:</label>
@@ -21,11 +21,46 @@
         <input class="input input--auth" type="password" id="password" name="password" required>
     </div>
     
-    <button class="btn btn--auth" type="submit">Создать</button>
+    <button id="signupSubmit" class="btn btn--auth" type="button">Создать</button>
 </form>
 
 <p>Уже есть аккаунт? 
     <a class="link--auth" href="{{ url_for('auth.login') }}">Войти</a>
 </p>
 {% endblock container %}
+
+{% block scripts %}
+<script>
+    console.log("hello");
+    document.getElementById('signupSubmit').addEventListener('click', function() {
+        // Получаем данные из формы
+        
+        const email = document.getElementById('email').value;
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+
+        // Формируем данные для отправки
+        const data = {
+            email: email,
+            username: username,
+            password: password
+        };
+
+        // Вызываем sendRequest для отправки данных
+        sendRequest({
+            url: "/auth/signup",  // URL для отправки данных
+            method: "POST",
+            data: data
+        }).then(response => {
+            if (response.status === 'success') {
+                // Успешная регистрация
+                toastr.success(response.message);
+                window.location.href = "/auth/login";  // Перенаправляем на страницу входа
+            } 
+        }).catch(error => {
+            console.log("Ошибка при отправке данных: ", error.message);
+        });
+    });
+</script>
+{% endblock scripts %}
    

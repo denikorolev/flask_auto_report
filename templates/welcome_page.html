@@ -1,0 +1,21 @@
+<!--welcome_page.html-->
+
+{% extends "base.html" %}
+
+{% block container %}
+{{ super() }}
+
+<p>Добро пожаловать, {{ user }} </p>
+
+
+<p>Вот данные вашего профиля. Позже вы сможете изменить их в настройках профиля</p>
+
+<p> {{ profile.profile_name}} </p>
+<p> {{ profile.description}} </p>
+
+
+
+{% endblock container %}
+
+{% block scripts %}
+{% endblock scripts %}

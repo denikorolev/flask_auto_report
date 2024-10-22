@@ -31,6 +31,32 @@ class User(db.Model, UserMixin):
 
     def check_password(self, password):
         return check_password_hash(self.user_pass, password)
+    
+    @classmethod
+    def create(cls, email, username, password, role="user"):
+        """
+        Creates a new user and saves them to the database.
+        Args:
+            email (str): The email of the user.
+            username (str): The username.
+            password (str): The password (will be hashed).
+            role (str): The role of the user, defaults to 'user'.
+        Returns:
+            User: The created user object.
+        """
+        # Проверяем, существует ли пользователь с таким email
+        if cls.query.filter_by(user_email=email).first():
+            raise ValueError("A user with that email already exists")
+        
+        user = cls(
+            user_email=email,
+            user_name=username,
+            user_role=role
+        )
+        user.set_password(password)  # Хэшируем пароль
+        db.session.add(user)
+        db.session.commit()
+        return user
 
 class AppConfig(db.Model):
     __tablename__ = 'app_config'
