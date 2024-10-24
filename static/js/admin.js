@@ -16,6 +16,7 @@ function userDeleteButtonClick() {
     document.querySelectorAll(".setup-users__btn--delete").forEach(button => {
         button.addEventListener("click", function() {
             let userId = this.dataset.userId;
+            userId = parseInt(userId, 10);
             sendRequest({
                 url: `/admin/delete_user/${userId}`,
                 method: "DELETE"
