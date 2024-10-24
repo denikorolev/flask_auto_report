@@ -20,7 +20,7 @@ from openai_api import openai_api_bp
 from key_words import key_words_bp
 from admin import admin_bp
 
-version = "0.5.3"
+version = "0.5.4"
 
 app = Flask(__name__)
 app.config.from_object(get_config()) # Load configuration from file config.py
@@ -80,32 +80,7 @@ def test_befor_request(message):
     print(f"{message}:  {us} and {pr}")
 
 
-def setup_profile_default():
-    profiles = UserProfile.query.all()
-    counter = 0
-    for profile in profiles:
-        if profile.default_profile != False:
-            profile.default_profile = False
-            profile.save()
-            counter +=1
-    if counter > 0:
-        print(f"Выполнено: {counter} замен Дефолт для Профиля")
-    else:
-        print(f"Не выполнено ни одной замены Дефолт для Профиля")
-        
-        
-def setup_paragraph_weight():
-    paragraphs = ReportParagraph.query.all()
-    counter = 0
-    for paragraph in paragraphs:
-        if paragraph.weight != 1:
-            paragraph.weight = 1
-            paragraph.save()
-            counter +=1
-    if counter > 0:
-        print(f"Выполнено: {counter} замен значений Вес для Параграфа")
-    else:
-        print(f"Не выполнено ни одной замены Вес для Параграфа")
+
 
 
 # Routs
@@ -173,18 +148,12 @@ def index():
         elif len(user_profiles) > 1:
             pass
         
-    
-    
-    setup_paragraph_weight()
-    setup_profile_default()
 
     return render_template('index.html', 
                            title="Radiologary", 
                            menu=menu,
                            user_profiles=user_profiles,
                            version=version)
-
-
 
 # Новый маршрут для создания профиля
 @app.route("/create_profile", methods=['POST', 'GET'])

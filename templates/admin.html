@@ -10,20 +10,20 @@
 <h3>List of users</h3>
 {% if users %}
     {% for user in users %}
-        <ul class="flex">
-            <li style="margin-right: 5px; width: 100px;"> {{user.user_name}} </li>
-            <li style="margin-right: 5px; width: 50px;"> {{user.user_role}} </li>
-            <li style="margin-right: 5px; width: 100px;"> {{user.user_name}} </li>
+        <ul class="flex setup-users__list">
+            <li class="setup-users__item setup-users__item--name" style="margin-right: 5px; width: 100px;" contenteditable="true" > {{user.user_name}} </li>
+            <li class="setup-users__item setup-users__item--role" style="margin-right: 5px; width: 50px;" contenteditable="true" > {{user.user_role}} </li>
+            
             {% if user.profiles %}
                 {% for profile in user.profiles %}
-                    <li style="margin-right: 5px; width: 100px;"> {{profile.profile_name}} </li>
-                    <li style="margin-right: 15px; font-weight: bold; width: 50px;"> {{profile.default_profile}} </li>
+                    <li class="setup-users__item setup-users__item--profile-name" style="margin-right: 5px; width: 100px;" contenteditable="true"> {{profile.profile_name}} </li>
+                    <li class="setup-users__item setup-users__item--profile-default" style="margin-right: 15px; font-weight: bold; width: 50px;" contenteditable="true"> {{profile.default_profile}} </li>
                 {% endfor %}
             {% else %}
                 <p style="margin-right: 15px; font-weight: bold;">This user havn't got profiles</p>
             {% endif %}
-            <button type="button" id="profileDelete" class="btn">del</button>
-            <button type="button" id="profileDelete" class="btn">edit</button>
+            <button type="button" class="btn setup-users__btn--delete" data-user-id="{{ user.id }}">Delete</button>
+            <button type="button" class="btn setup-users__btn--edit">edit</button>
         </ul>
     {% endfor %}
 {% endif %}
@@ -31,16 +31,33 @@
 <h3>List of paragraphs</h3>
 {% if paragraphs %}
     {% for paragraph in paragraphs %}
-        <ul class="flex">
-            <li style="margin-right: 5px; width: 200px;"> {{paragraph.paragraph}} </li>
-            <li style="margin-right: 5px; width: 50px;"> {{paragraph.weight}} </li>
+        <ul class="flex setup-paragraphs__list">
+            <li class="setup-paragraphs__item--text" style="margin-right: 5px; width: 200px;" contenteditable="true"> {{paragraph.paragraph}} </li>
+            <li class="setup-paragraphs__item--weight" style="margin-right: 5px; width: 50px;" contenteditable="true"> {{paragraph.weight}} </li>
             {% if paragraph.type_paragraph.type_name %}
-                <li style="margin-right: 15px; width: 100px;"> {{paragraph.type_paragraph.type_name}} </li>
+                <li class="setup-paragraphs__item--type" style="margin-right: 15px; width: 100px;" contenteditable="true"> {{paragraph.type_paragraph.type_name}} </li>
             {% else %}
                 <p style="margin-right: 15px; font-weight: bold;">This paragraph hasn't type</p>
             {% endif %}
-            <button type="button" id="paragraphDelete" class="btn ">del</button>
-            <button type="button" id="paragraphDelete" class="btn">edit</button>
+            <button type="button" class="btn setup-paragraphs__btn--delete" data-paragraph-id="{{ paragraph.id }}">Delete</button>
+            <button type="button" class="btn setup-paragraphs__btn--edit">edit</button>
+        </ul>
+    {% endfor %}
+{% endif %}
+
+
+<h3>List of profiles</h3>
+{% if profiles %}
+    {% for profile in profiles %}
+        <ul class="flex setup-profiles__list">
+            <li class="flex setup-profiles__item--name" style="margin-right: 5px; width: 200px;" contenteditable="true"> {{profile.profile_name}} </li>
+            {% if profile.user.user_name %}
+                <li class="flex setup-profiles__item--user" style="margin-right: 15px; width: 100px;" contenteditable="true"> {{profile.user.user_name}} </li>
+            {% else %}
+                <p style="margin-right: 15px; font-weight: bold;" contenteditable="true">This profile exist without user</p>
+            {% endif %}
+            <button type="button" class="btn setup-profiles__btn--delete" data-profile-id="{{ profile.id }}">Delete</button>
+            <button type="button" class="btn setup-profiles__btn--edit" data-profile-id="{{ profile.id }}">Edit</button>
         </ul>
     {% endfor %}
 {% endif %}
@@ -48,4 +65,5 @@
 {% endblock container %}
 
 {% block scripts %}
+<script src="{{ url_for("static", filename="js/admin.js") }}"></script>
 {% endblock scripts %}
