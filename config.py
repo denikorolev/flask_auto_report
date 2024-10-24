@@ -36,7 +36,8 @@ class Config:
             {"name": "Новый протокол", "url": url_for("new_report_creation.create_report")},
             {"name": "Настройки", "url": url_for("report_settings.report_settings")},
             {"name": "API", "url":url_for("openai_api.start_openai_api")},
-            {"name": "Ключевые слова", "url":url_for("key_words.key_words")}
+            {"name": "Ключевые слова", "url":url_for("key_words.key_words")},
+            {"name": "admin", "url":url_for("admin.admin")}
         ]
         
         # Добавляем настройки профиля, если профиль выбран

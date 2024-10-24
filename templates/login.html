@@ -28,31 +28,38 @@
 {% endblock container %}
 
 {% block scripts %}
+
 <script >
     document.getElementById('loginSubmit').addEventListener('click', function() {
         // Получаем данные из формы
         const email = document.getElementById('email').value;
         const password = document.getElementById('password').value;
-
-        // Формируем данные для отправки
-        const data = {
-            email: email,
-            password: password
+    
+        // Создаем объект для отправки данных
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', '/auth/login', true);  // Открываем POST запрос
+        xhr.setRequestHeader('Content-Type', 'application/json');  // Устанавливаем заголовок для JSON
+    
+        // Обрабатываем ответ сервера
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState === 4) {  // Проверяем, завершен ли запрос
+                if (xhr.status === 200) {  // Если статус 200 (OK), значит запрос успешен
+                    const response = JSON.parse(xhr.responseText);  // Разбираем ответ
+                    if (response.status === 'success') {
+                        console.log("logged in");
+                        window.location.href = "/";  // Перенаправляем на главную страницу
+                    } else {
+                        console.log("Ошибка: " + response.message);  // Обработка ошибок от сервера
+                    }
+                } else {
+                    console.log("Ошибка при отправке данных: " + xhr.status);  // Обработка ошибок
+                }
+            }
         };
-
-        // Вызываем sendRequest для отправки данных
-        sendRequest({
-            url: "/auth/login", // URL на который отправляем данные
-            method: "POST",
-            data: data
-        }).then(response => {
-            if (response.status === 'success') {
-                window.location.href = response.page;  // Меняем на url главной страницы
-            } 
-        }).catch(error => {
-            // Ловим ошибки сети или серверные ошибки
-            console.log("Ошибка при отправке данных");
-        });
+    
+        // Отправляем данные на сервер
+        const data = JSON.stringify({ email: email, password: password });
+        xhr.send(data);  // Отправляем JSON данные
     });
 </script>
 {% endblock scripts %}

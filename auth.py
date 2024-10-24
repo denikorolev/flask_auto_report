@@ -1,7 +1,7 @@
 # auth.py
 
 from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify
-from flask_login import login_user, login_required, logout_user
+from flask_login import login_user, login_required, logout_user, current_user
 from models import db, User, UserProfile
 
 auth_bp = Blueprint('auth', __name__)
@@ -15,12 +15,15 @@ def login():
     # POST: обрабатываем данные логина
     user_email = request.json.get("email")
     password = request.json.get("password")
-    next_page = request.args.get('next')
+    print(user_email,password)
+    
     
     user = User.query.filter_by(user_email=user_email).first()
     if user and user.check_password(password):
         login_user(user)
-        return jsonify({"status": "success", "page": next_page}), 200
+        if current_user.is_authenticated:
+            print("user logged in")
+        return jsonify({"status": "success", "message": "You was logged in successfully"}), 200
     else:
         return jsonify({"status": "error", "message": "Invalid credentials"}), 401
 
@@ -42,6 +45,7 @@ def signup():
         
         return jsonify({"status": "success", "message": "Account created successfully"}), 201
     except ValueError as e:
+        print(e)
         return jsonify({"status": "error", "message": str(e)}), 400
 
 
@@ -49,6 +53,7 @@ def signup():
 @auth_bp.route("/logout")
 @login_required
 def logout():
+    print("logged out")
     session.pop('profile_id', None)
     logout_user()
     return redirect(url_for("auth.login"))

@@ -26,6 +26,11 @@ class User(db.Model, UserMixin):
     user_bio = db.Column(db.Text, nullable=True)
     user_avatar = db.Column(db.LargeBinary, nullable=True)
 
+
+    profiles = db.relationship('UserProfile', backref='user', lazy=True, cascade="all, delete-orphan")
+
+
+
     def set_password(self, password):
         self.user_pass = generate_password_hash(password)
 
@@ -109,15 +114,59 @@ class UserProfile(BaseModel):
     user_id = db.Column(db.BigInteger, db.ForeignKey('users.id'), nullable=False)
     profile_name = db.Column(db.String(255), nullable=False)
     description = db.Column(db.String(500), nullable=True)
+    default_profile = db.Column(db.Boolean, default=False, nullable=True)
     
-    user = db.relationship('User', backref=db.backref('profiles', lazy=True))
+    
 
     @classmethod
-    def create(cls, user_id, profile_name, description=None):
-        new_profile = cls(user_id=user_id, profile_name=profile_name, description=description)
-        db.session.add(new_profile)
-        db.session.commit()
+    def create(cls, user_id, profile_name, description=None, default_profile=False):
+        """
+        Создание нового профиля.
+        Args:
+            user_id (int): ID пользователя.
+            profile_name (str): Имя профиля.
+            description (str, optional): Описание профиля. Defaults to None.
+            default (bool, optional): Является ли профиль профилем по умолчанию. Defaults to False.
+        
+        Raises:
+            ValueError: Если профиль по умолчанию уже существует для данного пользователя.
+        """
+        new_profile = cls(
+            user_id=user_id,
+            profile_name=profile_name,
+            description=description,
+            default_profile=default_profile
+        )
+        new_profile.save()  # Используем метод save для сохранения профиля с логикой проверки
         return new_profile
+
+    def save(self):
+        """
+        Сохраняет профиль в базу данных с проверкой на наличие другого профиля по умолчанию.
+        
+        Raises:
+            ValueError: Если профиль по умолчанию уже существует для данного пользователя.
+        """
+        # Проверка на наличие другого профиля по умолчанию, если флаг default установлен в True
+        if self.default_profile:
+            existing_default_profile = UserProfile.get_default_profile(self.user_id)
+            if existing_default_profile and existing_default_profile.id != self.id:
+                raise ValueError("Профиль по умолчанию уже существует для данного пользователя.")
+        
+        # Вызываем метод save из базовой модели
+        super(UserProfile, self).save()
+        
+    @classmethod
+    def get_default_profile(cls, user_id):
+        """
+        Возвращает профиль по умолчанию для пользователя.
+        Args:
+            user_id (int): ID пользователя.
+        Returns:
+            UserProfile: Профиль по умолчанию или None, если его нет.
+        """
+        return cls.query.filter_by(user_id=user_id, default_profile=True).first()
+
 
     @classmethod
     def get_user_profiles(cls, user_id):
@@ -447,13 +496,14 @@ class ReportParagraph(BaseModel):
     title_paragraph = db.Column(db.Boolean, default=False, nullable=False)
     bold_paragraph = db.Column(db.Boolean, default=False, nullable=False)
     type_paragraph_id = db.Column(db.Integer, db.ForeignKey('paragraph_types.id'), nullable=False)
-    comment = db.Column(db.String(255), nullable=True) 
+    comment = db.Column(db.String(255), nullable=True)
+    weight = db.Column(db.SmallInteger, nullable=True) 
 
     sentences = db.relationship('Sentence', backref='paragraph', cascade="all, delete-orphan", overlaps="paragraph,sentences")
     type_paragraph = db.relationship('ParagraphType', backref='paragraphs', lazy=True)
     
     @classmethod
-    def create(cls, paragraph_index, report_id, paragraph, paragraph_visible, title_paragraph, bold_paragraph, type_paragraph_id, comment=None):
+    def create(cls, paragraph_index, report_id, paragraph, paragraph_visible, title_paragraph, bold_paragraph, type_paragraph_id, comment=None, weight=1):
         new_paragraph = cls(
             paragraph_index=paragraph_index,
             report_id=report_id,
@@ -462,8 +512,8 @@ class ReportParagraph(BaseModel):
             title_paragraph=title_paragraph,
             bold_paragraph=bold_paragraph,
             type_paragraph_id=type_paragraph_id,
-            comment=comment
-            
+            comment=comment,
+            weight=weight
         )
         db.session.add(new_paragraph)
         db.session.commit()

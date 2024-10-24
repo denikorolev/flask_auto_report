@@ -1,0 +1,51 @@
+<!--admin.html-->
+
+{% extends "base.html" %}
+{% block container %}
+
+<h1>Admin panel</h1>
+
+<p>Welcome</p>
+
+<h3>List of users</h3>
+{% if users %}
+    {% for user in users %}
+        <ul class="flex">
+            <li style="margin-right: 5px; width: 100px;"> {{user.user_name}} </li>
+            <li style="margin-right: 5px; width: 50px;"> {{user.user_role}} </li>
+            <li style="margin-right: 5px; width: 100px;"> {{user.user_name}} </li>
+            {% if user.profiles %}
+                {% for profile in user.profiles %}
+                    <li style="margin-right: 5px; width: 100px;"> {{profile.profile_name}} </li>
+                    <li style="margin-right: 15px; font-weight: bold; width: 50px;"> {{profile.default_profile}} </li>
+                {% endfor %}
+            {% else %}
+                <p style="margin-right: 15px; font-weight: bold;">This user havn't got profiles</p>
+            {% endif %}
+            <button type="button" id="profileDelete" class="btn">del</button>
+            <button type="button" id="profileDelete" class="btn">edit</button>
+        </ul>
+    {% endfor %}
+{% endif %}
+
+<h3>List of paragraphs</h3>
+{% if paragraphs %}
+    {% for paragraph in paragraphs %}
+        <ul class="flex">
+            <li style="margin-right: 5px; width: 200px;"> {{paragraph.paragraph}} </li>
+            <li style="margin-right: 5px; width: 50px;"> {{paragraph.weight}} </li>
+            {% if paragraph.type_paragraph.type_name %}
+                <li style="margin-right: 15px; width: 100px;"> {{paragraph.type_paragraph.type_name}} </li>
+            {% else %}
+                <p style="margin-right: 15px; font-weight: bold;">This paragraph hasn't type</p>
+            {% endif %}
+            <button type="button" id="paragraphDelete" class="btn ">del</button>
+            <button type="button" id="paragraphDelete" class="btn">edit</button>
+        </ul>
+    {% endfor %}
+{% endif %}
+
+{% endblock container %}
+
+{% block scripts %}
+{% endblock scripts %}

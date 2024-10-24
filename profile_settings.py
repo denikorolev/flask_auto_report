@@ -27,9 +27,13 @@ def profile_settings(profile_id):
 @profile_settings_bp.route('/update_profile_settings', methods=['POST'])
 @login_required
 def update_profile_settings():
+    print("im in profile settings")
     profile_id = request.form.get('profile_id')
     new_name = request.form.get('profile_name')
     new_description = request.form.get('description')
+    print(profile_id)
+    print(new_name)
+    print(new_description)
 
     profile = UserProfile.find_by_id_and_user(profile_id, current_user.id)
     if profile:

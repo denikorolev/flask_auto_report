@@ -1,11 +1,11 @@
 # app.py
 
-from flask import Flask, redirect, url_for, render_template, request, session, g
+from flask import Flask, redirect, url_for, render_template, request, session, g, jsonify
 from flask_login import LoginManager, login_required, current_user
 from config import get_config, Config
 from flask_migrate import Migrate
 from auth import auth_bp  
-from models import db, User, UserProfile
+from models import db, User, UserProfile, ReportParagraph
 import os
 import logging
 
@@ -18,6 +18,7 @@ from editing_report import editing_report_bp
 from profile_settings import profile_settings_bp
 from openai_api import openai_api_bp
 from key_words import key_words_bp
+from admin import admin_bp
 
 version = "0.5.3"
 
@@ -45,6 +46,7 @@ app.register_blueprint(new_report_creation_bp, url_prefix="/new_report_creation"
 app.register_blueprint(profile_settings_bp, url_prefix="/profile_settings")
 app.register_blueprint(openai_api_bp, url_prefix="/openai_api")
 app.register_blueprint(key_words_bp, url_prefix="/key_words")
+app.register_blueprint(admin_bp, url_prefix="/admin")
 
 # Load user callback 
 @login_manager.user_loader
@@ -66,99 +68,122 @@ def test_db_connection():
         print(f"Database connection failed: {e}", "error")
         return False
 
+def test_befor_request(message):
+    try:
+        us = current_user.user_name or "noname"
+    except Exception as e:
+        us = f"no user: {e}"
+    try:
+        pr = g.current_profile.profile_name or "noprofile"
+    except Exception as e:
+        pr = f"error: {e}"
+    print(f"{message}:  {us} and {pr}")
+
+
+def setup_profile_default():
+    profiles = UserProfile.query.all()
+    counter = 0
+    for profile in profiles:
+        if profile.default_profile != False:
+            profile.default_profile = False
+            profile.save()
+            counter +=1
+    if counter > 0:
+        print(f"Выполнено: {counter} замен Дефолт для Профиля")
+    else:
+        print(f"Не выполнено ни одной замены Дефолт для Профиля")
+        
+        
+def setup_paragraph_weight():
+    paragraphs = ReportParagraph.query.all()
+    counter = 0
+    for paragraph in paragraphs:
+        if paragraph.weight != 1:
+            paragraph.weight = 1
+            paragraph.save()
+            counter +=1
+    if counter > 0:
+        print(f"Выполнено: {counter} замен значений Вес для Параграфа")
+    else:
+        print(f"Не выполнено ни одной замены Вес для Параграфа")
+
 
 # Routs
 
 # Логика для того, чтобы сделать данные профиля доступными в любом месте программы
 @app.before_request
 def load_current_profile():
-    # Проверяем, установлена ли сессия пользователя и находится ли он на странице, требующей профиля
-    if current_user.is_authenticated:  # Убедимся, что пользователь вошел в систему
-        if 'profile_id' in session:
-            # Устанавливаем текущий профиль
-            g.current_profile = UserProfile.find_by_id(session['profile_id'])
-            
-            if not g.current_profile or g.current_profile.user_id != current_user.id:
-                # Если профиль не найден или не принадлежит текущему пользователю, удаляем его из сессии
-                session.pop('profile_id', None)
-                g.current_profile = None
-        else:
-            g.current_profile = None
+    if request.path.startswith('/static/') or request.path.startswith('/auth/'):
+        return None
+    print(f"Меня вызвал запрос:   {request.method} {request.url}")
+    if request.endpoint not in ["profile_settings.update_profile_settings", "auth.loguot", "auth.login", "auth.signup"]:
         
-        # Если профиль отсутствует, но пользователь аутентифицирован, и запрос не относится к выбору профиля, перенаправляем
-        if not g.current_profile and request.endpoint not in ['create_profile', 'set_profile', 'index', 'auth.logout']:
-            print('Please select a profile before proceeding.', 'warning')
-            return redirect(url_for('create_profile'))
-        app.config['MENU'] = Config.get_menu()
-    else:
-        # Если пользователь не авторизован, очищаем меню
-        app.config['MENU'] = []
+        # Проверяем, установлена ли сессия пользователя и находится ли он на странице, требующей профиля
+        if current_user.is_authenticated:  # Убедимся, что пользователь вошел в систему
+            user_profiles = UserProfile.get_user_profiles(current_user.id)
+            
+            if 'profile_id' in session:
+                g.current_profile = UserProfile.find_by_id(session['profile_id'])
+                
+                test_befor_request("Просто загрузил профиль в g ")
+                # Если профиль не найден или не принадлежит текущему пользователю, удаляем его из сессии
+                if not g.current_profile or g.current_profile.user_id != current_user.id:
+                    session.pop('profile_id', None)
+                    g.current_profile = None
+                    test_befor_request("ОШИБКА ")
+            else:
+                # Проверяем, если у пользователя только один профиль
+                if user_profiles[0] == "Default":
+                    test_befor_request("Загрузился в ветку Default ")
+                    render_template("welcome_page.html",
+                                    title="Welcome",
+                                    menu=[])
+                    
+                if len(user_profiles) == 1:
+                    g.current_profile = user_profiles[0]
+                    session['profile_id'] = g.current_profile.id
+                    return redirect(url_for("working_with_reports.choosing_report"))
+                elif len(user_profiles) > 1:
+                    g.current_profile = user_profiles[0]
+                else:
+                    g.current_profile = None
+                
+            # Меню обновляется на основе текущего профиля
+            app.config['MENU'] = Config.get_menu()
+            test_befor_request("и доехал до конца функции ")
+
+        else:
+            app.config['MENU'] = []
+
 
 @app.route("/", methods=['POST', 'GET'])
 @login_required
 def index():
-    # Проверяем подключение к базе данных
-    if not test_db_connection():
-        print("db wasn't connected")
-        return redirect(url_for("error", message="db wasn't connected"))
-    
-    if not "profile_id" in session:
-        user_profiles = UserProfile.get_user_profiles(current_user.id)
-        
-        if not user_profiles:
-            UserProfile.create(current_user.id, "Default", "Default")
-            profile = UserProfile.get_user_profiles(current_user.id)[0]
-            if profile:
-                session['profile_id'] = profile.id
-                return render_template("welcome_page.html",
-                                       title="welcome in radiologary",
-                                       user=current_user.name,
-                                       profile=profile)
-            else:
-                print("samething goes wrong with profiles of new user")
-                return redirect(url_for("error", message="samething goes wrong with profiles of new user"))
-        
+    user_profiles = UserProfile.get_user_profiles(current_user.id)
+    menu = app.config["MENU"]
+    # Если у пользователя нет профиля в сессии, проверим количество профилей
+    if 'profile_id' not in session:
+        if user_profiles[0].profile_name == "Default":
+                session['profile_id'] = user_profiles[0].id
+                print("Зашел в блок default на главной странице")
+                return redirect(url_for("welcome_page"))
         if len(user_profiles) == 1:
-            print("there is only one profile")
-            profile = user_profiles[0]
-            if profile:
-                session['profile_id'] = profile.id
-                return redirect("/")
-            else:
-                print("samething goes wrong with profiles of seassoned user with only one profile")
-                return redirect(url_for("error", message="samething goes wrong with profiles of seassoned user with only one profile"))
+            session['profile_id'] = user_profiles[0].id
+            return redirect(url_for("working_with_reports.choosing_report"))
+        elif len(user_profiles) > 1:
+            pass
         
-        if len(user_profiles)>1:
-            print("here will be logic for check and choose default profile or show profiles list")
-            profile = user_profiles[0]
-            if profile:
-                session['profile_id'] = profile.id
-                return redirect("/")
-            else:
-                print("samething goes wrong with profiles of seassoned user with only one profile")
-                return redirect(url_for("error", message="samething goes wrong with profiles of seassoned user with only one profile"))
-    
-    menu = app.config['MENU']
-    
-    if 'profile_id' in session:
-        # Проверяем, принадлежит ли профиль текущему пользователю
-        profile = UserProfile.query.filter_by(id=session['profile_id'], user_id=current_user.id).first()
-        if profile:
-            g.current_profile = profile
-        else:
-            # Если профиль не найден или не принадлежит текущему пользователю, очищаем сессию
-            session.pop('profile_id', None)
-            g.current_profile = None
-    # Проверяем, есть ли у пользователя профиль
     
     
-        
+    setup_paragraph_weight()
+    setup_profile_default()
+
     return render_template('index.html', 
                            title="Radiologary", 
                            menu=menu,
                            user_profiles=user_profiles,
-                           version=version
-                           )
+                           version=version)
+
 
 
 # Новый маршрут для создания профиля
@@ -207,9 +232,18 @@ def delete_profile(profile_id):
     return redirect(url_for('index'))
 
 
+
+@app.route("/welcome_page", methods=["GET"])
+def welcome_page():
+    menu = []
+    return render_template("welcome_page.html",
+                           menu=menu,
+                           title="Welcome")
+
+
 @app.route("/error", methods=["POST", "GET"])
 def error():
-    message = request.args.get("message")
+    message = request.args.get("message") or "no message"
     return render_template("error.html",
                            message=message)
 
