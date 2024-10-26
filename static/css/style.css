@@ -223,7 +223,6 @@ body {
 .header {
     width: 100%;
     background-color: var(--main-background-color);
-    z-index: 1000;
 }
 
 .container--header {
@@ -231,7 +230,6 @@ body {
     justify-content: space-between;
     align-items: center;
     background-color: var(--main-background-color);
-    z-index: 1000;
 }
 
 .header__logo {
@@ -312,7 +310,6 @@ body {
 .footer {
     width: 100%;
     background-color: var(--main-background-color);
-    z-index: 1000;
 }
 
 
@@ -508,7 +505,7 @@ body {
     border: 1px solid #ccc;  /* Легкая рамка */
     box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);  /* Тень для красивого эффекта */
     padding: 10px;  /* Отступы внутри окна */
-    z-index: 1000;  /* Устанавливаем высокий z-index, чтобы окно было поверх других элементов */
+    z-index: 1000;  
     display: none;  /* Изначально скрыто */
     max-width: 900px; /* Ограничение на ширину */
     overflow-y: auto; /* Скроллинг, если список предложений слишком длинный */

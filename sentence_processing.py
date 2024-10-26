@@ -1,9 +1,10 @@
 # sentence_processing.py
 
+from flask import g
 from flask_login import current_user
 import re
 from docx import Document
-from models import Sentence, ReportParagraph, KeyWordsGroup, Report, User
+from models import Sentence, Paragraph, KeyWord, Report, User
 from collections import defaultdict
 from errors_processing import print_object_structure
 
@@ -27,9 +28,9 @@ def extract_keywords_from_doc(file_path):
     doc = Document(file_path)
     keywords = []
     current_protocol = None  # Текущий протокол (если жирным текстом обозначено имя протокола)
-    user_reports = Report.find_by_user(current_user.id)
+    current_profile_reports = Report.find_by_profile(g.current_profile.id)
     # Получаем имена всех протоколов пользователя
-    report_names = {report.report_name: report.id for report in user_reports}
+    report_names = {report.report_name: report.id for report in current_profile_reports}
 
     for para in doc.paragraphs:
         if para.runs and para.runs[0].bold:  # Если параграф содержит жирный текст
@@ -65,7 +66,7 @@ def process_keywords(key_word_input):
 
 def check_existing_keywords(key_words):
     """
-    Проверяет, какие ключевые слова уже существуют у текущего пользователя и возвращает сообщение об ошибке
+    Проверяет, какие ключевые слова уже существуют у текущего профиля и возвращает сообщение об ошибке
     в случае дублирования, или None, если ключевые слова уникальны.
     
     Args:
@@ -74,16 +75,14 @@ def check_existing_keywords(key_words):
     Returns:
         string or None: Сообщение об ошибке, если дублирующиеся ключевые слова найдены, или None, если ключевые слова уникальны.
     """
-    user_id = current_user.id  # Получаем ID текущего пользователя
-
-    # Получаем все ключевые слова пользователя
-    user_key_words = KeyWordsGroup.find_by_user(user_id)
+    
+    profile_key_words = KeyWord.find_by_profile(g.current_profile.id)
 
     # Создаем словарь для хранения результатов
     existing_keywords = {}
 
     # Проходим по всем ключевым словам пользователя
-    for kw in user_key_words:
+    for kw in profile_key_words:
         key_word_lower = kw.key_word.lower()
         if key_word_lower in [kw.lower() for kw in key_words]:
             # Проверяем, связаны ли ключевые слова с отчетами
@@ -138,7 +137,7 @@ def extract_paragraphs_and_sentences(file_path):
               - 'visible' (bool): Visibility of the paragraph (default is True).
               - 'bold' (bool): Whether the paragraph title is bold (default is False).
               - 'is_title' (bool): Whether the paragraph is marked as a title (default is False).
-              - 'type_paragraph' (str): Type of the paragraph, extracted from double parentheses `(( ))`.
+              - 'paragraph_types' (str): Type of the paragraph, extracted from double parentheses `(( ))`.
     
     Example:
         [
@@ -148,7 +147,7 @@ def extract_paragraphs_and_sentences(file_path):
                 'visible': True,
                 'bold': False,
                 'is_title': True,
-                'type_paragraph': 'text'
+                'paragraph_types': 'text'
             }
         ]
     """
@@ -275,8 +274,8 @@ def get_new_sentences(processed_paragraphs):
 
     # Получаем ключевые слова для текущего пользователя
     key_words = []
-    user_key_words = KeyWordsGroup.find_by_user(current_user.id)
-    for kw in user_key_words:
+    profile_key_words = KeyWord.find_by_profile(g.current_profile.id)
+    for kw in profile_key_words:
         key_words.append(kw.key_word.lower())
 
     for paragraph in processed_paragraphs:
@@ -293,7 +292,7 @@ def get_new_sentences(processed_paragraphs):
             existing_sentences_texts.append(cleaned_sentence)
 
         # Получаем текст параграфа из базы данных
-        paragraph_text = ReportParagraph.query.filter_by(id=paragraph_id).first().paragraph
+        paragraph_text = Paragraph.query.filter_by(id=paragraph_id).first().paragraph
 
         # Проверяем каждое предложение из обработанных, есть ли оно уже в базе данных
         for sentence in sentences:

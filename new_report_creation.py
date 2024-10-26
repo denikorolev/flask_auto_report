@@ -3,7 +3,7 @@
 
 from flask import Blueprint, render_template, request, redirect, url_for, current_app, session, g, jsonify
 from flask_login import current_user, login_required
-from models import db, User, Report, ReportType, ReportSubtype, ReportParagraph, Sentence, ParagraphType  
+from models import db, User, Report, ReportType, ReportSubtype, Paragraph, Sentence, ParagraphType  
 from sentence_processing import extract_paragraphs_and_sentences
 from werkzeug.utils import secure_filename
 import os
@@ -22,14 +22,15 @@ def allowed_file(filename):
 def create_report():
     page_title = "New report creation"
     menu = current_app.config['MENU']
-    report_types_and_subtypes = ReportType.get_types_with_subtypes(current_user.id)
-    user_reports = Report.find_by_user(current_user.id)
+    current_profile = g.current_profile
+    report_types_and_subtypes = ReportType.get_types_with_subtypes(current_profile.id)
+    current_profile_reports = Report.find_by_profile(current_profile.id)
             
     
     return render_template("create_report.html",
                            title=page_title,
                            menu=menu,
-                           user_reports=user_reports,
+                           user_reports=current_profile_reports,
                            report_types_and_subtypes=report_types_and_subtypes
                            )
     
@@ -44,18 +45,20 @@ def create_manual_report():
         report_name = request.form.get('report_name')
         report_type = request.form.get('report_type')
         report_subtype = request.form.get('report_subtype')
-        comment = request.form.get('comment')
-        report_side = request.form.get('report_side') == 'true'
         profile_id = g.current_profile.id
+        comment = request.form.get('comment')
+        public = False
+        report_side = request.form.get('report_side') == 'true'
+        
 
         # Create new report
         new_report = Report.create(
-            userid=current_user.id,
-            report_name=report_name,
-            report_type=report_type,
-            report_subtype=report_subtype,
             profile_id=profile_id,
+            report_subtype=report_subtype,
+            report_name=report_name,
+            user_id=current_user.id,
             comment=comment,
+            public=public,
             report_side=report_side
         )
         return jsonify({"status": "success", "message": "report was created succesfully", "report_id": new_report.id}), 200
@@ -99,16 +102,17 @@ def create_report_from_file():
                 # Извлекаем содержимое файла
                 paragraphs_from_file = extract_paragraphs_and_sentences(filepath)
 
+                public = False
                 # Создаем новый отчет
                 new_report = Report.create(
-                    userid=current_user.id,
-                    report_name=report_name,
-                    report_type=report_type,
-                    report_subtype=report_subtype,
-                    profile_id=profile_id,
-                    comment=comment,
-                    report_side=report_side
-                )
+                        profile_id=profile_id,
+                        report_subtype=report_subtype,
+                        report_name=report_name,
+                        user_id=current_user.id,
+                        comment=comment,
+                        public=public,
+                        report_side=report_side
+                    )
 
                 # Флаг для отслеживания первого вхождения impression
                 impression_exists = False
@@ -120,7 +124,7 @@ def create_report_from_file():
 
                 # Добавляем абзацы и предложения в отчет
                 for idx, paragraph in enumerate(paragraphs_from_file, start=1):
-                    paragraph_type = paragraph.get('type_paragraph', 'text')
+                    paragraph_type = paragraph.get('paragraph_types', 'text')
                     paragraph_type_id = ParagraphType.find_by_name(paragraph_type)
 
                     # Если это тип "impression" и такой параграф уже был создан, меняем на "text"
@@ -136,14 +140,16 @@ def create_report_from_file():
                             impression_exists = True
 
                     # Создаем новый параграф
-                    new_paragraph = ReportParagraph.create(
+                    new_paragraph = Paragraph.create(
                         paragraph_index=idx,
                         report_id=new_report.id,
                         paragraph=paragraph['title'],
                         paragraph_visible=paragraph.get('visible', True),
                         title_paragraph=paragraph.get('is_title', False),
                         bold_paragraph=paragraph.get('bold', False),
-                        type_paragraph_id=paragraph_type_id
+                        type_paragraph_id=paragraph_type_id,
+                        comment=None,
+                        paragraph_weight=1
                     )
 
                     # Обрабатываем предложения
@@ -209,27 +215,30 @@ def create_report_from_existing_report():
         if not existing_report:
             return jsonify({"status": "error", "message": "Report not found"}), 404
 
+        public = False
         # Создаем новый отчет на основе существующего
         new_report = Report.create(
-            userid=current_user.id,
-            report_name=report_name,
-            report_type=report_type,
-            report_subtype=report_subtype,
             profile_id=profile_id,
+            report_subtype=report_subtype,
+            report_name=report_name,
+            user_id=current_user.id,
             comment=comment,
+            public=public,
             report_side=report_side
         )
 
         # Копируем абзацы и предложения из существующего отчета в новый
-        for paragraph in existing_report.report_paragraphs:
-            new_paragraph = ReportParagraph.create(
+        for paragraph in existing_report.paragraphs:
+            new_paragraph = Paragraph.create(
                 paragraph_index=paragraph.paragraph_index,
                 report_id=new_report.id,
                 paragraph=paragraph.paragraph,
                 paragraph_visible=paragraph.paragraph_visible,
                 title_paragraph=paragraph.title_paragraph,
                 bold_paragraph=paragraph.bold_paragraph,
-                type_paragraph_id=paragraph.type_paragraph_id
+                type_paragraph_id=paragraph.type_paragraph_id,
+                comment=None,
+                paragraph_weight=1
             )
 
             for sentence in paragraph.sentences:

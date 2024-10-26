@@ -1,8 +1,8 @@
 # report_settings.py
 
-from flask import Blueprint, render_template, request, redirect, current_app, jsonify
+from flask import Blueprint, render_template, request, redirect, current_app, jsonify, g
 from flask_login import login_required, current_user
-from models import db, ReportType, ReportSubtype, KeyWordsGroup, Report, ParagraphType 
+from models import db, ReportType, ReportSubtype, KeyWord, Report, ParagraphType 
 from itertools import chain
 from file_processing import file_uploader, allowed_file
 from sentence_processing import group_keywords, sort_key_words_group, process_keywords, check_existing_keywords, extract_keywords_from_doc
@@ -20,15 +20,20 @@ report_settings_bp = Blueprint('report_settings', __name__)
 def report_settings():
     menu = current_app.config["MENU"]
     
-    user_types = ReportType.find_by_user(current_user.id)
-    user_subtypes = ReportSubtype.find_by_user(current_user.id)
+    profile_types = ReportType.find_by_profile(g.current_profile.id)
+    profile_subtypes = []
+    for type in profile_types:
+        subtypes = ReportSubtype.find_by_report_type(type=type)
+        profile_subtypes.append(subtypes)
+        
+        
     paragraph_types = ParagraphType.query.all() 
         
     return render_template('report_settings.html', 
                            title = "Report settings",
                            menu = menu,
-                           user_types=user_types,
-                           user_subtypes=user_subtypes,
+                           user_types=profile_types,
+                           user_subtypes=profile_subtypes,
                            paragraph_types=paragraph_types 
                            )
 
@@ -96,7 +101,7 @@ def add_type():
         return jsonify({"status": "error", "message": "Type name cannot be empty."}), 400
 
     try:
-        ReportType.create(type=new_type, user_id=current_user.id)
+        ReportType.create(type=new_type, profile_id=g.current_profile.id)
         return jsonify({"status": "success", "message": "New type was created successfully."}), 200
     except Exception as e:
         return jsonify({"status": "error", "message": "New type wasn't created because of {e}."}), 400
@@ -158,8 +163,7 @@ def add_subtype():
         return jsonify({"status": "error", "message": "Both type ID and subtype name are required."}), 400
 
     try:
-        # Создание нового подтипа
-        ReportSubtype.create(type=report_type_id, subtype=new_subtype_name, user_id=current_user.id)
+        ReportSubtype.create(type=report_type_id, subtype=new_subtype_name)
         return jsonify({"status": "success", "message": "New subtype was created successfully."}), 200
     except Exception as e:
         return jsonify({"status": "error", f"message": "Subtype wasn't created because of {str(e)}."}), 400
@@ -176,7 +180,6 @@ def delete_subtype():
         return jsonify({"status": "error", "message": "Subtype ID is required."}), 400
 
     try:
-        # Удаление подтипа из базы данных
         ReportSubtype.delete_by_id(subtype_id)
         return jsonify({"status": "success", "message": "Subtype was deleted successfully."}), 200
     except Exception as e:

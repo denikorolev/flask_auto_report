@@ -4,7 +4,7 @@
 
 
 <div class="container">
-    {% if user_reports_rel %}
+    {% if profile_reports %}
     <h3>List of reports</h3>
     
     <!-- Form for filtering by report type -->
@@ -12,8 +12,8 @@
         <label for="filter_type">Filter by Type:</label>
         <select class="report__select report__select--type" id="filter_type" name="filter_type">
             <option value="">All</option>
-            {% for rt in report_types %}
-                <option value="{{ rt.id }}">{{ rt.type }}</option>
+            {% for type in reports_type_with_subtypes %}
+                <option value="{{ type.type_id }}">{{ type.type_text }}</option>
             {% endfor %}
         </select>
     </div>
@@ -29,29 +29,29 @@
     
     <!-- Reports list as an unordered list with list items -->
     <ul style="display: grid;" id="reports_list">
-        {% for report in user_reports_rel %}
+        {% for report in profile_reports %}
             <li data-report-type="{{ report.report_type }}">
                 <form method="POST" action="{{ url_for("my_reports.reports_list") }}">
                     <input type="hidden" name="report_id" value="{{ report.id }}">
                     
-                    <ul class="report_grid" data-report-type = "{{report.report_type}}">
-                        <li class="report_form_item" data-report-type="{{ report.report_type }}">
-                            <input class="report_input__item" value="{{ report.report_type_rel.type }}" name="type" id="type" readonly>
-                        </li data-report-type="{{ report.report_type }}">
-                        <li class="report_form_item" data-report-type="{{ report.report_type }}">
-                            <input class="report_input__item" value="{{ report.report_subtype_rel.subtype }}" name="subtype" id="subtype" readonly>
+                    <ul class="report_grid" data-report-type = "{{report.report_to_subtype.subtype_to_type.id}}">
+                        <li class="report_form_item" data-report-type="{{ report.report_to_subtype.subtype_to_type.id }}">
+                            <input class="report_input__item" value="{{ report.report_to_subtype.subtype_to_type.type }}" name="type" id="type" readonly>
+                        </li data-report-type="{{ report.report_to_subtype.subtype_to_type.id }}">
+                        <li class="report_form_item" data-report-type="{{ report.report_to_subtype.subtype_to_type.id }}">
+                            <input class="report_input__item" value="{{ report.report_subtype.subtype }}" name="subtype" id="subtype" readonly>
                         </li>
-                        <li class="report_form_item" data-report-type="{{ report.report_type }}">
+                        <li class="report_form_item" data-report-type="{{ report.report_to_subtype.subtype_to_type.id }}">
                             <input class="report_input__item" value="{{ report.report_name }}" name="report_name" id="report_name" readonly>
                         </li>
-                        <li class="report_form_item" data-report-type="{{ report.report_type }}">
+                        <li class="report_form_item" data-report-type="{{ report.report_to_subtype.subtype_to_type.id }}">
                             <input class="report_input__item" value="{{ report.comment }}" name="comment" id="comment" readonly>
                         </li>
                         <!-- Interaction buttons as list items -->
-                        <li class="report_form_item" data-report-type="{{ report.report_type }}">
+                        <li class="report_form_item" data-report-type="{{ report.report_to_subtype.subtype_to_type.id }}">
                             <button class="btn report__btn" type="submit" name="report_delete">Delete</button>
                         </li>
-                        <li class="report_form_item" data-report-type="{{ report.report_type }}">
+                        <li class="report_form_item" data-report-type="{{ report.report_to_subtype.subtype_to_type.id }}">
                             <a class="btn report__btn" href="{{ url_for("editing_report.edit_report", report_id=report.id) }}">Edit</a>
                         </li>
                     </ul>

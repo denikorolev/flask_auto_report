@@ -41,7 +41,12 @@ def signup():
         user = User.create(email=user_email, username=user_name, password=password)
         
         # Создание профиля "Default" для нового пользователя
-        UserProfile.create(user_id=user.id, profile_name="Default", description="default")
+        UserProfile.create(
+            user_id=user.id, 
+            profile_name="Default", 
+            description="default",
+            default_profile= False
+            )
         
         return jsonify({"status": "success", "message": "Account created successfully"}), 201
     except ValueError as e:

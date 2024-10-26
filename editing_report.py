@@ -2,7 +2,7 @@
 
 from flask import Blueprint, render_template, request, current_app, jsonify
 from flask_login import current_user, login_required
-from models import db, Report, ReportParagraph, Sentence, ParagraphType
+from models import db, Report, Paragraph, Sentence, ParagraphType
 from errors_processing import print_object_structure
 
 
@@ -25,7 +25,7 @@ def edit_report():
         if not report or report.userid != current_user.id:
             return jsonify(success=False, message="Report not found or you don't have permission to edit it"), 403
 
-    report_paragraphs = sorted(report.report_paragraphs, key=lambda p: p.paragraph_index) if report else []
+    report_paragraphs = sorted(report.paragraphs, key=lambda p: p.paragraph_index) if report else []
     for paragraph in report_paragraphs:
         paragraph.sentences = sorted(paragraph.sentences, key=lambda s: (s.index, s.weight))
         # Добавляем маркер для разделения предложений
@@ -85,7 +85,7 @@ def new_paragraph():
         return jsonify({"status": "error", "message": "Report not found or you don't have permission to edit it"}), 403
 
     try:
-        paragraph_index = len(report.report_paragraphs) + 1
+        paragraph_index = len(report.paragraphs) + 1
         paragraph_visible = data.get("paragraph_visible") == "True"
         title_paragraph = data.get("title_paragraph") == "True"
         bold_paragraph = data.get("bold_paragraph") == "True"
@@ -96,14 +96,16 @@ def new_paragraph():
         if not default_paragraph_type:
             return jsonify({"status": "error", "message": "Default paragraph type 'text' not found."}), 400
         
-        ReportParagraph.create(
+        Paragraph.create(
             paragraph_index=paragraph_index,
             report_id=report.id,
             paragraph="insert your text",
             paragraph_visible=paragraph_visible,
             title_paragraph=title_paragraph,
             bold_paragraph=bold_paragraph,
-            type_paragraph_id=default_paragraph_type.id
+            type_paragraph_id=default_paragraph_type.id,
+            comment=None,
+            paragraph_weight=1
         )
         return jsonify({"status": "success", "message": "Paragraph added successfully"}), 200
     except Exception as e:
@@ -118,7 +120,7 @@ def edit_paragraph():
 
     data = request.get_json()
     paragraph_id = data.get("paragraph_id")
-    paragraph_for_edit = ReportParagraph.query.get(paragraph_id)
+    paragraph_for_edit = Paragraph.query.get(paragraph_id)
 
     if not paragraph_for_edit:
         return jsonify({"status": "error", "message": "Paragraph not found"}), 404
@@ -135,7 +137,7 @@ def edit_paragraph():
         # Сначала проверим, если предлагаемый тип не 'text' и не 'custom'
         if new_type_paragraph_id not in allowed_paragraph_types:
             # Проверим, существует ли уже параграф с таким типом для данного отчета
-            existing_paragraph = ReportParagraph.query.filter_by(
+            existing_paragraph = Paragraph.query.filter_by(
                 report_id=current_report_id,
                 type_paragraph_id=new_type_paragraph_id
             ).first()
@@ -178,7 +180,7 @@ def delete_paragraph():
 
     data = request.get_json()
     paragraph_id = data.get("paragraph_id")
-    paragraph = ReportParagraph.query.get(paragraph_id)
+    paragraph = Paragraph.query.get(paragraph_id)
 
     if not paragraph:
         return jsonify({"status": "error", "message": "Paragraph not found"}), 404
@@ -187,7 +189,7 @@ def delete_paragraph():
         return jsonify({"status": "error", "message": "You don't have permission to delete this paragraph"}), 403
 
     try:
-        ReportParagraph.delete_by_id(paragraph_id)
+        Paragraph.delete_by_id(paragraph_id)
         return jsonify({"status": "success", "message": "Paragraph deleted successfully"}), 200
     except Exception as e:
         return jsonify({"status": "error", "message": f"Failed to delete paragraph. Error code: {e}"}), 400

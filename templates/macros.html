@@ -54,7 +54,7 @@
     <ul class="">
         <li class="">
             {% if paragraph.sentences %}
-                {% for index, sentence_group in paragraph.sentences.items() %}
+                {% for index, sentence_group in paragraph.paragraph_to_sentences.items() %}
                     {% if sentence_group[0].index != 0 %}
                         <span contenteditable="true"
                             class="report__sentence sentence" 

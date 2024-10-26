@@ -1,9 +1,9 @@
 #working_with_reports.py
 
-from flask import Blueprint, render_template, request, current_app, jsonify, send_file, session, url_for
+from flask import Blueprint, render_template, request, current_app, jsonify, send_file, session, url_for, g
 from flask_login import login_required, current_user
 import os
-from models import db, Report, ReportType, ReportParagraph, Sentence, KeyWordsGroup
+from models import db, Report, ReportType, Paragraph, Sentence, KeyWord
 from file_processing import save_to_word
 from sentence_processing import split_sentences, get_new_sentences, group_keywords
 from errors_processing import print_object_structure
@@ -20,8 +20,9 @@ working_with_reports_bp = Blueprint('working_with_reports', __name__)
 @login_required
 def choosing_report(): 
     menu = current_app.config['MENU']
-    report_types_and_subtypes = ReportType.get_types_with_subtypes(current_user.id) 
-    user_reports = Report.find_by_user(current_user.id)
+    current_profile = g.current_profile
+    report_types_and_subtypes = ReportType.get_types_with_subtypes(current_profile.id) 
+    current_profile_reports = Report.find_by_profile(current_profile.id)
 
     if request.method == "POST":
         if request.is_json:
@@ -42,7 +43,7 @@ def choosing_report():
         "choose_report.html",
         title="Report",
         menu=menu,
-        user_reports=user_reports,
+        user_reports=current_profile_reports,
         report_types_and_subtypes=report_types_and_subtypes
     )
 
@@ -56,9 +57,10 @@ def working_with_reports():
     birthdate = request.args.get("birthdate")
     report_number = request.args.get("reportNumber")
     
-    print(f"current_report_id: {current_report_id}")
-    report_data = Report.get_report_data(current_report_id, current_user.id)
-    print(report_data)
+    report_data = Report.get_report_data(
+        current_report_id, 
+        g.current_profile.id
+        )
     if not report_data:
         print("there is no report_data")
         
@@ -66,7 +68,7 @@ def working_with_reports():
     
     # Получаем ключевые слова для текущего пользователя
     
-    key_words_obj = KeyWordsGroup.get_keywords_for_report(current_user.id, current_report_id)
+    key_words_obj = KeyWord.get_keywords_for_report(g.current_profile.id, current_report_id)
     key_words_group = group_keywords(key_words_obj)
 
     
@@ -104,7 +106,7 @@ def update_paragraph():
     paragraph_id = data.get("paragraph_id")
     new_value = data.get("new_value")
 
-    paragraph = ReportParagraph.query.get(paragraph_id)
+    paragraph = Paragraph.query.get(paragraph_id)
     if paragraph:
         paragraph.paragraph = new_value
         db.session.commit()

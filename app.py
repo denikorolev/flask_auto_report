@@ -5,7 +5,7 @@ from flask_login import LoginManager, login_required, current_user
 from config import get_config, Config
 from flask_migrate import Migrate
 from auth import auth_bp  
-from models import db, User, UserProfile, ReportParagraph
+from models import db, User, UserProfile, Paragraph
 import os
 import logging
 
@@ -20,7 +20,7 @@ from openai_api import openai_api_bp
 from key_words import key_words_bp
 from admin import admin_bp
 
-version = "0.5.4"
+version = "0.6.0"
 
 app = Flask(__name__)
 app.config.from_object(get_config()) # Load configuration from file config.py
@@ -162,10 +162,15 @@ def create_profile():
     if request.method == 'POST':
         profile_name = request.form.get('profile_name')
         description = request.form.get('description')
-
+        default_profile = False
         if profile_name:
             # Создаем профиль пользователя
-            UserProfile.create(current_user.id, profile_name, description)
+            UserProfile.create(
+                current_user.id, 
+                profile_name, 
+                description,
+                default_profile=default_profile
+                )
             print("Profile created successfully!", "success")
             return redirect(url_for('index'))
         else:

@@ -1,7 +1,7 @@
 # my_reports.py
 #v0.1.0
 
-from flask import Blueprint, render_template, request, redirect, url_for, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, current_app, g
 from flask_login import login_required, current_user
 from models import Report, ReportType, ReportSubtype
 
@@ -13,17 +13,8 @@ def reports_list():
     page_title = "List of the reports"
     # Initialize config variables
     menu = current_app.config['MENU']
-    # Geting report types and subtypes 
-    report_types = ReportType.query.all()  
-    report_subtypes = ReportSubtype.query.all() 
-    # Convert objects to dictionary
-    report_subtypes_dict = [
-        {'id': rst.id, 'type_id': rst.type, 'subtype': rst.subtype, "subtype_type_name": rst.report_type_rel.type}
-        for rst in report_subtypes
-    ]
-    # All reports of current user with load of linked records (types and subtypes) by method in class
-    user_reports_rel = Report.query.filter_by(userid=current_user.id).all()
-    
+    reports_type_with_subtypes = ReportType.get_types_with_subtypes(g.current_profile.id)
+    profile_reports = Report.find_by_profile(g.current_profile.id)
     
     if request.method == "POST":
         # 'Delete' button logic (button 'edit' just redirect to new page)
@@ -38,7 +29,6 @@ def reports_list():
     return render_template("my_reports.html", 
                            title=page_title, 
                            menu=menu,
-                           report_types=report_types, 
-                           report_subtypes=report_subtypes_dict, 
-                           user_reports_rel=user_reports_rel,
+                           reports_type_with_subtypes = reports_type_with_subtypes, 
+                           profile_reports=profile_reports,
                            )

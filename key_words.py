@@ -1,8 +1,8 @@
 # key_words.py
 
-from flask import Blueprint, render_template, request, redirect, current_app, jsonify
+from flask import Blueprint, render_template, request, redirect, current_app, jsonify, g
 from flask_login import login_required, current_user
-from models import db, ReportType, ReportSubtype, KeyWordsGroup, Report, ParagraphType 
+from models import db, ReportType, ReportSubtype, KeyWord, Report, ParagraphType 
 from itertools import chain
 from file_processing import file_uploader, allowed_file
 from sentence_processing import group_keywords, sort_key_words_group, process_keywords, check_existing_keywords, extract_keywords_from_doc
@@ -17,16 +17,16 @@ key_words_bp = Blueprint("key_words", __name__)
 @login_required
 def key_words():
     menu=current_app.config["MENU"]
-    user_reports=Report.find_by_user(current_user.id)
+    current_profile_reports=Report.find_by_profile(g.current_profile.id)
     
     # Prepare global key words
-    global_user_key_words = KeyWordsGroup.find_without_reports(current_user.id)
+    global_user_key_words = KeyWord.find_without_reports(g.current_profile.id)
     unsorted_global_key_words = group_keywords(global_user_key_words, with_index=True)
     global_key_words = sort_key_words_group(unsorted_global_key_words)
     # Prepare key words linked to reports
     uncleared_report_user_key_words = []
-    for report in user_reports:
-        uncleared_report_user_key_words.append(KeyWordsGroup.find_by_report(report.id))
+    for report in current_profile_reports:
+        uncleared_report_user_key_words.append(KeyWord.find_by_report(report.id))
     report_user_key_words = list(chain.from_iterable(uncleared_report_user_key_words))
     
     report_key_words = group_keywords(report_user_key_words, with_report=True)
@@ -34,7 +34,7 @@ def key_words():
     return render_template("/key_words.html",
                            title="Key words",
                            menu=menu,
-                           user_reports=user_reports,
+                           user_reports=current_profile_reports,
                            global_key_words=global_key_words,
                            report_key_words=report_key_words)
     
@@ -143,16 +143,16 @@ def add_word_to_exist_group():
         return {"status": "error", "message": "Invalid keywords format"}, 400
 
     # Подсчитываем количество существующих ключевых слов в конкретной группе
-    num_of_exist_key_words = len(KeyWordsGroup.query.filter_by(group_index=group_index, user_id=current_user.id).all())
+    num_of_exist_key_words = len(KeyWord.query.filter_by(group_index=group_index, user_id=current_user.id).all())
 
         
     # Добавляем ключевые слова в нужную группу
     for i, key_word in enumerate(key_words, start=1):
-        KeyWordsGroup.create(
+        KeyWord.create(
             group_index=group_index,
             index=num_of_exist_key_words + i,
             key_word=key_word,
-            user_id=current_user.id,
+            profile_id=g.current_profile.id,
             reports=reports
         )
     db.session.commit()
@@ -170,7 +170,7 @@ def delete_keywords():
         return jsonify({"status": "error", "message": "Group index is required"}), 400
 
     # Удаление всех ключевых слов с данным group_index для текущего пользователя
-    KeyWordsGroup.query.filter_by(group_index=group_index, user_id=current_user.id).delete()
+    KeyWord.query.filter_by(group_index=group_index, user_id=current_user.id).delete()
     db.session.commit()
 
     return jsonify({"status": "success", "message": "Keywords group deleted successfully"}), 200
@@ -188,8 +188,7 @@ def unlink_keyword_from_report():
         return jsonify({"status": "error", "message": "Group index and report ID are required"}), 400
 
     # Найдем ключевые слова в этой группе, связанные с данным отчетом
-    keywords = KeyWordsGroup.find_by_group_index(group_index=group_index, user_id=current_user.id)
-    print(keywords)
+    keywords = KeyWord.find_by_group_index(group_index, g.current_profile.id)
     if not keywords:
         return jsonify({"status": "error", "message": "No keywords found for this group"}), 404
 
@@ -226,13 +225,13 @@ def edit_keywords():
 
         if not key_word:
             # Если ключевое слово пустое, удаляем его
-            word_for_delete = KeyWordsGroup.query.get(word_id)
+            word_for_delete = KeyWord.query.get(word_id)
             print(word_for_delete)
             word_for_delete.delete()
             
         else:
             # Если ключевое слово есть, обновляем его
-            keyword_entry = KeyWordsGroup.query.get(word_id)
+            keyword_entry = KeyWord.query.get(word_id)
             if keyword_entry:
                 keyword_entry.key_word = key_word
 

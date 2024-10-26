@@ -57,7 +57,7 @@
                 {% for subtype in user_subtypes %}
                         <li class="flex report-section__list-item">
                             
-                            <input class="report_input__item" type="text" id="subtype_type" name="subtype_type" value="{{ subtype.report_type_rel.type }}" readonly>
+                            <input class="report_input__item" type="text" id="subtype_type" name="subtype_type" value="{{ subtype.type.type }}" readonly>
                             <input class="report_input__item subtype-input" type="text" id="subtype_subtype" name="subtype_subtype" value="{{ subtype.subtype }}">
                             <button class="btn report__btn delete-subtype-btn" type="submit" name="delete_subtype_button" data-subtype-id="{{ subtype.id }}">Delete Subtype</button>
                             <button class="btn report__btn edit-subtype-btn" type="submit" name="edit_subtype_button" data-subtype-id="{{ subtype.id }}">Edit Subtype</button>

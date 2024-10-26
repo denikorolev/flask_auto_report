@@ -8,13 +8,61 @@ from utils import ensure_list
 
 db = SQLAlchemy()
 
-# Association table between KeyWordsGroup and Report
+# Association table between KeyWord and Report
 key_word_report_link = db.Table(
     'key_word_report_link',
     db.Column('key_word_id', db.BigInteger, db.ForeignKey('key_words_group.id', ondelete="CASCADE"), primary_key=True),
     db.Column('report_id', db.BigInteger, db.ForeignKey('reports.id', ondelete="CASCADE"), primary_key=True),
     Index('ix_key_word_report_link_keyword_report', 'key_word_id', 'report_id')
 )
+
+
+class AppConfig(db.Model):
+    __tablename__ = 'app_config'
+    id = db.Column(db.Integer, primary_key=True)
+    config_key = db.Column(db.String(50), unique=True, nullable=False)
+    config_value = db.Column(db.String(200), nullable=False)
+    config_user = db.Column(db.BigInteger, db.ForeignKey('users.id'), nullable=False)
+
+    user = db.relationship('User', lazy=True, backref=db.backref('app_config'))
+
+    @staticmethod
+    def get_config_value(key, user_id):
+        config = AppConfig.query.filter_by(config_key=key, config_user=user_id).first()
+        return config.config_value if config else None
+
+    @staticmethod
+    def set_config_value(key, value, user_id):
+        config = AppConfig.query.filter_by(config_key=key, config_user=user_id).first()
+        if config:
+            config.config_value = value
+        else:
+            config = AppConfig(config_key=key, config_value=value, config_user=user_id)
+        db.session.add(config)
+        db.session.commit()
+
+
+class BaseModel(db.Model):
+    __abstract__ = True
+    id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
+
+    def save(self):
+        db.session.add(self)
+        db.session.commit()
+
+    def delete(self):
+        db.session.delete(self)
+        db.session.commit()
+
+    @classmethod
+    def delete_by_id(cls, object_id):
+        obj = cls.query.get(object_id)
+        if obj:
+            db.session.delete(obj)
+            db.session.commit()
+            return True
+        return False
+
 
 class User(db.Model, UserMixin):
     __tablename__ = 'users'
@@ -27,9 +75,8 @@ class User(db.Model, UserMixin):
     user_avatar = db.Column(db.LargeBinary, nullable=True)
 
 
-    profiles = db.relationship('UserProfile', backref='user', lazy=True, cascade="all, delete-orphan")
-
-
+    user_to_profiles = db.relationship('UserProfile', lazy="joined", backref=db.backref("profile_to_user"), cascade="all, delete-orphan")
+    user_to_reports = db.relationship('Report', lazy=True)
 
     def set_password(self, password):
         self.user_pass = generate_password_hash(password)
@@ -63,50 +110,6 @@ class User(db.Model, UserMixin):
         db.session.commit()
         return user
 
-class AppConfig(db.Model):
-    __tablename__ = 'app_config'
-    id = db.Column(db.Integer, primary_key=True)
-    config_key = db.Column(db.String(50), unique=True, nullable=False)
-    config_value = db.Column(db.String(200), nullable=False)
-    config_user = db.Column(db.BigInteger, db.ForeignKey('users.id'), nullable=False)
-
-    user = db.relationship('User', backref=db.backref('configs', lazy=True))
-
-    @staticmethod
-    def get_config_value(key, user_id):
-        config = AppConfig.query.filter_by(config_key=key, config_user=user_id).first()
-        return config.config_value if config else None
-
-    @staticmethod
-    def set_config_value(key, value, user_id):
-        config = AppConfig.query.filter_by(config_key=key, config_user=user_id).first()
-        if config:
-            config.config_value = value
-        else:
-            config = AppConfig(config_key=key, config_value=value, config_user=user_id)
-        db.session.add(config)
-        db.session.commit()
-
-class BaseModel(db.Model):
-    __abstract__ = True
-    id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
-
-    def save(self):
-        db.session.add(self)
-        db.session.commit()
-
-    def delete(self):
-        db.session.delete(self)
-        db.session.commit()
-
-    @classmethod
-    def delete_by_id(cls, object_id):
-        obj = cls.query.get(object_id)
-        if obj:
-            db.session.delete(obj)
-            db.session.commit()
-            return True
-        return False
 
 class UserProfile(BaseModel):
     __tablename__ = 'user_profiles'
@@ -117,6 +120,10 @@ class UserProfile(BaseModel):
     default_profile = db.Column(db.Boolean, default=False, nullable=True)
     
     
+    profile_to_reports = db.relationship('Report', lazy=True)
+    profile_to_files = db.relationship("FileMetadata", lazy=True, backref=db.backref("file_to_profile"), cascade="all, delete-orphan")
+    profile_to_key_words = db.relationship("KeyWord", lazy=True, backref=db.backref("key_word_to_profile"), cascade="all, delete-orphan")
+    profile_to_report_types = db.relationship("ReportType", lazy=True, backref=db.backref("report_type_to_profile"), cascade="all, delete-orphan")
 
     @classmethod
     def create(cls, user_id, profile_name, description=None, default_profile=False):
@@ -184,78 +191,139 @@ class UserProfile(BaseModel):
         return cls.query.filter_by(id=profile_id, user_id=user_id).first()
 
 
-class FileMetadata(BaseModel):
-    __tablename__ = "file_metadata"
+class ReportType(BaseModel):
+    __tablename__ = 'report_type'
+    profile_id = db.Column(db.BigInteger, db.ForeignKey('user_profiles.id'), nullable=True)
+    type = db.Column(db.String(50), nullable=False)
+    type_index = db.Column(db.Integer, nullable=False)
     
-    profile_id = db.Column(db.BigInteger, db.ForeignKey("user_profiles.id"), nullable=False)  # Связь с профилем
-    file_name = db.Column(db.String(255), nullable=False)  # Имя файла
-    file_path = db.Column(db.String(500), nullable=False)  # Путь к файлу
-    file_type = db.Column(db.String(50), nullable=False)  # Тип файла (например, "docx", "jpg")
-    uploaded_at = db.Column(db.DateTime, default=db.func.now(), nullable=False)  # Время загрузки файла
-    file_description = db.Column(db.String(500), nullable=False)
-    # Связь с профилем, к которому привязан файл
-    profile = db.relationship("UserProfile", backref=db.backref("files", cascade="all, delete-orphan"))
-
-    @classmethod
-    def create(cls, profile_id, file_name, file_path, file_type, file_description):
-        new_file = cls(
-            profile_id=profile_id,
-            file_name=file_name,
-            file_path=file_path,
-            file_type=file_type,
-            file_description=file_description
-        )
-        db.session.add(new_file)
-        db.session.commit()
-        return new_file
+    type_to_subtypes = db.relationship("ReportSubtype", lazy=True, backref=db.backref("subtype_to_type"), cascade="all, delete-orphan")
     
     @classmethod
-    def get_file_by_description(cls, profile_id, file_description):
+    def create(cls, type, profile_id, type_index=None):
         """
-        Возвращает полный путь к файлу, который относится к данному профилю, на основе его описания.
+        Creates a new report type.
         
         Args:
-            profile_id (int): ID профиля.
-            file_description (str): Описание файла.
-        
+            type (str): The type of the report.
+            profile_id (int): The ID of the user creating the report type.
+            type_index (int, optional): The index of the type. If not provided, it will be set automatically.
+
         Returns:
-            str: Путь к файлу, если найден, иначе None.
+            ReportType: The newly created report type object.
         """
-        file = cls.query.filter_by(profile_id=profile_id, file_description=file_description).first()
-        if file:
-            return file
-        else:
-            return None
+        # If type_index is not provided, set it to the next available index
+        if type_index is None:
+            max_index = db.session.query(db.func.max(cls.type_index)).scalar() or 0
+            type_index = max_index + 1
+
+        new_type = cls(
+            type=type,
+            profile_id=profile_id,
+            type_index=type_index
+        )
+        db.session.add(new_type)
+        db.session.commit()
+        return new_type
+    
+    @classmethod
+    def find_by_profile(cls, profile_id):
+        """
+        Find all report types created by a specific user.
+        """
+        return cls.query.filter_by(profile_id=profile_id).all()
+    
+    @classmethod
+    def get_types_with_subtypes(cls, profile_id):
+        """
+        Собирает список словарей с типами и их подтипами для указанного пользователя.
+        Args:
+            user_id (int): ID пользователя.
+        Returns:
+            list: Список словарей с типами и подтипами.
+        """
+        types = cls.query.filter_by(profile_id=profile_id).all()
+        result = []
+        
+        for report_type in types:
+            subtypes = [
+                {
+                    "subtype_id": subtype.id,
+                    "subtype_text": subtype.subtype
+                } 
+                for subtype in report_type.type_to_subtypes
+            ]
+            result.append({
+                "type_id": report_type.id,
+                "type_text": report_type.type,
+                "subtypes": subtypes
+            })
+        return result
+
+
+class ReportSubtype(BaseModel):
+    __tablename__ = "report_subtype"
+    type = db.Column(db.SmallInteger, db.ForeignKey("report_type.id"), nullable=False)
+    subtype = db.Column(db.String(250), nullable=False)
+    subtype_index = db.Column(db.Integer, nullable=False)
+    
+    subtype_to_reports = db.relationship('Report', lazy=True, backref=db.backref("report_to_subtype"), cascade="all, delete-orphan")
+    
+    @classmethod
+    def create(cls, type, subtype, subtype_index=None): # subtype_index должен быть None чтобы ниже зайти в if и вычислить его
+        """
+        Creates a new report subtype.
+
+        Args:
+            type (int): The ID of the report type.
+            subtype (str): The subtype text.
+            subtype_index (int, optional): The index of the subtype. If not provided, it will be set automatically.
+
+        Returns:
+            ReportSubtype: The newly created report subtype object.
+        """
+        # If subtype_index is not provided, set it to the next available index
+        if subtype_index is None:
+            max_index = db.session.query(db.func.max(cls.subtype_index)).scalar() or 0
+            subtype_index = max_index + 1
+
+        new_subtype = cls(
+            type=type,
+            subtype=subtype,
+            subtype_index=subtype_index
+        )
+        db.session.add(new_subtype)
+        db.session.commit()
+        return new_subtype
+    
+    @classmethod
+    def find_by_report_type(cls, type):
+        """Возвращает все подтипы, связанные с профилем."""
+        return cls.query.filter_by(type=type).all()
 
 
 class Report(BaseModel):
     __tablename__ = "reports"
-    userid = db.Column(db.BigInteger, db.ForeignKey('users.id'), nullable=False)
     profile_id = db.Column(db.BigInteger, db.ForeignKey('user_profiles.id'), nullable=False)
-    comment = db.Column(db.String(255), nullable=True)
-    comment2 = db.Column(db.String(255), nullable=True)
-    report_name = db.Column(db.String(255), nullable=False)
-    report_type = db.Column(db.Integer, db.ForeignKey('report_type.id'), nullable=False)
+    userid = db.Column(db.BigInteger, db.ForeignKey('users.id'), nullable=False)
     report_subtype = db.Column(db.Integer, db.ForeignKey('report_subtype.id'), nullable=False)
+    comment = db.Column(db.String(255), nullable=True)
+    report_name = db.Column(db.String(255), nullable=False)
     public = db.Column(db.Boolean, default=False, nullable=False)
     report_side = db.Column(db.Boolean, nullable=False, default=False)
     
-    user = db.relationship('User', backref=db.backref('reports', lazy=True))
-    profile = db.relationship('UserProfile', backref=db.backref('reports', lazy=True))  
-    report_type_rel = db.relationship('ReportType', backref=db.backref('reports', lazy=True), overlaps="report_type")
-    report_subtype_rel = db.relationship('ReportSubtype', backref=db.backref('reports', lazy=True), overlaps="report_subtype")
-    report_paragraphs = db.relationship('ReportParagraph', backref='report', cascade="all, delete-orphan", overlaps="paragraphs,report")
+   
+    report_to_paragraphs = db.relationship('Paragraph', lazy=True, backref=db.backref("paragraph_to_report"), cascade="all, delete-orphan")
 
+    
     @classmethod
-    def create(cls, userid, report_name, report_type, report_subtype, profile_id, comment=None, comment2=None, public=False, report_side=False):
+    def create(cls, profile_id, report_subtype, report_name,  user_id, comment=None, public=False, report_side=False):
         new_report = cls(
-            userid=userid,
-            report_name=report_name,
-            report_type=report_type,
-            report_subtype=report_subtype,
             profile_id=profile_id,
+            report_subtype=report_subtype,
+            report_name=report_name,
+            userid=user_id,
             comment=comment,
-            comment2=comment2,
             public=public,
             report_side=report_side
         )
@@ -264,9 +332,9 @@ class Report(BaseModel):
         return new_report
     
     @classmethod
-    def find_by_user(cls, user_id):
-        """Возвращает все отчеты, связанные с данным пользователем."""
-        return cls.query.filter_by(userid=user_id).all()
+    def find_by_profile(cls, profile_id):
+        """Возвращает все отчеты, связанные с данным профилем."""
+        return cls.query.filter_by(profile_id=profile_id).all()
     
     def get_impression(self):
         """
@@ -281,19 +349,19 @@ class Report(BaseModel):
 
         if not impression_type:
             # Если тип 'impression' не найден, возвращаем None
-            return None
+            return []
 
         # Ищем параграф с этим типом для данного отчета
-        impression_paragraph = ReportParagraph.query.filter_by(
+        impression_paragraph = Paragraph.query.filter_by(
             report_id=self.id, 
             type_paragraph_id=impression_type.id
         ).first()
 
         # Возвращаем текст параграфа, если найден
-        return impression_paragraph.paragraph if impression_paragraph else None
+        return impression_paragraph.paragraph_to_sentences if impression_paragraph else []
 
     @classmethod
-    def get_report_data(cls, report_id, user_id):
+    def get_report_data(cls, report_id, profile_id):
         """
         Возвращает отчет с указанными связанными данными в виде словаря.
         
@@ -305,13 +373,13 @@ class Report(BaseModel):
             dict: Данные отчета, включая параграфы, предложения и ключевые слова.
         """
         # Ищем отчет по ID и пользователю
-        report = cls.query.filter_by(id=report_id, userid=user_id).first()
+        report = cls.query.filter_by(id=report_id, profile_id=profile_id).first()
         
         if not report:
             return None  # Если отчет не найден или принадлежит другому пользователю
         
         # Получаем параграфы и предложения
-        paragraphs = ReportParagraph.query.filter_by(report_id=report_id).order_by(ReportParagraph.paragraph_index).all()
+        paragraphs = Paragraph.query.filter_by(report_id=report_id).order_by(Paragraph.paragraph_index).all()
 
         # Преобразуем параграфы и предложения в словари
         paragraph_data = []
@@ -338,13 +406,13 @@ class Report(BaseModel):
                 "paragraph_visible": paragraph.paragraph_visible,
                 "title_paragraph": paragraph.title_paragraph,
                 "bold_paragraph": paragraph.bold_paragraph,
-                "paragraph_type": paragraph.type_paragraph.type_name,
+                "paragraph_type": paragraph.paragraph_to_types.type_name,
                 "paragraph_comment": paragraph.comment,
                 "sentences": grouped_sentences
             })
         
         # Получаем ключевые слова, связанные с отчетом
-        key_words = KeyWordsGroup.get_keywords_for_report(user_id, report_id)
+        key_words = KeyWord.get_keywords_for_report(profile_id, report_id)
 
         keywords_data = []
         for key_word in key_words:
@@ -360,11 +428,12 @@ class Report(BaseModel):
             "report": {
                 "id": report.id,
                 "report_name": report.report_name,
-                "report_type": report.report_type_rel.type,
-                "report_subtype": report.report_subtype_rel.subtype,
+                "report_type": report.report_to_subtype.subtype_to_type.type,
+                "report_subtype": report.report_to_subtype.subtype,
                 "comment": report.comment,
                 "report_side": report.report_side,
                 "user_id": report.userid,
+                "report_public": report.public
             },
             "paragraphs": paragraph_data,
             "keywords": keywords_data
@@ -373,137 +442,24 @@ class Report(BaseModel):
         return report_data
 
 
-class ReportType(BaseModel):
-    __tablename__ = 'report_type'
-    user_id = db.Column(db.BigInteger, db.ForeignKey('users.id'), nullable=False)
-    type = db.Column(db.String(50), nullable=False)
-    type_index = db.Column(db.Integer, nullable=False)
-    
-    user = db.relationship('User', backref=db.backref('report_types', lazy=True))
-    subtypes_rel = db.relationship('ReportSubtype', back_populates='report_type_rel', lazy=True)
-    
-    @classmethod
-    def create(cls, type, user_id, type_index=None):
-        """
-        Creates a new report type.
-        
-        Args:
-            type (str): The type of the report.
-            user_id (int): The ID of the user creating the report type.
-            type_index (int, optional): The index of the type. If not provided, it will be set automatically.
-
-        Returns:
-            ReportType: The newly created report type object.
-        """
-        # If type_index is not provided, set it to the next available index
-        if type_index is None:
-            max_index = db.session.query(db.func.max(cls.type_index)).scalar() or 0
-            type_index = max_index + 1
-
-        new_type = cls(
-            type=type,
-            user_id=user_id,
-            type_index=type_index
-        )
-        db.session.add(new_type)
-        db.session.commit()
-        return new_type
-    
-    @classmethod
-    def find_by_user(cls, user_id):
-        """
-        Find all report types created by a specific user.
-        """
-        return cls.query.filter_by(user_id=user_id).all()
-    
-    @classmethod
-    def get_types_with_subtypes(cls, user_id):
-        """
-        Собирает список словарей с типами и их подтипами для указанного пользователя.
-        Args:
-            user_id (int): ID пользователя.
-        Returns:
-            list: Список словарей с типами и подтипами.
-        """
-        types = cls.query.filter_by(user_id=user_id).all()
-        result = []
-        
-        for report_type in types:
-            subtypes = [
-                {
-                    "subtype_id": subtype.id,
-                    "subtype_text": subtype.subtype
-                } 
-                for subtype in report_type.subtypes_rel
-            ]
-            result.append({
-                "type_id": report_type.id,
-                "type_text": report_type.type,
-                "subtypes": subtypes
-            })
-        return result
-
-class ReportSubtype(BaseModel):
-    __tablename__ = "report_subtype"
-    user_id = db.Column(db.BigInteger, db.ForeignKey('users.id'), nullable=False)
-    type = db.Column(db.SmallInteger, db.ForeignKey("report_type.id"), nullable=False)
-    subtype = db.Column(db.String(250), nullable=False)
-    subtype_index = db.Column(db.Integer, nullable=False)
-    
-    user = db.relationship('User', backref=db.backref('report_subtypes', lazy=True))
-    report_type_rel = db.relationship('ReportType', back_populates='subtypes_rel', lazy=True)
-    
-    @classmethod
-    def create(cls, type, subtype, user_id, subtype_index=None):
-        """
-        Creates a new report subtype.
-
-        Args:
-            type (int): The ID of the report type.
-            subtype (str): The subtype text.
-            user_id (int): The ID of the user creating the subtype.
-            subtype_index (int, optional): The index of the subtype. If not provided, it will be set automatically.
-
-        Returns:
-            ReportSubtype: The newly created report subtype object.
-        """
-        # If subtype_index is not provided, set it to the next available index
-        if subtype_index is None:
-            max_index = db.session.query(db.func.max(cls.subtype_index)).scalar() or 0
-            subtype_index = max_index + 1
-
-        new_subtype = cls(
-            type=type,
-            subtype=subtype,
-            user_id=user_id,
-            subtype_index=subtype_index
-        )
-        db.session.add(new_subtype)
-        db.session.commit()
-        return new_subtype
-    
-    @classmethod
-    def find_by_user(cls, user_id):
-        """Возвращает все подтипы, связанные с пользователем."""
-        return cls.query.filter_by(user_id=user_id).all()
-
-class ReportParagraph(BaseModel):
+class Paragraph(BaseModel):
     __tablename__ = "report_paragraphs"
-    paragraph_index = db.Column(db.Integer, nullable=False)
     report_id = db.Column(db.BigInteger, db.ForeignKey("reports.id"), nullable=False)
+    type_paragraph_id = db.Column(db.Integer, db.ForeignKey('paragraph_types.id'), nullable=False)
+    paragraph_index = db.Column(db.Integer, nullable=False)
     paragraph = db.Column(db.String(255), nullable=False)
     paragraph_visible = db.Column(db.Boolean, default=False, nullable=False)
     title_paragraph = db.Column(db.Boolean, default=False, nullable=False)
     bold_paragraph = db.Column(db.Boolean, default=False, nullable=False)
-    type_paragraph_id = db.Column(db.Integer, db.ForeignKey('paragraph_types.id'), nullable=False)
     comment = db.Column(db.String(255), nullable=True)
-    weight = db.Column(db.SmallInteger, nullable=True) 
+    paragraph_weight = db.Column(db.SmallInteger, nullable=True) 
 
-    sentences = db.relationship('Sentence', backref='paragraph', cascade="all, delete-orphan", overlaps="paragraph,sentences")
-    type_paragraph = db.relationship('ParagraphType', backref='paragraphs', lazy=True)
+    paragraph_to_sentences = db.relationship('Sentence', lazy=True, backref=db.backref("sentence_to_paragraph"), cascade="all, delete-orphan")
+    paragraph_to_types = db.relationship('ParagraphType')
+    
     
     @classmethod
-    def create(cls, paragraph_index, report_id, paragraph, paragraph_visible, title_paragraph, bold_paragraph, type_paragraph_id, comment=None, weight=1):
+    def create(cls, paragraph_index, report_id, paragraph, paragraph_visible, title_paragraph, bold_paragraph, type_paragraph_id, comment=None, paragraph_weight=1):
         new_paragraph = cls(
             paragraph_index=paragraph_index,
             report_id=report_id,
@@ -513,37 +469,12 @@ class ReportParagraph(BaseModel):
             bold_paragraph=bold_paragraph,
             type_paragraph_id=type_paragraph_id,
             comment=comment,
-            weight=weight
+            paragraph_weight=paragraph_weight
         )
         db.session.add(new_paragraph)
         db.session.commit()
         return new_paragraph
 
-class ParagraphType(db.Model):
-    __tablename__ = "paragraph_types"
-    id = db.Column(db.Integer, primary_key=True)
-    type_name = db.Column(db.String(50), nullable=False, unique=True)
-
-    @classmethod
-    def create(cls, type_name):
-        """Creates a new paragraph type."""
-        new_type = cls(type_name=type_name)
-        db.session.add(new_type)
-        db.session.commit()
-        return new_type
-    
-    
-    @classmethod
-    def find_by_name(cls, name):
-        """
-        Возвращает ID типа параграфа по его имени.
-        Args:
-            name (str): Имя типа параграфа.
-        Returns:
-            int: ID типа параграфа или None, если не найден.
-        """
-        paragraph_type = cls.query.filter_by(type_name=name).first()
-        return paragraph_type.id if paragraph_type else None
 
 class Sentence(BaseModel):
     __tablename__ = "sentences"
@@ -553,7 +484,7 @@ class Sentence(BaseModel):
     comment = db.Column(db.String(100), nullable=False)
     sentence = db.Column(db.String(400), nullable=False)
 
-    # report_paragraph_rel = db.relationship("ReportParagraph", backref=db.backref("sentences_list", lazy=True), overlaps="paragraph,sentences")
+
 
     @classmethod
     def create(cls, paragraph_id, index, weight, comment, sentence):
@@ -572,23 +503,24 @@ class Sentence(BaseModel):
     def find_by_paragraph_id(cls, paragraph_id):
         return cls.query.filter_by(paragraph_id=paragraph_id).all()
 
-class KeyWordsGroup(BaseModel):
-    __tablename__ = 'key_words_group'
 
+
+
+
+class KeyWord(BaseModel):
+    __tablename__ = 'key_words_group'
+    profile_id = db.Column(db.BigInteger, db.ForeignKey('user_profiles.id'), nullable=True)
     group_index = db.Column(db.Integer, nullable=False)
     index = db.Column(db.Integer, nullable=False)
     key_word = db.Column(db.String(50), nullable=False)
     key_word_comment = db.Column(db.String(100), nullable=True)
     public = db.Column(db.Boolean, default=False, nullable=False)
-    user_id = db.Column(db.BigInteger, db.ForeignKey('users.id'), nullable=False)
-
-    user = db.relationship('User', backref=db.backref('key_words_groups', lazy=True))
     
     # Связь многие ко многим с таблицей reports
-    key_word_reports = db.relationship('Report', secondary='key_word_report_link', backref='key_words', lazy=True)
+    key_word_reports = db.relationship('Report', lazy=True, secondary='key_word_report_link', backref='key_words')
 
     @classmethod
-    def create(cls, group_index, index, key_word, user_id, key_word_comment=None, public=False, reports=None):
+    def create(cls, group_index, index, key_word, profile_id, key_word_comment=None, public=False, reports=None):
         """Creates a new keyword group entry."""
         new_key_word_group = cls(
             group_index=group_index,
@@ -596,11 +528,11 @@ class KeyWordsGroup(BaseModel):
             key_word=key_word,
             key_word_comment=key_word_comment,
             public=public,
-            user_id=user_id
+            profile_id=profile_id
         )
         # Если переданы отчеты, добавляем связи с ними
         if reports:
-            reports = Report.query.filter(Report.id.in_(reports), Report.userid == user_id).all()
+            reports = Report.query.filter(Report.id.in_(reports), Report.profile_id == profile_id).all()
             for report in reports:
                 new_key_word_group.key_word_reports.append(report)
 
@@ -609,16 +541,16 @@ class KeyWordsGroup(BaseModel):
         return new_key_word_group
 
     @classmethod
-    def find_by_user(cls, user_id):
-        """Finds all keyword groups for a specific user."""
-        return cls.query.filter_by(user_id=user_id).order_by(cls.group_index, cls.index).all()
+    def find_by_profile(cls, profile_id):
+        """Finds all keyword groups for a specific profile."""
+        return cls.query.filter_by(profile_id=profile_id).order_by(cls.group_index, cls.index).all()
     
     @classmethod
-    def find_without_reports(cls, user_id):
-        """Возвращает все ключевые слова пользователя, не связанные с отчетами."""
+    def find_without_reports(cls, profile_id):
+        """Возвращает все ключевые слова профиля, не связанные с отчетами."""
         return cls.query.outerjoin(cls.key_word_reports).filter(
             cls.key_word_reports == None,  # Нет связей с отчетами
-            cls.user_id == user_id  # Фильтр по пользователю
+            cls.profile_id == profile_id  # Фильтр по пользователю
         ).all()
         
     @classmethod
@@ -629,13 +561,13 @@ class KeyWordsGroup(BaseModel):
         ).all()
         
     @classmethod
-    def get_keywords_for_report(cls, user_id, report_id):
+    def get_keywords_for_report(cls, profile_id, report_id):
         """ Функция получения списка всех ключевых слов необходимых 
         для конкретного отчета, включает как связанные с отчетом 
-        ключевые слова так и общие ключевые слова конкретного пользователя """
+        ключевые слова так и общие ключевые слова конкретного профиля """
         
         keywords_linked_to_report = cls.find_by_report(report_id)
-        keywords_without_reports = cls.find_without_reports(user_id)
+        keywords_without_reports = cls.find_without_reports(profile_id)
         
         # Объединяем списки
         all_keywords = keywords_linked_to_report + keywords_without_reports
@@ -645,20 +577,20 @@ class KeyWordsGroup(BaseModel):
         return all_keywords
     
     @classmethod
-    def find_by_group_index(cls, group_index, user_id):
+    def find_by_group_index(cls, group_index, profile_id):
         """
         Поиск ключевых слов по значению group_index для конкретного пользователя.
 
         Args:
             group_index (int): Индекс группы ключевых слов.
-            user_id (int): ID пользователя.
+            profile_id (int): ID пользователя.
 
         Returns:
-            list[KeyWordsGroup]: Найденные записи слов данной группы. Возвращает пустой список, если ничего не найдено.
+            list[KeyWord]: Найденные записи слов данной группы. Возвращает пустой список, если ничего не найдено.
         """
         # Проверка существования индексов на полях group_index и user_id для повышения производительности
         # Запрос по фильтрации ключевых слов для конкретного пользователя с указанным group_index
-        return cls.query.filter_by(group_index=group_index, user_id=user_id).all()
+        return cls.query.filter_by(group_index=group_index, profile_id=profile_id).all()
 
         
     @classmethod
@@ -699,13 +631,80 @@ class KeyWordsGroup(BaseModel):
     @classmethod
     def remove_all_reports_from_keywords(cls, keywords):
         """Удаляет все связи с отчетами для одного или нескольких ключевых слов."""
-        # Если keywords не список, преобразуем его в список
         keywords = ensure_list(keywords)
 
-        # Удаляем связи с отчетами для каждого ключевого слова
         for keyword in keywords:
-            keyword.key_word_reports = []  # Очищаем все связи с отчетами
+            keyword.key_word_reports = []  
 
         db.session.commit()
 
+
+class ParagraphType(db.Model):
+    __tablename__ = "paragraph_types"
+    id = db.Column(db.Integer, primary_key=True)
+    type_name = db.Column(db.String(50), nullable=False, unique=True)
+
+    @classmethod
+    def create(cls, type_name):
+        """Creates a new paragraph type."""
+        new_type = cls(type_name=type_name)
+        db.session.add(new_type)
+        db.session.commit()
+        return new_type
     
+    
+    @classmethod
+    def find_by_name(cls, name):
+        """
+        Возвращает ID типа параграфа по его имени.
+        Args:
+            name (str): Имя типа параграфа.
+        Returns:
+            int: ID типа параграфа или None, если не найден.
+        """
+        paragraph_type = cls.query.filter_by(type_name=name).first()
+        return paragraph_type.id if paragraph_type else None
+
+
+class FileMetadata(BaseModel):
+    __tablename__ = "file_metadata"
+    
+    profile_id = db.Column(db.BigInteger, db.ForeignKey("user_profiles.id"), nullable=False)  # Связь с профилем
+    file_name = db.Column(db.String(255), nullable=False)  # Имя файла
+    file_path = db.Column(db.String(500), nullable=False)  # Путь к файлу
+    file_type = db.Column(db.String(50), nullable=False)  # Тип файла (например, "docx", "jpg")
+    uploaded_at = db.Column(db.DateTime, default=db.func.now(), nullable=False)  # Время загрузки файла
+    file_description = db.Column(db.String(500), nullable=False)
+    
+
+    @classmethod
+    def create(cls, profile_id, file_name, file_path, file_type, file_description):
+        new_file = cls(
+            profile_id=profile_id,
+            file_name=file_name,
+            file_path=file_path,
+            file_type=file_type,
+            file_description=file_description
+        )
+        db.session.add(new_file)
+        db.session.commit()
+        return new_file
+    
+    @classmethod
+    def get_file_by_description(cls, profile_id, file_description):
+        """
+        Возвращает полный путь к файлу, который относится к данному профилю, на основе его описания.
+        
+        Args:
+            profile_id (int): ID профиля.
+            file_description (str): Описание файла.
+        
+        Returns:
+            str: Путь к файлу, если найден, иначе None.
+        """
+        file = cls.query.filter_by(profile_id=profile_id, file_description=file_description).first()
+        if file:
+            return file
+        else:
+            return None
+

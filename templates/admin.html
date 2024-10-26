@@ -14,8 +14,8 @@
             <li class="setup-users__item setup-users__item--name" style="margin-right: 5px; width: 100px;" contenteditable="true" > {{user.user_name}} </li>
             <li class="setup-users__item setup-users__item--role" style="margin-right: 5px; width: 50px;" contenteditable="true" > {{user.user_role}} </li>
             
-            {% if user.profiles %}
-                {% for profile in user.profiles %}
+            {% if user.user_to_profiles %}
+                {% for profile in user.user_to_profiles %}
                     <li class="setup-users__item setup-users__item--profile-name" style="margin-right: 5px; width: 100px;" contenteditable="true"> {{profile.profile_name}} </li>
                     <li class="setup-users__item setup-users__item--profile-default" style="margin-right: 15px; font-weight: bold; width: 50px;" contenteditable="true"> {{profile.default_profile}} </li>
                 {% endfor %}
@@ -33,9 +33,9 @@
     {% for paragraph in paragraphs %}
         <ul class="flex setup-paragraphs__list">
             <li class="setup-paragraphs__item--text" style="margin-right: 5px; width: 200px;" contenteditable="true"> {{paragraph.paragraph}} </li>
-            <li class="setup-paragraphs__item--weight" style="margin-right: 5px; width: 50px;" contenteditable="true"> {{paragraph.weight}} </li>
-            {% if paragraph.type_paragraph.type_name %}
-                <li class="setup-paragraphs__item--type" style="margin-right: 15px; width: 100px;" contenteditable="true"> {{paragraph.type_paragraph.type_name}} </li>
+            <li class="setup-paragraphs__item--weight" style="margin-right: 5px; width: 50px;" contenteditable="true"> {{paragraph.paragraph_weight}} </li>
+            {% if paragraph.paragraph_to_types.type_name %}
+                <li class="setup-paragraphs__item--type" style="margin-right: 15px; width: 100px;" contenteditable="true"> {{paragraph.paragraph_to_types.type_name}} </li>
             {% else %}
                 <p style="margin-right: 15px; font-weight: bold;">This paragraph hasn't type</p>
             {% endif %}
@@ -51,8 +51,8 @@
     {% for profile in profiles %}
         <ul class="flex setup-profiles__list">
             <li class="flex setup-profiles__item--name" style="margin-right: 5px; width: 200px;" contenteditable="true"> {{profile.profile_name}} </li>
-            {% if profile.user.user_name %}
-                <li class="flex setup-profiles__item--user" style="margin-right: 15px; width: 100px;" contenteditable="true"> {{profile.user.user_name}} </li>
+            {% if profile.profile_to_user.user_name %}
+                <li class="flex setup-profiles__item--user" style="margin-right: 15px; width: 100px;" contenteditable="true"> {{profile.profile_to_user.user_name}} </li>
             {% else %}
                 <p style="margin-right: 15px; font-weight: bold;" contenteditable="true">This profile exist without user</p>
             {% endif %}

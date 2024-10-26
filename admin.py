@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify, current_app
 from flask_login import login_user, login_required, logout_user, current_user
-from models import db, User, UserProfile, ReportParagraph
+from models import db, User, UserProfile, Paragraph
 
 
 admin_bp = Blueprint("admin", __name__)
@@ -12,8 +12,9 @@ def admin():
     menu = current_app.config["MENU"]
     
     users = User.query.all()
-    paragraphs = ReportParagraph.query.all()
+    paragraphs = Paragraph.query.all()
     profiles = UserProfile.query.all()
+    # print(users[0].user_to_profiles.profile_name)
     
     return render_template("admin.html",
                            menu=menu,
@@ -38,7 +39,7 @@ def delete_user(user_id):
 @admin_bp.route("/delete_paragraph/<int:paragraph_id>", methods=["DELETE"])
 @login_required
 def delete_paragraph(paragraph_id):
-    paragraph = ReportParagraph.query.get(paragraph_id)
+    paragraph = Paragraph.query.get(paragraph_id)
     if paragraph:
         db.session.delete(paragraph)
         db.session.commit()
@@ -73,7 +74,7 @@ def edit_user(user_id):
 @admin_bp.route("/edit_paragraph/<int:paragraph_id>", methods=["PUT"])
 @login_required
 def edit_paragraph(paragraph_id):
-    paragraph = ReportParagraph.query.get(paragraph_id)
+    paragraph = Paragraph.query.get(paragraph_id)
     if paragraph:
         data = request.get_json()
         paragraph.paragraph = data.get("paragraph", paragraph.paragraph)
