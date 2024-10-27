@@ -6,12 +6,28 @@ from flask import url_for, session, g, current_app
 from flask_login import current_user
 import os
 from dotenv import load_dotenv
-from models import AppConfig
+from models import *
 
 load_dotenv()
 
 class Config:
     """Базовая конфигурация, общая для всех сред"""
+    
+    # Словарь сопоставления имен таблиц с классами моделей нужна для панели Admin
+    TABLE_MODELS = {
+        "AppConfig": AppConfig,
+        "User": User,
+        "UserProfile": UserProfile,
+        "ReportType": ReportType,
+        "ReportSubtype": ReportSubtype,
+        "Report": Report,
+        "Paragraph": Paragraph,
+        "Sentence": Sentence,
+        "KeyWord": KeyWord,
+        "ParagraphType": ParagraphType,
+        "FileMetadata": FileMetadata,
+    }
+    
     
     SECRET_KEY = os.getenv("SECRET_KEY", "my_secret_key")
     SQLALCHEMY_TRACK_MODIFICATIONS = False

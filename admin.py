@@ -1,99 +1,180 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify, current_app
+import models
+import inspect
+from sqlalchemy.ext.declarative import DeclarativeMeta
 from flask_login import login_user, login_required, logout_user, current_user
-from models import db, User, UserProfile, Paragraph
+from models import *
+import re
 
 
 admin_bp = Blueprint("admin", __name__)
 
-@admin_bp.route("/admin", methods=["POST", "GET"])
+
+# Function
+def get_model_fields(module):
+    """
+    Returns a list of tuples, where each tuple contains the class name and a list of its field names.
+    """
+    model_fields = {}
+    
+    # Перебираем все классы в модуле
+    for name, obj in inspect.getmembers(module, inspect.isclass):
+        # Проверяем, что класс принадлежит модулю models и является моделью SQLAlchemy
+        if obj.__module__ == module.__name__ and isinstance(obj, DeclarativeMeta):
+            if hasattr(obj, "__table__"):
+                fields = [field.name for field in obj.__table__.columns]
+                model_fields[name] = fields
+
+    reversed_model_fields = dict(reversed(list(model_fields.items())))
+    return reversed_model_fields
+
+
+# Routs
+
+@admin_bp.route("/admin", methods=["GET"])
 @login_required
 def admin():
     
     menu = current_app.config["MENU"]
     
-    users = User.query.all()
-    paragraphs = Paragraph.query.all()
-    profiles = UserProfile.query.all()
-    # print(users[0].user_to_profiles.profile_name)
+        
+    all_models_and_fields = get_model_fields(models)
     
     return render_template("admin.html",
                            menu=menu,
                            title="Admin",
-                           users=users,
-                           paragraphs=paragraphs,
-                           profiles=profiles)
+                           all_models_and_fields=all_models_and_fields)
     
     
-@admin_bp.route("/delete_user/<int:user_id>", methods=["DELETE"])
+
+@admin_bp.route("/fetch_data", methods=["POST"])
 @login_required
-def delete_user(user_id):
-    print(f"запрос пришел {user_id}")
-    user = User.query.get(user_id)
-    if user:
-        db.session.delete(user)
-        db.session.commit()
-        return jsonify({"status": "success", "message": "User deleted successfully"}), 200
-    return jsonify({"status": "error", "message": "User not found"}), 404
+def fetch_data():
+    # Получаем данные, отправленные с клиента
+    print("маршрут запущен")
+    data = request.json
+    selected_tables = data.get("tables", [])
+    selected_columns = data.get("columns", {})
+
+    # Результат для отправки обратно
+    result = {}
+
+    for table_name in selected_tables:
+        # Получаем класс таблицы по имени
+        table_class = globals().get(table_name)
+        if not table_class:
+            continue  # Если класс не найден, пропускаем
+
+        # Выбираем только указанные поля
+        fields = selected_columns.get(table_name, [])
+        if "id" not in fields:
+            fields.append("id")
+        try:
+            # Выполняем запрос к базе данных
+            query = db.session.query(*[getattr(table_class, field) for field in fields])
+            records = query.all()
+            
+            # Сохраняем результаты в виде списка словарей
+            result[table_name] = [dict(zip(fields, record)) for record in records]
+        except Exception as e:
+            print(f"Ошибка при запросе к таблице {table_name}: {e}")
+
+    print(result)
+    # Возвращаем результаты в формате JSON
+    return jsonify(result)
 
 
-@admin_bp.route("/delete_paragraph/<int:paragraph_id>", methods=["DELETE"])
+@admin_bp.route("/delete/<table_name>/<int:record_id>", methods=["DELETE"])
 @login_required
-def delete_paragraph(paragraph_id):
-    paragraph = Paragraph.query.get(paragraph_id)
-    if paragraph:
-        db.session.delete(paragraph)
+def delete_record(table_name, record_id):
+    # Получаем класс таблицы из словаря
+    table_class = current_app.config["TABLE_MODELS"].get(table_name)
+    print(table_class)
+    if not table_class:
+        return jsonify({"error": "Таблица не найдена в настройках config.py"}), 404
+
+    # Выполняем запрос для удаления записи
+    try:
+        record = db.session.query(table_class).get(record_id)
+        if record is None:
+            return jsonify({"error": "Запись не найдена"}), 404
+
+        db.session.delete(record)
         db.session.commit()
-        return jsonify({"status": "success", "message": "Paragraph deleted successfully"}), 200
-    return jsonify({"status": "error", "message": "Paragraph not found"}), 404
+        return jsonify({"success": True}), 200
 
-
-@admin_bp.route("/delete_profile/<int:profile_id>", methods=["DELETE"])
+    except Exception as e:
+        db.session.rollback()
+        print(f"Ошибка при удалении записи: {e}")
+        return jsonify({"error": "Ошибка при удалении записи"}), 500
+    
+    
+@admin_bp.route("/update/<table_name>/<int:record_id>", methods=["PUT"])
 @login_required
-def delete_profile(profile_id):
-    profile = UserProfile.query.get(profile_id)
-    if profile:
-        db.session.delete(profile)
+def update_record(table_name, record_id):
+    # Получаем класс таблицы из конфигурации
+    table_class = current_app.config["TABLE_MODELS"].get(table_name)
+    if not table_class:
+        return jsonify({"status": "error", "message": "Таблица не найдена в настройках config.py"}), 404
+
+    # Получаем данные из запроса
+    data = request.json
+    ignored_fields = ["user_pass"]
+    id_pattern = re.compile(r"(^|_)id(_|$)", re.IGNORECASE)
+
+    try:
+        # Ищем запись по ID
+        record = db.session.query(table_class).get(record_id)
+        if record is None:
+            return jsonify({"status": "error", "message": "Запись не найдена"}), 404
+
+        fields_was_ignored = []
+        
+        # Обновляем поля в записи
+        for key, value in data.items():
+            # Пропускаем поля с названием user_pass или содержащие id
+            if key in ignored_fields or id_pattern.search(key):
+                fields_was_ignored.append(key)
+                continue
+
+            # Проверяем, существует ли колонка в модели
+            column_attr = getattr(table_class, key, None)
+            if column_attr is None:
+                continue
+
+            # Получаем тип колонки
+            column_type = str(column_attr.property.columns[0].type)
+
+            # Преобразуем строковые значения "True" и "False" в булевые
+            if column_type == "BOOLEAN":
+                value = value.lower() == "true"
+
+            # Проверяем тип данных для Binary полей
+            elif "BINARY" in column_type.upper() and isinstance(value, str):
+                fields_was_ignored.append(key)  # Пропускаем строковые данные для бинарных полей
+                continue
+
+            # Обновляем поле, если оно существует в записи
+            setattr(record, key, value)
+
         db.session.commit()
-        return jsonify({"status": "success", "message": "Profile deleted successfully"}), 200
-    return jsonify({"status": "error", "message": "Profile not found"}), 404
+        
+        # Формируем сообщение для notification
+        notification_message = [
+            "Эти поля не были обновлены: " + ", ".join(fields_was_ignored) if fields_was_ignored else "Все поля обновлены"
+        ]
+        print(notification_message)
+        return jsonify({
+            "status": "success",
+            "notifications": notification_message,
+            "message": "Fields in the table were updated successfully"
+        }), 200
 
+    except Exception as e:
+        db.session.rollback()
+        print(f"Ошибка при обновлении записи: {e}")
+        return jsonify({"status": "error", "message": "Ошибка при обновлении записи"}), 500
 
-@admin_bp.route("/edit_user/<int:user_id>", methods=["PUT"])
-@login_required
-def edit_user(user_id):
-    user = User.query.get(user_id)
-    if user:
-        data = request.get_json()
-        user.user_name = data.get("user_name", user.user_name)
-        user.user_role = data.get("user_role", user.user_role)
-        db.session.commit()
-        return jsonify({"status": "success", "message": "User updated successfully"}), 200
-    return jsonify({"status": "error", "message": "User not found"}), 404
-
-
-@admin_bp.route("/edit_paragraph/<int:paragraph_id>", methods=["PUT"])
-@login_required
-def edit_paragraph(paragraph_id):
-    paragraph = Paragraph.query.get(paragraph_id)
-    if paragraph:
-        data = request.get_json()
-        paragraph.paragraph = data.get("paragraph", paragraph.paragraph)
-        paragraph.weight = data.get("weight", paragraph.weight)
-        db.session.commit()
-        return jsonify({"status": "success", "message": "Paragraph updated successfully"}), 200
-    return jsonify({"status": "error", "message": "Paragraph not found"}), 404
-
-
-@admin_bp.route("/edit_profile/<int:profile_id>", methods=["PUT"])
-@login_required
-def edit_profile(profile_id):
-    profile = UserProfile.query.get(profile_id)
-    if profile:
-        data = request.get_json()
-        profile.profile_name = data.get("profile_name", profile.profile_name)
-        db.session.commit()
-        return jsonify({"status": "success", "message": "Profile updated successfully"}), 200
-    return jsonify({"status": "error", "message": "Profile not found"}), 404
-
-
-
+    
+    
+    

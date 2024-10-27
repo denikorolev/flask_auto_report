@@ -3,64 +3,72 @@
 {% extends "base.html" %}
 {% block container %}
 
-<h1>Admin panel</h1>
+<h1>Welcome to Admin panel</h1>
 
-<p>Welcome</p>
+<div class="box">
+    <p>шаблон контейнера</p>
+</div>
 
-<h3>List of users</h3>
-{% if users %}
-    {% for user in users %}
-        <ul class="flex setup-users__list">
-            <li class="setup-users__item setup-users__item--name" style="margin-right: 5px; width: 100px;" contenteditable="true" > {{user.user_name}} </li>
-            <li class="setup-users__item setup-users__item--role" style="margin-right: 5px; width: 50px;" contenteditable="true" > {{user.user_role}} </li>
-            
-            {% if user.user_to_profiles %}
-                {% for profile in user.user_to_profiles %}
-                    <li class="setup-users__item setup-users__item--profile-name" style="margin-right: 5px; width: 100px;" contenteditable="true"> {{profile.profile_name}} </li>
-                    <li class="setup-users__item setup-users__item--profile-default" style="margin-right: 15px; font-weight: bold; width: 50px;" contenteditable="true"> {{profile.default_profile}} </li>
+
+
+<div class="container flex">
+    <div class="box admin-filters">
+        <h2>Панель фильтров</h2>
+    
+        {% if all_models_and_fields %}
+            <div class="admin-filters__form">
+                {% for table, columns in all_models_and_fields.items() %}
+                    <ul class="admin-filters__list">
+                        <!-- Чекбокс для названия таблицы -->
+                        <li class="admin-filters__item">
+                            <input type="checkbox" class="admin-filter__checkbox admin-filter__checkbox--table" 
+                                   value="{{ table }}" id="table-{{ table }}" 
+                                   onclick="toggleFields('{{ table }}')">
+                            <label for="table-{{ table }}" 
+                                   class="admin-filters__label admin-filters__label--table">Название таблицы: {{ table }}</label>
+                        </li>
+                        
+                        <!-- Список полей, изначально скрыт -->
+                        <div class="admin-filters__fields" id="fields-{{ table }}" style="display: none;">
+                            {% for column in columns %}
+                                <li class="admin-filters__item">
+                                    <input type="checkbox" class="admin-filter__checkbox admin-filter__checkbox--column" 
+                                           data-table="{{ table }}" value="{{ column }}" 
+                                           id="column-{{ table }}-{{ column }}" checked>
+                                    <label class="admin-filters__label admin-filters__label--column" 
+                                           for="column-{{ table }}-{{ column }}">Название поля в таблице: {{ column }}</label>
+                                </li>
+                            {% endfor %}
+                        </div>
+                    </ul>
                 {% endfor %}
-            {% else %}
-                <p style="margin-right: 15px; font-weight: bold;">This user havn't got profiles</p>
-            {% endif %}
-            <button type="button" class="btn setup-users__btn--delete" data-user-id="{{ user.id }}">Delete</button>
-            <button type="button" class="btn setup-users__btn--edit">edit</button>
-        </ul>
-    {% endfor %}
-{% endif %}
-
-<h3>List of paragraphs</h3>
-{% if paragraphs %}
-    {% for paragraph in paragraphs %}
-        <ul class="flex setup-paragraphs__list">
-            <li class="setup-paragraphs__item--text" style="margin-right: 5px; width: 200px;" contenteditable="true"> {{paragraph.paragraph}} </li>
-            <li class="setup-paragraphs__item--weight" style="margin-right: 5px; width: 50px;" contenteditable="true"> {{paragraph.paragraph_weight}} </li>
-            {% if paragraph.paragraph_to_types.type_name %}
-                <li class="setup-paragraphs__item--type" style="margin-right: 15px; width: 100px;" contenteditable="true"> {{paragraph.paragraph_to_types.type_name}} </li>
-            {% else %}
-                <p style="margin-right: 15px; font-weight: bold;">This paragraph hasn't type</p>
-            {% endif %}
-            <button type="button" class="btn setup-paragraphs__btn--delete" data-paragraph-id="{{ paragraph.id }}">Delete</button>
-            <button type="button" class="btn setup-paragraphs__btn--edit">edit</button>
-        </ul>
-    {% endfor %}
-{% endif %}
+    
+                <!-- Кнопка для отправки данных через JavaScript -->
+                <button type="button" class="admin-filters__submit" onclick="sendSelectedData()">Получить данные</button>
+            </div>
+        {% else %}
+            <p>Что-то пошло не так с получением информации о таблицах базы данных</p>
+        {% endif %}
+    </div>
+    
 
 
-<h3>List of profiles</h3>
-{% if profiles %}
-    {% for profile in profiles %}
-        <ul class="flex setup-profiles__list">
-            <li class="flex setup-profiles__item--name" style="margin-right: 5px; width: 200px;" contenteditable="true"> {{profile.profile_name}} </li>
-            {% if profile.profile_to_user.user_name %}
-                <li class="flex setup-profiles__item--user" style="margin-right: 15px; width: 100px;" contenteditable="true"> {{profile.profile_to_user.user_name}} </li>
-            {% else %}
-                <p style="margin-right: 15px; font-weight: bold;" contenteditable="true">This profile exist without user</p>
-            {% endif %}
-            <button type="button" class="btn setup-profiles__btn--delete" data-profile-id="{{ profile.id }}">Delete</button>
-            <button type="button" class="btn setup-profiles__btn--edit" data-profile-id="{{ profile.id }}">Edit</button>
-        </ul>
-    {% endfor %}
-{% endif %}
+    <div class="box">
+        <h2>Данные таблиц</h2>
+        <div class="container admin-data">
+            <!--Динамически заполняется данными-->
+        </div>
+    </div>
+    
+    
+</div>
+
+
+
+
+
+
+
 
 {% endblock container %}
 

@@ -1,138 +1,261 @@
 // admin.js
 
-document.addEventListener("DOMContentLoaded", function(){
-    userDeleteButtonClick();
-    userEditButtonClick();
+function toggleFields(tableName) {
+    // Получаем контейнер для полей таблицы
+    const fieldsContainer = document.getElementById(`fields-${tableName}`);
+    const tableCheckbox = document.getElementById(`table-${tableName}`);
 
-    paragraphDeleteButtonClick();
-    paragraphEditButtonClick();
-
-    profileDeleteButtonClick();
-    profileEditButtonClick();
-});
-
-
-function userDeleteButtonClick() {
-    document.querySelectorAll(".setup-users__btn--delete").forEach(button => {
-        button.addEventListener("click", function() {
-            let userId = this.dataset.userId;
-            userId = parseInt(userId, 10);
-            sendRequest({
-                url: `/admin/delete_user/${userId}`,
-                method: "DELETE"
-            }).then(response => {
-                if (response.status === "success") {
-                    console.log(response.message);
-                    location.reload(); 
-                } 
-            }).catch(error => {
-                console.error("Error deleting user:");
-            });
+    // Проверяем состояние чекбокса таблицы
+    if (tableCheckbox.checked) {
+        // Показываем список полей и отмечаем их
+        fieldsContainer.style.display = "block";
+        const columnCheckboxes = fieldsContainer.querySelectorAll(`.admin-filter__checkbox--column`);
+        columnCheckboxes.forEach(checkbox => {
+            checkbox.checked = true;
         });
+    } else {
+        // Скрываем список полей и снимаем отметки
+        fieldsContainer.style.display = "none";
+        const columnCheckboxes = fieldsContainer.querySelectorAll(`.admin-filter__checkbox--column`);
+        columnCheckboxes.forEach(checkbox => {
+            checkbox.checked = false;
+        });
+    }
+}
+
+
+function sendSelectedData() {
+    // Сбор выбранных таблиц
+    const selectedTables = Array.from(document.querySelectorAll(".admin-filter__checkbox--table:checked")).map(checkbox => checkbox.value);
+
+    // Сбор выбранных полей по каждой таблице
+    const selectedColumns = {};
+    selectedTables.forEach(table => {
+        const columns = Array.from(document.querySelectorAll(`.admin-filter__checkbox--column[data-table="${table}"]:checked`)).map(checkbox => checkbox.value);
+        if (columns.length > 0) {
+            selectedColumns[table] = columns;
+        }
+    });
+
+    // Формируем данные для отправки
+    const data = {
+        tables: selectedTables,
+        columns: selectedColumns
+    };
+
+    // Отправка данных на сервер с использованием sendRequest из api.js
+    sendRequest({
+        url: "/admin/fetch_data",
+        data: data
+    }).then(response => {
+        displayData(response);
+    }).catch(error => {
+        console.error("Ошибка при отправке данных:", error);
     });
 }
 
-function userEditButtonClick() {
-    document.querySelectorAll(".setup-users__btn--edit").forEach(button => {
-        button.addEventListener("click", function() {
-            const userId = this.previousElementSibling.dataset.userId; // Предполагаем, что предыдущий элемент — это кнопка "delete"
-            const userName = this.closest(".setup-users__list").querySelector(".setup-users__item--name").innerText;
-            const userRole = this.closest(".setup-users__list").querySelector(".setup-users__item--role").innerText;
 
-            sendRequest({
-                url: `/admin/edit_user/${userId}`,
-                method: "PUT",
-                data: { user_name: userName, user_role: userRole }
-            }).then(response => {
-                if (response.status === "success") {
-                    location.reload(); 
+
+function displayData(data) {
+    const dataContainer = document.querySelector(".admin-data");
+    dataContainer.innerHTML = ""; // Очистка контейнера перед добавлением новых данных
+
+    for (const [tableName, rows] of Object.entries(data)) {
+        const tableBlock = document.createElement("div");
+        tableBlock.classList.add("admin-data__table");
+
+        const tableTitle = document.createElement("h3");
+        tableTitle.textContent = `Название таблицы: ${tableName}`;
+        tableBlock.appendChild(tableTitle);
+
+        const table = document.createElement("table");
+        table.classList.add("admin-data__table-element");
+
+        if (rows.length > 0) {
+            const headerRow = document.createElement("tr");
+            const columnHeaders = Object.keys(rows[0]);
+
+            if (columnHeaders.includes("id")) {
+                columnHeaders.splice(columnHeaders.indexOf("id"), 1);
+                columnHeaders.unshift("id");
+            }
+
+            columnHeaders.forEach(column => {
+                const headerCell = document.createElement("th");
+                headerCell.textContent = column;
+                if (column === "id") {
+                    headerCell.style.color = "red";
                 }
-            }).catch(error => {
-                console.error("Error editing user:");
+                headerRow.appendChild(headerCell);
             });
-        });
-    });
+
+            const actionHeaderCell = document.createElement("th");
+            actionHeaderCell.textContent = "Action";
+            headerRow.appendChild(actionHeaderCell);
+            table.appendChild(headerRow);
+
+            rows.forEach(row => {
+                const rowElement = document.createElement("tr");
+                rowElement.setAttribute("data-id", row["id"]);
+                rowElement.setAttribute("data-table", tableName);
+
+                columnHeaders.forEach(column => {
+                    const cell = document.createElement("td");
+                    const cellData = row[column];
+
+                    // Добавляем data-атрибут для хранения имени колонки
+                    cell.setAttribute("data-column", column);
+
+                    if (column === "id") {
+                        cell.style.color = "red";
+                    }
+
+                    // Логика проверки данных
+                    if (isHash(cellData)) {
+                        cell.textContent = "вероятно хэш";
+                    } else if (isPasswordField(column)) {
+                        cell.textContent = "скрытый пароль";
+                    } else if (isBinaryData(cellData)) {
+                        cell.textContent = "вероятно бинарные данные";
+                    } else {
+                        cell.textContent = cellData !== undefined ? cellData : "";
+                    }
+
+                    if (column !== "id") {
+                        cell.setAttribute("data-editable", "true");
+                        cell.setAttribute("contenteditable", "false");
+                    }
+
+                    rowElement.appendChild(cell);
+                });
+
+                const actionCell = document.createElement("td");
+                actionCell.classList.add("admin-data__action-cell");
+
+                const editButton = document.createElement("button");
+                editButton.textContent = "Edit";
+                editButton.classList.add("btn", "btn-edit");
+                editButton.onclick = () => handleEdit(row.id, tableName, rowElement, editButton);
+
+                const deleteButton = document.createElement("button");
+                deleteButton.textContent = "Delete";
+                deleteButton.classList.add("btn", "btn-delete");
+                deleteButton.onclick = () => handleDelete(row.id, tableName);
+
+                actionCell.appendChild(editButton);
+                actionCell.appendChild(deleteButton);
+                rowElement.appendChild(actionCell);
+
+                table.appendChild(rowElement);
+            });
+        } else {
+            const noDataMessage = document.createElement("p");
+            noDataMessage.textContent = "Нет данных для отображения";
+            tableBlock.appendChild(noDataMessage);
+        }
+
+        tableBlock.appendChild(table);
+        dataContainer.appendChild(tableBlock);
+    }
 }
 
 
-function paragraphDeleteButtonClick() {
-    document.querySelectorAll(".setup-paragraphs__btn--delete").forEach(button => {
-        button.addEventListener("click", function() {
-            const paragraphId = this.dataset.paragraphId;
-            sendRequest({
-                url: `/admin/delete_paragraph/${paragraphId}`,
-                method: "DELETE"
-            }).then(response => {
-                if (response.status === "success") {
-                    console.log(response.message);
-                    location.reload();  
-                } 
-            }).catch(error => {
-                console.error("Error deleting paragraph:");
-            });
+
+function handleEdit(id, tableName, rowElement, editButton) {
+    const isEditing = editButton.textContent === "Save";
+
+    if (isEditing) {
+        const updatedData = {};
+
+        // Собираем значения всех редактируемых ячеек с учетом data-column
+        rowElement.querySelectorAll("td[data-editable='true']").forEach(cell => {
+            const columnName = cell.getAttribute("data-column");
+            updatedData[columnName] = cell.textContent.trim();
+            cell.setAttribute("contenteditable", "false");
         });
-    });
+
+        sendRequest({
+            url: `/admin/update/${tableName}/${id}`,
+            method: "PUT",
+            data: updatedData
+        })
+        .then(response => {
+            if (response.success) {
+                console.log(`Запись с id ${id} успешно обновлена.`);
+            } else {
+                console.error("Ошибка при обновлении записи:", response.error);
+            }
+        })
+        .catch(error => {
+            console.error("Произошла ошибка:", error);
+        });
+
+        editButton.textContent = "Edit";
+    } else {
+        // Переключаем ячейки в режим редактирования
+        rowElement.querySelectorAll("td[data-editable='true']").forEach(cell => {
+            cell.setAttribute("contenteditable", "true");
+        });
+
+        editButton.textContent = "Save";
+    }
 }
 
-function paragraphEditButtonClick() {
-    document.querySelectorAll(".setup-paragraphs__btn--edit").forEach(button => {
-        button.addEventListener("click", function() {
-            const paragraphId = this.previousElementSibling.dataset.paragraphId;
-            const paragraphText = this.closest(".setup-paragraphs__list").querySelector(".setup-paragraphs__item--text").innerText;
-            const paragraphWeight = this.closest(".setup-paragraphs__list").querySelector(".setup-paragraphs__item--weight").innerText;
 
-            sendRequest({
-                url: `/admin/edit_paragraph/${paragraphId}`,
-                method: "PUT",
-                data: { paragraph: paragraphText, weight: paragraphWeight }
-            }).then(response => {
-                if (response.status === "success") {
-                    location.reload();  // Перезагружаем страницу после редактирования
-                }
-            }).catch(error => {
-                console.error("Error editing paragraph:", error);
-            });
+
+function handleDelete(id, tableName) {
+    if (confirm(`Вы уверены, что хотите удалить запись с id ${id} из таблицы ${tableName}?`)) {
+        sendRequest({
+            url: `/admin/delete/${tableName}/${id}`,
+            method: "DELETE",
+        })
+        .then(response => {
+            if (response.success) {
+                console.log(`Запись с id ${id} успешно удалена.`);
+                // Обновляем данные на экране после удаления
+                displayDataAfterDeletion(id, tableName);
+            } else {
+                console.error("Ошибка при удалении записи:", response.error);
+            }
+        })
+        .catch(error => {
+            console.error("Произошла ошибка:", error);
         });
-    });
+    }
 }
 
 
-function profileDeleteButtonClick() {
-    document.querySelectorAll(".setup-profiles__btn--delete").forEach(button => {
-        button.addEventListener("click", function() {
-            const profileId = this.dataset.profileId;
-            sendRequest({
-                url: `/admin/delete_profile/${profileId}`,
-                method: "DELETE"
-            }).then(response => {
-                if (response.status === "success") {
-                    console.log(response.message);
-                    location.reload();  // Перезагружаем страницу для обновления списка профилей
-                } 
-            }).catch(error => {
-                console.error("Error deleting profile:");
-            });
-        });
-    });
+
+
+// Функция для обновления интерфейса после удаления
+function displayDataAfterDeletion(id, tableName) {
+    const rowToDelete = document.querySelector(`[data-id="${id}"][data-table="${tableName}"]`);
+    console.log(rowToDelete)
+    if (rowToDelete) {
+        rowToDelete.remove();
+    }
 }
 
-function profileEditButtonClick() {
-    document.querySelectorAll(".setup-profiles__btn--edit").forEach(button => {
-        button.addEventListener("click", function() {
-            const profileId = this.dataset.profileId;
-            const profileName = this.closest(".setup-profiles__list").querySelector(".setup-profiles__item--name").innerText;
 
-            sendRequest({
-                url: `/admin/edit_profile/${profileId}`,
-                method: "PUT",
-                data: { profile_name: profileName }
-            }).then(response => {
-                if (response.status === "success") {
-                    location.reload();  
-                }
-            }).catch(error => {
-                console.error("Error editing profile:", error);
-            });
-        });
-    });
+
+
+
+// Проверка, является ли значение вероятным хэшем
+function isHash(value) {
+    const hashRegex = /^[a-f0-9]{32,64}$/i;
+    return typeof value === "string" && hashRegex.test(value);
 }
+
+// Проверка, является ли значение полем пароля
+function isPasswordField(columnName) {
+    return typeof columnName === "string" && (columnName.toLowerCase().includes("user_pass") || columnName.toLowerCase().includes("hash"));
+}
+
+// Проверка, являются ли данные бинарными
+function isBinaryData(value) {
+    return typeof value === "string" && !/[a-zA-Z\s]/.test(value);
+}
+
+
+
+

@@ -60,6 +60,9 @@ function sendRequest({ url, method = "POST", data = {}, responseType = "json" })
 }
 
 
+
+
+
 /**
  * Sends a request to the server to generate an impression based on the input text and assistant list.
  *

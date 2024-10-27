@@ -162,6 +162,10 @@ body {
     padding: 15px; 
 }
 
+.box {
+    padding: 10px;
+}
+
 
 /* блок авторизации */
 
@@ -641,4 +645,40 @@ body {
 .edit_delete_buttons_group {
     display: flex;
     margin: 0 25px 0 25px;
+}
+
+
+/* Стили для блока данных в admin-data */
+.admin-data__table {
+    margin-bottom: 20px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+.admin-data__table h3 {
+    margin-bottom: 10px;
+    font-size: 1.2em;
+    color: #333;
+}
+
+.admin-data__table-element {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.admin-data__table-element th, .admin-data__table-element td {
+    padding: 8px;
+    border: 1px solid #ddd;
+    text-align: left;
+}
+
+.admin-data__table-element th {
+    background-color: #f2f2f2;
+    font-weight: bold;
+}
+
+.admin-data__action-cell {
+    min-width: 150px;
+    text-align: center;
 }
