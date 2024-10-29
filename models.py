@@ -117,7 +117,7 @@ class UserProfile(BaseModel):
     user_id = db.Column(db.BigInteger, db.ForeignKey('users.id'), nullable=False)
     profile_name = db.Column(db.String(255), nullable=False)
     description = db.Column(db.String(500), nullable=True)
-    default_profile = db.Column(db.Boolean, default=False, nullable=True)
+    default_profile = db.Column(db.Boolean, default=False, nullable=False)
     
     
     profile_to_reports = db.relationship('Report', lazy=True)
@@ -193,7 +193,7 @@ class UserProfile(BaseModel):
 
 class ReportType(BaseModel):
     __tablename__ = 'report_type'
-    profile_id = db.Column(db.BigInteger, db.ForeignKey('user_profiles.id'), nullable=True)
+    profile_id = db.Column(db.BigInteger, db.ForeignKey('user_profiles.id'), nullable=False)
     type = db.Column(db.String(50), nullable=False)
     type_index = db.Column(db.Integer, nullable=False)
     
@@ -457,7 +457,7 @@ class Paragraph(BaseModel):
     title_paragraph = db.Column(db.Boolean, default=False, nullable=False)
     bold_paragraph = db.Column(db.Boolean, default=False, nullable=False)
     comment = db.Column(db.String(255), nullable=True)
-    paragraph_weight = db.Column(db.SmallInteger, nullable=True) 
+    paragraph_weight = db.Column(db.SmallInteger, nullable=False) 
 
     paragraph_to_sentences = db.relationship('Sentence', lazy=True, backref=db.backref("sentence_to_paragraph"), cascade="all, delete-orphan")
     paragraph_to_types = db.relationship('ParagraphType')
@@ -514,7 +514,7 @@ class Sentence(BaseModel):
 
 class KeyWord(BaseModel):
     __tablename__ = 'key_words_group'
-    profile_id = db.Column(db.BigInteger, db.ForeignKey('user_profiles.id'), nullable=True)
+    profile_id = db.Column(db.BigInteger, db.ForeignKey('user_profiles.id'), nullable=False)
     group_index = db.Column(db.Integer, nullable=False)
     index = db.Column(db.Integer, nullable=False)
     key_word = db.Column(db.String(50), nullable=False)

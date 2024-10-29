@@ -23,7 +23,7 @@ function toggleFields(tableName) {
     }
 }
 
-
+// Функция для отправки на сервер данных из чекбоксов, для фильтрации
 function sendSelectedData() {
     // Сбор выбранных таблиц
     const selectedTables = Array.from(document.querySelectorAll(".admin-filter__checkbox--table:checked")).map(checkbox => checkbox.value);
@@ -111,12 +111,8 @@ function displayData(data) {
                     }
 
                     // Логика проверки данных
-                    if (isHash(cellData)) {
-                        cell.textContent = "вероятно хэш";
-                    } else if (isPasswordField(column)) {
+                    if (typeof column === "string" && (column.toLowerCase().includes("user_pass") || column.toLowerCase().includes("hash"))) {
                         cell.textContent = "скрытый пароль";
-                    } else if (isBinaryData(cellData)) {
-                        cell.textContent = "вероятно бинарные данные";
                     } else {
                         cell.textContent = cellData !== undefined ? cellData : "";
                     }
@@ -240,21 +236,11 @@ function displayDataAfterDeletion(id, tableName) {
 
 
 
-// Проверка, является ли значение вероятным хэшем
-function isHash(value) {
-    const hashRegex = /^[a-f0-9]{32,64}$/i;
-    return typeof value === "string" && hashRegex.test(value);
-}
-
 // Проверка, является ли значение полем пароля
 function isPasswordField(columnName) {
     return typeof columnName === "string" && (columnName.toLowerCase().includes("user_pass") || columnName.toLowerCase().includes("hash"));
 }
 
-// Проверка, являются ли данные бинарными
-function isBinaryData(value) {
-    return typeof value === "string" && !/[a-zA-Z\s]/.test(value);
-}
 
 
 
