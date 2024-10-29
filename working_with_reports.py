@@ -29,7 +29,7 @@ def choosing_report():
             data = request.get_json()
             rep_type = data.get("report_type")
             rep_subtype = data.get("report_subtype")
-            reports = Report.query.filter_by(userid=current_user.id, report_type=rep_type, report_subtype=rep_subtype).all()
+            reports = Report.find_by_subtypes(rep_subtype)
 
             # Возвращаем данные в формате JSON
             return jsonify({
@@ -70,7 +70,7 @@ def working_with_reports():
     
     key_words_obj = KeyWord.get_keywords_for_report(g.current_profile.id, current_report_id)
     key_words_group = group_keywords(key_words_obj)
-
+    print(report_data)
     
     return render_template(
         "working_with_report.html", 

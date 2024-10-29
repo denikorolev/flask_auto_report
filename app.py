@@ -5,7 +5,7 @@ from flask_login import LoginManager, login_required, current_user
 from config import get_config, Config
 from flask_migrate import Migrate
 from auth import auth_bp  
-from models import db, User, UserProfile, Paragraph
+from models import db, User, UserProfile, Paragraph, ReportType, KeyWord
 import os
 import logging
 
@@ -68,7 +68,7 @@ def test_db_connection():
         print(f"Database connection failed: {e}", "error")
         return False
 
-def test_befor_request(message):
+def test_before_request(message):
     try:
         us = current_user.user_name or "noname"
     except Exception as e:
@@ -80,6 +80,41 @@ def test_befor_request(message):
     print(f"{message}:  {us} and {pr}")
 
 
+def set_profile_id_to_report_type():
+    print("starting function set_profile_id_to_report_type")
+    report_types = ReportType.query.all()
+    counter = 0
+    for type in report_types:
+        if not type.profile_id:
+            type.profile_id = 1
+            try:
+                type.save()
+            except Exception as e:
+                print(f"Error save changes: {e}")
+    if counter < 1:
+        print("there is no data to change")
+    else:
+        print(f"{counter} fields was updated")
+    print("ending function set_profile_id_to_report_type")
+    return
+
+def set_profile_id_to_key_words():
+    print("starting function set_profile_id_to_key_words!!!")
+    key_words = KeyWord.query.all()
+    counter = 0
+    for kw in key_words:
+        if not kw.profile_id:
+            kw.profile_id = 1
+            try:
+                kw.save()
+            except Exception as e:
+                print(f"Error save changes to key words: {e}")
+    if counter < 1:
+        print("there is no more data to change")
+    else:
+        print(f"{counter} fields was updated")
+    print("ending function set_profile_id_to_key_words!!!")
+    return
 
 
 
@@ -100,16 +135,16 @@ def load_current_profile():
             if 'profile_id' in session:
                 g.current_profile = UserProfile.find_by_id(session['profile_id'])
                 
-                test_befor_request("Просто загрузил профиль в g ")
+                test_before_request("Просто загрузил профиль в g ")
                 # Если профиль не найден или не принадлежит текущему пользователю, удаляем его из сессии
                 if not g.current_profile or g.current_profile.user_id != current_user.id:
                     session.pop('profile_id', None)
                     g.current_profile = None
-                    test_befor_request("ОШИБКА ")
+                    test_before_request("ОШИБКА ")
             else:
                 # Проверяем, если у пользователя только один профиль
                 if user_profiles[0] == "Default":
-                    test_befor_request("Загрузился в ветку Default ")
+                    test_before_request("Загрузился в ветку Default ")
                     render_template("welcome_page.html",
                                     title="Welcome",
                                     menu=[])
@@ -125,7 +160,7 @@ def load_current_profile():
                 
             # Меню обновляется на основе текущего профиля
             app.config['MENU'] = Config.get_menu()
-            test_befor_request("и доехал до конца функции ")
+            test_before_request("и доехал до конца функции ")
 
         else:
             app.config['MENU'] = []
@@ -148,7 +183,9 @@ def index():
         elif len(user_profiles) > 1:
             pass
         
-
+    set_profile_id_to_report_type()
+    set_profile_id_to_key_words()
+    
     return render_template('index.html', 
                            title="Radiologary", 
                            menu=menu,

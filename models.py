@@ -297,9 +297,9 @@ class ReportSubtype(BaseModel):
         return new_subtype
     
     @classmethod
-    def find_by_report_type(cls, type):
+    def find_by_report_type(cls, type_id):
         """Возвращает все подтипы, связанные с профилем."""
-        return cls.query.filter_by(type=type).all()
+        return cls.query.filter_by(type=type_id).all()
 
 
 class Report(BaseModel):
@@ -335,6 +335,11 @@ class Report(BaseModel):
     def find_by_profile(cls, profile_id):
         """Возвращает все отчеты, связанные с данным профилем."""
         return cls.query.filter_by(profile_id=profile_id).all()
+    
+    @classmethod
+    def find_by_subtypes(cls, report_subtype):
+        """Возвращает все отчеты, связанные с данным подтипом"""
+        return cls.query.filter_by(report_subtype=report_subtype).all()
     
     def get_impression(self):
         """

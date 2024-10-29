@@ -22,9 +22,11 @@ def report_settings():
     
     profile_types = ReportType.find_by_profile(g.current_profile.id)
     profile_subtypes = []
-    for type in profile_types:
-        subtypes = ReportSubtype.find_by_report_type(type=type)
-        profile_subtypes.append(subtypes)
+    for type_ in profile_types:
+        subtypes = ReportSubtype.find_by_report_type(type_id=type_.id)
+        for subtype in subtypes:
+            profile_subtypes.append(subtype)
+    print(profile_subtypes)
         
         
     paragraph_types = ParagraphType.query.all() 
@@ -139,7 +141,7 @@ def edit_type():
 
     try:
         # Поиск типа по ID и обновление имени
-        type_for_editing = ReportType.query.filter_by(id=type_id, user_id=current_user.id).first()
+        type_for_editing = ReportType.query.filter_by(id=type_id, profile_id=g.current_profile.id).first()
 
         if not type_for_editing:
             return jsonify({"status": "error", "message": "You do not have permission to edit this type."}), 403
@@ -148,7 +150,8 @@ def edit_type():
         type_for_editing.save()  # Сохранение изменений в базе данных
         return jsonify({"status": "success", "message": "Type edited successfully."}), 200
     except Exception as e:
-        return jsonify({"status": "error", f"message": "Type wasn't edited because of {str(e)}."}), 400
+        print(f"can't edit typt, error: {e}")
+        return jsonify({"status": "error", "message": "Type wasn't edited."}), 400
 
 
 @report_settings_bp.route('/add_subtype', methods=['POST'])
@@ -199,7 +202,7 @@ def edit_subtype():
 
     try:
         # Поиск подтипа по ID и обновление имени
-        subtype_for_editing = ReportSubtype.query.filter_by(id=subtype_id, user_id=current_user.id).first()
+        subtype_for_editing = ReportSubtype.query.filter_by(id=subtype_id).first()
 
         if not subtype_for_editing:
             return jsonify({"status": "error", "message": "You do not have permission to edit this subtype."}), 403
@@ -208,4 +211,5 @@ def edit_subtype():
         subtype_for_editing.save()  # Сохранение изменений в базе данных
         return jsonify({"status": "success", "message": "Subtype edited successfully."}), 200
     except Exception as e:
-        return jsonify({"status": "error", f"message": "Subtype wasn't edited because of {str(e)}."}), 400
+        print(f"can't save changes of subtype, error: {e}")
+        return jsonify({"status": "error", "message": "Subtype wasn't edited."}), 400
