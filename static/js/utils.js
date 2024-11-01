@@ -114,3 +114,35 @@ function filterReportsByType(reportTypeSelect, existingReportList) {
         }
     });
 }
+
+
+
+
+/**
+ * Finds the maximum numeric value among a collection of input elements.
+ * 
+ * @param {NodeList|Array} indexInputs - A collection of input elements whose values are to be evaluated as integers.
+ * @returns {number} - The highest integer value found among the input elements, or 0 if the collection is empty or contains no valid numbers.
+ */
+function findMaxIndex(indexInputs) {
+    let maxIndex = 0;
+
+    if (indexInputs.length === 0) {
+        return maxIndex;  // Return 0 if there are no elements
+    }
+
+    indexInputs.forEach(input => {
+        const index = parseInt(input.value, 10);
+        if (!isNaN(index) && index > maxIndex) {
+            maxIndex = index;
+        }
+    });
+
+    return maxIndex;
+}
+
+
+
+
+
+

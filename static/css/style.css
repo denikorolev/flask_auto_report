@@ -357,7 +357,7 @@ body {
     max-width: 100%;
 }
 
-.report_input__item {
+.input { /*вместо report_input__item*/
     max-height: 25px;
     margin-right: 10px;
     margin-bottom: 10px;
@@ -367,20 +367,32 @@ body {
     font-size: 14px;
 }
 
-.report_input__item--type {
+
+.input--medium {
     max-width: 50px;
 }
 
-.report_input__item--index {
+.input--short {
     width: auto;
     min-width: 5px;
     max-width: 40px;
 }
 
-.report_input__item--name {
-    min-width: 20%;
-    max-width: 50%;
+.input--wide {
+    min-width: 200px;
+    max-width: 800px;
 }
+
+
+
+
+
+.edit-paragraph__input{
+    font-size: 14px; /* сдублировал с .input чтобы не оставлять класс пустым */
+}
+
+
+
 
 .report__btn {
     margin-right: 10px;

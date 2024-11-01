@@ -1,6 +1,6 @@
 # editing_report.py
 
-from flask import Blueprint, render_template, request, current_app, jsonify
+from flask import Blueprint, render_template, request, current_app, jsonify, g
 from flask_login import current_user, login_required
 from models import db, Report, Paragraph, Sentence, ParagraphType
 from errors_processing import print_object_structure
@@ -22,18 +22,18 @@ def edit_report():
 
     if report_id:
         report = Report.query.get(report_id)
-        if not report or report.userid != current_user.id:
-            return jsonify(success=False, message="Report not found or you don't have permission to edit it"), 403
+        if not report or report.profile_id != g.current_profile.id:
+            return jsonify({"status": "error", "message": "Report not found or you don't have permission to edit it"}), 403
 
-    report_paragraphs = sorted(report.paragraphs, key=lambda p: p.paragraph_index) if report else []
+    report_paragraphs = sorted(report.report_to_paragraphs, key=lambda p: p.paragraph_index) if report else []
     for paragraph in report_paragraphs:
-        paragraph.sentences = sorted(paragraph.sentences, key=lambda s: (s.index, s.weight))
+        paragraph.paragraph_to_sentences = sorted(paragraph.paragraph_to_sentences, key=lambda s: (s.index, s.weight))
         # Добавляем маркер для разделения предложений
         previous_index = None
-        for sentence in paragraph.sentences:
+        for sentence in paragraph.paragraph_to_sentences:
             sentence.show_separator = previous_index is not None and previous_index != sentence.index
             previous_index = sentence.index
-            
+    print(report_paragraphs)
     paragraph_types = ParagraphType.query.all()
 
 
@@ -46,24 +46,21 @@ def edit_report():
                            )
 
 
-@editing_report_bp.route('/update_report', methods=['POST'])
+@editing_report_bp.route('/update_report', methods=['PUT'])
 @login_required
 def update_report():
-    if not request.is_json:
-        return jsonify({"status": "error", "message": "Invalid request format"}), 400
 
-    data = request.get_json()
-    report_id = data.get("report_id")
+    report_id = request.form.get("report_id")
     report = Report.query.get(report_id)
-
-    if not report or report.userid != current_user.id:
-        return jsonify({"status": "error", "message": "Report not found or you don't have permission to edit it"}), 403
+    
+    if not report or report.profile_id != g.current_profile.id:
+        return jsonify({"status": "error", "message": "Report not found or profile data of this paragraph doesn't match with current profile"}), 403
 
     try:
-        report.report_name = data.get("report_name")
-        report.comment = data.get("comment")
-        report_side_value = data.get("report_side")
-        report.report_side = True if report_side_value == "true" else False if report_side_value == "false" else False
+        report.report_name = request.form.get("report_name")
+        report.comment = request.form.get("comment")
+        report_side_value = request.form.get("report_side")
+        report.report_side = True if report_side_value == "true" else False
         report.save()
         return jsonify({"status": "success", "message": "Report updated successfully"}), 200
     except Exception as e:
@@ -74,24 +71,17 @@ def update_report():
 @editing_report_bp.route('/new_paragraph', methods=['POST'])
 @login_required
 def new_paragraph():
-    if not request.is_json:
-        return jsonify({"status": "error", "message": "Invalid request format"}), 400
-
-    data = request.get_json()
-    report_id = data.get("report_id")
+    
+    report_id = request.json.get("report_id")
+    print(report_id)
     report = Report.query.get(report_id)
 
-    if not report or report.userid != current_user.id:
-        return jsonify({"status": "error", "message": "Report not found or you don't have permission to edit it"}), 403
+    if not report or report.profile_id != g.current_profile.id:
+        return jsonify({"status": "error", "message": "Report not found or it's profile data doesn't match with current profile"}), 403
 
     try:
-        paragraph_index = len(report.paragraphs) + 1
-        paragraph_visible = data.get("paragraph_visible") == "True"
-        title_paragraph = data.get("title_paragraph") == "True"
-        bold_paragraph = data.get("bold_paragraph") == "True"
+        paragraph_index = len(report.report_to_paragraphs) + 1
         
-        
-        # Найти тип параграфа "text" в базе данных и получить его ID
         default_paragraph_type = ParagraphType.query.filter_by(type_name="text").first()
         if not default_paragraph_type:
             return jsonify({"status": "error", "message": "Default paragraph type 'text' not found."}), 400
@@ -100,9 +90,9 @@ def new_paragraph():
             paragraph_index=paragraph_index,
             report_id=report.id,
             paragraph="insert your text",
-            paragraph_visible=paragraph_visible,
-            title_paragraph=title_paragraph,
-            bold_paragraph=bold_paragraph,
+            paragraph_visible=True,
+            title_paragraph=False,
+            bold_paragraph=False,
             type_paragraph_id=default_paragraph_type.id,
             comment=None,
             paragraph_weight=1
@@ -115,26 +105,20 @@ def new_paragraph():
 @editing_report_bp.route('/edit_paragraph', methods=['POST'])
 @login_required
 def edit_paragraph():
-    if not request.is_json:
-        return jsonify({"status": "error", "message": "Invalid request format"}), 400
 
-    data = request.get_json()
-    paragraph_id = data.get("paragraph_id")
+    paragraph_id = request.form.get("paragraph_id")
     paragraph_for_edit = Paragraph.query.get(paragraph_id)
 
-    if not paragraph_for_edit:
-        return jsonify({"status": "error", "message": "Paragraph not found"}), 404
-
-    if paragraph_for_edit.report.userid != current_user.id:
-        return jsonify({"status": "error", "message": "You don't have permission to edit this paragraph"}), 403
+    if not paragraph_for_edit or paragraph_for_edit.paragraph_to_report.profile_id != g.current_profile.id:
+        return jsonify({"status": "error", "message": "Paragraph not found or data of this paragraph doesn't match with current profile"}), 404
 
     try:
         # Получаем предлагаемый тип параграфа
-        new_type_paragraph_id = int(data.get("paragraph_type"))
+        new_type_paragraph_id = int(request.form.get("paragraph_type"))
         current_report_id = paragraph_for_edit.report_id
         # Список типов параграфов, которые могут быть не уникальными
         allowed_paragraph_types = [ParagraphType.find_by_name("text"), ParagraphType.find_by_name("custom"), ParagraphType.find_by_name("title")]
-        # Сначала проверим, если предлагаемый тип не 'text' и не 'custom'
+        # Сначала проверим, если предлагаемый тип не 'text' и не 'custom' и не "title"
         if new_type_paragraph_id not in allowed_paragraph_types:
             # Проверим, существует ли уже параграф с таким типом для данного отчета
             existing_paragraph = Paragraph.query.filter_by(
@@ -145,11 +129,11 @@ def edit_paragraph():
             if existing_paragraph and existing_paragraph.id != paragraph_for_edit.id:
                 # Если существует другой параграф с этим типом, не обновляем тип
                 # Сохраняем остальные изменения
-                paragraph_for_edit.paragraph_index = data.get("paragraph_index")
-                paragraph_for_edit.paragraph = data.get("paragraph")
-                paragraph_for_edit.paragraph_visible = data.get("paragraph_visible")
-                paragraph_for_edit.title_paragraph = data.get("title_paragraph")
-                paragraph_for_edit.bold_paragraph = data.get("bold_paragraph")
+                paragraph_for_edit.paragraph_index = request.form.get("paragraph_index")
+                paragraph_for_edit.paragraph = request.form.get("paragraph_name")
+                paragraph_for_edit.paragraph_visible = request.form.get("paragraph_visible") == "on"
+                paragraph_for_edit.title_paragraph = request.form.get("title_paragraph") == "on"
+                paragraph_for_edit.bold_paragraph = request.form.get("bold_paragraph") == "on"
 
                 paragraph_for_edit.save()
                 return jsonify({
@@ -158,11 +142,11 @@ def edit_paragraph():
                 }), 200
 
         # Если тип 'text', 'custom' или такого типа еще нет, сохраняем все изменения, включая тип
-        paragraph_for_edit.paragraph_index = data.get("paragraph_index")
-        paragraph_for_edit.paragraph = data.get("paragraph")
-        paragraph_for_edit.paragraph_visible = data.get("paragraph_visible")
-        paragraph_for_edit.title_paragraph = data.get("title_paragraph")
-        paragraph_for_edit.bold_paragraph = data.get("bold_paragraph")
+        paragraph_for_edit.paragraph_index = request.form.get("paragraph_index")
+        paragraph_for_edit.paragraph = request.form.get("paragraph_name")
+        paragraph_for_edit.paragraph_visible = request.form.get("paragraph_visible") == "on"
+        paragraph_for_edit.title_paragraph = request.form.get("title_paragraph") == "on"
+        paragraph_for_edit.bold_paragraph = request.form.get("bold_paragraph") == "on"
         paragraph_for_edit.type_paragraph_id = new_type_paragraph_id
 
         paragraph_for_edit.save()
@@ -172,21 +156,15 @@ def edit_paragraph():
         return jsonify({"status": "error", "message": f"Something went wrong. Error code: {e}"}), 400
 
 
-@editing_report_bp.route('/delete_paragraph', methods=['POST'])
+@editing_report_bp.route('/delete_paragraph', methods=["DELETE"])
 @login_required
 def delete_paragraph():
-    if not request.is_json:
-        return jsonify({"status": "error", "message": "Invalid request format"}), 400
-
-    data = request.get_json()
-    paragraph_id = data.get("paragraph_id")
+    
+    paragraph_id = request.json.get("paragraph_id")
     paragraph = Paragraph.query.get(paragraph_id)
 
-    if not paragraph:
-        return jsonify({"status": "error", "message": "Paragraph not found"}), 404
-
-    if paragraph.report.userid != current_user.id:
-        return jsonify({"status": "error", "message": "You don't have permission to delete this paragraph"}), 403
+    if not paragraph or paragraph.paragraph_to_report.profile_id != g.current_profile.id:
+        return jsonify({"status": "error", "message": "Paragraph not found or data of this paragraph doesn't match with current profile"}), 404
 
     try:
         Paragraph.delete_by_id(paragraph_id)
@@ -200,25 +178,29 @@ def delete_paragraph():
 def edit_sentences_bulk():
 
     if not request.is_json:
-        return jsonify(success=False, message="Invalid request format"), 400
+        return jsonify({"status": "error", "message": "Invalid request format"}), 400
 
     data = request.get_json()
-    print_object_structure(data)
+    print(data)
     try:
         for sentence_data in data["sentences"]:
-            print(sentence_data)
             if sentence_data["sentence_id"] == "new":
                 # Логика для создания нового предложения
                 print(f"Creating new sentence for paragraph_id={sentence_data['add_sentence_paragraph']}")
                 sentence_index = sentence_data["sentence_index"]
                 paragraph_id = sentence_data["add_sentence_paragraph"]
-                Sentence.create(
-                    paragraph_id=paragraph_id,
-                    index=sentence_index,
-                    weight=sentence_data["sentence_weight"],
-                    comment=sentence_data["sentence_comment"],
-                    sentence=sentence_data["sentence_sentence"]
-                )
+                try:
+                    Sentence.create(
+                        paragraph_id=paragraph_id,
+                        index=sentence_index,
+                        weight=sentence_data["sentence_weight"],
+                        comment=sentence_data["sentence_comment"],
+                        sentence=sentence_data["sentence_sentence"]
+                    )
+                except Exception as e:
+                    print("can't create new sentence")
+                    return jsonify({"status": "error", "message": "can't create new sentence"}), 500
+                    
             else:
                 # Логика для обновления существующего предложения
                 sentence_for_edit = Sentence.query.get(sentence_data["sentence_id"])

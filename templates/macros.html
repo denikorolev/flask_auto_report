@@ -2,34 +2,33 @@
   
 <!-- использую в report_editing -->
 {% macro render_sentence(sentence, is_first) %}
-<div class="flex">
-    <input class="report_input__item report_input__item--index" type="hidden" id="sentence_id" name="sentence_id" value="{{ sentence.id }}" data-sentence-id="{{ sentence.id }}">
+<div class="flex edit-sentence__wrapper">
     <div class="flex_column">
         {% if is_first %}
-            <label class="report_label__item" for="sentence_index">Index:</label>
+            <label class="label" for="sentence_index">Index:</label>
         {% endif %}
-        <input class="report_input__item report_input__item--index" type="text" id="sentence_index" name="sentence_index" value="{{ sentence.index }}" data-sentence-id="{{ sentence.id }}">
+        <input class="input input--short" type="text" id="sentence_index" name="sentence_index" value="{{ sentence.index }}" data-sentence-id="{{ sentence.id }}">
     </div>
     <div class="flex_column">
         {% if is_first %}
-            <label class="report_label__item" for="sentence_weight">Weight:</label>
+            <label class="label" for="sentence_weight">Weight:</label>
         {% endif %}
-        <input class="report_input__item report_input__item--index" type="text" id="sentence_weight" name="sentence_weight" value="{{ sentence.weight }}" data-sentence-id="{{ sentence.id }}">
+        <input class="input input--short" type="text" id="sentence_weight" name="sentence_weight" value="{{ sentence.weight }}" data-sentence-id="{{ sentence.id }}">
     </div>
     <div class="flex_column">
         {% if is_first %}
-            <label class="report_label__item" for="sentence_comment">Comment:</label>
+            <label class="label" for="sentence_comment">Comment:</label>
         {% endif %}
-        <input class="report_input__item report_input__item--index" type="text" id="sentence_comment" name="sentence_comment" value="{{ sentence.comment }}" data-sentence-id="{{ sentence.id }}">
+        <input class="input input--short" type="text" id="sentence_comment" name="sentence_comment" value="{{ sentence.comment }}" data-sentence-id="{{ sentence.id }}">
     </div>
     <div class="flex_column">
         {% if is_first %}
-            <label class="report_label__item" for="sentence_sentence">Sentence text:</label>
+            <label class="label" for="sentence_sentence">Sentence text:</label>
         {% endif %}
-        <input class="report_input__item report_input__item--name temporary_wide" type="text" id="sentence_sentence" name="sentence_sentence" value="{{ sentence.sentence }}" data-sentence-id="{{ sentence.id }}">
+        <input class="input input--wide" type="text" id="sentence_sentence" name="sentence_sentence" value="{{ sentence.sentence }}" data-sentence-id="{{ sentence.id }}">
     </div>
     
-    <button class="btn report__btn delete-sentence-btn" type="button" data-sentence-id="{{ sentence.id }}">delete_sentence</button>
+    <button class="btn report__btn edit-paragraph__btn--delete-sentence" type="button" data-sentence-id="{{ sentence.id }}" onclick="deleteSentenceButton(this)">delete_sentence</button>
 </div>
 {% endmacro %}
 
