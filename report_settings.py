@@ -1,14 +1,9 @@
 # report_settings.py
 
-from flask import Blueprint, render_template, request, redirect, current_app, jsonify, g
-from flask_login import login_required, current_user
-from models import db, ReportType, ReportSubtype, KeyWord, Report, ParagraphType 
-from itertools import chain
-from file_processing import file_uploader, allowed_file
-from sentence_processing import group_keywords, sort_key_words_group, process_keywords, check_existing_keywords, extract_keywords_from_doc
-from errors_processing import print_object_structure
-from utils import ensure_list, get_max_index
-from db_processing import add_keywords_to_db
+from flask import Blueprint, render_template, request, current_app, jsonify, g
+from flask_login import login_required
+from models import db, ReportType, ReportSubtype, ParagraphType 
+from file_processing import file_uploader
 
 report_settings_bp = Blueprint('report_settings', __name__)
 
@@ -95,7 +90,7 @@ def add_paragraph_type():
 @report_settings_bp.route('/add_type', methods=['POST'])
 @login_required
 def add_type():
-    """Handles adding a new report type."""
+    
     data = request.get_json()
     new_type = data.get("new_type", "").strip()
 
@@ -103,16 +98,17 @@ def add_type():
         return jsonify({"status": "error", "message": "Type name cannot be empty."}), 400
 
     try:
-        ReportType.create(type=new_type, profile_id=g.current_profile.id)
+        ReportType.create(type_text=new_type, profile_id=g.current_profile.id)
         return jsonify({"status": "success", "message": "New type was created successfully."}), 200
     except Exception as e:
-        return jsonify({"status": "error", "message": "New type wasn't created because of {e}."}), 400
+        print(e)
+        return jsonify({"status": "error", "message": f"New type wasn't created because of {e}."}), 400
 
 
 @report_settings_bp.route('/delete_type', methods=['POST'])
 @login_required
 def delete_type():
-    """Handles deleting a report type."""
+    
     data = request.get_json()
     type_id = data.get("type_id")
     print(type_id)
@@ -131,7 +127,7 @@ def delete_type():
 @report_settings_bp.route('/edit_type', methods=['POST'])
 @login_required
 def edit_type():
-    """Handles editing a report type."""
+    
     data = request.get_json()
     type_id = data.get("type_id")
     new_type_name = data.get("new_type_name", "").strip()
@@ -157,7 +153,7 @@ def edit_type():
 @report_settings_bp.route('/add_subtype', methods=['POST'])
 @login_required
 def add_subtype():
-    """Handles adding a new report subtype."""
+    
     data = request.get_json()
     report_type_id = data.get("report_type_id")
     new_subtype_name = data.get("new_subtype_name", "").strip()
@@ -175,7 +171,7 @@ def add_subtype():
 @report_settings_bp.route('/delete_subtype', methods=['POST'])
 @login_required
 def delete_subtype():
-    """Handles deleting a report subtype."""
+    
     data = request.get_json()
     subtype_id = data.get("subtype_id")
 
@@ -192,7 +188,7 @@ def delete_subtype():
 @report_settings_bp.route('/edit_subtype', methods=['POST'])
 @login_required
 def edit_subtype():
-    """Handles editing a report subtype."""
+    
     data = request.get_json()
     subtype_id = data.get("subtype_id")
     new_subtype_name = data.get("new_subtype_name", "").strip()

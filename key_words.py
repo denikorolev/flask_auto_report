@@ -7,7 +7,7 @@ from itertools import chain
 from file_processing import file_uploader, allowed_file
 from sentence_processing import group_keywords, sort_key_words_group, process_keywords, check_existing_keywords, extract_keywords_from_doc
 from errors_processing import print_object_structure
-from utils import ensure_list, get_max_index
+from utils import ensure_list
 from db_processing import add_keywords_to_db
 
 key_words_bp = Blueprint("key_words", __name__)

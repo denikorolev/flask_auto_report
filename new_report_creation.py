@@ -38,9 +38,7 @@ def create_report():
 @new_report_creation_bp.route('/create_manual_report', methods=['POST'])
 @login_required
 def create_manual_report():
-    """
-    This route handles manual report creation.
-    """
+    
     try:
         report_name = request.form.get('report_name')
         report_type = request.form.get('report_type')
@@ -71,9 +69,7 @@ def create_manual_report():
 @new_report_creation_bp.route('/create_report_from_file', methods=['POST'])
 @login_required
 def create_report_from_file():
-    """
-    This route handles report creation from a file.
-    """
+    
     try:
         report_name = request.form.get('report_name')
         report_type = request.form.get('report_type')
@@ -194,9 +190,7 @@ def create_report_from_file():
 @new_report_creation_bp.route('/create_report_from_existing_report', methods=['POST'])
 @login_required
 def create_report_from_existing_report():
-    """
-    This route handles report creation based on an existing report.
-    """
+    
     try:
         existing_report_id = request.form.get('existing_report_id')
         if not existing_report_id:

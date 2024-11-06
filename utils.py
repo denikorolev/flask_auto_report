@@ -17,7 +17,8 @@ def get_max_index(model, filter_field, filter_value, column):
 
     Args:
         model (db.Model): Модель, для которой нужно вычислить максимальный индекс.
-        user_id (int): ID пользователя.
+        filter_field (str): Поле, по которому фильтруются данные.
+        filter_value (Any): Значение для фильтрации.
         column (db.Column): Столбец, по которому вычисляется максимальный индекс.
 
     Returns:
