@@ -555,8 +555,31 @@ document.addEventListener("DOMContentLoaded", function() {
     let activeSentence = null;  // Для отслеживания активного предложения
 
     linkSentences(); // Связываем предложения с данными
-    setupHoverAndClickLogic(); // Настраиваем логику отображения кружка и всплывающего окна
+    // setupHoverAndClickLogic(); // Настраиваем логику отображения кружка и всплывающего окна
+    sentenceDoubleClickHandle () // Включаем логику двойного клика на предложение
 });
+
+
+
+
+function sentenceDoubleClickHandle (){
+    const sentencesOnPage = document.querySelectorAll(".report__sentence");
+    console.log("logic started")
+    sentencesOnPage.forEach(sentenceElement => {
+        // Добавляю слушатель двойного клика на предложение
+        sentenceElement.addEventListener("dblclick", function(event){
+            if (sentenceElement.linkedSentences && sentenceElement.linkedSentences.length > 0) {
+                showPopup(event.pageX, event.pageY, sentenceElement.linkedSentences);
+            } else {
+                console.error("No linked sentences or linked sentences is not an array");
+            }
+        });
+        // Добавляю слушатель начала ввода на предложение
+        sentenceElement.addEventListener("input", function(event) {
+            hidePopup();
+        });
+    });
+}
 
 
 /**
@@ -564,7 +587,7 @@ document.addEventListener("DOMContentLoaded", function() {
  */
 function setupHoverAndClickLogic() {
     const sentencesOnPage = document.querySelectorAll(".report__sentence");
-
+    
     sentencesOnPage.forEach(sentenceElement => {
         // Наведение на предложение
         sentenceElement.addEventListener("mouseenter", function(event) {
@@ -622,32 +645,7 @@ function setupHoverAndClickLogic() {
 
 
 
-// "Add Impression to Report" button logic
-document.getElementById("addImpressionToReportButton").addEventListener("click", function() {
-    // Получаем текст ответа ИИ
-    const aiResponseText = document.getElementById("aiResponse").innerText.trim();
 
-    if (!aiResponseText) {
-        alert("AI response is empty. Please generate an impression first.");
-        return;
-    }
-
-    // Ищем первый видимый элемент предложения в impression-paragraph-list
-    const impressionParagraphs = document.querySelectorAll(".impression-paragraph-list .report__sentence");
-    let foundVisibleSentence = false;
-
-    impressionParagraphs.forEach(sentenceElement => {
-        if (isElementVisible(sentenceElement) && !foundVisibleSentence) {
-            // Заменяем текст первого видимого предложения на ответ ИИ
-            sentenceElement.textContent = aiResponseText;
-            foundVisibleSentence = true;  // Останавливаем поиск после первого найденного
-        }
-    });
-
-    if (!foundVisibleSentence) {
-        alert("No visible impression sentence found.");
-    }
-});
 
 
 
@@ -973,6 +971,8 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 
 
+
+
 // "Copy to clipboard" button logic
 document.getElementById("copyButton").addEventListener("click", async function() {
 
@@ -1123,4 +1123,32 @@ document.getElementById("generateImpression").addEventListener("click", async fu
         document.getElementById("aiResponse").textContent = "An error occurred. Please try again.";
     }
 
+});
+
+
+// "Add Impression to Report" button logic
+document.getElementById("addImpressionToReportButton").addEventListener("click", function() {
+    // Получаем текст ответа ИИ
+    const aiResponseText = document.getElementById("aiResponse").innerText.trim();
+
+    if (!aiResponseText) {
+        alert("AI response is empty. Please generate an impression first.");
+        return;
+    }
+
+    // Ищем первый видимый элемент предложения в impression-paragraph-list
+    const impressionParagraphs = document.querySelectorAll(".impression-paragraph-list .report__sentence");
+    let foundVisibleSentence = false;
+
+    impressionParagraphs.forEach(sentenceElement => {
+        if (isElementVisible(sentenceElement) && !foundVisibleSentence) {
+            // Заменяем текст первого видимого предложения на ответ ИИ
+            sentenceElement.textContent = aiResponseText;
+            foundVisibleSentence = true;  // Останавливаем поиск после первого найденного
+        }
+    });
+
+    if (!foundVisibleSentence) {
+        alert("No visible impression sentence found.");
+    }
 });
