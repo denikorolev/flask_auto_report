@@ -561,13 +561,14 @@ document.addEventListener("DOMContentLoaded", function() {
 
 
 
-
+// Обработчик двойного клика на предложение
 function sentenceDoubleClickHandle (){
     const sentencesOnPage = document.querySelectorAll(".report__sentence");
     console.log("logic started")
     sentencesOnPage.forEach(sentenceElement => {
         // Добавляю слушатель двойного клика на предложение
         sentenceElement.addEventListener("dblclick", function(event){
+            activeSentence = sentenceElement;
             if (sentenceElement.linkedSentences && sentenceElement.linkedSentences.length > 0) {
                 showPopup(event.pageX, event.pageY, sentenceElement.linkedSentences);
             } else {
@@ -578,6 +579,13 @@ function sentenceDoubleClickHandle (){
         sentenceElement.addEventListener("input", function(event) {
             hidePopup();
         });
+    });
+
+    // Скрываем всплывающее окно при клике вне его
+    document.addEventListener("click", function(event) {
+        if (!popup.contains(event.target)) {
+            hidePopup();
+        }
     });
 }
 
