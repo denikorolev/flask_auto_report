@@ -58,20 +58,20 @@ function createEditableSentenceElement(sentenceText) {
  * 
  * @param {HTMLElement} button - The button that toggles the sentence list.
  */
-function toggleSentenceList(button) {
-    const sentenceList = button.closest(".report__paragraph").querySelector(".sentence-list");
-    if (sentenceList.style.display === "none" || sentenceList.style.display === "") {
-        sentenceList.style.display = "block";
-        button.classList.add("expanded");
-        button.classList.remove("collapsed");
-        button.title = "Collapse";
-    } else {
-        sentenceList.style.display = "none";
-        button.classList.remove("expanded");
-        button.classList.add("collapsed");
-        button.title = "Expand";
-    }
-}
+// function toggleSentenceList(button) {
+//     const sentenceList = button.closest(".report__paragraph").querySelector(".sentence-list");
+//     if (sentenceList.style.display === "none" || sentenceList.style.display === "") {
+//         sentenceList.style.display = "block";
+//         button.classList.add("expanded");
+//         button.classList.remove("collapsed");
+//         button.title = "Collapse";
+//     } else {
+//         sentenceList.style.display = "none";
+//         button.classList.remove("expanded");
+//         button.classList.add("collapsed");
+//         button.title = "Expand";
+//     }
+// }
 
 
 /**
@@ -252,24 +252,24 @@ function displayProcessedParagraphs(paragraphs) {
 }
 
 
-/**
- * Функция для переключения видимости списка предложений
- * @param {HTMLElement} button - Кнопка, которая была нажата
- */
-function toggleSentenceList(button) {
-    const sentenceList = button.closest(".report__paragraph").querySelector(".sentence-list");
-    if (sentenceList.style.display === "none" || sentenceList.style.display === "") {
-        sentenceList.style.display = "block";
-        button.classList.add("expanded");
-        button.classList.remove("collapsed");
-        button.title = "Collapse";
-    } else {
-        sentenceList.style.display = "none";
-        button.classList.remove("expanded");
-        button.classList.add("collapsed");
-        button.title = "Expand";
-    }
-}
+// /**
+//  * Функция для переключения видимости списка предложений
+//  * @param {HTMLElement} button - Кнопка, которая была нажата
+//  */
+// function toggleSentenceList(button) {
+//     const sentenceList = button.closest(".report__paragraph").querySelector(".sentence-list");
+//     if (sentenceList.style.display === "none" || sentenceList.style.display === "") {
+//         sentenceList.style.display = "block";
+//         button.classList.add("expanded");
+//         button.classList.remove("collapsed");
+//         button.title = "Collapse";
+//     } else {
+//         sentenceList.style.display = "none";
+//         button.classList.remove("expanded");
+//         button.classList.add("collapsed");
+//         button.title = "Expand";
+//     }
+// }
 
 
 /**
@@ -444,28 +444,28 @@ function collectTextFromParagraphs(paragraphClass) {
 
 
 
-/**
- * Отображает кружок "+" рядом с предложением.
- * 
- * @param {number} x - Координата X курсора.
- * @param {number} y - Координата Y курсора.
- * @param {HTMLElement} target - Элемент, для которого отображаем кружок.
- */
-function showPlusCircle(x, y, target) {
-    activeSentence = target;
-    plusCircle.style.left = `${x + 7}px`; // Чуть правее курсора
-    plusCircle.style.top = `${y + 7}px`; // Чуть ниже курсора
-    plusCircle.style.display = 'flex';
-}
+// /**
+//  * Отображает кружок "+" рядом с предложением.
+//  * 
+//  * @param {number} x - Координата X курсора.
+//  * @param {number} y - Координата Y курсора.
+//  * @param {HTMLElement} target - Элемент, для которого отображаем кружок.
+//  */
+// function showPlusCircle(x, y, target) {
+//     activeSentence = target;
+//     plusCircle.style.left = `${x + 7}px`; // Чуть правее курсора
+//     plusCircle.style.top = `${y + 7}px`; // Чуть ниже курсора
+//     plusCircle.style.display = 'flex';
+// }
 
 /**
  * Скрывает кружок "+" с небольшой задержкой.
  */
-function hidePlusCircle() {
-    hideTimeout = setTimeout(() => {
-        plusCircle.style.display = 'none';
-    }, 800); 
-}
+// function hidePlusCircle() {
+//     hideTimeout = setTimeout(() => {
+//         plusCircle.style.display = 'none';
+//     }, 800); 
+// }
 
 
 
@@ -478,7 +478,7 @@ function hidePlusCircle() {
  * @param {number} y - Координата Y для отображения окна.
  * @param {Array} sentenceList - Список предложений для выбора.
  */
-function showPopup(x, y, sentenceList) {
+function showPopup(x, y, sentenceList, onSelect) {
     popupList.innerHTML = ''; // Очищаем старые предложения
 
     // Создаем поле ввода для фильтрации
@@ -502,18 +502,15 @@ function showPopup(x, y, sentenceList) {
             if (sentence.sentence.toLowerCase().includes(filterText)) {
                 const li = document.createElement("li");
                 li.textContent = sentence.sentence; // Используем текст предложения
-                popupList.appendChild(li);
+               
 
-                // Обработка клика по предложению
-                li.addEventListener("click", function() {
-                    if (activeSentence) {
-                        activeSentence.textContent = sentence.sentence; // Заменяем текст предложения
-                        hidePopup(); // Закрываем всплывающее окно после выбора
-
-                        // Запускаем функцию обновления текста
-                        updateCoreParagraphText();
-                    }
+                // Устанавливаем обработчик клика на элемент списка
+                li.addEventListener("click", () => {
+                    onSelect(sentence); // Вызываем переданную функцию при выборе предложения
+                    hidePopup();
                 });
+
+                popupList.appendChild(li);
             }
         });
     }
@@ -572,7 +569,7 @@ function linkSentences() {
 }
 
 /**
- * Изменяет стиль предложения.
+ * Изменяет стиль предложения. Нужно для выделения предложений у которых есть альтернатива.
  * 
  * @param {HTMLElement} sentenceElement - Элемент предложения для изменения цвета.
  */
@@ -580,10 +577,15 @@ function highlightSentence(sentenceElement) {
     sentenceElement.classList.add("highlighted-sentence");
 }
 
-// Стартуем всю логику связанную с кружком + при загрузке страницы
+
+
+
+
+
+// Объявляем глобальные переменные и запускаем стартовые функции, постепенно нужно перенести сюда и логику связанную с ключевыми словами и развешивание части слушателей
 document.addEventListener("DOMContentLoaded", function() {
-    let hoverTimeout; // Объявляем переменную для хранения таймера
-    let hideTimeout;  // Объявляем переменную для хранения таймера скрытия кружка
+    // let hoverTimeout; // Объявляем переменную для хранения таймера
+    // let hideTimeout;  // Объявляем переменную для хранения таймера скрытия кружка
     let activeSentence = null;  // Для отслеживания активного предложения
     const popupList = document.getElementById("popupList"); // // Для обращения к PopUp
 
@@ -591,6 +593,10 @@ document.addEventListener("DOMContentLoaded", function() {
     // setupHoverAndClickLogic(); // Настраиваем логику отображения кружка и всплывающего окна
     sentenceDoubleClickHandle () // Включаем логику двойного клика на предложение
 });
+
+
+
+
 
 
 
@@ -603,7 +609,11 @@ function sentenceDoubleClickHandle (){
         sentenceElement.addEventListener("dblclick", function(event){
             activeSentence = sentenceElement;
             if (sentenceElement.linkedSentences && sentenceElement.linkedSentences.length > 0) {
-                showPopup(event.pageX, event.pageY, sentenceElement.linkedSentences);
+                // Передаем функцию, которая заменяет текст предложения
+                showPopup(event.pageX, event.pageY, sentenceElement.linkedSentences, (selectedSentence) => {
+                    activeSentence.textContent = selectedSentence.sentence; // Заменяем текст предложения
+                    updateCoreParagraphText(); // Обновляем текст
+                });
             } else {
                 console.error("No linked sentences or linked sentences is not an array");
             }
@@ -626,71 +636,62 @@ function sentenceDoubleClickHandle (){
 /**
  * Настраивает логику наведения мыши и клика по предложениям для отображения кружка и списка предложений.
  */
-function setupHoverAndClickLogic() {
-    const sentencesOnPage = document.querySelectorAll(".report__sentence");
+// function setupHoverAndClickLogic() {
+//     const sentencesOnPage = document.querySelectorAll(".report__sentence");
     
-    sentencesOnPage.forEach(sentenceElement => {
-        // Наведение на предложение
-        sentenceElement.addEventListener("mouseenter", function(event) {
-            if (!sentenceElement.classList.contains("editing") && sentenceElement.linkedSentences.length > 0) { // Проверяем, что предложение не в режиме редактирования
-                hoverTimeout = setTimeout(() => {
-                    showPlusCircle(event.pageX, event.pageY, sentenceElement);
-                }, 700);
-            }
-        });
+//     sentencesOnPage.forEach(sentenceElement => {
+//         // Наведение на предложение
+//         sentenceElement.addEventListener("mouseenter", function(event) {
+//             if (!sentenceElement.classList.contains("editing") && sentenceElement.linkedSentences.length > 0) { // Проверяем, что предложение не в режиме редактирования
+//                 hoverTimeout = setTimeout(() => {
+//                     showPlusCircle(event.pageX, event.pageY, sentenceElement);
+//                 }, 700);
+//             }
+//         });
 
-        sentenceElement.addEventListener("mouseleave", function() {
-            clearTimeout(hoverTimeout); // Отменяем показ кружка, если мышь ушла
-            hidePlusCircle(); // Скроем кружок с небольшой задержкой
-        });
+//         sentenceElement.addEventListener("mouseleave", function() {
+//             clearTimeout(hoverTimeout); // Отменяем показ кружка, если мышь ушла
+//             hidePlusCircle(); // Скроем кружок с небольшой задержкой
+//         });
 
-        // Добавляем обработку фокуса (когда предложение редактируется)
-        sentenceElement.addEventListener("focus", function() {
-            sentenceElement.classList.add("editing"); // Добавляем класс для режима редактирования
-            hidePlusCircle(); // Скрываем кружок, если предложение редактируется
-        });
+//         // Добавляем обработку фокуса (когда предложение редактируется)
+//         sentenceElement.addEventListener("focus", function() {
+//             sentenceElement.classList.add("editing"); // Добавляем класс для режима редактирования
+//             hidePlusCircle(); // Скрываем кружок, если предложение редактируется
+//         });
 
-        // Добавляем обработку потери фокуса (когда предложение больше не редактируется)
-        sentenceElement.addEventListener("blur", function() {
-            sentenceElement.classList.remove("editing"); // Убираем класс режима редактирования
-        });
+//         // Добавляем обработку потери фокуса (когда предложение больше не редактируется)
+//         sentenceElement.addEventListener("blur", function() {
+//             sentenceElement.classList.remove("editing"); // Убираем класс режима редактирования
+//         });
 
-    });
+//     });
 
-    // Клик по кружку "+"
-    plusCircle.addEventListener("click", function(event) {
-        if (activeSentence && activeSentence.linkedSentences) {
-            showPopup(event.pageX, event.pageY, activeSentence.linkedSentences);
-        } else {
-            console.error('No linked sentences or linked sentences is not an array');
-        }
-    });
+//     // Клик по кружку "+"
+//     plusCircle.addEventListener("click", function(event) {
+//         if (activeSentence && activeSentence.linkedSentences) {
+//             showPopup(event.pageX, event.pageY, activeSentence.linkedSentences);
+//         } else {
+//             console.error('No linked sentences or linked sentences is not an array');
+//         }
+//     });
 
-    // Добавляем обработку событий для наведения на кружок
-    plusCircle.addEventListener("mouseenter", function() {
-        clearTimeout(hideTimeout); // Останавливаем таймер скрытия, если мышь над кружком
-    });
+//     // Добавляем обработку событий для наведения на кружок
+//     plusCircle.addEventListener("mouseenter", function() {
+//         clearTimeout(hideTimeout); // Останавливаем таймер скрытия, если мышь над кружком
+//     });
 
-    plusCircle.addEventListener("mouseleave", function() {
-        hidePlusCircle(); // Скрываем кружок, если мышь ушла
-    });
+//     plusCircle.addEventListener("mouseleave", function() {
+//         hidePlusCircle(); // Скрываем кружок, если мышь ушла
+//     });
 
-    // Скрываем всплывающее окно при клике вне его
-    document.addEventListener("click", function(event) {
-        if (!popup.contains(event.target) && !plusCircle.contains(event.target)) {
-            hidePopup();
-        }
-    });
-}
-
-
-
-
-
-
-
-
-
+//     // Скрываем всплывающее окно при клике вне его
+//     document.addEventListener("click", function(event) {
+//         if (!popup.contains(event.target) && !plusCircle.contains(event.target)) {
+//             hidePopup();
+//         }
+//     });
+// }
 
 
 
@@ -898,116 +899,168 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 
 
-// Логика добавления предложения при нажатии на кнопку "+"
-document.addEventListener("DOMContentLoaded", function() {
-    /**
-     * Создает поле ввода для нового предложения.
-     * @param {HTMLElement} buttonElement - Кнопка, перед которой будет вставлено поле ввода.
-     */
-    function createInputForNewSentence(buttonElement) {
-        // Удаляем все активные элементы (селекты или инпуты)
-        document.querySelectorAll(".dynamic-select, .dynamic-input").forEach(el => el.remove());
+// // Логика добавления предложения при нажатии на кнопку "+"
+// document.addEventListener("DOMContentLoaded", function() {
+//     /**
+//      * Создает поле ввода для нового предложения.
+//      * @param {HTMLElement} buttonElement - Кнопка, перед которой будет вставлено поле ввода.
+//      */
+//     function createInputForNewSentence(buttonElement) {
+//         // Удаляем все активные элементы (селекты или инпуты)
+//         document.querySelectorAll(".dynamic-select, .dynamic-input").forEach(el => el.remove());
 
-        // Создаем инпут для нового предложения и добавляем его перед кнопкой +
-        const inputElement = document.createElement("input");
-        inputElement.type = "text";
-        inputElement.classList.add("dynamic-input");
-        inputElement.placeholder = "Введите предложение";
-        buttonElement.parentNode.insertBefore(inputElement, buttonElement);
+//         // Создаем инпут для нового предложения и добавляем его перед кнопкой +
+//         const inputElement = document.createElement("input");
+//         inputElement.type = "text";
+//         inputElement.classList.add("dynamic-input");
+//         inputElement.placeholder = "Введите предложение";
+//         buttonElement.parentNode.insertBefore(inputElement, buttonElement);
 
-        inputElement.focus();
+//         inputElement.focus();
 
-        // Обработка нажатия Enter для добавления предложения
-        inputElement.addEventListener("keydown", function(event) {
-            if (event.key === "Enter") {
-                const customSentence = inputElement.value.trim();
-                if (customSentence) {
-                    const newSentenceElement = createEditableSentenceElement(customSentence);
-                    buttonElement.parentNode.insertBefore(newSentenceElement, buttonElement);
-                    inputElement.remove();
+//         // Обработка нажатия Enter для добавления предложения
+//         inputElement.addEventListener("keydown", function(event) {
+//             if (event.key === "Enter") {
+//                 const customSentence = inputElement.value.trim();
+//                 if (customSentence) {
+//                     const newSentenceElement = createEditableSentenceElement(customSentence);
+//                     buttonElement.parentNode.insertBefore(newSentenceElement, buttonElement);
+//                     inputElement.remove();
                     
-                    updateCoreParagraphText();
-                }else {
-                    inputElement.remove(); 
-                }
-            }
+//                     updateCoreParagraphText();
+//                 }else {
+//                     inputElement.remove(); 
+//                 }
+//             }
             
-        });
+//         });
         
-    }
+//     }
 
-    /**
-     * Логика при нажатии на кнопку "+". Создает выпадающий список или поле ввода для добавления предложения.
-     */
-    document.querySelectorAll(".icon-btn--add-sentence").forEach(button => {
-        button.addEventListener("click", function() {
-            const paragraphId = this.getAttribute("data-paragraph-id");
-            const buttonElement = this;
+//     /**
+//      * Логика при нажатии на кнопку "+". Создает выпадающий список или поле ввода для добавления предложения.
+//      */
+//     document.querySelectorAll(".icon-btn--add-sentence").forEach(button => {
+//         button.addEventListener("click", function() {
+//             const paragraphId = this.getAttribute("data-paragraph-id");
+//             const buttonElement = this;
 
-            // Удаляем предыдущие выпадающие списки или поля ввода, если они уже существуют
-            document.querySelectorAll(".dynamic-select, .dynamic-input").forEach(el => el.remove());
+//             // Удаляем предыдущие выпадающие списки или поля ввода, если они уже существуют
+//             document.querySelectorAll(".dynamic-select, .dynamic-input").forEach(el => el.remove());
 
-            // Получаем предложения с индексом 0 для этого параграфа
-            sendRequest({
-                url: "/working_with_reports/get_sentences_with_index_zero",
-                method: "POST",
-                data: {
-                    paragraph_id: paragraphId
-                }
-            }).then(data => {
-                if (data.sentences && data.sentences.length > 0) {
-                    // Создаем выпадающий список (select) с предложениями
-                    const selectElement = document.createElement("select");
-                    selectElement.classList.add("dynamic-select");
+//             // Получаем предложения с индексом 0 для этого параграфа
+//             sendRequest({
+//                 url: "/working_with_reports/get_sentences_with_index_zero",
+//                 method: "POST",
+//                 data: {
+//                     paragraph_id: paragraphId
+//                 }
+//             }).then(data => {
+//                 if (data.sentences && data.sentences.length > 0) {
+//                     // Создаем выпадающий список (select) с предложениями
+//                     const selectElement = document.createElement("select");
+//                     selectElement.classList.add("dynamic-select");
 
-                    // Добавляем первое пустое поле, значение пустое, а текст — "Введите предложение"
-                    const startOption = document.createElement("option");
-                    startOption.value = "";
-                    startOption.textContent = "Выберите предложение для добавления";
-                    selectElement.appendChild(startOption);
+//                     // Добавляем первое пустое поле, значение пустое, а текст — "Введите предложение"
+//                     const startOption = document.createElement("option");
+//                     startOption.value = "";
+//                     startOption.textContent = "Выберите предложение для добавления";
+//                     selectElement.appendChild(startOption);
 
-                    // Добавляем поле для ввода своего предложения
-                    const emptyOption = document.createElement("option");
-                    emptyOption.value = "";
-                    emptyOption.textContent = "Введите свое предложение";
-                    selectElement.appendChild(emptyOption);
+//                     // Добавляем поле для ввода своего предложения
+//                     const emptyOption = document.createElement("option");
+//                     emptyOption.value = "";
+//                     emptyOption.textContent = "Введите свое предложение";
+//                     selectElement.appendChild(emptyOption);
 
-                    // Добавляем остальные предложения с индексом 0
-                    data.sentences.forEach(sentence => {
-                        const option = document.createElement("option");
-                        option.value = sentence.id;
-                        option.textContent = sentence.sentence;
-                        selectElement.appendChild(option);
-                    });
-                    selectElement.value = "";
+//                     // Добавляем остальные предложения с индексом 0
+//                     data.sentences.forEach(sentence => {
+//                         const option = document.createElement("option");
+//                         option.value = sentence.id;
+//                         option.textContent = sentence.sentence;
+//                         selectElement.appendChild(option);
+//                     });
+//                     selectElement.value = "";
 
-                    // Добавляем выпадающий список перед кнопкой
-                    buttonElement.parentNode.insertBefore(selectElement, buttonElement);
+//                     // Добавляем выпадающий список перед кнопкой
+//                     buttonElement.parentNode.insertBefore(selectElement, buttonElement);
 
-                    // Обработка выбора предложения
-                    selectElement.addEventListener("change", function() {
-                        if (selectElement.value === "") {
-                            // Если выбрано пустое поле, вызываем функцию для инпута
-                            createInputForNewSentence(buttonElement);
-                            selectElement.remove();  // Удаляем выпадающий список
-                        } else {
-                            // Если выбрано предложение из списка, добавляем его в текст
-                            const selectedSentence = selectElement.options[selectElement.selectedIndex].textContent;
-                            const newSentenceElement = createEditableSentenceElement(selectedSentence);
-                            buttonElement.parentNode.insertBefore(newSentenceElement, buttonElement);
-                            selectElement.remove();
-                            updateCoreParagraphText();
-                        }
-                    });
+//                     // Обработка выбора предложения
+//                     selectElement.addEventListener("change", function() {
+//                         if (selectElement.value === "") {
+//                             // Если выбрано пустое поле, вызываем функцию для инпута
+//                             createInputForNewSentence(buttonElement);
+//                             selectElement.remove();  // Удаляем выпадающий список
+//                         } else {
+//                             // Если выбрано предложение из списка, добавляем его в текст
+//                             const selectedSentence = selectElement.options[selectElement.selectedIndex].textContent;
+//                             const newSentenceElement = createEditableSentenceElement(selectedSentence);
+//                             buttonElement.parentNode.insertBefore(newSentenceElement, buttonElement);
+//                             selectElement.remove();
+//                             updateCoreParagraphText();
+//                         }
+//                     });
 
-                } else {
-                    // Если предложений нет, вызываем функцию для инпута
-                    createInputForNewSentence(buttonElement);
-                }
-            }).catch(error => {
-                console.error("Error:", error);
-            });
+//                 } else {
+//                     // Если предложений нет, вызываем функцию для инпута
+//                     createInputForNewSentence(buttonElement);
+//                 }
+//             }).catch(error => {
+//                 console.error("Error:", error);
+//             });
+//         });
+//     });
+// });
+
+
+
+/**
+ * Логика для кнопки "+". Открывает popup с отфильтрованными предложениями.
+ */
+document.querySelectorAll(".icon-btn--add-sentence").forEach(button => {
+    button.addEventListener("click", function(event) {
+        const paragraphId = this.getAttribute("data-paragraph-id");
+
+        // Создаем пустое предложение и добавляем перед кнопкой
+        const newSentenceElement = createEditableSentenceElement("");
+        button.parentNode.insertBefore(newSentenceElement, button);
+        newSentenceElement.focus(); // Устанавливаем фокус на новый элемент
+
+        // Получаем предложения с индексом 0 для этого параграфа
+        sendRequest({
+            url: "/working_with_reports/get_sentences_with_index_zero",
+            method: "POST",
+            data: { paragraph_id: paragraphId }
+        }).then(data => {
+            if (data.sentences && data.sentences.length > 0) {
+                // Используем общий popup для показа предложений
+                showPopup(event.pageX, event.pageY, data.sentences, function(selectedSentence) {
+                    // Логика при выборе предложения из popup
+                    const newSentenceElement = createEditableSentenceElement(selectedSentence.sentence);
+                    button.parentNode.insertBefore(newSentenceElement, button);
+                    updateCoreParagraphText(); // Обновляем текст абзаца после добавления предложения
+                });
+            } else {
+                console.error("No sentences available for this paragraph.");
+            }
+        }).catch(error => {
+            console.error("Error fetching sentences:", error);
         });
+
+
+        // Логика скрытия popup или удаления предложения
+        newSentenceElement.addEventListener("input", function() {
+            hidePopup(); // Скрываем popup при начале ввода
+        });
+
+        newSentenceElement.addEventListener("blur", function() {
+            if (newSentenceElement.textContent.trim() === "") {
+                // Удаляем пустое предложение, если потеряно фокус без ввода текста
+                newSentenceElement.remove();
+            }
+        });
+
+
     });
 });
 
