@@ -467,6 +467,10 @@ function hidePlusCircle() {
     }, 800); 
 }
 
+
+
+
+
 /**
  * Отображает всплывающее окно с предложениями для замены.
  * 
@@ -477,27 +481,55 @@ function hidePlusCircle() {
 function showPopup(x, y, sentenceList) {
     popupList.innerHTML = ''; // Очищаем старые предложения
 
-    sentenceList.forEach(sentence => {
-        const li = document.createElement("li");
-        li.textContent = sentence.sentence; // Используем текст предложения
-        popupList.appendChild(li);
+    // Создаем поле ввода для фильтрации
+    const filterInput = document.createElement("input");
+    filterInput.type = "text";
+    filterInput.placeholder = "Введите текст для фильтрации...";
+    filterInput.classList.add("input", "popup-filter-input");
 
-        // Обработка клика по предложению
-        li.addEventListener("click", function() {
-            if (activeSentence) {
-                activeSentence.textContent = sentence.sentence; // Заменяем текст предложения
-                hidePopup(); // Закрываем всплывающее окно после выбора
+    // Добавляем поле ввода в начало popupList
+    popupList.appendChild(filterInput);
 
-                // Запускаем функцию обновления текста
-                updateCoreParagraphText();
+    // Функция для отображения отфильтрованного списка
+    function renderFilteredList() {
+        const filterText = filterInput.value.toLowerCase(); // Текст фильтра, приведенный к нижнему регистру
+
+        // Очищаем список перед обновлением
+        popupList.querySelectorAll("li").forEach(li => li.remove());
+
+        // Отображаем только те предложения, которые соответствуют фильтру
+        sentenceList.forEach(sentence => {
+            if (sentence.sentence.toLowerCase().includes(filterText)) {
+                const li = document.createElement("li");
+                li.textContent = sentence.sentence; // Используем текст предложения
+                popupList.appendChild(li);
+
+                // Обработка клика по предложению
+                li.addEventListener("click", function() {
+                    if (activeSentence) {
+                        activeSentence.textContent = sentence.sentence; // Заменяем текст предложения
+                        hidePopup(); // Закрываем всплывающее окно после выбора
+
+                        // Запускаем функцию обновления текста
+                        updateCoreParagraphText();
+                    }
+                });
             }
         });
-    });
+    }
 
+    // Запускаем рендеринг отфильтрованного списка при вводе текста
+    filterInput.addEventListener("input", renderFilteredList);
+
+    // Изначально отображаем полный список
+    renderFilteredList();
+
+    // Устанавливаем позицию и отображаем popup
     popup.style.left = `${x}px`;
     popup.style.top = `${y + 10}px`; // Отображаем окно чуть ниже кружка
     popup.style.display = 'block';
 }
+
 
 /**
  * Скрывает всплывающее окно с предложениями.
@@ -553,6 +585,7 @@ document.addEventListener("DOMContentLoaded", function() {
     let hoverTimeout; // Объявляем переменную для хранения таймера
     let hideTimeout;  // Объявляем переменную для хранения таймера скрытия кружка
     let activeSentence = null;  // Для отслеживания активного предложения
+    const popupList = document.getElementById("popupList"); // // Для обращения к PopUp
 
     linkSentences(); // Связываем предложения с данными
     // setupHoverAndClickLogic(); // Настраиваем логику отображения кружка и всплывающего окна
