@@ -146,7 +146,7 @@ def edit_type():
         if not type_for_editing:
             return jsonify({"status": "error", "message": "You do not have permission to edit this type."}), 403
 
-        type_for_editing.type = new_type_name
+        type_for_editing.type_text = new_type_name
         type_for_editing.save()  # Сохранение изменений в базе данных
         return jsonify({"status": "success", "message": "Type edited successfully."}), 200
     except Exception as e:
@@ -166,7 +166,7 @@ def add_subtype():
         return jsonify({"status": "error", "message": "Both type ID and subtype name are required."}), 400
 
     try:
-        ReportSubtype.create(type=report_type_id, subtype=new_subtype_name)
+        ReportSubtype.create(type_id=report_type_id, subtype_text=new_subtype_name)
         return jsonify({"status": "success", "message": "New subtype was created successfully."}), 200
     except Exception as e:
         return jsonify({"status": "error", f"message": "Subtype wasn't created because of {str(e)}."}), 400
@@ -207,7 +207,7 @@ def edit_subtype():
         if not subtype_for_editing:
             return jsonify({"status": "error", "message": "You do not have permission to edit this subtype."}), 403
 
-        subtype_for_editing.subtype = new_subtype_name
+        subtype_for_editing.subtype_text = new_subtype_name
         subtype_for_editing.save()  # Сохранение изменений в базе данных
         return jsonify({"status": "success", "message": "Subtype edited successfully."}), 200
     except Exception as e:

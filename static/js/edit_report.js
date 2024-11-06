@@ -138,27 +138,26 @@ function newSentenceCreate(button){
     
 
 
-    
-
-    
-
-    
 
 // Delete sentence deleteSentenceButton()
 function deleteSentenceButton(button) {
     const sentenceId = button.getAttribute("data-sentence-id");
 
-    sendRequest({
-        url: `/editing_report/delete_sentence`,
-        method: "DELETE",
-        data: {
-            sentence_id: sentenceId
-        }
-    }).then(response => {
-        if (response.status === "success") {
-            button.closest("li").remove();
-        } 
-    });
+    if(sentenceId === "new") {
+        button.closest("li").remove();
+    } else {
+        sendRequest({
+            url: `/editing_report/delete_sentence`,
+            method: "DELETE",
+            data: {
+                sentence_id: sentenceId
+            }
+        }).then(response => {
+            if (response.status === "success") {
+                button.closest("li").remove();
+            } 
+        });
+    };
 };
    
 

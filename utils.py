@@ -11,7 +11,7 @@ def ensure_list(value):
 
 
 
-def get_max_index(model, user_id, column):
+def get_max_index(model, filter_field, filter_value, column):
     """
     Вычисляет максимальный индекс для указанного столбца модели для текущего пользователя.
 
@@ -23,7 +23,11 @@ def get_max_index(model, user_id, column):
     Returns:
         int: Максимальный индекс или 0, если данных нет.
     """
-    max_index = model.query.filter_by(user_id=user_id).with_entities(func.max(column)).scalar() or 0
+    
+    # Динамическое создание фильтра через распаковку словаря
+    filter_kwargs = {filter_field: filter_value}
+    
+    max_index = model.query.filter_by(**filter_kwargs).with_entities(func.max(column)).scalar() or 0
     return max_index + 1
 
 

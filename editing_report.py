@@ -216,7 +216,7 @@ def edit_sentences_bulk():
         return jsonify(success=False, message=f"Something went wrong. error code: {e}")
     
     
-@editing_report_bp.route('/delete_sentence', methods=['POST'])
+@editing_report_bp.route('/delete_sentence', methods=['DELETE'])
 @login_required
 def delete_sentence():
     if not request.is_json:
@@ -229,7 +229,7 @@ def delete_sentence():
     if not sentence:
         return jsonify({"status": "error", "message": "Sentence not found"}), 404
 
-    if sentence.paragraph.report.userid != current_user.id:
+    if sentence.sentence_to_paragraph.paragraph_to_report.report_to_profile.id != g.current_profile.id:
         return jsonify({"status": "error", "message": "You don't have permission to delete this sentence"}), 403
 
     try:

@@ -15,7 +15,7 @@ def add_keywords_to_db(key_words, report_ids):
         report_ids (list): Список идентификаторов отчетов, к которым привязываются ключевые слова.
     """
     # Определяем максимальный group_index для новой группы
-    new_group_index = get_max_index(KeyWord, current_user.id, KeyWord.group_index)
+    new_group_index = get_max_index(KeyWord, "profile_id", g.current_profile.id, KeyWord.group_index)
 
     # Добавляем ключевые слова с соответствующими индексами
     for i, key_word in enumerate(key_words):

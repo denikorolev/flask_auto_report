@@ -36,10 +36,10 @@
                     
                     <ul class="report_grid" data-report-type = "{{report.report_to_subtype.subtype_to_type.id}}">
                         <li class="report_form_item" data-report-type="{{ report.report_to_subtype.subtype_to_type.id }}">
-                            <input class="report_input__item" value="{{ report.report_to_subtype.subtype_to_type.type }}" name="type" id="type" readonly>
+                            <input class="report_input__item" value="{{ report.report_to_subtype.subtype_to_type.type_text }}" name="type" id="type" readonly>
                         </li data-report-type="{{ report.report_to_subtype.subtype_to_type.id }}">
                         <li class="report_form_item" data-report-type="{{ report.report_to_subtype.subtype_to_type.id }}">
-                            <input class="report_input__item" value="{{ report.report_subtype.subtype }}" name="subtype" id="subtype" readonly>
+                            <input class="report_input__item" value="{{ report.report_subtype.subtype_text }}" name="subtype" id="subtype" readonly>
                         </li>
                         <li class="report_form_item" data-report-type="{{ report.report_to_subtype.subtype_to_type.id }}">
                             <input class="report_input__item" value="{{ report.report_name }}" name="report_name" id="report_name" readonly>

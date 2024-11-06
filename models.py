@@ -120,7 +120,7 @@ class UserProfile(BaseModel):
     default_profile = db.Column(db.Boolean, default=False, nullable=False)
     
     
-    profile_to_reports = db.relationship('Report', lazy=True)
+    profile_to_reports = db.relationship('Report', lazy=True, backref=db.backref("report_to_profile"), cascade="all, delete-orphan")
     profile_to_files = db.relationship("FileMetadata", lazy=True, backref=db.backref("file_to_profile"), cascade="all, delete-orphan")
     profile_to_key_words = db.relationship("KeyWord", lazy=True, backref=db.backref("key_word_to_profile"), cascade="all, delete-orphan")
     profile_to_report_types = db.relationship("ReportType", lazy=True, backref=db.backref("report_type_to_profile"), cascade="all, delete-orphan")
@@ -194,13 +194,13 @@ class UserProfile(BaseModel):
 class ReportType(BaseModel):
     __tablename__ = 'report_type'
     profile_id = db.Column(db.BigInteger, db.ForeignKey('user_profiles.id'), nullable=False)
-    type = db.Column(db.String(50), nullable=False)
+    type_text = db.Column(db.String(50), nullable=False)
     type_index = db.Column(db.Integer, nullable=False)
     
     type_to_subtypes = db.relationship("ReportSubtype", lazy=True, backref=db.backref("subtype_to_type"), cascade="all, delete-orphan")
     
     @classmethod
-    def create(cls, type, profile_id, type_index=None):
+    def create(cls, type_text, profile_id, type_index=None):
         """
         Creates a new report type.
         
@@ -218,7 +218,7 @@ class ReportType(BaseModel):
             type_index = max_index + 1
 
         new_type = cls(
-            type=type,
+            type_text=type_text,
             profile_id=profile_id,
             type_index=type_index
         )
@@ -249,13 +249,13 @@ class ReportType(BaseModel):
             subtypes = [
                 {
                     "subtype_id": subtype.id,
-                    "subtype_text": subtype.subtype
+                    "subtype_text": subtype.subtype_text
                 } 
                 for subtype in report_type.type_to_subtypes
             ]
             result.append({
                 "type_id": report_type.id,
-                "type_text": report_type.type,
+                "type_text": report_type.type_text,
                 "subtypes": subtypes
             })
         return result
@@ -263,14 +263,14 @@ class ReportType(BaseModel):
 
 class ReportSubtype(BaseModel):
     __tablename__ = "report_subtype"
-    type = db.Column(db.SmallInteger, db.ForeignKey("report_type.id"), nullable=False)
-    subtype = db.Column(db.String(250), nullable=False)
+    type_id = db.Column(db.SmallInteger, db.ForeignKey("report_type.id"), nullable=False)
+    subtype_text = db.Column(db.String(250), nullable=False)
     subtype_index = db.Column(db.Integer, nullable=False)
     
     subtype_to_reports = db.relationship('Report', lazy=True, backref=db.backref("report_to_subtype"), cascade="all, delete-orphan")
     
     @classmethod
-    def create(cls, type, subtype, subtype_index=None): # subtype_index должен быть None чтобы ниже зайти в if и вычислить его
+    def create(cls, type_id, subtype_text, subtype_index=None): # subtype_index должен быть None чтобы ниже зайти в if и вычислить его
         """
         Creates a new report subtype.
 
@@ -288,8 +288,8 @@ class ReportSubtype(BaseModel):
             subtype_index = max_index + 1
 
         new_subtype = cls(
-            type=type,
-            subtype=subtype,
+            type_id=type_id,
+            subtype_text=subtype_text,
             subtype_index=subtype_index
         )
         db.session.add(new_subtype)
@@ -299,13 +299,13 @@ class ReportSubtype(BaseModel):
     @classmethod
     def find_by_report_type(cls, type_id):
         """Возвращает все подтипы, связанные с профилем."""
-        return cls.query.filter_by(type=type_id).all()
+        return cls.query.filter_by(type_id=type_id).all()
 
 
 class Report(BaseModel):
     __tablename__ = "reports"
     profile_id = db.Column(db.BigInteger, db.ForeignKey('user_profiles.id'), nullable=False)
-    userid = db.Column(db.BigInteger, db.ForeignKey('users.id'), nullable=False)
+    user_id = db.Column(db.BigInteger, db.ForeignKey('users.id'), nullable=False)
     report_subtype = db.Column(db.Integer, db.ForeignKey('report_subtype.id'), nullable=False)
     comment = db.Column(db.String(255), nullable=True)
     report_name = db.Column(db.String(255), nullable=False)
@@ -322,7 +322,7 @@ class Report(BaseModel):
             profile_id=profile_id,
             report_subtype=report_subtype,
             report_name=report_name,
-            userid=user_id,
+            user_id=user_id,
             comment=comment,
             public=public,
             report_side=report_side
@@ -433,11 +433,11 @@ class Report(BaseModel):
             "report": {
                 "id": report.id,
                 "report_name": report.report_name,
-                "report_type": report.report_to_subtype.subtype_to_type.type,
-                "report_subtype": report.report_to_subtype.subtype,
+                "report_type": report.report_to_subtype.subtype_to_type.type_text,
+                "report_subtype": report.report_to_subtype.subtype_text,
                 "comment": report.comment,
                 "report_side": report.report_side,
-                "user_id": report.userid,
+                "user_id": report.user_id,
                 "report_public": report.public
             },
             "paragraphs": paragraph_data,
