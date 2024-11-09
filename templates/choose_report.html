@@ -12,23 +12,23 @@
 <form class="flex" id="exportForm" style="margin-bottom: 30px;">
     <div class="flex_column">
         <label for="patient-surname">Surname:</label>
-        <input style="margin-right: 10px;" type="text" id="patient-surname" name="patient_surname" value="{{ request.form.get('patient_surname', '') }}" required>
+        <input class="input" type="text" id="patient-surname" name="patient_surname" value="{{ request.form.get('patient_surname', '') }}" required>
     </div>
     <div class="flex_column">
         <label for="patient-name">Name:</label>
-        <input style="margin-right: 10px;" type="text" id="patient-name" name="patient_name" value="{{ request.form.get('patient_name', '') }}" required>
+        <input class="input" type="text" id="patient-name" name="patient_name" value="{{ request.form.get('patient_name', '') }}" required>
     </div>
     <div class="flex_column">
         <label for="patient-patronymicname">Patronymic name:</label>
-        <input style="margin-right: 10px;" type="text" id="patient-patronymicname" name="patient_patronymicname" value="{{ request.form.get('patient_patronymicname', '') }}" required>
+        <input class="input" type="text" id="patient-patronymicname" name="patient_patronymicname" value="{{ request.form.get('patient_patronymicname', '') }}" required>
     </div>
     <div class="flex_column">
         <label for="patient-birthdate">Birthdate:</label>
-        <input style="margin-right: 10px;" type="date" id="patient-birthdate" name="patient_birthdate" value="{{ request.form.get('patient_birthdate', '') }}" required>
+        <input class="input" type="date" id="patient-birthdate" name="patient_birthdate" value="{{ request.form.get('patient_birthdate', '') }}" required>
     </div>
     <div class="flex_column">
         <label for="report-number">Report Number:</label>
-        <input style="margin-right: 10px;" type="text" id="report-number" name="report_number" value="{{ request.form.get('report_number', '') }}" required>
+        <input class="input" type="text" id="report-number" name="report_number" value="{{ request.form.get('report_number', '') }}" required>
     </div>
 </form>
 

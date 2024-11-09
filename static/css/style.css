@@ -121,6 +121,8 @@ body {
 
 .input {
     height: var(--main-text-block-height);
+    margin-right: 10px;
+    margin-bottom: 10px;
     border: none;
     box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.1);
     padding: 0 10px;
@@ -128,6 +130,22 @@ body {
     outline: 1px solid var(--main-background-color-dark);
     border-radius: 5px;
     width: 100%;
+}
+
+
+.input--medium {
+    max-width: 50px;
+}
+
+.input--short {
+    width: auto;
+    min-width: 5px;
+    max-width: 40px;
+}
+
+.input--wide {
+    min-width: 200px;
+    max-width: 800px;
 }
 
 
@@ -357,31 +375,7 @@ body {
     max-width: 100%;
 }
 
-.input { /*вместо report_input__item*/
-    max-height: 25px;
-    margin-right: 10px;
-    margin-bottom: 10px;
-    border-radius: 6px;
-    border-width: 1px;
-    border-style: solid;
-    font-size: 14px;
-}
 
-
-.input--medium {
-    max-width: 50px;
-}
-
-.input--short {
-    width: auto;
-    min-width: 5px;
-    max-width: 40px;
-}
-
-.input--wide {
-    min-width: 200px;
-    max-width: 800px;
-}
 
 
 
@@ -695,4 +689,13 @@ body {
 .admin-data__action-cell {
     min-width: 150px;
     text-align: center;
+}
+
+
+.edit-paragraph__form--sentence {
+    min-width: 100%;
+}
+
+.edit-sentence__wrapper--sentence-text {
+   min-width: 1000px;
 }

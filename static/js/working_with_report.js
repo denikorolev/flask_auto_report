@@ -1209,12 +1209,15 @@ document.getElementById("generateImpression").addEventListener("click", async fu
     const assistantNames = [
         "airadiologist"
     ];
+    const boxForAiResponse = document.getElementById("aiResponse");
+    boxForAiResponse.textContent = "waiting for ai response...";
+
     try {
         const aiResponse = await generateImpressionRequest(textToCopy, assistantNames);
-        document.getElementById("aiResponse").textContent = aiResponse;
+        boxForAiResponse.textContent = aiResponse || "No response received.";
     } catch(error) {
         console.log(error);
-        document.getElementById("aiResponse").textContent = "An error occurred. Please try again.";
+        boxForAiResponse.textContent = "An error occurred. Please try again.";
     }
 
 });

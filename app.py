@@ -20,7 +20,7 @@ from openai_api import openai_api_bp
 from key_words import key_words_bp
 from admin import admin_bp
 
-version = "0.6.5"
+version = "0.6.6"
 
 app = Flask(__name__)
 app.config.from_object(get_config()) # Load configuration from file config.py
@@ -180,6 +180,7 @@ def index():
 @app.route("/create_profile", methods=['POST', 'GET'])
 @login_required
 def create_profile():
+    print("started route 'create profile'")
     if request.method == 'POST':
         profile_name = request.form.get('profile_name')
         description = request.form.get('description')
@@ -199,10 +200,12 @@ def create_profile():
 
     return render_template('create_profile.html', title="Create Profile")
 
+
 # Логика для того чтобы установить выбранный профайл
 @app.route("/set_profile/<int:profile_id>")
 @login_required
 def set_profile(profile_id):
+    print("i'm in set_profile route")
     profile = UserProfile.find_by_id_and_user(profile_id, current_user.id)
     if profile:
         session['profile_id'] = profile.id
@@ -216,6 +219,7 @@ def set_profile(profile_id):
 @app.route('/delete_profile/<int:profile_id>', methods=['POST'])
 @login_required
 def delete_profile(profile_id):
+    print("you are deleting profile")
     profile = UserProfile.find_by_id_and_user(profile_id, current_user.id)
     if profile:
         db.session.delete(profile)
@@ -230,6 +234,7 @@ def delete_profile(profile_id):
 
 @app.route("/welcome_page", methods=["GET"])
 def welcome_page():
+    print("welcome page started")
     menu = []
     return render_template("welcome_page.html",
                            menu=menu,

@@ -53,7 +53,7 @@
                     {% for paragraph in report_paragraphs %}
                         <div class="flex_column" data-paragraph-id="{{ paragraph.id }}">
                             <form class="flex edit-paragraph__form--paragraph">
-                                <input class="input edit-paragraph__input edit-paragraph__input--index" type="text" id="paragraph_index" name="paragraph_index" value="{{ paragraph.paragraph_index }}">
+                                <input class="input input--short edit-paragraph__input edit-paragraph__input--index" type="text" id="paragraph_index" name="paragraph_index" value="{{ paragraph.paragraph_index }}">
                                 <input class="input edit-paragraph__input edit-paragraph__input--name" type="text" id="paragraph_name" name="paragraph_name" value="{{ paragraph.paragraph }}">
                                 
                                 <!-- Dropdown for paragraph type -->
@@ -92,7 +92,7 @@
                                         {% if sentence.show_separator %}
                                             <hr class="sentence-separator">
                                         {% endif %}  <!-- check the separator marker -->
-                                        <li>
+                                        <li class="">
                                             <form class="flex edit-paragraph__form--sentence" data-sentence-id="{{ sentence.id }}">
                                                 {{ render_sentence(sentence, loop.index == 1) }}
                                             </form>
