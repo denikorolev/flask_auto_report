@@ -73,7 +73,7 @@ class User(db.Model, UserMixin):
     user_pass = db.Column(db.String, nullable=False)
     user_bio = db.Column(db.Text, nullable=True)
     user_avatar = db.Column(db.LargeBinary, nullable=True)
-    active = db.Column(db.Boolean, default=True, nullable=True)
+    active = db.Column(db.Boolean, default=True, nullable=False)
 
     user_to_profiles = db.relationship('UserProfile', lazy="joined", backref=db.backref("profile_to_user"), cascade="all, delete-orphan")
     user_to_reports = db.relationship('Report', lazy=True)
