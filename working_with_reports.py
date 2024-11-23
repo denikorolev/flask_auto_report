@@ -70,7 +70,6 @@ def working_with_reports():
     
     key_words_obj = KeyWord.get_keywords_for_report(g.current_profile.id, current_report_id)
     key_words_group = group_keywords(key_words_obj)
-    print(report_data)
     
     return render_template(
         "working_with_report.html", 
@@ -146,7 +145,6 @@ def new_sentence_adding():
         processed_paragraphs = split_sentences(paragraphs)
         new_sentences = get_new_sentences(processed_paragraphs)
         
-        print(new_sentences)
         # Возвращаем новые предложения на клиентскую часть
         return jsonify({"status": "success", "processed_paragraphs": new_sentences}), 200
 

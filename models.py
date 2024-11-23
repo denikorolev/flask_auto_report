@@ -67,13 +67,13 @@ class BaseModel(db.Model):
 class User(db.Model, UserMixin):
     __tablename__ = 'users'
     id = db.Column(db.BigInteger, primary_key=True)
-    user_role = db.Column(db.String, nullable=False)
+    
     user_email = db.Column(db.String, unique=True, nullable=False)
     user_name = db.Column(db.String, nullable=False)
     user_pass = db.Column(db.String, nullable=False)
     user_bio = db.Column(db.Text, nullable=True)
     user_avatar = db.Column(db.LargeBinary, nullable=True)
-
+    # active = db.Column(db.Boolean, default=True, nullable=True)
 
     user_to_profiles = db.relationship('UserProfile', lazy="joined", backref=db.backref("profile_to_user"), cascade="all, delete-orphan")
     user_to_reports = db.relationship('Report', lazy=True)
@@ -85,7 +85,7 @@ class User(db.Model, UserMixin):
         return check_password_hash(self.user_pass, password)
     
     @classmethod
-    def create(cls, email, username, password, role="user"):
+    def create(cls, email, username, password, active=True):
         """
         Creates a new user and saves them to the database.
         Args:
@@ -103,7 +103,7 @@ class User(db.Model, UserMixin):
         user = cls(
             user_email=email,
             user_name=username,
-            user_role=role
+            # active=active
         )
         user.set_password(password)  # Хэшируем пароль
         db.session.add(user)
