@@ -75,7 +75,7 @@ class User(db.Model, UserMixin):
     user_bio = db.Column(db.Text, nullable=True)
     user_avatar = db.Column(db.LargeBinary, nullable=True)
     active = db.Column(db.Boolean, default=True, nullable=False)
-    fs_uniquifier = db.Column(db.String(255), unique=True, nullable=False)
+    fs_uniquifier = db.Column(db.String(255), unique=True, nullable=True)
     email = db.Column(db.String, unique=True, nullable=True)
 
     user_to_profiles = db.relationship('UserProfile', lazy="joined", backref=db.backref("profile_to_user"), cascade="all, delete-orphan")

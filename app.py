@@ -8,6 +8,7 @@ from auth import auth_bp
 from models import db, User, UserProfile, Paragraph, ReportType, KeyWord
 import os
 import logging
+import uuid
 
 # Импортирую блюпринты
 from working_with_reports import working_with_reports_bp  
@@ -30,6 +31,8 @@ db.init_app(app)
 
 # Initialize Flask-Migrate
 migrate = Migrate(app, db)
+
+uuid_butt = str(uuid.uuid4())
 
 # Initialize LoginManager
 login_manager = LoginManager()
