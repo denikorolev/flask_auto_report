@@ -173,11 +173,14 @@ def index():
     # set_profile_id_to_report_type()
     # set_profile_id_to_key_words()
     
+    user_fs_uniquifier = current_user.fs_uniquifier
+    
     return render_template('index.html', 
                            title="Radiologary", 
                            menu=menu,
                            user_profiles=user_profiles,
-                           version=version)
+                           version=version,
+                           user_fs_uniquifier=user_fs_uniquifier)
 
 # Новый маршрут для создания профиля
 @app.route("/create_profile", methods=['POST', 'GET'])
