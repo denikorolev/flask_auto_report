@@ -21,7 +21,7 @@ from openai_api import openai_api_bp
 from key_words import key_words_bp
 from admin import admin_bp
 
-version = "0.6.8"
+version = "0.6.9"
 
 app = Flask(__name__)
 app.config.from_object(get_config()) # Load configuration from file config.py
@@ -71,24 +71,26 @@ def test_db_connection():
         print(f"Database connection failed: {e}", "error")
         return False
 
-def set_password():
-    print("starting function set_password")
-    users = User.query.all()
-    counter = 0
-    for user in users:
-        if not user.password:
-            user.password = user.user_pass
-            try:
-                user.save()
-                counter +=1
-            except Exception as e:
-                print(f"Error save changes: {e}")
-    if counter < 1:
-        print("there is no data to change")
-    else:
-        print(f"{counter} fields password was updated")
-    print("ending function set_password")
-    return
+
+
+# def set_password():
+#     print("starting function set_password")
+#     users = User.query.all()
+#     counter = 0
+#     for user in users:
+#         if not user.password:
+#             user.password = user.user_pass
+#             try:
+#                 user.save()
+#                 counter +=1
+#             except Exception as e:
+#                 print(f"Error save changes: {e}")
+#     if counter < 1:
+#         print("there is no data to change")
+#     else:
+#         print(f"{counter} fields password was updated")
+#     print("ending function set_password")
+#     return
 
 
 
@@ -153,17 +155,13 @@ def index():
         elif len(user_profiles) > 1:
             pass
         
-    set_password()
-    
-    
-    user_fs_uniquifier = current_user.fs_uniquifier
     
     return render_template('index.html', 
                            title="Radiologary", 
                            menu=menu,
                            user_profiles=user_profiles,
-                           version=version,
-                           user_fs_uniquifier=user_fs_uniquifier)
+                           version=version
+                           )
 
 # Новый маршрут для создания профиля
 @app.route("/create_profile", methods=['POST', 'GET'])

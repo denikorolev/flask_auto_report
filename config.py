@@ -29,8 +29,8 @@ class Config:
     }
     
     # Flask-Security Configuration
-    SECURITY_PASSWORD_SALT = "$$1"
-    SECURITY_PASSWORD_HASH = "bcrypt"  # Алгоритм хэширования паролей
+    SECURITY_PASSWORD_SALT = os.getenv("SECURITY_PASSWORD_SALT", "$$1")
+    SECURITY_PASSWORD_HASH = "scrypt"  # Алгоритм хэширования паролей
     SECURITY_REGISTERABLE = True       # Разрешить регистрацию
     SECURITY_CONFIRMABLE = True        # Требовать подтверждения email
     SECURITY_RECOVERABLE = True        # Включить восстановление пароля
