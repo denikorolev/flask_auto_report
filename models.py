@@ -107,6 +107,8 @@ class User(BaseModel, db.Model, UserMixin):
     user_to_profiles = db.relationship('UserProfile', lazy="joined", backref=db.backref("profile_to_user"), cascade="all, delete-orphan")
     user_to_reports = db.relationship('Report', lazy=True)
 
+
+
     def set_password(self, password):
         self.user_pass = generate_password_hash(password)
 
@@ -140,6 +142,18 @@ class User(BaseModel, db.Model, UserMixin):
         db.session.commit()
         return user
 
+
+    def has_role(self, role_name):
+        """Проверяет, есть ли у пользователя определенная роль."""
+        return any(role.name == role_name for role in self.roles)
+
+
+    def add_role(self, role_name):
+        """Добавляет роль пользователю, если её еще нет."""
+        role = Role.query.filter_by(name=role_name).first()
+        if role and role not in self.roles:
+            self.roles.append(role)
+            db.session.commit()
 
 class UserProfile(BaseModel):
     __tablename__ = 'user_profiles'

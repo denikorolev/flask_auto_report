@@ -28,6 +28,18 @@ class Config:
         "FileMetadata": FileMetadata,
     }
     
+    # Flask-Security Configuration
+    SECURITY_PASSWORD_SALT = "$$1"
+    SECURITY_PASSWORD_HASH = "bcrypt"  # Алгоритм хэширования паролей
+    SECURITY_REGISTERABLE = True       # Разрешить регистрацию
+    SECURITY_CONFIRMABLE = True        # Требовать подтверждения email
+    SECURITY_RECOVERABLE = True        # Включить восстановление пароля
+    SECURITY_TRACKABLE = True          # Включить отслеживание входов
+    SECURITY_CHANGEABLE = True         # Включить изменение пароля
+    SECURITY_POST_LOGIN_VIEW = "/"  # URL после успешного входа
+    SECURITY_POST_LOGOUT_VIEW = "/auth/login"         # URL после выхода
+    
+    
     
     SECRET_KEY = os.getenv("SECRET_KEY", "my_secret_key")
     SQLALCHEMY_TRACK_MODIFICATIONS = False

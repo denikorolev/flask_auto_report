@@ -91,15 +91,6 @@ def set_password():
     return
 
 
-def seed_roles():
-    roles = ['admin', 'user']
-    for role in roles:
-        if not Role.query.filter_by(name=role).first():
-            db.session.add(Role(name=role))
-            print("roles added")
-        else:
-            print("no need to add roles")
-    db.session.commit()
 
 # Routs
 
@@ -163,7 +154,7 @@ def index():
             pass
         
     set_password()
-    seed_roles()
+    
     
     user_fs_uniquifier = current_user.fs_uniquifier
     
