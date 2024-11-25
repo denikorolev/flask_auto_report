@@ -51,7 +51,6 @@ def admin():
 @login_required
 def fetch_data():
     # Получаем данные, отправленные с клиента
-    print("маршрут запущен")
     data = request.json
     selected_tables = data.get("tables", [])
     selected_columns = data.get("columns", {})
@@ -79,7 +78,6 @@ def fetch_data():
         except Exception as e:
             print(f"Ошибка при запросе к таблице {table_name}: {e}")
 
-    print(result)
     # Возвращаем результаты в формате JSON
     return jsonify(result)
 

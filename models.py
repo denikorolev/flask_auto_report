@@ -84,7 +84,6 @@ class User(BaseModel, db.Model, UserMixin):
     __tablename__ = 'users'
     id = db.Column(db.BigInteger, primary_key=True)
     user_name = db.Column(db.String, nullable=False)
-    user_pass = db.Column(db.String, nullable=False)
     password = db.Column(db.String, nullable=False)
     user_bio = db.Column(db.Text, nullable=True)
     user_avatar = db.Column(db.LargeBinary, nullable=True)
@@ -115,39 +114,8 @@ class User(BaseModel, db.Model, UserMixin):
         self.password = bcrypt.hash(password)
 
     def check_password(self, password):
-        """Check password with support for legacy and new hashes."""
-        try:
-            # Сначала пробуем проверить через bcrypt
-            if self.password and bcrypt.verify(password, self.password):
-                print("all right")
-                return True
-        except ValueError:
-            print("hash is not in bcrypt format")
-            pass
-        
-        # Если bcrypt не сработал, пробуем проверить через scrypt
-        try:
-            if self.user_pass and scrypt.verify(password, self.user_pass):
-                # Опционально: миграция пароля в bcrypt
-                self.set_password(password)  # Перезапись пароля в новом формате
-                db.session.commit()
-                print("hash was changed")
-                return True
-        except Exception as e:
-            print("hash is in script format doesn't work too")
-            print(e)
-            pass
-        try:
-            if self.user_pass and check_password_hash(self.user_pass, password):
-                self.set_password(password)  # Перезапись пароля в новом формате
-                db.session.commit()
-                print("hash was changed in second iteration")
-        except Exception as e:
-            print(f"doesn't work anyway {e}")
-            pass
-            
-                
-        return False
+        return bcrypt.verify(password, self.password)
+         
     
     @classmethod
     def create(cls, email, username, password, active=True):
