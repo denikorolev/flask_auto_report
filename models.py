@@ -65,7 +65,7 @@ class BaseModel(db.Model):
         return False
 
 
-class User(db.Model, UserMixin):
+class User(BaseModel, db.Model, UserMixin):
     __tablename__ = 'users'
     id = db.Column(db.BigInteger, primary_key=True)
     
