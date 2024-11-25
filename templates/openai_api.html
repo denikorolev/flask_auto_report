@@ -3,6 +3,7 @@
 {% block container %}
 {{ super() }}
 
+{% if current_user.id == 1 %}
 <form>
     <label for="inputai">Введите запрос</label>
     <input type="text" id="inputai" name="inputai">
@@ -10,7 +11,7 @@
     <div class="shift"></div>
     <div id="answer" class="answer"></div>
 </form>
-
+{% endif %}
 
 {% endblock container %}
 

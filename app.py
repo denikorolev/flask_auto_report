@@ -71,41 +71,25 @@ def test_db_connection():
         print(f"Database connection failed: {e}", "error")
         return False
 
-# def set_profile_id_to_report_type():
-#     print("starting function set_profile_id_to_report_type")
-#     report_types = ReportType.query.all()
-#     counter = 0
-#     for type in report_types:
-#         if not type.profile_id:
-#             type.profile_id = 1
-#             try:
-#                 type.save()
-#             except Exception as e:
-#                 print(f"Error save changes: {e}")
-#     if counter < 1:
-#         print("there is no data to change")
-#     else:
-#         print(f"{counter} fields was updated")
-#     print("ending function set_profile_id_to_report_type")
-#     return
+def set_email():
+    print("starting function set_email")
+    users = User.query.all()
+    counter = 0
+    for user in users:
+        if not user.email:
+            user.email = user.user_email
+            try:
+                user.save()
+                counter +=1
+            except Exception as e:
+                print(f"Error save changes: {e}")
+    if counter < 1:
+        print("there is no data to change")
+    else:
+        print(f"{counter} fields email was updated")
+    print("ending function set_email")
+    return
 
-# def set_profile_id_to_key_words():
-#     print("starting function set_profile_id_to_key_words!!!")
-#     key_words = KeyWord.query.all()
-#     counter = 0
-#     for kw in key_words:
-#         if not kw.profile_id:
-#             kw.profile_id = 1
-#             try:
-#                 kw.save()
-#             except Exception as e:
-#                 print(f"Error save changes to key words: {e}")
-#     if counter < 1:
-#         print("there is no more data to change")
-#     else:
-#         print(f"{counter} fields was updated")
-#     print("ending function set_profile_id_to_key_words!!!")
-#     return
 
 
 
@@ -170,7 +154,7 @@ def index():
         elif len(user_profiles) > 1:
             pass
         
-    # set_profile_id_to_report_type()
+    set_email()
     # set_profile_id_to_key_words()
     
     user_fs_uniquifier = current_user.fs_uniquifier
