@@ -119,7 +119,7 @@ def update_record(table_name, record_id):
 
     # Получаем данные из запроса
     data = request.json
-    ignored_fields = ["user_pass"]
+    ignored_fields = ["password"]
     id_pattern = re.compile(r"(^|_)id(_|$)", re.IGNORECASE)
 
     try:
@@ -132,7 +132,7 @@ def update_record(table_name, record_id):
         
         # Обновляем поля в записи
         for key, value in data.items():
-            # Пропускаем поля с названием user_pass или содержащие id
+            # Пропускаем поля с названием password или содержащие id
             if key in ignored_fields or id_pattern.search(key):
                 fields_was_ignored.append(key)
                 continue

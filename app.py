@@ -71,13 +71,13 @@ def test_db_connection():
         print(f"Database connection failed: {e}", "error")
         return False
 
-def set_email():
-    print("starting function set_email")
+def set_password():
+    print("starting function set_password")
     users = User.query.all()
     counter = 0
     for user in users:
-        if not user.email:
-            user.email = user.user_email
+        if not user.password:
+            user.password = user.user_pass
             try:
                 user.save()
                 counter +=1
@@ -86,11 +86,28 @@ def set_email():
     if counter < 1:
         print("there is no data to change")
     else:
-        print(f"{counter} fields email was updated")
-    print("ending function set_email")
+        print(f"{counter} fields password was updated")
+    print("ending function set_password")
     return
 
-
+def set_login_count():
+    print("starting function set_login_count")
+    users = User.query.all()
+    counter = 0
+    for user in users:
+        if not user.login_count:
+            user.login_count = 0
+            try:
+                user.save()
+                counter +=1
+            except Exception as e:
+                print(f"Error save changes: {e}")
+    if counter < 1:
+        print("there is no data to change")
+    else:
+        print(f"{counter} fields login count was updated")
+    print("ending function set_login_count")
+    return
 
 
 # Routs
@@ -154,8 +171,8 @@ def index():
         elif len(user_profiles) > 1:
             pass
         
-    set_email()
-    # set_profile_id_to_key_words()
+    set_password()
+    set_login_count()
     
     user_fs_uniquifier = current_user.fs_uniquifier
     

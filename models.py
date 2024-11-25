@@ -17,6 +17,13 @@ key_word_report_link = db.Table(
     Index('ix_key_word_report_link_keyword_report', 'key_word_id', 'report_id')
 )
 
+# Association table between Users and Roles
+roles_users = db.Table(
+    'roles_users',
+    db.Column('user_id', db.BigInteger, db.ForeignKey('users.id', ondelete="CASCADE"), primary_key=True),
+    db.Column('role_id', db.BigInteger, db.ForeignKey('roles.id', ondelete="CASCADE"), primary_key=True),
+    Index('ix_roles_users_user_id_role_id', 'user_id', 'role_id')
+)
 
 class AppConfig(db.Model):
     __tablename__ = 'app_config'
@@ -65,19 +72,38 @@ class BaseModel(db.Model):
         return False
 
 
+class Role(db.Model):
+    __tablename__ = 'roles'
+    id = db.Column(db.BigInteger, primary_key=True)
+    name = db.Column(db.String(80), unique=True, nullable=False)  
+    description = db.Column(db.String(255), nullable=True) 
+
+
 class User(BaseModel, db.Model, UserMixin):
     __tablename__ = 'users'
     id = db.Column(db.BigInteger, primary_key=True)
-    
-    
     user_name = db.Column(db.String, nullable=False)
     user_pass = db.Column(db.String, nullable=False)
+    password = db.Column(db.String, nullable=True)
     user_bio = db.Column(db.Text, nullable=True)
     user_avatar = db.Column(db.LargeBinary, nullable=True)
     active = db.Column(db.Boolean, default=True, nullable=False)
     fs_uniquifier = db.Column(db.String(255), unique=True, nullable=False)
     email = db.Column(db.String, unique=True, nullable=False)
+    confirmed_at = db.Column(db.DateTime, nullable=True)  # Время подтверждения email
+    last_login_at = db.Column(db.DateTime, nullable=True)  # Последняя авторизация
+    current_login_at = db.Column(db.DateTime, nullable=True)  # Текущая авторизация
+    last_login_ip = db.Column(db.String(45), nullable=True)  # Последний IP-адрес
+    current_login_ip = db.Column(db.String(45), nullable=True)  # Текущий IP-адрес
+    login_count = db.Column(db.Integer, default=0, nullable=True)  # Счетчик входов
 
+
+
+    roles = db.relationship(
+        'Role',
+        secondary=roles_users,
+        backref=db.backref('users', lazy='dynamic')
+    )
     user_to_profiles = db.relationship('UserProfile', lazy="joined", backref=db.backref("profile_to_user"), cascade="all, delete-orphan")
     user_to_reports = db.relationship('Report', lazy=True)
 
