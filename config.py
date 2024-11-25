@@ -79,7 +79,7 @@ class Config:
         Создаёт путь к папке для загрузок пользователя в формате: <первая_часть_email>_<user_id>/profile_<profile_id>.
         Если папка не существует, она будет создана.
         """
-        user_email = current_user.user_email
+        user_email = current_user.email
         user_id = current_user.id
         # Извлекаем первую часть email (до @)
         email_prefix = user_email.split('@')[0]

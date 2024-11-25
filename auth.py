@@ -18,7 +18,7 @@ def login():
     print(user_email,password)
     
     
-    user = User.query.filter_by(user_email=user_email).first()
+    user = User.query.filter_by(email=user_email).first()
     if user and user.check_password(password):
         login_user(user)
         if current_user.is_authenticated:

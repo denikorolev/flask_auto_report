@@ -69,14 +69,14 @@ class User(BaseModel, db.Model, UserMixin):
     __tablename__ = 'users'
     id = db.Column(db.BigInteger, primary_key=True)
     
-    user_email = db.Column(db.String, unique=True, nullable=False)
+    
     user_name = db.Column(db.String, nullable=False)
     user_pass = db.Column(db.String, nullable=False)
     user_bio = db.Column(db.Text, nullable=True)
     user_avatar = db.Column(db.LargeBinary, nullable=True)
     active = db.Column(db.Boolean, default=True, nullable=False)
     fs_uniquifier = db.Column(db.String(255), unique=True, nullable=False)
-    email = db.Column(db.String, unique=True, nullable=True)
+    email = db.Column(db.String, unique=True, nullable=False)
 
     user_to_profiles = db.relationship('UserProfile', lazy="joined", backref=db.backref("profile_to_user"), cascade="all, delete-orphan")
     user_to_reports = db.relationship('Report', lazy=True)
@@ -100,11 +100,11 @@ class User(BaseModel, db.Model, UserMixin):
             User: The created user object.
         """
         # Проверяем, существует ли пользователь с таким email
-        if cls.query.filter_by(user_email=email).first():
+        if cls.query.filter_by(email=email).first():
             raise ValueError("A user with that email already exists")
         
         user = cls(
-            user_email=email,
+            email=email,
             user_name=username,
             active=active,
             fs_uniquifier=str(uuid.uuid4())
