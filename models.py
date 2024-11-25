@@ -84,7 +84,7 @@ class User(BaseModel, db.Model, UserMixin):
     id = db.Column(db.BigInteger, primary_key=True)
     user_name = db.Column(db.String, nullable=False)
     user_pass = db.Column(db.String, nullable=False)
-    password = db.Column(db.String, nullable=True)
+    password = db.Column(db.String, nullable=False)
     user_bio = db.Column(db.Text, nullable=True)
     user_avatar = db.Column(db.LargeBinary, nullable=True)
     active = db.Column(db.Boolean, default=True, nullable=False)
@@ -95,7 +95,7 @@ class User(BaseModel, db.Model, UserMixin):
     current_login_at = db.Column(db.DateTime, nullable=True)  # Текущая авторизация
     last_login_ip = db.Column(db.String(45), nullable=True)  # Последний IP-адрес
     current_login_ip = db.Column(db.String(45), nullable=True)  # Текущий IP-адрес
-    login_count = db.Column(db.Integer, default=0, nullable=True)  # Счетчик входов
+    login_count = db.Column(db.Integer, default=0, nullable=False)  # Счетчик входов
 
 
 

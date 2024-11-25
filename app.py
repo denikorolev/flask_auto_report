@@ -5,7 +5,7 @@ from flask_login import LoginManager, login_required, current_user
 from config import get_config, Config
 from flask_migrate import Migrate
 from auth import auth_bp  
-from models import db, User, UserProfile, Paragraph, ReportType, KeyWord
+from models import db, User, UserProfile, Role
 import os
 import logging
 import uuid
@@ -90,25 +90,16 @@ def set_password():
     print("ending function set_password")
     return
 
-def set_login_count():
-    print("starting function set_login_count")
-    users = User.query.all()
-    counter = 0
-    for user in users:
-        if not user.login_count:
-            user.login_count = 0
-            try:
-                user.save()
-                counter +=1
-            except Exception as e:
-                print(f"Error save changes: {e}")
-    if counter < 1:
-        print("there is no data to change")
-    else:
-        print(f"{counter} fields login count was updated")
-    print("ending function set_login_count")
-    return
 
+def seed_roles():
+    roles = ['admin', 'user']
+    for role in roles:
+        if not Role.query.filter_by(name=role).first():
+            db.session.add(Role(name=role))
+            print("roles added")
+        else:
+            print("no need to add roles")
+    db.session.commit()
 
 # Routs
 
@@ -172,7 +163,7 @@ def index():
             pass
         
     set_password()
-    set_login_count()
+    seed_roles()
     
     user_fs_uniquifier = current_user.fs_uniquifier
     
