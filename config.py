@@ -7,6 +7,9 @@ from flask_login import current_user
 import os
 from dotenv import load_dotenv
 from models import *
+# импорты для flask security
+from forms import CustomRegisterForm
+import logging
 
 load_dotenv()
 
@@ -16,6 +19,7 @@ class Config:
     # Словарь сопоставления имен таблиц с классами моделей нужна для панели Admin
     TABLE_MODELS = {
         "AppConfig": AppConfig,
+        "Role": Role,
         "User": User,
         "UserProfile": UserProfile,
         "ReportType": ReportType,
@@ -30,16 +34,24 @@ class Config:
     
     # Flask-Security Configuration
     SECURITY_PASSWORD_SALT = os.getenv("SECURITY_PASSWORD_SALT", "$$1")
-    SECURITY_PASSWORD_HASH = "scrypt"  # Алгоритм хэширования паролей
+    SECURITY_PASSWORD_HASH = "bcrypt"  # Алгоритм хэширования паролей
     SECURITY_REGISTERABLE = True       # Разрешить регистрацию
-    SECURITY_CONFIRMABLE = True        # Требовать подтверждения email
-    SECURITY_RECOVERABLE = True        # Включить восстановление пароля
-    SECURITY_TRACKABLE = True          # Включить отслеживание входов
-    SECURITY_CHANGEABLE = True         # Включить изменение пароля
+    SECURITY_REGISTER_FORM = CustomRegisterForm  # Путь к вашей кастомной форме
+    SECURITY_CONFIRMABLE = False        # Требовать подтверждения email
+    SECURITY_RECOVERABLE = False        # Включить восстановление пароля
+    SECURITY_TRACKABLE = False          # Включить отслеживание входов
+    SECURITY_CHANGEABLE = False         # Включить изменение пароля
+    SECURITY_SEND_REGISTER_EMAIL = False  # Отключить отправку писем при регистрации
+    SECURITY_SEND_PASSWORD_CHANGE_EMAIL = False  # Отключить отправку писем при изменении пароля
+    SECURITY_SEND_PASSWORD_RESET_EMAIL = False
     SECURITY_POST_LOGIN_VIEW = "/"  # URL после успешного входа
-    SECURITY_POST_LOGOUT_VIEW = "/auth/login"         # URL после выхода
-    
-    
+    SECURITY_POST_LOGOUT_VIEW = "/login"  
+    REMEMBER_COOKIE_DURATION = 3600 * 24 * 7  # Продолжительность в секундах (7 дней)
+    REMEMBER_COOKIE_HTTPONLY = True          # Безопасность cookie
+    SECURITY_REMEMBER_ME = True              # Включить "запомнить меня"# URL после выхода
+    SECURITY_CSRF_PROTECT = False           # Отключает проверку CSRF
+    SECURITY_LOG_LEVEL = logging.DEBUG   # Включение логирования Flask-Security
+    WTF_CSRF_ENABLED = False # Отключает проверку CSRF
     
     SECRET_KEY = os.getenv("SECRET_KEY", "my_secret_key")
     SQLALCHEMY_TRACK_MODIFICATIONS = False

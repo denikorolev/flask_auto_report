@@ -1,9 +1,10 @@
 # models.py
 
 from flask_sqlalchemy import SQLAlchemy
-from werkzeug.security import generate_password_hash, check_password_hash
-from passlib.hash import scrypt, bcrypt
-from flask_login import UserMixin
+from flask_security.utils import verify_password, hash_password
+from flask_security import UserMixin, RoleMixin
+from passlib.hash import bcrypt
+# from flask_login import UserMixin
 from sqlalchemy import Index
 from utils import ensure_list
 import uuid
@@ -73,7 +74,7 @@ class BaseModel(db.Model):
         return False
 
 
-class Role(db.Model):
+class Role(db.Model, RoleMixin):
     __tablename__ = 'roles'
     id = db.Column(db.BigInteger, primary_key=True)
     name = db.Column(db.String(80), unique=True, nullable=False)  
@@ -83,7 +84,7 @@ class Role(db.Model):
 class User(BaseModel, db.Model, UserMixin):
     __tablename__ = 'users'
     id = db.Column(db.BigInteger, primary_key=True)
-    user_name = db.Column(db.String, nullable=False)
+    user_name = db.Column(db.String, nullable=False, default="User")
     password = db.Column(db.String, nullable=False)
     user_bio = db.Column(db.Text, nullable=True)
     user_avatar = db.Column(db.LargeBinary, nullable=True)
@@ -110,11 +111,36 @@ class User(BaseModel, db.Model, UserMixin):
 
 
     def set_password(self, password):
+        print("зашел в set_password")
         """Set password using bcrypt."""
         self.password = bcrypt.hash(password)
 
-    def check_password(self, password):
-        return bcrypt.verify(password, self.password)
+    # def check_password(self, password):
+    #     print("old check pass started")
+    #     return bcrypt.verify(password, self.password)
+         
+         
+    def verify_and_update_password(self, password):
+        """
+        Verify if the provided password matches the stored password.
+        If the hash is outdated, update it.
+        """
+        print("im in the verify pass logic")
+        # Проверяем пароль с текущим хэшем
+        if verify_password(password, self.password):
+            print("pass was verified")
+            # Если хэш устарел, обновляем
+            if self.password != hash_password(password):
+                print("пароль устарел")
+                self.password = hash_password(password)
+                db.session.commit()
+            return True
+        print("этого я видеть не должен и удалю эту сроку сразу после заливки на сервер")
+        self.password = hash_password(password)
+        db.session.commit()    # не забудь удалить эти строки НЕ ЗАБУДЬ
+        print("pass wrong")
+        return False
+         
          
     
     @classmethod

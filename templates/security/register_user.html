@@ -1,0 +1,35 @@
+{% extends "login_base.html" %}
+
+{% block container %}
+{{ super() }}
+
+<h1 class="title title-auth" id="signupForm">Создать аккаунт</h1>
+<form class="flex_column" method="POST" action="{{ url_for('security.register') }}">
+
+    <div class="wrapper wrapper--auth">
+        <label class="label label--auth" for="email">Email:</label>
+        <input class="input input--auth" type="email" id="email" name="email" required>
+    </div>
+
+    <div class="wrapper wrapper--auth">
+        <label class="label label--auth" for="password">Пароль:</label>
+        <input class="input input--auth" type="password" id="password" name="password" required>
+    </div>
+
+    <div class="wrapper wrapper--auth">
+        <label class="label label--auth" for="password_confirm">Подтверждение пароля:</label>
+        <input class="input input--auth" type="password" id="password_confirm" name="password_confirm" required>
+    </div>
+    
+    <button id="signupSubmit" class="btn btn--auth" type="submit">Создать</button>
+</form>
+
+<p>Уже есть аккаунт? 
+    <a class="link--auth" href="{{ url_for('security.login') }}">Войти</a>
+</p>
+
+{% endblock container %}
+
+{% block scripts %}
+{% endblock scripts %}
+   

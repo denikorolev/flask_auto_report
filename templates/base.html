@@ -46,7 +46,7 @@
 
             <!-- Сообщение о текущем юзере -->
             <p class="header__paragraph">Привет, {{ current_user.user_role }}, {{ current_user.user_name }}!</p>
-            <a class="header__link" href="{{ url_for("auth.logout") }}">Выйти</a>
+            <a class="header__link" href="{{ url_for("security.logout") }}">Выйти</a>
         </div>
     </header>
     {% endblock menu %}
