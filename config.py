@@ -38,7 +38,7 @@ class Config:
     SECURITY_REGISTERABLE = True       # Разрешить регистрацию
     SECURITY_CONFIRMABLE = False        # Требовать подтверждения email
     SECURITY_RECOVERABLE = False        # Включить восстановление пароля
-    SECURITY_TRACKABLE = False          # Включить отслеживание входов
+    SECURITY_TRACKABLE = True          # Включить отслеживание входов
     SECURITY_CHANGEABLE = False         # Включить изменение пароля
     SECURITY_SEND_REGISTER_EMAIL = False  # Отключить отправку писем при регистрации
     SECURITY_SEND_PASSWORD_CHANGE_EMAIL = False  # Отключить отправку писем при изменении пароля

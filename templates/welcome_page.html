@@ -1,14 +1,14 @@
 <!--welcome_page.html-->
 
 {% extends "base.html" %}
-
 {% block container %}
+
 
 <h1>Добро пожаловать, {{ current_user.user_name }}!</h1>
     <p>Ваш профиль {{ g.current_profile.id }} был автоматически создан. Вы можете изменить его ниже.</p>
 
     <form method="POST" action="{{ url_for('profile_settings.update_profile_settings') }}">
-        
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" id="profile_id" name="profile_id" value="{{ g.current_profile.id }}">
         <div>
             <label for="profile_name">Имя профиля:</label>
