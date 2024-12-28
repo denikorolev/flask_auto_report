@@ -8,7 +8,9 @@ from flask_migrate import Migrate
 from models import db, User, UserProfile, Role
 import os
 import logging
-from flask_debugtoolbar import DebugToolbarExtension
+if os.getenv("FLASK_ENV") == "local":
+    from flask_debugtoolbar import DebugToolbarExtension
+    
 
 
 
