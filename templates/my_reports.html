@@ -31,7 +31,7 @@
     <!-- Reports list as an unordered list with list items -->
     <ul style="display: grid;" id="reports_list">
         {% for report in profile_reports %}
-            <li data-report-type="{{ report.report_type }}">
+            <li data-report-type="{{ report.report_to_subtype.subtype_to_type.id }}">
                 <form method="POST" action="{{ url_for("my_reports.reports_list") }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="report_id" value="{{ report.id }}">

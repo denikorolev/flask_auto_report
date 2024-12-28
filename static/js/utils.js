@@ -94,16 +94,18 @@ function initializeSubtypeLogic(reportTypeSelectId, reportSubtypeSelectId, subty
  */
 function filterReportsByType(reportTypeSelect, existingReportList) {
     const selectedType = reportTypeSelect.value;  // Получаем выбранный тип
+    console.log("Selected type:", selectedType);
     const reports = existingReportList.querySelectorAll("li, .report_form__item");  // Получаем все отчеты
 
     reports.forEach(report => {
         const reportType = report.getAttribute("data-report-type");  // Получаем тип отчета
-        
+        console.log("Report type:", reportType);
         // Определяем стиль отображения родительского элемента
         const parentDisplayStyle = getComputedStyle(existingReportList).display;
-
+        console.log("Parent display style:", parentDisplayStyle);
         // Если выбран тип "" (All) или тип совпадает с атрибутом отчета, показываем его
         if (selectedType === "" || reportType === selectedType) {
+            console.log("Displaying report");
             if (parentDisplayStyle === "grid") {
                 report.style.display = "grid";  // Используем grid, если у родителя grid
             } else {
@@ -113,6 +115,7 @@ function filterReportsByType(reportTypeSelect, existingReportList) {
             report.style.display = "none";  // Скрываем отчет, если тип не совпадает
         }
     });
+    
 }
 
 

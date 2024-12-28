@@ -16,26 +16,33 @@ document.addEventListener("DOMContentLoaded", function() {
         filterReportsByType(reportTypeSelect, existingReportList);
     });
 
-    // Показываем или скрываем поле загрузки файла в зависимости от выбора
-    actionSelect.addEventListener("change", function() {
-        if (this.value === "file") {
-            fileUploadContainer.style.display = "flex";
-        } else {
-            fileUploadContainer.style.display = "none";
-        }
-    });
-
     // Программно вызываем событие для первоначального отображения правильных полей
     actionSelect.dispatchEvent(new Event("change"));
 
-    // Показываем или скрываем список существующих отчетов при выборе действия "existing"
+    // Показываем или скрываем поля в зависимости от выбора действия
     actionSelect.addEventListener("change", function() {
-        if (this.value === "existing") {
-            existingReportContainer.style.display = "block";  // Показываем список
+        if (this.value === "file") {
+            fileUploadContainer.style.display = "flex";  // Показываем поле загрузки файла
+            existingReportContainer.style.display = "none";  // Скрываем список существующих отчетов
+        } else if (this.value === "existing") {
+            fileUploadContainer.style.display = "none";  // Скрываем поле загрузки файла
+            existingReportContainer.style.display = "block";  // Показываем список существующих отчетов
         } else {
-            existingReportContainer.style.display = "none";  // Скрываем список
+            fileUploadContainer.style.display = "none";  // Скрываем поле загрузки файла
+            existingReportContainer.style.display = "none";  // Скрываем список существующих отчетов
         }
     });
+
+    
+
+    // Показываем или скрываем список существующих отчетов при выборе действия "existing"
+    // actionSelect.addEventListener("change", function() {
+    //     if (this.value === "existing") {
+    //         existingReportContainer.style.display = "block";  // Показываем список
+    //     } else {
+    //         existingReportContainer.style.display = "none";  // Скрываем список
+    //     }
+    // });
 
     // Логика для создания отчета вручную или на основе файла
     document.querySelector(".btn.report__btn").addEventListener("click", function() {
@@ -47,7 +54,8 @@ document.addEventListener("DOMContentLoaded", function() {
                 url: "/new_report_creation/create_manual_report",
                 method: "POST",
                 data: formData,
-                responseType: "json"
+                responseType: "json",
+                csrfToken: csrfToken
             }).then(response => {
                 if (response.status === "success") {
                     toastr.success(response.message);
@@ -63,7 +71,8 @@ document.addEventListener("DOMContentLoaded", function() {
                 url: "/new_report_creation/create_report_from_file",
                 method: "POST",
                 data: formData,
-                responseType: "json"
+                responseType: "json",
+                csrfToken: csrfToken
             }).then(response => {
                 if (response.status === "success") {
                     toastr.success(response.message);
@@ -90,7 +99,8 @@ document.addEventListener("DOMContentLoaded", function() {
                 url: "/new_report_creation/create_report_from_existing_report",  // Правильный маршрут
                 method: "POST",
                 data: formData,
-                responseType: "json"
+                responseType: "json",
+                csrfToken: csrfToken
             }).then(response => {
                 if (response.status === "success") {
                     toastr.success(response.message);

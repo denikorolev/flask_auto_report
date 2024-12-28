@@ -4,14 +4,13 @@
 
 {% block container %}
 
-
+<input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
 
 <!-- New report master -->
 <div class="container">
     <h2>Create a New Report</h2>
     <form id="report-creation-form" class="flex" enctype="multipart/form-data">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
+        
         <!-- Fields for creating report -->
         <div class="flex_column">
             <label class="report_label__item" for="report_name">Report Name:</label>
@@ -70,7 +69,9 @@
         <h3>Select an Existing Report</h3>
         <ul id="existing-report-list">
             {% for report in user_reports %}
-            <li class="report_form__item" data-report-type="{{ report.report_type }}">
+            <li class="report_form__item" data-report-type="{{ report.report_to_subtype.subtype_to_type.id }}">
+                
+                
                 <input type="checkbox" id="report_{{ report.id }}" name="existing_report_id" value="{{ report.id }}">
                 <label for="report_{{ report.id }}">{{ report.report_name }}</label>
             </li>
