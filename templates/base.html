@@ -48,6 +48,22 @@
             <p class="header__paragraph">Привет, {{ current_user.user_role }}, {{ current_user.user_name }}!</p>
             <a class="header__link" href="{{ url_for("security.logout") }}">Выйти</a>
         </div>
+
+        <div class="flash-message-panel">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <ul class="flash-messages">
+                        {% for category, message in messages %}
+                            <li class="flash-message {{ category }}">
+                                [Категория: {{ category }}] Сообщение: {{ message }}
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+                
+            {% endwith %}
+        </div>
+    
     </header>
     {% endblock menu %}
 
@@ -63,6 +79,8 @@
                 {% endblock container %}
             </div>
         </div>
+
+        
     </main>
 
     <footer class="footer">
@@ -73,6 +91,12 @@
 </div>
 <!-- Общие скрипты -->
 <noscript>please turn on JS!</noscript>
+
+<script> 
+    document.addEventListener("DOMContentLoaded", function(){
+        window.csrfToken = document.getElementById("csrf_token").value;
+    })
+</script>
 
 <script src="{{ url_for("static", filename='js/jquery.js') }}"></script>
 <script src="{{ url_for("static", filename='js/toastr.min.js') }}"></script>

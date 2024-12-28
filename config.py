@@ -8,7 +8,7 @@ import os
 from dotenv import load_dotenv
 from models import *
 # импорты для flask security
-from forms import CustomRegisterForm
+# from  import CustomRegisterForm
 import logging
 
 load_dotenv()
@@ -36,7 +36,6 @@ class Config:
     SECURITY_PASSWORD_SALT = os.getenv("SECURITY_PASSWORD_SALT", "$$1")
     SECURITY_PASSWORD_HASH = "bcrypt"  # Алгоритм хэширования паролей
     SECURITY_REGISTERABLE = True       # Разрешить регистрацию
-    SECURITY_REGISTER_FORM = CustomRegisterForm  # Путь к вашей кастомной форме
     SECURITY_CONFIRMABLE = False        # Требовать подтверждения email
     SECURITY_RECOVERABLE = False        # Включить восстановление пароля
     SECURITY_TRACKABLE = False          # Включить отслеживание входов
@@ -49,14 +48,20 @@ class Config:
     REMEMBER_COOKIE_DURATION = 3600 * 24 * 7  # Продолжительность в секундах (7 дней)
     REMEMBER_COOKIE_HTTPONLY = True          # Безопасность cookie
     SECURITY_REMEMBER_ME = True              # Включить "запомнить меня"# URL после выхода
-    SECURITY_CSRF_PROTECT = False           # Отключает проверку CSRF
+    SECURITY_CSRF_PROTECT = True           # Отключает проверку CSRF
+    WTF_CSRF_ENABLED = True  # Включить CSRF для Flask-WTF
+    WTF_CSRF_SECRET_KEY = os.getenv("WTF_CSRF_SECRET_KEY")
+    WTF_CSRF_TIME_LIMIT = 3600 * 12 # Время жизни токена (опционально)
     SECURITY_LOG_LEVEL = logging.DEBUG   # Включение логирования Flask-Security
-    WTF_CSRF_ENABLED = False # Отключает проверку CSRF
+    SECURITY_FLASH_MESSAGES = True # Включает flash сообщения
+    SECURITY_RETURN_GENERIC_RESPONSES = False
+
     
-    SECRET_KEY = os.getenv("SECRET_KEY", "my_secret_key")
-    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    
+    SECRET_KEY = os.getenv("SECRET_KEY")
+    SQLALCHEMY_TRACK_MODIFICATIONS = False # Отключает события SQLAlchemy что бережет память и избавляет от сообщения об ошибках в терминале.
     BASE_UPLOAD_FOLDER = os.getenv("UPLOAD_FOLDER", "/uploads")
-    
+    SESSION_TYPE = "filesystem"
     
     # OpenAI API configuration
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")

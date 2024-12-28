@@ -5,8 +5,9 @@
 
 
 <h1 class="title title-auth">Авторизация</h1>
-<form action="{{ url_for('security.login') }}" method="POST" class="flex_column" id="loginForm">
-    
+<form action="{{ url_for('security.login') }}" method="POST" class="flex_column" id="loginForm" name="login_form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
     <div class="wrapper wrapper--auth">
         <label class="label label--auth" for="email">E-mail:</label>
         <input class="input input--auth" type="email" id="email" name="email" required autocomplete="email"><br>
@@ -17,15 +18,32 @@
         <input class="input input--auth" type="password" id="password" name="password" required autocomplete="current-password"><br>
     </div>
 
+
+    <div class="" id="remember">
+        <label for="remember">Remember Me</label> 
+        <input id="remember" name="remember" type="checkbox" value="y">
+    </div>
+
     <button class="btn btn--auth" type="submit">Войти</button>
 </form>
+
+{% if login_user_form.errors %}
+    <ul>
+    {% for field, errors in login_user_form.errors.items() %}
+        {% for error in errors %}
+            <li>
+                <p>В поле {{ field }}</p> 
+                <p>ошибка:  {{ error }}</p>
+            </li>
+        {% endfor %}
+    {% endfor %}
+    </ul>
+{% endif %}
 
 <p>Нет аккаунта? 
     <a class="link--auth" href="{{ url_for('security.register') }}">Создать</a>
 </p>
 
 
-{% endblock container %}
 
-{% block scripts %}
-{% endblock scripts %}
+{% endblock container %}

@@ -1,35 +1,45 @@
-{% extends "login_base.html" %}
+{% extends "login_base.html" %}  
 
 {% block container %}
 {{ super() }}
 
 <h1 class="title title-auth" id="signupForm">Создать аккаунт</h1>
-<form class="flex_column" method="POST" action="{{ url_for('security.register') }}">
+<form class="flex_column" action="/register" method="post" name="register_user_form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
     <div class="wrapper wrapper--auth">
         <label class="label label--auth" for="email">Email:</label>
-        <input class="input input--auth" type="email" id="email" name="email" required>
+        <input class="input input--auth" type="email" id="email" name="email" required type="email" autocomplete="email">
     </div>
 
     <div class="wrapper wrapper--auth">
-        <label class="label label--auth" for="password">Пароль:</label>
-        <input class="input input--auth" type="password" id="password" name="password" required>
+        <label class="label label--auth" for="password">Password:</label>
+        <input class="input input--auth" type="password" id="password" name="password" autocomplete="new-password" >
     </div>
 
     <div class="wrapper wrapper--auth">
-        <label class="label label--auth" for="password_confirm">Подтверждение пароля:</label>
-        <input class="input input--auth" type="password" id="password_confirm" name="password_confirm" required>
+        <label class="label label--auth" for="password_confirm">Password:</label>
+        <input class="input input--auth" type="password" id="password_confirm" name="password_confirm">
     </div>
     
-    <button id="signupSubmit" class="btn btn--auth" type="submit">Создать</button>
+    <button id="signupSubmit" class="btn btn--auth" type="submit" value="Register">Создать</button>
 </form>
 
-<p>Уже есть аккаунт? 
-    <a class="link--auth" href="{{ url_for('security.login') }}">Войти</a>
-</p>
+{% if register_user_form.errors %}
+    <ul>
+    {% for field, errors in register_user_form.errors.items() %}
+        {% for error in errors %}
+            <li>
+                <p>В поле {{ field }}</p> 
+                <p>ошибка:  {{ error }}</p>
+            </li>
+        {% endfor %}
+    {% endfor %}
+    </ul>
+{% endif %}
 
+<p>Уже есть аккаунт? 
+    <a class="link--auth" href="/login">Войти</a>
+</p>
 {% endblock container %}
 
-{% block scripts %}
-{% endblock scripts %}
-   

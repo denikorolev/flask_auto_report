@@ -8,6 +8,7 @@ from sentence_processing import extract_paragraphs_and_sentences
 from werkzeug.utils import secure_filename
 import os
 import shutil 
+from flask_security.decorators import auth_required
 
 new_report_creation_bp = Blueprint('new_report_creation', __name__)
 
@@ -18,13 +19,12 @@ def allowed_file(filename):
 # Routes
 
 @new_report_creation_bp.route('/create_report', methods=['GET', 'POST'])
-@login_required
+@auth_required()
 def create_report():
     page_title = "New report creation"
     menu = current_app.config['MENU']
-    current_profile = g.current_profile
-    report_types_and_subtypes = ReportType.get_types_with_subtypes(current_profile.id)
-    current_profile_reports = Report.find_by_profile(current_profile.id)
+    report_types_and_subtypes = ReportType.get_types_with_subtypes(g.current_profile.id)
+    current_profile_reports = Report.find_by_profile(g.current_profile.id)
             
     
     return render_template("create_report.html",
@@ -36,7 +36,7 @@ def create_report():
     
     
 @new_report_creation_bp.route('/create_manual_report', methods=['POST'])
-@login_required
+@auth_required()
 def create_manual_report():
     
     try:
@@ -67,7 +67,7 @@ def create_manual_report():
     
 
 @new_report_creation_bp.route('/create_report_from_file', methods=['POST'])
-@login_required
+@auth_required()
 def create_report_from_file():
     
     try:
@@ -188,7 +188,7 @@ def create_report_from_file():
 
 
 @new_report_creation_bp.route('/create_report_from_existing_report', methods=['POST'])
-@login_required
+@auth_required()
 def create_report_from_existing_report():
     
     try:
@@ -222,7 +222,7 @@ def create_report_from_existing_report():
         )
 
         # Копируем абзацы и предложения из существующего отчета в новый
-        for paragraph in existing_report.paragraphs:
+        for paragraph in existing_report.report_to_paragraphs:
             new_paragraph = Paragraph.create(
                 paragraph_index=paragraph.paragraph_index,
                 report_id=new_report.id,
@@ -235,7 +235,7 @@ def create_report_from_existing_report():
                 paragraph_weight=1
             )
 
-            for sentence in paragraph.sentences:
+            for sentence in paragraph.paragraph_to_sentences:
                 Sentence.create(
                     paragraph_id=new_paragraph.id,
                     index=sentence.index,

@@ -44,6 +44,7 @@ function initAddTypeListener() {
                 url: '/report_settings/add_type',  // URL для добавления нового типа
                 method: 'POST',
                 data: { new_type: newTypeName },
+                csrfToken: csrfToken
             });
 
             // Если запрос успешен, обновляем список типов на странице
@@ -84,6 +85,7 @@ function initDeleteTypeListener() {
                 const response = await sendRequest({
                     url: '/report_settings/delete_type',  // Маршрут для удаления типа
                     data: { type_id: typeId },
+                    csrfToken: csrfToken
                 });
 
                 if (response.status === 'success') {
@@ -113,8 +115,9 @@ function initEditTypeListener() {
             }
 
             sendRequest({
-                url: '/report_settings/edit_type',  // Маршрут для редактирования типа
+                url: '/report_settings/edit_type',  
                 data: { type_id: typeId, new_type_name: newTypeName },
+                csrfToken: csrfToken
             })
             .catch(error => {
                 console.log('An error occurred while editing the type.');
@@ -144,8 +147,9 @@ function initAddSubtypeListener() {
 
         try {
             const response = await sendRequest({
-                url: '/report_settings/add_subtype',  // Маршрут для добавления подтипа
+                url: '/report_settings/add_subtype',  
                 data: { report_type_id: reportTypeId, new_subtype_name: newSubtypeName },
+                csrfToken: csrfToken
             });
 
             if (response.status === 'success') {
@@ -184,8 +188,9 @@ function initDeleteSubtypeListener() {
 
             try {
                 const response = await sendRequest({
-                    url: '/report_settings/delete_subtype',  // Маршрут для удаления подтипа
+                    url: '/report_settings/delete_subtype',
                     data: { subtype_id: subtypeId },
+                    csrfToken: csrfToken
                 });
 
                 if (response.status === 'success') {
@@ -214,8 +219,9 @@ function initEditSubtypeListener() {
             }
             try {
                 await sendRequest({
-                    url: '/report_settings/edit_subtype',  // Маршрут для редактирования подтипа
+                    url: '/report_settings/edit_subtype',
                     data: { subtype_id: subtypeId, new_subtype_name: newSubtypeName },
+                    csrfToken: csrfToken
                 });
             } catch (error) {
                 console.log('An error occurred while editing the subtype.');
@@ -247,6 +253,7 @@ function initAddParagraphTypeListener() {
                 url: '/report_settings/add_paragraph_type',
                 method: 'POST',
                 data: { new_paragraph_type: newTypeName },
+                csrfToken: csrfToken
             });
 
             // Если запрос успешен, обновляем список типов параграфов на странице
@@ -283,7 +290,7 @@ function initFileUploadListener() {
         formData.append('file_type', fileType);
 
         sendRequest({
-            url: '/report_settings/upload_template',  // Маршрут для загрузки файла
+            url: '/report_settings/upload_template',
             data: formData
         })
         .then(() => {

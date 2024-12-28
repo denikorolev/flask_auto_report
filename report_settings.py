@@ -4,6 +4,7 @@ from flask import Blueprint, render_template, request, current_app, jsonify, g
 from flask_login import login_required
 from models import db, ReportType, ReportSubtype, ParagraphType 
 from file_processing import file_uploader
+from flask_security.decorators import auth_required
 
 report_settings_bp = Blueprint('report_settings', __name__)
 
@@ -11,7 +12,7 @@ report_settings_bp = Blueprint('report_settings', __name__)
 # Routs
 # Главный маршрут страницы
 @report_settings_bp.route('/report_settings', methods=['GET', 'POST'])
-@login_required
+@auth_required()
 def report_settings():
     menu = current_app.config["MENU"]
     
@@ -37,7 +38,7 @@ def report_settings():
 
 
 @report_settings_bp.route('/upload_template', methods=['POST'])
-@login_required
+@auth_required()
 def upload_template():
     """
     Обрабатывает загрузку шаблона Word файла.
@@ -69,7 +70,7 @@ def upload_template():
 
 
 @report_settings_bp.route('/add_paragraph_type', methods=['POST'])
-@login_required
+@auth_required()
 def add_paragraph_type():
     data = request.get_json()
     new_type_name = data.get('new_paragraph_type', '').strip()
@@ -88,7 +89,7 @@ def add_paragraph_type():
 
 
 @report_settings_bp.route('/add_type', methods=['POST'])
-@login_required
+@auth_required()
 def add_type():
     
     data = request.get_json()
@@ -106,7 +107,7 @@ def add_type():
 
 
 @report_settings_bp.route('/delete_type', methods=['POST'])
-@login_required
+@auth_required()
 def delete_type():
     
     data = request.get_json()
@@ -125,7 +126,7 @@ def delete_type():
 
 
 @report_settings_bp.route('/edit_type', methods=['POST'])
-@login_required
+@auth_required()
 def edit_type():
     
     data = request.get_json()
@@ -151,7 +152,7 @@ def edit_type():
 
 
 @report_settings_bp.route('/add_subtype', methods=['POST'])
-@login_required
+@auth_required()
 def add_subtype():
     
     data = request.get_json()
@@ -169,7 +170,7 @@ def add_subtype():
 
 
 @report_settings_bp.route('/delete_subtype', methods=['POST'])
-@login_required
+@auth_required()
 def delete_subtype():
     
     data = request.get_json()
@@ -186,7 +187,7 @@ def delete_subtype():
     
     
 @report_settings_bp.route('/edit_subtype', methods=['POST'])
-@login_required
+@auth_required()
 def edit_subtype():
     
     data = request.get_json()

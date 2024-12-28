@@ -1,10 +1,12 @@
+<!-- working_with_report.html-->
 
 {% extends "base.html" %}
 
 
 {% block container %}
-{{ super() }}
 {% import 'macros.html' as macros %}
+
+<input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
 
 <!-- Pre-filled form for the second page -->
 <form class="flex" id="exportForm" data-report-type="{{ report_data.report.report_type }}" data-subtype="{{ report_data.report.report_subtype }}" data-comment="{{ report_data.report.comment }}" data-key-words="{{ key_words | tojson | safe }}">
@@ -78,12 +80,14 @@
 
         
         
-        <!-- Кружок с + для отображения дополнительных предложений -->
+        <!-- Кружок с + для отображения дополнительных предложений 
         <div id="plusCircle" class="plus-circle"></div>
         <div id="popup" class="popup">
             <ul id="popupList"></ul>
-        </div>
+        </div>-->
+
     </div> 
+    
     <div class="flex_column right-side-container">
 
         <!-- Кнопка для перехода к настройке текущего параграфа -->
@@ -92,7 +96,7 @@
             Edit this report
         </a>
 
-        <!-- Button to copy text -->
+        <!-- Button to copy text export to the Word and generate impression -->
         <div class="flex_column">
             <button class="btn report__btn" id="copyButton">Copy Text</button>
             <button class="btn report__btn" id="exportButton">Export to Word</button>

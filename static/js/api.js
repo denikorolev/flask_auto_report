@@ -8,17 +8,22 @@
  * @param {string} [options.responseType="json"] - The type of response expected ("json" or "blob").
  * @returns {Promise<Object|Blob>} - The response data as a JSON object or Blob.
  */
-function sendRequest({ url, method = "POST", data = {}, responseType = "json" }) {
+function sendRequest({ url, method = "POST", data = {}, responseType = "json", csrfToken}) {
     const fetchOptions = {
         method: method,
         headers: {}
     };
-
+    
     // Check if data is FormData
     if (data instanceof FormData) {
         fetchOptions.body = data;  // FormData automatically sets the headers
     } else {
         fetchOptions.headers["Content-Type"] = "application/json";
+        
+        if(csrfToken) {
+            fetchOptions.headers["X-CSRFToken"] = csrfToken;
+            }
+
         fetchOptions.body = JSON.stringify(data);  // Convert data to JSON for normal requests
     }
 
@@ -80,7 +85,8 @@ function generateImpressionRequest(text, assistantList) {
     // Отправляем запрос на сервер с помощью sendRequest
     return sendRequest({   
         url: "/openai_api/generate_impression",
-        data: jsonData
+        data: jsonData,
+        csrfToken: csrfToken
     }).then(data => {
         if (data.status === "success") {
             return data.data; // Возвращаем успешный ответ от сервера

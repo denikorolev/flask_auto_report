@@ -1,5 +1,6 @@
 // admin.js
 
+
 function toggleFields(tableName) {
     // Получаем контейнер для полей таблицы
     const fieldsContainer = document.getElementById(`fields-${tableName}`);
@@ -46,7 +47,8 @@ function sendSelectedData() {
     // Отправка данных на сервер с использованием sendRequest из api.js
     sendRequest({
         url: "/admin/fetch_data",
-        data: data
+        data: data,
+        csrfToken: csrfToken
     }).then(response => {
         displayData(response);
     }).catch(error => {
@@ -172,6 +174,7 @@ function handleEdit(id, tableName, rowElement, editButton) {
 
         sendRequest({
             url: `/admin/update/${tableName}/${id}`,
+            csrfToken: csrfToken,
             method: "PUT",
             data: updatedData
         })
@@ -204,6 +207,7 @@ function handleDelete(id, tableName) {
         sendRequest({
             url: `/admin/delete/${tableName}/${id}`,
             method: "DELETE",
+            csrfToken: csrfToken
         })
         .then(response => {
             if (response.success) {
@@ -240,6 +244,8 @@ function displayDataAfterDeletion(id, tableName) {
 function isPasswordField(columnName) {
     return typeof columnName === "string" && (columnName.toLowerCase().includes("user_pass") || columnName.toLowerCase().includes("hash"));
 }
+
+
 
 
 

@@ -1,13 +1,13 @@
 #working_with_reports.py
 
-from flask import Blueprint, render_template, request, current_app, jsonify, send_file, session, url_for, g
-from flask_login import login_required, current_user
+from flask import Blueprint, render_template, request, current_app, jsonify, send_file, g
 import os
 from models import db, Report, ReportType, Paragraph, Sentence, KeyWord
 from file_processing import save_to_word
 from sentence_processing import split_sentences, get_new_sentences, group_keywords
 from errors_processing import print_object_structure
 from utils import ensure_list
+from flask_security.decorators import auth_required
 
 
 working_with_reports_bp = Blueprint('working_with_reports', __name__)
@@ -17,7 +17,7 @@ working_with_reports_bp = Blueprint('working_with_reports', __name__)
 # Routes
 
 @working_with_reports_bp.route("/choosing_report", methods=['POST', 'GET'])
-@login_required
+@auth_required()
 def choosing_report(): 
     menu = current_app.config['MENU']
     current_profile = g.current_profile
@@ -49,7 +49,7 @@ def choosing_report():
 
 
 @working_with_reports_bp.route("/working_with_reports", methods=['POST', 'GET'])
-@login_required
+@auth_required()
 def working_with_reports(): 
     menu = current_app.config['MENU']
     current_report_id = request.args.get("reportId")
@@ -84,7 +84,7 @@ def working_with_reports():
 
 
 @working_with_reports_bp.route("/update_sentence", methods=['POST'])
-@login_required
+@auth_required()
 def update_sentence():
     data = request.get_json()
     sentence_id = data.get('sentence_id')
@@ -99,7 +99,7 @@ def update_sentence():
 
 
 @working_with_reports_bp.route("/update_paragraph", methods=["POST"])
-@login_required
+@auth_required()
 def update_paragraph():
     data = request.get_json()
     paragraph_id = data.get("paragraph_id")
@@ -114,7 +114,7 @@ def update_paragraph():
 
 
 @working_with_reports_bp.route("/get_sentences_with_index_zero", methods=["POST"])
-@login_required
+@auth_required()
 def get_sentences_with_index_zero():
     data = request.get_json()
     paragraph_id = data.get("paragraph_id")
@@ -130,7 +130,7 @@ def get_sentences_with_index_zero():
 
 # Добавляем новое предложение с индексом 0
 @working_with_reports_bp.route("/new_sentence_adding", methods=["POST"])
-@login_required
+@auth_required()
 def new_sentence_adding():
     try:
         data = request.get_json()
@@ -153,7 +153,7 @@ def new_sentence_adding():
     
     
 @working_with_reports_bp.route("/add_sentence_to_paragraph", methods=["POST"])
-@login_required
+@auth_required()
 def add_sentence_to_paragraph():
     try:
         data = request.get_json()
@@ -186,7 +186,7 @@ def add_sentence_to_paragraph():
 
 
 @working_with_reports_bp.route("/export_to_word", methods=["POST"])
-@login_required
+@auth_required()
 def export_to_word():
     try:
         data = request.get_json()

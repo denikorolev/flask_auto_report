@@ -2,122 +2,122 @@
 
 {% extends "base.html" %}
 {% block container %}
-{{ super() }}
 
+<input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
 
-
+<!-- Types -->
+<section class="section report-section report-section--types">
+    <form class="report-section__form" id="type-form" method="POST">
+       
+        <div class="flex">
+            <label for="new_type" class="report-section__label">New Type:</label>
+            <input class="report-section__input" type="text" id="new_type" name="new_type">
+            <button class="btn report__btn report-section__btn" type="submit" name="add_new_type_button">Add Type</button>
+        </div>
+    </form>
     
-        <!-- Types -->
-        <section class="section report-section report-section--types">
-            <form class="report-section__form" id="type-form" method="POST">
-                <div class="flex">
-                    <label for="new_type" class="report-section__label">New Type:</label>
-                    <input class="report-section__input" type="text" id="new_type" name="new_type">
-                    <button class="btn report__btn report-section__btn" type="submit" name="add_new_type_button">Add Type</button>
-                </div>
-            </form>
-            
-            <div class="report_borderline"></div>
+    <div class="report_borderline"></div>
 
-            <ul class="report-section__list" id="types-list">
-                <li report-section__list-item>
-                    <div class="type_list">
-                        <label class="report_label__item" for="type_type">Edit Types:</label>
-                        <ul id="types-list" class="report-section__list">
-                            {% for type in user_types %}
-                                <li class="report-section__list">
-                                    <input class="report-section__input--type" type="text" id="type_type" name="type_type" value="{{ type.type_text }}">
-                                    <button class="btn report__btn report-section__btn--delete" type="button" name="delete_type_button" data-type-id="{{ type.id }}">Delete Type</button>
-                                    <button class="btn report__btn report-section__btn--edit" type="button" name="edit_type_button" data-type-id="{{ type.id }}">Edit Type</button>
-                                </li>
-                            {% endfor %}
-                        </ul>
-                    </div>
-                    <div class="report_borderline"></div>
-                </li>
-            </ul>
-        </section>
-
-        <!-- Subtypes -->
-        <section class="section report-section report-section--subtypes">
-            <form id="subtype-form" method="POST" class="flex">
-                <label class="report_label__item" for="report_subtype_type">New Subtype:</label>
-                <select class="report__select report-section__select" id="report_subtype_type" name="report_subtype_type" required>
+    <ul class="report-section__list" id="types-list">
+        <li report-section__list-item>
+            <div class="type_list">
+                <label class="report_label__item" for="type_type">Edit Types:</label>
+                <ul id="types-list" class="report-section__list">
                     {% for type in user_types %}
-                        <option value="{{ type.id }}">{{ type.type_text }}</option>
-                    {% endfor %}
-                </select>
-                <label for="new_subtype" class="report-section__label">New Subtype:</label>
-                <input class="report-section__input" type="text" id="new_subtype" name="new_subtype">
-                <button class="btn report__btn report-section__btn" type="submit">Add Subtype</button>
-            </form>
-            <div class="report_borderline"></div>
-
-            <ul id="subtypes-list" class="report-section__list">
-                {% for subtype in user_subtypes %}
-                        <li class="flex report-section__list-item">
-                            
-                            <input class="report_input__item" type="text" id="subtype_type" name="subtype_type" value="{{ subtype.subtype_to_type.type_text }}" readonly>
-                            <input class="report_input__item subtype-input" type="text" id="subtype_subtype" name="subtype_subtype" value="{{ subtype.subtype_text }}">
-                            <button class="btn report__btn delete-subtype-btn" type="submit" name="delete_subtype_button" data-subtype-id="{{ subtype.id }}">Delete Subtype</button>
-                            <button class="btn report__btn edit-subtype-btn" type="submit" name="edit_subtype_button" data-subtype-id="{{ subtype.id }}">Edit Subtype</button>
+                        <li class="report-section__list">
+                            <input class="report-section__input--type" type="text" id="type_type" name="type_type" value="{{ type.type_text }}">
+                            <button class="btn report__btn report-section__btn--delete" type="button" name="delete_type_button" data-type-id="{{ type.id }}">Delete Type</button>
+                            <button class="btn report__btn report-section__btn--edit" type="button" name="edit_type_button" data-type-id="{{ type.id }}">Edit Type</button>
                         </li>
-                {% endfor %}
+                    {% endfor %}
+                </ul>
+            </div>
+            <div class="report_borderline"></div>
+        </li>
+    </ul>
+</section>
+
+<!-- Subtypes -->
+<section class="section report-section report-section--subtypes">
+    <form id="subtype-form" method="POST" class="flex">
+       
+        <label class="report_label__item" for="report_subtype_type">New Subtype:</label>
+        <select class="report__select report-section__select" id="report_subtype_type" name="report_subtype_type" required>
+            {% for type in user_types %}
+                <option value="{{ type.id }}">{{ type.type_text }}</option>
+            {% endfor %}
+        </select>
+        <label for="new_subtype" class="report-section__label">New Subtype:</label>
+        <input class="report-section__input" type="text" id="new_subtype" name="new_subtype">
+        <button class="btn report__btn report-section__btn" type="submit">Add Subtype</button>
+    </form>
+    <div class="report_borderline"></div>
+
+    <ul id="subtypes-list" class="report-section__list">
+        {% for subtype in user_subtypes %}
+                <li class="flex report-section__list-item">
                     
-                <div class="report_borderline"></div>
-               
-            </ul>
-        </section>
-
-        <!-- Загрузка файла -->
-        <section class="section file-upload">
-            <h3>Загрузка файлов</h3>
-            <div class="report_borderline"></div>
-            <p>Здесь вы можете загрузить файлы шаблона Word и картинку росписи для этого шаблона</p>
-            <form id="file-upload-form">
-                <input class="file-upload-input--file-upload" type="file" name="file" id="file-input" required>
-                <div>
-                    <label>
-                        <input class="file-upload-input-radio" type="radio" name="file_type" value="template" checked>
-                        Загрузить шаблон для файлов Word
-                    </label>
-                    <label>
-                        <input class="file-upload-input-radio" type="radio" name="file_type" value="signature">
-                        Загрузить подпись
-                    </label>
-                </div>
-                <button class="file-upload-btn-submit" type="submit">Upload</button>
-            </form>
-            <div class="report_borderline"></div>
-        </section>
-
-        <!-- Создание и редактирование типов параграфов -->
-        <section class="section paragraph-types">
-            <h3>Типы параграфов</h3>
-            <div class="report_borderline"></div>
-            <!-- Список существующих типов параграфов -->
-            <ul class="" id="paragraph-types-list">
-                {% for paragraph_type in paragraph_types %}
-                <div class="flex">    
-                    <li class="paragraph-types-item">{{ paragraph_type.type_name }}</li>
-                    <button class="btn report__btn paragraph-types-btn--edit" type="button">Править</button>
-                    <button class="btn report__btn paragraph-types-btn--delete" type="button">Удалить</button>
-                </div>
-                {% endfor %}
-            </ul>
+                    <input class="report_input__item" type="text" id="subtype_type" name="subtype_type" value="{{ subtype.subtype_to_type.type_text }}" readonly>
+                    <input class="report_input__item subtype-input" type="text" id="subtype_subtype" name="subtype_subtype" value="{{ subtype.subtype_text }}">
+                    <button class="btn report__btn delete-subtype-btn" type="submit" name="delete_subtype_button" data-subtype-id="{{ subtype.id }}">Delete Subtype</button>
+                    <button class="btn report__btn edit-subtype-btn" type="submit" name="edit_subtype_button" data-subtype-id="{{ subtype.id }}">Edit Subtype</button>
+                </li>
+        {% endfor %}
             
-            <div class="report_borderline"></div>
+        <div class="report_borderline"></div>
+        
+    </ul>
+</section>
 
-            <!-- Форма для добавления нового типа параграфа -->
-            <form id="paragraph-type-form" class="flex">
-                <label for="new_paragraph_type" class="report_label__item paragraph-types-label">New Paragraph Type:</label>
-                <input class="report_input__item paragraph-types-input" type="text" id="new_paragraph_type" name="new_paragraph_type" required>
-                <button class="btn report__btn paragraph-types-btn--submit" type="submit">Add Paragraph Type</button>
-            </form>
-            <div class="report_borderline"></div>
-        </section>
+<!-- Загрузка файла -->
+<section class="section file-upload">
+    <h3>Загрузка файлов</h3>
+    <div class="report_borderline"></div>
+    <p>Здесь вы можете загрузить файлы шаблона Word и картинку росписи для этого шаблона</p>
+    <form id="file-upload-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input class="file-upload-input--file-upload" type="file" name="file" id="file-input" required>
+        <div>
+            <label>
+                <input class="file-upload-input-radio" type="radio" name="file_type" value="template" checked>
+                Загрузить шаблон для файлов Word
+            </label>
+            <label>
+                <input class="file-upload-input-radio" type="radio" name="file_type" value="signature">
+                Загрузить подпись
+            </label>
+        </div>
+        <button class="file-upload-btn-submit" type="submit">Upload</button>
+    </form>
+    <div class="report_borderline"></div>
+</section>
 
+<!-- Создание и редактирование типов параграфов -->
+<section class="section paragraph-types">
+    <h3>Типы параграфов</h3>
+    <div class="report_borderline"></div>
+    <!-- Список существующих типов параграфов -->
+    <ul class="" id="paragraph-types-list">
+        {% for paragraph_type in paragraph_types %}
+        <div class="flex">    
+            <li class="paragraph-types-item">{{ paragraph_type.type_name }}</li>
+            <button class="btn report__btn paragraph-types-btn--edit" type="button">Править</button>
+            <button class="btn report__btn paragraph-types-btn--delete" type="button">Удалить</button>
+        </div>
+        {% endfor %}
+    </ul>
     
+    <div class="report_borderline"></div>
+
+    <!-- Форма для добавления нового типа параграфа -->
+    <form id="paragraph-type-form" class="flex">
+        
+        <label for="new_paragraph_type" class="report_label__item paragraph-types-label">New Paragraph Type:</label>
+        <input class="report_input__item paragraph-types-input" type="text" id="new_paragraph_type" name="new_paragraph_type" required>
+        <button class="btn report__btn paragraph-types-btn--submit" type="submit">Add Paragraph Type</button>
+    </form>
+    <div class="report_borderline"></div>
+</section>
 
 {% endblock container %}
 

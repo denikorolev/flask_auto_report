@@ -8,7 +8,8 @@ const jsonData = {
 
     sendRequest({   
         url: "/openai_api/generate_impression",
-        data: jsonData
+        data: jsonData,
+        csrfToken: csrfToken
         }
         
     ).then(data => {

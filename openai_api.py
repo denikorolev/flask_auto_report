@@ -1,12 +1,11 @@
 # openai_api.py
 
 from flask import request, jsonify, current_app, Blueprint, render_template
-import requests
-from flask_login import login_required, current_user
-from calculating import calculate_age
+from flask_login import login_required
 from openai import OpenAI
 from errors_processing import print_object_structure
 import time
+from flask_security.decorators import auth_required
 
 openai_api_bp = Blueprint("openai_api", __name__)
 
@@ -14,7 +13,7 @@ openai_api_bp = Blueprint("openai_api", __name__)
 
 
 @openai_api_bp.route("/start_openai_api", methods=["POST", "GET"])
-@login_required
+@auth_required()
 def start_openai_api():
     menu = current_app.config["MENU"]
     return render_template(
@@ -25,7 +24,7 @@ def start_openai_api():
 
 
 @openai_api_bp.route("/generate_impression", methods=['POST'])
-@login_required
+@auth_required()
 def generate_impression():
     try:
         data = request.get_json()

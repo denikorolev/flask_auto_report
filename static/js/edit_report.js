@@ -22,7 +22,8 @@ function newParagraphCreate(){
     const reportId = document.querySelector(".edit-report").getAttribute("data-report-id");
     sendRequest({
         url: `/editing_report/new_paragraph`,
-        data: {"report_id": reportId}
+        data: {"report_id": reportId},
+        csrfToken: csrfToken
     }).then(response => {
         if (response.status === "success") {
             window.location.reload();
@@ -53,7 +54,8 @@ function deleteParagraph(button){
         sendRequest({
             url: `/editing_report/delete_paragraph`,
             method: "DELETE",
-            data: { paragraph_id: paragraphId }
+            data: { paragraph_id: paragraphId },
+            csrfToken: csrfToken
         }).then(response => {
             window.location.reload();
         }).catch(error => {
@@ -93,7 +95,8 @@ function expandSentencesOfParagraph(button){
         // Отправляем данные предложений на сервер
         sendRequest({
             url: "/editing_report/edit_sentences_bulk",
-            data: { sentences: sentenceData }
+            data: { sentences: sentenceData },
+            csrfToken: csrfToken
         }).then(response => {
             if (response.success) {
                 window.location.reload();
@@ -149,9 +152,8 @@ function deleteSentenceButton(button) {
         sendRequest({
             url: `/editing_report/delete_sentence`,
             method: "DELETE",
-            data: {
-                sentence_id: sentenceId
-            }
+            data: {sentence_id: sentenceId},
+            csrfToken: csrfToken
         }).then(response => {
             if (response.status === "success") {
                 button.closest("li").remove();

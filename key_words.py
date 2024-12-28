@@ -1,20 +1,21 @@
 # key_words.py
 
-from flask import Blueprint, render_template, request, redirect, current_app, jsonify, g
-from flask_login import login_required, current_user
-from models import db, ReportType, ReportSubtype, KeyWord, Report, ParagraphType 
+from flask import Blueprint, render_template, request, current_app, jsonify, g
+from flask_login import current_user
+from models import db, KeyWord, Report
 from itertools import chain
-from file_processing import file_uploader, allowed_file
+from file_processing import file_uploader
 from sentence_processing import group_keywords, sort_key_words_group, process_keywords, check_existing_keywords, extract_keywords_from_doc
 from errors_processing import print_object_structure
 from utils import ensure_list
 from db_processing import add_keywords_to_db
+from flask_security.decorators import auth_required
 
 key_words_bp = Blueprint("key_words", __name__)
 
 
 @key_words_bp.route("/key_words", methods=["POST","GET"])
-@login_required
+@auth_required()
 def key_words():
     menu=current_app.config["MENU"]
     current_profile_reports=Report.find_by_profile(g.current_profile.id)
@@ -44,7 +45,7 @@ def key_words():
 
 # Маршрут для добавления группы ключевых слов
 @key_words_bp.route('/add_keywords', methods=['POST'])
-@login_required
+@auth_required()
 def add_keywords():
     data = request.get_json()
     key_word_input = data.get('key_word_input').strip()
@@ -77,7 +78,7 @@ def add_keywords():
 
 
 # Маршрут для добавления групп ключевых слов из файла word
-@login_required
+@auth_required()
 @key_words_bp.route('/upload_keywords_from_word', methods=['POST'])
 def upload_keywords_from_word():
     
@@ -124,7 +125,7 @@ def upload_keywords_from_word():
 
 # Маршрут для добавления одного или нескольких ключевых слов в уже существующую группу
 @key_words_bp.route('/add_word_to_exist_group', methods=['POST'])
-@login_required
+@auth_required()
 def add_word_to_exist_group():
     data = request.json
     group_index = data.get("group_index")
@@ -143,7 +144,7 @@ def add_word_to_exist_group():
         return {"status": "error", "message": "Invalid keywords format"}, 400
 
     # Подсчитываем количество существующих ключевых слов в конкретной группе
-    num_of_exist_key_words = len(KeyWord.query.filter_by(group_index=group_index, user_id=current_user.id).all())
+    num_of_exist_key_words = len(KeyWord.query.filter_by(group_index=group_index, profile_id=g.current_profile.id).all())
 
         
     # Добавляем ключевые слова в нужную группу
@@ -162,7 +163,7 @@ def add_word_to_exist_group():
 
 # Маршрут для удаления группы ключевых слов
 @key_words_bp.route('/delete_keywords', methods=['POST'])
-@login_required
+@auth_required()
 def delete_keywords():
     group_index = request.json.get("group_index")
 
@@ -170,7 +171,7 @@ def delete_keywords():
         return jsonify({"status": "error", "message": "Group index is required"}), 400
 
     # Удаление всех ключевых слов с данным group_index для текущего пользователя
-    KeyWord.query.filter_by(group_index=group_index, user_id=current_user.id).delete()
+    KeyWord.query.filter_by(group_index=group_index, profile_id=g.current_profile.id).delete()
     db.session.commit()
 
     return jsonify({"status": "success", "message": "Keywords group deleted successfully"}), 200
@@ -178,12 +179,11 @@ def delete_keywords():
 
 # Отвязываем группу ключевых слов от конкретного отчета
 @key_words_bp.route('/unlink_keyword_from_report', methods=['POST'])
-@login_required
+@auth_required()
 def unlink_keyword_from_report():
     data = request.json
     group_index = data.get("group_index")
     report_id = data.get("report_id")
-    print(Report.query.get(report_id))
     if not group_index or not report_id:
         return jsonify({"status": "error", "message": "Group index and report ID are required"}), 400
 
@@ -210,11 +210,10 @@ def unlink_keyword_from_report():
 
 
 @key_words_bp.route('/edit_keywords', methods=['POST'])
-@login_required
+@auth_required()
 def edit_keywords():
     data = request.json
     key_words = data.get("key_words")
-    print(data)
 
     if not key_words:
         return jsonify({"status": "error", "message": "Words are required"}), 400
@@ -226,7 +225,6 @@ def edit_keywords():
         if not key_word:
             # Если ключевое слово пустое, удаляем его
             word_for_delete = KeyWord.query.get(word_id)
-            print(word_for_delete)
             word_for_delete.delete()
             
         else:

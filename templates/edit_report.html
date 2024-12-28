@@ -7,10 +7,12 @@
 {% block container %}
 {{ super() }}
 
+<input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
 <div class="container edit-report" data-report-id="{{ report.id }}">
     {% if report %}
     <h3>Editing Report</h3>
     <form class="edit-report__form--report" id="edit-report-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="flex">
             <div class="flex_column">
                 <label class="report_label__item" for="report_type">Report Type:</label>
@@ -53,6 +55,7 @@
                     {% for paragraph in report_paragraphs %}
                         <div class="flex_column" data-paragraph-id="{{ paragraph.id }}">
                             <form class="flex edit-paragraph__form--paragraph">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <input class="input input--short edit-paragraph__input edit-paragraph__input--index" type="text" id="paragraph_index" name="paragraph_index" value="{{ paragraph.paragraph_index }}">
                                 <input class="input edit-paragraph__input edit-paragraph__input--name" type="text" id="paragraph_name" name="paragraph_name" value="{{ paragraph.paragraph }}">
                                 
@@ -109,6 +112,7 @@
             </li>
             <div>
                 <form method="POST" action="{{ url_for('editing_report.edit_report', report_id=report.id) }}" class="new-paragraph-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <label class="label edit-paragraph__label" for="new_paragraph">Добавить новый параграф</label>
                     <button class="btn report__btn edit-paragraph__button" type="button" id="new_paragraph" name="new_paragraph" onclick="newParagraphCreate()">Добавить</button>
                 </form>

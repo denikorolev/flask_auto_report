@@ -1,7 +1,9 @@
 {% extends "base.html" %}
 
 {% block container %}
-{{ super() }}
+
+
+<input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
 
 {% if current_user.id == 1 %}
 <form>

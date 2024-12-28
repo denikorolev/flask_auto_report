@@ -145,7 +145,8 @@ document.addEventListener("DOMContentLoaded", function () {
             data: {
                 report_type: reportType,
                 report_subtype: reportSubtype
-            }
+            },
+            csrfToken: csrfToken
         })
         .then(data => {
             if (data.reports) {

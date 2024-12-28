@@ -1,9 +1,9 @@
 # editing_report.py
 
 from flask import Blueprint, render_template, request, current_app, jsonify, g
-from flask_login import current_user, login_required
 from models import db, Report, Paragraph, Sentence, ParagraphType
 from errors_processing import print_object_structure
+from flask_security.decorators import auth_required
 
 
 editing_report_bp = Blueprint('editing_report', __name__)
@@ -12,8 +12,8 @@ editing_report_bp = Blueprint('editing_report', __name__)
 
 # Routs
 
-@editing_report_bp.route('/edit_report', methods=['GET', 'POST'])
-@login_required
+@editing_report_bp.route('/edit_report', methods=["GET"])
+@auth_required()
 def edit_report():
     page_title = "Editing report"
     menu = current_app.config['MENU']
@@ -33,7 +33,6 @@ def edit_report():
         for sentence in paragraph.paragraph_to_sentences:
             sentence.show_separator = previous_index is not None and previous_index != sentence.index
             previous_index = sentence.index
-    print(report_paragraphs)
     paragraph_types = ParagraphType.query.all()
 
 
@@ -47,7 +46,7 @@ def edit_report():
 
 
 @editing_report_bp.route('/update_report', methods=['PUT'])
-@login_required
+@auth_required()
 def update_report():
 
     report_id = request.form.get("report_id")
@@ -69,7 +68,7 @@ def update_report():
 
 
 @editing_report_bp.route('/new_paragraph', methods=['POST'])
-@login_required
+@auth_required()
 def new_paragraph():
     
     report_id = request.json.get("report_id")
@@ -103,7 +102,7 @@ def new_paragraph():
 
 
 @editing_report_bp.route('/edit_paragraph', methods=['POST'])
-@login_required
+@auth_required()
 def edit_paragraph():
 
     paragraph_id = request.form.get("paragraph_id")
@@ -157,7 +156,7 @@ def edit_paragraph():
 
 
 @editing_report_bp.route('/delete_paragraph', methods=["DELETE"])
-@login_required
+@auth_required()
 def delete_paragraph():
     
     paragraph_id = request.json.get("paragraph_id")
@@ -174,7 +173,7 @@ def delete_paragraph():
 
 
 @editing_report_bp.route('/edit_sentences_bulk', methods=['POST'])
-@login_required
+@auth_required()
 def edit_sentences_bulk():
 
     if not request.is_json:
@@ -217,7 +216,7 @@ def edit_sentences_bulk():
     
     
 @editing_report_bp.route('/delete_sentence', methods=['DELETE'])
-@login_required
+@auth_required()
 def delete_sentence():
     if not request.is_json:
         return jsonify({"status": "error", "message": "Invalid request format"}), 400

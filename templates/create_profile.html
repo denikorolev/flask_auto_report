@@ -3,8 +3,8 @@
 {% extends "base.html" %}
 
 {% block container %}
-    <h1>Create Profile</h1>
     <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="form-group">
             <label for="profile_name">Profile Name:</label>
             <input type="text" id="profile_name" name="profile_name" class="form-control" required>

@@ -3,11 +3,12 @@
 from flask import Blueprint, render_template, request, redirect, url_for
 from flask_login import login_required, current_user
 from models import User
+from flask_security.decorators import auth_required
 
 profile_bp = Blueprint('profile', __name__)
 
 # @profile_bp.route('/settings', methods=['GET', 'POST'])
-# @login_required
+# @auth_required()
 # def user_settings():
 #     if request.method == 'POST':
 #         theme = request.form['theme']

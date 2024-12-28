@@ -3,7 +3,8 @@
 
 {% block container %}
     <h2>Profile Settings</h2>
-    <form method="POST" action="{{ url_for('profile_settings.update_profile_settings') }}">
+    <form method="POST" action="{{ url_for("profile_settings.update_profile_settings") }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="profile_id" value="{{ profile.id }}">
         <div>
             <label for="profile_name">Profile Name:</label>
@@ -15,7 +16,9 @@
         </div>
         <button type="submit">Save Changes</button>
     </form>
-    <form method="POST" action="{{ url_for('delete_profile', profile_id=profile.id) }}" onsubmit="return confirm('Are you sure you want to delete this profile?');">
+
+    <form method="POST" action="{{ url_for("profile_settings.delete_profile", profile_id=profile.id) }}" onsubmit="return confirm('Are you sure you want to delete this profile?');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="submit">Delete Profile</button>
     </form>
 {% endblock container %}

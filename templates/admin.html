@@ -2,13 +2,8 @@
 
 {% extends "base.html" %}
 {% block container %}
-
+<input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
 <h1>Welcome to Admin panel</h1>
-
-<div class="box">
-    <p>шаблон контейнера</p>
-</div>
-
 
 {% if current_user.id == 1 %}
 <div class="container flex">
@@ -44,6 +39,7 @@
                 {% endfor %}
     
                 <!-- Кнопка для отправки данных через JavaScript -->
+                
                 <button type="button" class="admin-filters__submit" onclick="sendSelectedData()">Получить данные</button>
             </div>
         {% else %}

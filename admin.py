@@ -1,10 +1,11 @@
-from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify, current_app
+from flask import Blueprint, render_template, request, jsonify, current_app
 import models
 import inspect
 from sqlalchemy.ext.declarative import DeclarativeMeta
-from flask_login import login_user, login_required, logout_user, current_user
+from flask_login import login_required
 from models import *
 import re
+from flask_security.decorators import auth_required
 
 
 admin_bp = Blueprint("admin", __name__)
@@ -32,7 +33,7 @@ def get_model_fields(module):
 # Routs
 
 @admin_bp.route("/admin", methods=["GET"])
-@login_required
+@auth_required()
 def admin():
     
     menu = current_app.config["MENU"]
@@ -48,7 +49,7 @@ def admin():
     
 
 @admin_bp.route("/fetch_data", methods=["POST"])
-@login_required
+@auth_required()
 def fetch_data():
     # Получаем данные, отправленные с клиента
     data = request.json
@@ -83,7 +84,7 @@ def fetch_data():
 
 
 @admin_bp.route("/delete/<table_name>/<int:record_id>", methods=["DELETE"])
-@login_required
+@auth_required()
 def delete_record(table_name, record_id):
     # Получаем класс таблицы из словаря
     table_class = current_app.config["TABLE_MODELS"].get(table_name)
@@ -108,7 +109,7 @@ def delete_record(table_name, record_id):
     
     
 @admin_bp.route("/update/<table_name>/<int:record_id>", methods=["PUT"])
-@login_required
+@auth_required()
 def update_record(table_name, record_id):
     # Получаем класс таблицы из конфигурации
     table_class = current_app.config["TABLE_MODELS"].get(table_name)

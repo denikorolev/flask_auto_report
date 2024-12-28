@@ -3,7 +3,8 @@
 {% extends "base.html" %}
 
 {% block container %}
-{{ super() }}
+
+<input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
 
 <!-- report type\subtype choosing -->
 <h2>What report will we use for now?</h2>

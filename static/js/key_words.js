@@ -46,7 +46,8 @@ function setupKeywordsFormListener() {
                 key_word_input: keyWordInput,
                 ignore_unique_check: ignoreUniqueCheck,
                 report_ids: reportIds  // Передаем выбранные отчеты
-            }
+            },
+            csrfToken: csrfToken
         }).then(() => location.reload()).catch(error => console.error("Error:", error));
     });
 }
@@ -83,7 +84,8 @@ function setupUnlinkKeywordsListener() {
                 data: {
                     group_index: groupIndex,
                     report_id: reportId
-                }
+                },
+                csrfToken: csrfToken
             }).then(() => location.reload());
         });
     });
@@ -127,8 +129,10 @@ function setupAddKeywordsListener() {
                 sendRequest({
                     url: "/key_words/add_word_to_exist_group",
                     method: "POST",
+                    csrfToken: csrfToken,
                     data: reportId ? { report_id: reportId, group_index: groupIndex, key_word_input: newKeywords }
                                    : { group_index: groupIndex, key_word_input: newKeywords }
+                    
                 }).then(() => location.reload());
             }
         });
@@ -196,7 +200,8 @@ function setupEditKeywordsListener() {
                     sendRequest({
                         url: "/key_words/edit_keywords",
                         method: "POST",
-                        data: { key_words: updatedWords }  // Передаем массив слов с id и новым значением
+                        data: { key_words: updatedWords },  // Передаем массив слов с id и новым значением
+                        csrfToken: csrfToken
                     }).then(() => location.reload());
                 }
             }
@@ -215,8 +220,10 @@ function setupDeleteKeywordsListener() {
 
             sendRequest({
                 url: "/key_words/delete_keywords", 
-                data: { group_index: groupIndex }
-            }).then(() => location.reload());
+                data: { group_index: groupIndex },
+                csrfToken: csrfToken
+            })
+            .then(() => location.reload());
         });
     });
 }
@@ -245,6 +252,7 @@ function setupUploadWordButtonListener() {
         const formData = new FormData();
         formData.append('file', file);
         formData.append('ignore_unique_check', ignoreUniqueCheck);
+        formData.append("csrf_token", csrfToken)
 
         // Отправляем данные на сервер
         sendRequest({
