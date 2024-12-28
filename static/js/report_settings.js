@@ -291,7 +291,8 @@ function initFileUploadListener() {
 
         sendRequest({
             url: '/report_settings/upload_template',
-            data: formData
+            data: formData,
+            csrfToken: csrfToken
         })
         .then(() => {
             fileInput.value = ''; // Очищаем поле ввода

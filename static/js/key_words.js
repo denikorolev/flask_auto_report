@@ -257,7 +257,8 @@ function setupUploadWordButtonListener() {
         // Отправляем данные на сервер
         sendRequest({
             url: "/key_words/upload_keywords_from_word",  
-            data: formData
+            data: formData,
+            csrfToken: csrfToken
         })
         .then(() => {
             location.reload(); 

@@ -1,9 +1,10 @@
 # profile_settings.py
 
-from flask import Blueprint, render_template, request, redirect, url_for, current_app, session
+from flask import Blueprint, render_template, request, redirect, url_for, current_app, session, g
 from flask_login import current_user
 from models import UserProfile, db
 from flask_security.decorators import auth_required
+from file_processing import sync_profile_files
 
 
 profile_settings_bp = Blueprint('profile_settings', __name__)
@@ -30,11 +31,10 @@ def profile_settings(profile_id):
 @profile_settings_bp.route("/set_profile/<int:profile_id>")
 @auth_required()
 def set_profile(profile_id):
-    print("i'm in set_profile route")
     profile = UserProfile.find_by_id_and_user(profile_id, current_user.id)
     if profile:
         session['profile_id'] = profile.id
-        print(f"Profile '{profile.profile_name}' set as current.", "success")
+        sync_profile_files(g.current_profile.id)
     else:
         print("Profile not found.", "danger")
     return redirect(url_for("working_with_reports.choosing_report"))

@@ -86,10 +86,11 @@ def upload_keywords_from_word():
     if 'file' not in request.files:
         return jsonify({"status": "error", "message": "No file part"}), 400
     file = request.files['file']
+    folder_name = "keywords_from_word"
     if file.filename == '':
         return jsonify({"status": "error", "message": "No selected file"}), 400
     # Загружаем файл с помощью функции file_uploader и получаем сразу 2 переменные ответ и путь
-    upload_result, file_path = file_uploader(file, "doc")
+    upload_result, file_path = file_uploader(file, "doc", folder_name)
     if "successfully" not in upload_result:
         return jsonify({"status": "error", "message": upload_result}), 400
     if not file_path:

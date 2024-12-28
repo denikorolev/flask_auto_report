@@ -3,6 +3,7 @@
 from flask import Blueprint, render_template, request, current_app, jsonify, g
 from models import db, Report, Paragraph, Sentence, ParagraphType
 from errors_processing import print_object_structure
+from utils import get_max_index
 from flask_security.decorators import auth_required
 
 
@@ -72,14 +73,13 @@ def update_report():
 def new_paragraph():
     
     report_id = request.json.get("report_id")
-    print(report_id)
     report = Report.query.get(report_id)
 
     if not report or report.profile_id != g.current_profile.id:
         return jsonify({"status": "error", "message": "Report not found or it's profile data doesn't match with current profile"}), 403
 
     try:
-        paragraph_index = len(report.report_to_paragraphs) + 1
+        paragraph_index = get_max_index(Paragraph, "report_id", report_id, Paragraph.paragraph_index)
         
         default_paragraph_type = ParagraphType.query.filter_by(type_name="text").first()
         if not default_paragraph_type:

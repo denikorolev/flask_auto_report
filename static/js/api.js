@@ -16,6 +16,7 @@ function sendRequest({ url, method = "POST", data = {}, responseType = "json", c
     
     // Check if data is FormData
     if (data instanceof FormData) {
+        fetchOptions.headers["X-CSRFToken"] = csrfToken;
         fetchOptions.body = data;  // FormData automatically sets the headers
     } else {
         fetchOptions.headers["Content-Type"] = "application/json";

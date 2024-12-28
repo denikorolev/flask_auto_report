@@ -196,6 +196,7 @@ def save_to_word(text, name, subtype, report_type, birthdate, reportnumber, scan
         modified_birthdate = "unknown"
     try:
         profile_id = g.current_profile.id
+        
         signatura_metadata = FileMetadata.get_file_by_description(profile_id, "signatura")
         template_metadata = FileMetadata.get_file_by_description(profile_id, "word_template")
         
