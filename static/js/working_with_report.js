@@ -1,5 +1,15 @@
 // working_with_report.js
 
+// Объявляем глобальные переменные и запускаем стартовые функции, постепенно нужно перенести сюда и логику связанную с ключевыми словами и развешивание части слушателей
+document.addEventListener("DOMContentLoaded", function() {
+
+    let activeSentence = null;  // Для отслеживания активного предложения
+    const popupList = document.getElementById("popupList"); // // Для обращения к PopUp
+
+    linkSentences(); // Связываем предложения с данными
+    sentenceDoubleClickHandle () // Включаем логику двойного клика на предложение
+});
+
 
 
 /**
@@ -515,15 +525,7 @@ function highlightSentence(sentenceElement) {
 
 
 
-// Объявляем глобальные переменные и запускаем стартовые функции, постепенно нужно перенести сюда и логику связанную с ключевыми словами и развешивание части слушателей
-document.addEventListener("DOMContentLoaded", function() {
 
-    let activeSentence = null;  // Для отслеживания активного предложения
-    const popupList = document.getElementById("popupList"); // // Для обращения к PopUp
-
-    linkSentences(); // Связываем предложения с данными
-    sentenceDoubleClickHandle () // Включаем логику двойного клика на предложение
-});
 
 
 
