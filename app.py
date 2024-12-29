@@ -1,6 +1,6 @@
 # app.py
 
-from flask import Flask, redirect, url_for, render_template, request, session, g, jsonify
+from flask import Flask, redirect, url_for, render_template, request, session, g
 from flask_login import current_user
 import logging
 from config import get_config, Config
@@ -30,7 +30,7 @@ from openai_api import openai_api_bp
 from key_words import key_words_bp
 from admin import admin_bp
 
-version = "0.7.4"
+version = "0.7.5"
 
 app = Flask(__name__)
 app.config.from_object(get_config()) # Load configuration from file config.py
@@ -44,12 +44,6 @@ db.init_app(app)
 # Initialize Flask-Migrate
 migrate = Migrate(app, db)
 
-# uuid_butt = str(uuid.uuid4())
-
-#Initialize LoginManager turn off for Flask-Security
-# login_manager = LoginManager()
-# login_manager.init_app(app)
-# login_manager.login_view = "security.login"
 
 
 # Инициализирую Flask-security-too
@@ -76,22 +70,14 @@ app.register_blueprint(openai_api_bp, url_prefix="/openai_api")
 app.register_blueprint(key_words_bp, url_prefix="/key_words")
 app.register_blueprint(admin_bp, url_prefix="/admin")
 
-#Load user callback turn off for Flask-Security
-# @login_manager.user_loader
-# def load_user(user_id):
-#     return User.query.get(int(user_id))
 
 
 # Обработка ошибок
-# @app.errorhandler(Exception)
-# def handle_exception(e):
-#     app.logger.error(f"My errorhandler Exception occurred: {str(e)}")
-#     return "Internal Server Error", 500
-
-# @app.errorhandler(400)
-# def handle_bad_request(e):
-#     app.logger.error(f"My errorhandler CSRF error: {str(e)}")
-#     return "CSRF token missing or invalid", 400
+@app.errorhandler(Exception)
+def handle_exception(e):
+    app.logger.error(f"My errorhandler Exception occurred: {str(e)}")
+    er = str(e)
+    return f"Internal Server Error: {er}", 500
 
 
 csrf = CSRFProtect(app)
