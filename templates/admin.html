@@ -5,7 +5,7 @@
 <input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
 <h1>Welcome to Admin panel</h1>
 
-{% if current_user.id == 1 %}
+
 <div class="container flex">
     <div class="box admin-filters">
         <h2>Панель фильтров</h2>
@@ -90,7 +90,7 @@
     
     
 </div>
-{% endif %}
+
 
 
 

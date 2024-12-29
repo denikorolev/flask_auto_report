@@ -1,14 +1,18 @@
 from flask import Blueprint, render_template, request, jsonify, current_app
-import models
-import inspect
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from flask_login import login_required
 from models import *
 import re
-from flask_security.decorators import auth_required
+from flask_security.decorators import auth_required, roles_required
+
 
 
 admin_bp = Blueprint("admin", __name__)
+
+@admin_bp.before_request
+@roles_required("superadmin")  
+def restrict_to_superadmin():
+    pass
 
 
 # Function

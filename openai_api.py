@@ -5,10 +5,14 @@ from flask_login import login_required
 from openai import OpenAI
 from errors_processing import print_object_structure
 import time
-from flask_security.decorators import auth_required
+from flask_security.decorators import auth_required, roles_required
 
 openai_api_bp = Blueprint("openai_api", __name__)
 
+@openai_api_bp.before_request
+@roles_required("superadmin")  
+def restrict_to_superadmin():
+    pass
 
 
 

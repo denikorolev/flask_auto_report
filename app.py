@@ -99,49 +99,6 @@ csrf.init_app(app) # Инициализация CSRF-защиты
 
 # Functions 
 
-def create_roles(*role_names):
-    """
-    Добавляет роли в таблицу Role, если их еще нет.
-    :param role_names: Названия ролей, которые нужно добавить.
-    """
-    for role_name in role_names:
-        # Проверяем, существует ли уже такая роль
-        if not Role.query.filter_by(name=role_name).first():
-            role = Role(name=role_name)
-            db.session.add(role)
-            print(f"Добавлена роль: {role_name}")
-        else:
-            print(f"Роль '{role_name}' уже существует")
-    
-    db.session.commit()
-
-def assign_role_to_user(user_id, role_name):
-    """
-    Назначает роль пользователю с указанным id.
-    :param user_id: ID пользователя.
-    :param role_name: Название роли.
-    """
-    # Получаем пользователя
-    user = User.query.get(user_id)
-    if not user:
-        print(f"Пользователь с ID {user_id} не найден")
-        return
-
-    # Получаем роль
-    role = Role.query.filter_by(name=role_name).first()
-    if not role:
-        print(f"Роль '{role_name}' не найдена")
-        return
-
-    # Проверяем, есть ли у пользователя эта роль
-    if role not in user.roles:
-        user.roles.append(role)
-        db.session.commit()
-        print(f"Роль '{role_name}' добавлена пользователю с ID {user_id}")
-    else:
-        print(f"Пользователь с ID {user_id} уже имеет роль '{role_name}'")
-
-
 
 def test_db_connection():
     try:
@@ -245,11 +202,6 @@ def index():
     menu = app.config["MENU"]
     
     
-    # Добавляем роли superuser и superadmin
-    create_roles("superuser", "superadmin")
-
-    # Назначаем пользователю с id = 1 роль superadmin
-    assign_role_to_user(1, "superadmin")
     
     # Если у пользователя нет профиля в сессии, проверим количество профилей
     if 'profile_id' not in session:
