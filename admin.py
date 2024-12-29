@@ -12,22 +12,33 @@ admin_bp = Blueprint("admin", __name__)
 
 
 # Function
-def get_model_fields(module):
+def get_model_fields():
     """
-    Returns a list of tuples, where each tuple contains the class name and a list of its field names.
+    Returns two dictionaries:
+    - models: a dictionary where keys are model names and values are their field names.
+    - association_tables: a dictionary where keys are table names and values are their field names.
     """
-    model_fields = {}
-    
-    # Перебираем все классы в модуле
-    for name, obj in inspect.getmembers(module, inspect.isclass):
-        # Проверяем, что класс принадлежит модулю models и является моделью SQLAlchemy
-        if obj.__module__ == module.__name__ and isinstance(obj, DeclarativeMeta):
-            if hasattr(obj, "__table__"):
-                fields = [field.name for field in obj.__table__.columns]
-                model_fields[name] = fields
 
-    reversed_model_fields = dict(reversed(list(model_fields.items())))
-    return reversed_model_fields
+    models = {}
+    association_tables = {}
+
+    # Получаем список моделей и ассоциативных таблиц из конфигурации
+    table_models = current_app.config.get("TABLE_MODELS", {})
+    associative_tables = current_app.config.get("ASSOCIATIVE_TABLES", [])
+
+    # Обрабатываем модели
+    for table_name, model_class in table_models.items():
+        if hasattr(model_class, "__table__"):  # Проверяем, является ли это моделью SQLAlchemy
+            models[table_name] = [column.name for column in model_class.__table__.columns]
+
+    # Обрабатываем ассоциативные таблицы
+    for table_name in associative_tables:
+        table = db.metadata.tables.get(table_name)
+        if table is not None:
+            association_tables[table_name] = [column.name for column in table.columns]
+
+    return models, association_tables
+
 
 
 # Routs
@@ -38,48 +49,55 @@ def admin():
     
     menu = current_app.config["MENU"]
     
-        
-    all_models_and_fields = get_model_fields(models)
+    all_models, association_tables = get_model_fields()
     
     return render_template("admin.html",
                            menu=menu,
                            title="Admin",
-                           all_models_and_fields=all_models_and_fields)
+                           all_models=all_models,
+                           association_tables=association_tables)
     
     
 
 @admin_bp.route("/fetch_data", methods=["POST"])
 @auth_required()
 def fetch_data():
-    # Получаем данные, отправленные с клиента
     data = request.json
     selected_tables = data.get("tables", [])
     selected_columns = data.get("columns", {})
-
-    # Результат для отправки обратно
     result = {}
 
+    table_models = current_app.config.get("TABLE_MODELS", {})
+    associative_tables = current_app.config.get("ASSOCIATIVE_TABLES", [])
+
     for table_name in selected_tables:
-        # Получаем класс таблицы по имени
-        table_class = globals().get(table_name)
-        if not table_class:
-            continue  # Если класс не найден, пропускаем
+        if table_name in table_models:
+            model_class = table_models[table_name]
+            fields = selected_columns.get(table_name, [])
+            if "id" not in fields:
+                fields.append("id")
+            try:
+                query = db.session.query(*[getattr(model_class, field) for field in fields])
+                records = query.all()
+                result[table_name] = [dict(zip(fields, record)) for record in records]
+            except Exception as e:
+                print(f"Ошибка при запросе к модели {table_name}: {e}")
+                result[table_name] = {"error": f"Ошибка: {e}"}
+        elif table_name in associative_tables:
+            table = db.metadata.tables.get(table_name)
+            if table is None:
+                print(f"Таблица {table_name} не найдена в metadata")
+                result[table_name] = {"error": "Таблица не найдена"}
+                continue
+            try:
+                query = db.session.query(table)
+                records = query.all()
+                columns = [column.name for column in table.columns]
+                result[table_name] = [dict(zip(columns, record)) for record in records]
+            except Exception as e:
+                print(f"Ошибка при запросе к таблице {table_name}: {e}")
+                result[table_name] = {"error": f"Ошибка: {e}"}
 
-        # Выбираем только указанные поля
-        fields = selected_columns.get(table_name, [])
-        if "id" not in fields:
-            fields.append("id")
-        try:
-            # Выполняем запрос к базе данных
-            query = db.session.query(*[getattr(table_class, field) for field in fields])
-            records = query.all()
-            
-            # Сохраняем результаты в виде списка словарей
-            result[table_name] = [dict(zip(fields, record)) for record in records]
-        except Exception as e:
-            print(f"Ошибка при запросе к таблице {table_name}: {e}")
-
-    # Возвращаем результаты в формате JSON
     return jsonify(result)
 
 

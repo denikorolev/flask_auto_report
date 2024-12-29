@@ -32,6 +32,11 @@ class Config:
         "FileMetadata": FileMetadata,
     }
     
+    ASSOCIATIVE_TABLES = [
+        "key_word_report_link",
+        "roles_users"
+    ]
+    
     # Flask-Security Configuration
     SECURITY_PASSWORD_SALT = os.getenv("SECURITY_PASSWORD_SALT", "$$1")
     SECURITY_PASSWORD_HASH = "bcrypt"  # Алгоритм хэширования паролей

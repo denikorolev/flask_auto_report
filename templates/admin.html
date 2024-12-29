@@ -10,9 +10,9 @@
     <div class="box admin-filters">
         <h2>Панель фильтров</h2>
     
-        {% if all_models_and_fields %}
+        {% if all_models %}
             <div class="admin-filters__form">
-                {% for table, columns in all_models_and_fields.items() %}
+                {% for table, columns in all_models.items() %}
                     <ul class="admin-filters__list">
                         <!-- Чекбокс для названия таблицы -->
                         <li class="admin-filters__item">
@@ -43,7 +43,39 @@
                 <button type="button" class="admin-filters__submit" onclick="sendSelectedData()">Получить данные</button>
             </div>
         {% else %}
-            <p>Что-то пошло не так с получением информации о таблицах базы данных</p>
+            <p>Нет данных для отображения моделей</p>
+        {% endif %}
+
+        <!-- Ассоциативные таблицы -->
+        {% if association_tables %}
+            <div class="admin-filters__form">
+                <h3>Ассоциативные таблицы:</h3>
+                {% for table, columns in association_tables.items() %}
+                    <ul class="admin-filters__list">
+                        <li class="admin-filters__item">
+                            <input type="checkbox" class="admin-filter__checkbox admin-filter__checkbox--table" 
+                                   value="{{ table }}" id="table-{{ table }}" 
+                                   onclick="toggleFields('{{ table }}')">
+                            <label for="table-{{ table }}" 
+                                   class="admin-filters__label admin-filters__label--table">{{ table }}</label>
+                        </li>
+                        <div class="admin-filters__fields" id="fields-{{ table }}" style="display: none;">
+                            {% for column in columns %}
+                                <li class="admin-filters__item">
+                                    <input type="checkbox" class="admin-filter__checkbox admin-filter__checkbox--column" 
+                                           data-table="{{ table }}" value="{{ column }}" 
+                                           id="column-{{ table }}-{{ column }}" checked>
+                                    <label class="admin-filters__label admin-filters__label--column" 
+                                           for="column-{{ table }}-{{ column }}">{{ column }}</label>
+                                </li>
+                            {% endfor %}
+                        </div>
+                    </ul>
+                {% endfor %}
+                <button type="button" class="admin-filters__submit" onclick="sendSelectedData()">Получить данные</button>
+            </div>
+        {% else %}
+            <p>Нет данных для ассоциативных таблиц</p>
         {% endif %}
     </div>
     

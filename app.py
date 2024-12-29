@@ -17,6 +17,7 @@ if os.getenv("FLASK_ENV") == "local":
 from flask_wtf.csrf import CSRFProtect
 from flask_security import Security, SQLAlchemyUserDatastore
 from flask_security.decorators import auth_required
+from flask_security.signals import user_registered
 
 # Импортирую блюпринты
 from working_with_reports import working_with_reports_bp  
@@ -55,6 +56,15 @@ migrate = Migrate(app, db)
 user_datastore = SQLAlchemyUserDatastore(db, User, Role)
 security = Security(app, user_datastore)
 
+# Обработчик сигнала user_registered и автоматическое назначение роли 'user'
+@user_registered.connect_via(app)
+def assign_default_role(sender, user, **extra):
+    """Назначаем роль 'user' для новых пользователей"""
+    default_role = Role.query.filter_by(name="user").first()
+    if default_role:
+        user.roles.append(default_role)  # Добавляем роль
+    db.session.commit()  # Сохраняем изменения
+
 # Register Blueprints
 app.register_blueprint(working_with_reports_bp, url_prefix="/working_with_reports")
 app.register_blueprint(my_reports_bp, url_prefix="/my_reports")
@@ -73,21 +83,64 @@ app.register_blueprint(admin_bp, url_prefix="/admin")
 
 
 # Обработка ошибок
-@app.errorhandler(Exception)
-def handle_exception(e):
-    app.logger.error(f"My errorhandler Exception occurred: {str(e)}")
-    return "Internal Server Error", 500
+# @app.errorhandler(Exception)
+# def handle_exception(e):
+#     app.logger.error(f"My errorhandler Exception occurred: {str(e)}")
+#     return "Internal Server Error", 500
 
-@app.errorhandler(400)
-def handle_bad_request(e):
-    app.logger.error(f"My errorhandler CSRF error: {str(e)}")
-    return "CSRF token missing or invalid", 400
+# @app.errorhandler(400)
+# def handle_bad_request(e):
+#     app.logger.error(f"My errorhandler CSRF error: {str(e)}")
+#     return "CSRF token missing or invalid", 400
 
 
 csrf = CSRFProtect(app)
 csrf.init_app(app) # Инициализация CSRF-защиты
 
 # Functions 
+
+def create_roles(*role_names):
+    """
+    Добавляет роли в таблицу Role, если их еще нет.
+    :param role_names: Названия ролей, которые нужно добавить.
+    """
+    for role_name in role_names:
+        # Проверяем, существует ли уже такая роль
+        if not Role.query.filter_by(name=role_name).first():
+            role = Role(name=role_name)
+            db.session.add(role)
+            print(f"Добавлена роль: {role_name}")
+        else:
+            print(f"Роль '{role_name}' уже существует")
+    
+    db.session.commit()
+
+def assign_role_to_user(user_id, role_name):
+    """
+    Назначает роль пользователю с указанным id.
+    :param user_id: ID пользователя.
+    :param role_name: Название роли.
+    """
+    # Получаем пользователя
+    user = User.query.get(user_id)
+    if not user:
+        print(f"Пользователь с ID {user_id} не найден")
+        return
+
+    # Получаем роль
+    role = Role.query.filter_by(name=role_name).first()
+    if not role:
+        print(f"Роль '{role_name}' не найдена")
+        return
+
+    # Проверяем, есть ли у пользователя эта роль
+    if role not in user.roles:
+        user.roles.append(role)
+        db.session.commit()
+        print(f"Роль '{role_name}' добавлена пользователю с ID {user_id}")
+    else:
+        print(f"Пользователь с ID {user_id} уже имеет роль '{role_name}'")
+
 
 
 def test_db_connection():
@@ -190,6 +243,14 @@ def load_current_profile():
 def index():
     user_profiles = UserProfile.get_user_profiles(current_user.id)
     menu = app.config["MENU"]
+    
+    
+    # Добавляем роли superuser и superadmin
+    create_roles("superuser", "superadmin")
+
+    # Назначаем пользователю с id = 1 роль superadmin
+    assign_role_to_user(1, "superadmin")
+    
     # Если у пользователя нет профиля в сессии, проверим количество профилей
     if 'profile_id' not in session:
         if user_profiles[0].profile_name == "Default":
