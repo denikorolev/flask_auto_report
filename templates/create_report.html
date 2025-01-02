@@ -8,16 +8,16 @@
 
 <!-- New report master -->
 <div class="container">
-    <h2>Create a New Report</h2>
+    <h2>Создание нового протокола</h2>
     <form id="report-creation-form" class="flex" enctype="multipart/form-data">
         
         <!-- Fields for creating report -->
         <div class="flex_column">
-            <label class="report_label__item" for="report_name">Report Name:</label>
+            <label class="report_label__item" for="report_name">Название протокола:</label>
             <input class="report_input__item form-control" type="text" id="report_name" name="report_name" required>
         </div>
         <div class="flex_column">
-            <label class="report_label__item" for="report_type">Report Type:</label>
+            <label class="report_label__item" for="report_type">Тип протокола:</label>
             <select class="report__select" id="report_type" name="report_type" required>
                 {% for rt in report_types_and_subtypes %}
                     <option value="{{ rt.type_id }}">{{ rt.type_text }}</option>
@@ -25,13 +25,13 @@
             </select>
         </div>
         <div class="flex_column">
-            <label class="report_label__item" for="report_subtype">Report Subtype:</label>
+            <label class="report_label__item" for="report_subtype">Подтип протокола:</label>
             <select class="report__select" id="report_subtype" name="report_subtype" required>
                <!-- Empty, will be filled dynamically -->
             </select>
         </div>
         <div class="flex_column">
-            <label class="report_label__item" for="comment">Comment:</label>
+            <label class="report_label__item" for="comment">Комментарий:</label>
             <input class="report_input__item form-control" type="text" id="comment" name="comment" required>
         </div>
         <!-- side boolean changer -->
@@ -45,35 +45,42 @@
             </div>
         </div>
         <div class="flex_column">
-            <label class="report_label__item" for="action" >Select the method to create a report:</label>
+            <label class="report_label__item" for="action" >Выберите способ создания протокола:</label>
             <select class="report__select form-control" id="action" name="action" required>
-                <option value="manual">Manually</option>
-                <option value="file">From File</option>
-                <option value="existing">From Existing Report</option>
+                <option value="manual">Вручную</option>
+                <option value="file">Из файла</option>
+                <option value="existing">Из существующего протокола</option>
+                <option value="existing_few">Из нескольких существующих протоколов</option>
             </select>
         </div>
 
         <div class="flex_column" id="file-upload-container" style="display: none;">
-            <label class="report_label__item" for="report_file">Upload Report File:</label>
+            <label class="report_label__item" for="report_file">Загрузить файл с протоколом:</label>
             <input class="report_input__item form-control" type="file" id="report_file" name="report_file" accept=".doc, .docx">
         </div>
         
-        <button class="btn report__btn" type="button" name="report_creation">Create Report</button>
-
-
-        
+        <button class="btn report__btn" type="button" name="report_creation">Создать протокол</button>
 
     </form>
+
+
     <!-- Список существующих отчетов -->
-    <div id="existing-report-container" style="display: none;">
-        <h3>Select an Existing Report</h3>
-        <ul id="existing-report-list">
+    <div class="existing-fewreports" id="existing-report-container" style="display: none;">
+        <h3 class="existing-fewreports__title">Выберите протокол из существующих:</h3>
+        <div class="existing-fewreports__wrapper" id="additional_paragraphs_container">
+            <span class="existing-fewreports__span">Нужно добавить</span>
+            <span><input class="existing-fewreports__input--number" type="number" id="additional_paragraphs" name="additional_paragraphs" min="0" max="5" step="1" value="0"></span>
+            <span>дополнительных параграфов между протоколами.</span>
+        </div>
+
+        <ul class="existing-fewreports__list" id="existing-report-list">
             {% for report in user_reports %}
-            <li class="report_form__item" data-report-type="{{ report.report_to_subtype.subtype_to_type.id }}">
+            <li class="existing-fewreports__item" data-report-type="{{ report.report_to_subtype.subtype_to_type.id }}">
                 
                 
-                <input type="checkbox" id="report_{{ report.id }}" name="existing_report_id" value="{{ report.id }}">
-                <label for="report_{{ report.id }}">{{ report.report_name }}</label>
+                <input class="existing-fewreports__input--checkbox" type="radio" id="report_{{ report.id }}" name="existing_report_id" value="{{ report.id }}">
+                <label class="existing-fewreports__label--checkbox" for="report_{{ report.id }}">{{ report.report_name }}</label>
+                <span class="existing-fewreports__order-circle"></span>
             </li>
             {% endfor %}
         </ul>
@@ -87,7 +94,7 @@
 </script>
 
 
-<pre style="font-size: 12px; width: 800px; margin-top: 20px;"> Инструкция по подготовке текста в Word для создания шаблона
+<pre style="font-size: 12px; width: 800px; margin-top: 20px;"> Инструкция по подготовке текста в Word для создания шаблона:
     Чтобы создать шаблон с помощью нашей программы, необходимо правильно подготовить текст в документе Word. 
     Следуйте этой инструкции, чтобы программа корректно обработала ваш документ:
     

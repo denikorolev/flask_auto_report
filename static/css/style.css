@@ -727,3 +727,18 @@ body {
     padding-right: 15px;
     background-color: rgb(213, 213, 242);
 }
+
+/* кружок в создании нового протокола */
+
+.existing-fewreports__order-circle {
+    display: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background-color: var(--main-btn-color);
+    color: white;
+    text-align: center;
+    line-height: 20px;
+    font-size: 12px;
+    margin-left: 10px;
+}

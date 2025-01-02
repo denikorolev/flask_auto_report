@@ -526,13 +526,6 @@ function highlightSentence(sentenceElement) {
 
 
 
-
-
-
-
-
-
-
 // Обработчик двойного клика на предложение
 function sentenceDoubleClickHandle (){
     const sentencesOnPage = document.querySelectorAll(".report__sentence");
@@ -657,117 +650,118 @@ document.addEventListener("DOMContentLoaded", function() {
 
 
 // Логика редактирования предложений и параграфов
-document.addEventListener("DOMContentLoaded", function() {
-    /**
-     * Логика для кнопки "Edit" в предложениях.
-     */
-    document.querySelectorAll(".icon-btn--edit").forEach(button => {
-        button.addEventListener("click", function() {
-            const container = this.closest(".edit-container");
-            const sentenceElement = container.querySelector(".report__sentence");
-            const selectElement = container.querySelector(".report__select");
+// document.addEventListener("DOMContentLoaded", function() {
+//     /**
+//      * Логика для кнопки "Edit" в предложениях.
+//      */
+//     document.querySelectorAll(".icon-btn--edit").forEach(button => {
+//         console.log("im here")
+//         button.addEventListener("click", function() {
+//             const container = this.closest(".edit-container");
+//             const sentenceElement = container.querySelector(".report__sentence");
+//             const selectElement = container.querySelector(".report__select");
 
-            if (this.classList.contains("editing")) {
-                // Save logic
-                const sentenceId = sentenceElement ? sentenceElement.getAttribute("data-sentence-id") : selectElement.value;
-                const newValue = sentenceElement ? sentenceElement.innerText : container.querySelector(".report__input").value;
+//             if (this.classList.contains("editing")) {
+//                 // Save logic
+//                 const sentenceId = sentenceElement ? sentenceElement.getAttribute("data-sentence-id") : selectElement.value;
+//                 const newValue = sentenceElement ? sentenceElement.innerText : container.querySelector(".report__input").value;
 
-                // Отправляем запрос на сервер с использованием sendRequest
-                sendRequest({
-                    url: "/working_with_reports/update_sentence",
-                    method: "POST",
-                    data: {
-                        sentence_id: sentenceId,
-                        new_value: newValue
-                    },
-                    csrfToken: csrfToken
-                }).then(() => {
-                    this.classList.remove("editing");
-                    this.style.background = "url('/static/pic/edit_button.svg') no-repeat center center";
-                    if (selectElement) {
-                        const input = container.querySelector(".report__input");
-                        const selectedOption = selectElement.selectedOptions[0];
-                        selectedOption.setAttribute("data-sentence", input.value);
-                        selectedOption.textContent = input.value;
-                        input.remove();
-                        selectElement.style.display = "inline-block";
-                    } else {
-                        sentenceElement.contentEditable = false;
-                        sentenceElement.classList.remove("editing");
-                    }
-                }).catch(error => {
-                    alert("Failed to update sentence.");
-                    console.error("Error updating sentence:", error);
-                });
-            } else {
-                // Edit logic
-                this.classList.add("editing");
-                this.style.background = "url('/static/pic/save_button.svg') no-repeat center center";
+//                 // Отправляем запрос на сервер с использованием sendRequest
+//                 sendRequest({
+//                     url: "/working_with_reports/update_sentence",
+//                     method: "POST",
+//                     data: {
+//                         sentence_id: sentenceId,
+//                         new_value: newValue
+//                     },
+//                     csrfToken: csrfToken
+//                 }).then(() => {
+//                     this.classList.remove("editing");
+//                     this.style.background = "url('/static/pic/edit_button.svg') no-repeat center center";
+//                     if (selectElement) {
+//                         const input = container.querySelector(".report__input");
+//                         const selectedOption = selectElement.selectedOptions[0];
+//                         selectedOption.setAttribute("data-sentence", input.value);
+//                         selectedOption.textContent = input.value;
+//                         input.remove();
+//                         selectElement.style.display = "inline-block";
+//                     } else {
+//                         sentenceElement.contentEditable = false;
+//                         sentenceElement.classList.remove("editing");
+//                     }
+//                 }).catch(error => {
+//                     alert("Failed to update sentence.");
+//                     console.error("Error updating sentence:", error);
+//                 });
+//             } else {
+//                 // Edit logic
+//                 this.classList.add("editing");
+//                 this.style.background = "url('/static/pic/save_button.svg') no-repeat center center";
 
-                if (selectElement) {
-                    const selectedOption = selectElement.selectedOptions[0];
-                    const sentenceText = selectedOption.getAttribute("data-sentence");
-                    const input = document.createElement("input");
-                    input.type = "text";
-                    input.value = sentenceText;
-                    input.className = "report__input";
-                    container.insertBefore(input, selectElement);
-                    selectElement.style.display = "none";
-                } else {
-                    sentenceElement.contentEditable = true;
-                    sentenceElement.classList.add("editing");
-                }
-            }
-        });
-    });
+//                 if (selectElement) {
+//                     const selectedOption = selectElement.selectedOptions[0];
+//                     const sentenceText = selectedOption.getAttribute("data-sentence");
+//                     const input = document.createElement("input");
+//                     input.type = "text";
+//                     input.value = sentenceText;
+//                     input.className = "report__input";
+//                     container.insertBefore(input, selectElement);
+//                     selectElement.style.display = "none";
+//                 } else {
+//                     sentenceElement.contentEditable = true;
+//                     sentenceElement.classList.add("editing");
+//                 }
+//             }
+//         });
+//     });
 
-    /**
-     * Логика для кнопки "Edit" в параграфах.
-     */
-    document.querySelectorAll(".icon-btn--edit-paragraph").forEach(button => {
-        button.addEventListener("click", function() {
-            const paragraphElement = this.closest("li").querySelector(".paragraphTitle");
+//     /**
+//      * Логика для кнопки "Edit" в параграфах.
+//      */
+//     document.querySelectorAll(".icon-btn--edit-paragraph").forEach(button => {
+//         button.addEventListener("click", function() {
+//             const paragraphElement = this.closest("li").querySelector(".paragraphTitle");
 
-            // Проверка на null
-            if (!paragraphElement) {
-                console.error("Paragraph element not found.");
-                return;
-            }
+//             // Проверка на null
+//             if (!paragraphElement) {
+//                 console.error("Paragraph element not found.");
+//                 return;
+//             }
 
-            const paragraphId = paragraphElement.getAttribute("data-paragraph-id");
+//             const paragraphId = paragraphElement.getAttribute("data-paragraph-id");
 
-            if (this.classList.contains("editing")) {
-                // Save logic for paragraph
-                const newParagraphValue = paragraphElement.innerText;
+//             if (this.classList.contains("editing")) {
+//                 // Save logic for paragraph
+//                 const newParagraphValue = paragraphElement.innerText;
 
-                // Отправляем запрос на сервер с использованием sendRequest
-                sendRequest({
-                    url: "/working_with_reports/update_paragraph",
-                    method: "POST",
-                    data: {
-                        paragraph_id: paragraphId,
-                        new_value: newParagraphValue
-                    },
-                    csrfToken: csrfToken
-                }).then(() => {
-                    this.classList.remove("editing");
-                    paragraphElement.contentEditable = false;
-                    paragraphElement.classList.remove("editing");
-                    this.style.background = "url('/static/pic/edit_button.svg') no-repeat center center";
-                }).catch(error => {
-                    alert("Failed to update paragraph.");
-                    console.error("Error updating paragraph:", error);
-                });
-            } else {
-                // Edit logic for paragraph
-                this.classList.add("editing");
-                paragraphElement.contentEditable = true;
-                paragraphElement.classList.add("editing");
-                this.style.background = "url('/static/pic/save_button.svg') no-repeat center center";
-            }
-        });
-    });
-});
+//                 // Отправляем запрос на сервер с использованием sendRequest
+//                 sendRequest({
+//                     url: "/working_with_reports/update_paragraph",
+//                     method: "POST",
+//                     data: {
+//                         paragraph_id: paragraphId,
+//                         new_value: newParagraphValue
+//                     },
+//                     csrfToken: csrfToken
+//                 }).then(() => {
+//                     this.classList.remove("editing");
+//                     paragraphElement.contentEditable = false;
+//                     paragraphElement.classList.remove("editing");
+//                     this.style.background = "url('/static/pic/edit_button.svg') no-repeat center center";
+//                 }).catch(error => {
+//                     alert("Failed to update paragraph.");
+//                     console.error("Error updating paragraph:", error);
+//                 });
+//             } else {
+//                 // Edit logic for paragraph
+//                 this.classList.add("editing");
+//                 paragraphElement.contentEditable = true;
+//                 paragraphElement.classList.add("editing");
+//                 this.style.background = "url('/static/pic/save_button.svg') no-repeat center center";
+//             }
+//         });
+//     });
+// });
 
 
 /**

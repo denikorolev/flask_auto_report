@@ -51,7 +51,7 @@
                         </li>
                         <!-- Interaction buttons as list items -->
                         <li class="report_form_item" data-report-type="{{ report.report_to_subtype.subtype_to_type.id }}">
-                            <button class="btn report__btn" type="submit" name="report_delete">Delete</button>
+                            <button class="btn report__btn" type="button" onclick="deleteReport(this)" data-report-id="{{ report.id }}" name="report_delete">Delete</button>
                         </li>
                         <li class="report_form_item" data-report-type="{{ report.report_to_subtype.subtype_to_type.id }}">
                             <a class="btn report__btn" href="{{ url_for("editing_report.edit_report", report_id=report.id) }}">Edit</a>

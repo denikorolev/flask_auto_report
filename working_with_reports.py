@@ -98,19 +98,19 @@ def update_sentence():
     return jsonify({"status": "error", "message": "Failed to update sentence."}), 400
 
 
-@working_with_reports_bp.route("/update_paragraph", methods=["POST"])
-@auth_required()
-def update_paragraph():
-    data = request.get_json()
-    paragraph_id = data.get("paragraph_id")
-    new_value = data.get("new_value")
+# @working_with_reports_bp.route("/update_paragraph", methods=["POST"])
+# @auth_required()
+# def update_paragraph():
+#     data = request.get_json()
+#     paragraph_id = data.get("paragraph_id")
+#     new_value = data.get("new_value")
 
-    paragraph = Paragraph.query.get(paragraph_id)
-    if paragraph:
-        paragraph.paragraph = new_value
-        db.session.commit()
-        return jsonify({"message": "Paragraph updated successfully!"}), 200
-    return jsonify({"message": "Failed to update paragraph."}), 400
+#     paragraph = Paragraph.query.get(paragraph_id)
+#     if paragraph:
+#         paragraph.paragraph = new_value
+#         db.session.commit()
+#         return jsonify({"message": "Paragraph updated successfully!"}), 200
+#     return jsonify({"message": "Failed to update paragraph."}), 400
 
 
 @working_with_reports_bp.route("/get_sentences_with_index_zero", methods=["POST"])

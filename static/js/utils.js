@@ -11,11 +11,6 @@ function updateSubtypes(reportTypeSelectId, reportSubtypeSelectId, allSubtypes) 
     const reportTypeSelect = document.getElementById(reportTypeSelectId);
     const reportSubtypeSelect = document.getElementById(reportSubtypeSelectId);
 
-    // Debugging logs
-    console.log("updateSubtypes called");
-    console.log("reportTypeSelect:", reportTypeSelect);
-    console.log("reportSubtypeSelect:", reportSubtypeSelect);
-    console.log("allSubtypes:", allSubtypes);
 
     if (!reportTypeSelect || !reportSubtypeSelect) {
         console.error("Report type or subtype select element not found");
@@ -49,9 +44,6 @@ function updateSubtypes(reportTypeSelectId, reportSubtypeSelectId, allSubtypes) 
 function initializeSubtypeLogic(reportTypeSelectId, reportSubtypeSelectId, subtypesDataScriptId) {
     const subtypesDataScript = document.getElementById(subtypesDataScriptId);
 
-    // Debugging logs
-    console.log("initializeSubtypeLogic called");
-    console.log("subtypesDataScript:", subtypesDataScript);
 
     if (!subtypesDataScript) {
         console.error(`Element with ID '${subtypesDataScriptId}' not found.`);
@@ -66,8 +58,6 @@ function initializeSubtypeLogic(reportTypeSelectId, reportSubtypeSelectId, subty
         allSubtypes[type.type_id] = type.subtypes;
     });
 
-    // Debugging log for allSubtypes
-    console.log("Parsed allSubtypes:", allSubtypes);
 
     const reportTypeSelect = document.getElementById(reportTypeSelectId);
 
@@ -94,18 +84,14 @@ function initializeSubtypeLogic(reportTypeSelectId, reportSubtypeSelectId, subty
  */
 function filterReportsByType(reportTypeSelect, existingReportList) {
     const selectedType = reportTypeSelect.value;  // Получаем выбранный тип
-    console.log("Selected type:", selectedType);
     const reports = existingReportList.querySelectorAll("li, .report_form__item");  // Получаем все отчеты
 
     reports.forEach(report => {
         const reportType = report.getAttribute("data-report-type");  // Получаем тип отчета
-        console.log("Report type:", reportType);
         // Определяем стиль отображения родительского элемента
         const parentDisplayStyle = getComputedStyle(existingReportList).display;
-        console.log("Parent display style:", parentDisplayStyle);
         // Если выбран тип "" (All) или тип совпадает с атрибутом отчета, показываем его
         if (selectedType === "" || reportType === selectedType) {
-            console.log("Displaying report");
             if (parentDisplayStyle === "grid") {
                 report.style.display = "grid";  // Используем grid, если у родителя grid
             } else {

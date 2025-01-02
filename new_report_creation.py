@@ -5,6 +5,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, curren
 from flask_login import current_user, login_required
 from models import db, User, Report, ReportType, ReportSubtype, Paragraph, Sentence, ParagraphType  
 from sentence_processing import extract_paragraphs_and_sentences
+from file_processing import allowed_file
 from werkzeug.utils import secure_filename
 import os
 import shutil 
@@ -12,9 +13,9 @@ from flask_security.decorators import auth_required
 
 new_report_creation_bp = Blueprint('new_report_creation', __name__)
 
-# Check the file extensions for being in allowed list
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'doc', 'docx'}
+# # Check the file extensions for being in allowed list
+# def allowed_file(filename):
+#     return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'doc', 'docx'}
 
 # Routes
 
@@ -59,7 +60,9 @@ def create_manual_report():
             public=public,
             report_side=report_side
         )
-        return jsonify({"status": "success", "message": "report was created succesfully", "report_id": new_report.id}), 200
+        return jsonify({"status": "success", 
+                        "message": "report was created succesfully", 
+                        "report_id": new_report.id}), 200
 
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500    
@@ -81,13 +84,15 @@ def create_report_from_file():
         # Обрабатываем загруженный файл
         user_temp_folder = f"{current_user.id}_temp"
         if 'report_file' not in request.files:
-            return jsonify({"status": "error", "message": "No file part in the request"}), 400
+            return jsonify({"status": "error", 
+                            "message": "No file part in the request"}), 400
 
         file = request.files['report_file']
         if file.filename == '':
-            return jsonify({"status": "error", "message": "No selected file"}), 400
+            return jsonify({"status": "error", 
+                            "message": "No selected file"}), 400
 
-        if file and allowed_file(file.filename):
+        if file and allowed_file(file.filename, file_type='doc'):
             filename = secure_filename(file.filename)
             filepath = os.path.join(user_temp_folder, filename)
             if not os.path.exists(user_temp_folder):
@@ -173,7 +178,10 @@ def create_report_from_file():
                     shutil.rmtree(user_temp_folder)
 
                 # Формируем ответ с уведомлениями о замене
-                return jsonify({"status": "success", "report_id": new_report.id, "message": "report was created successfully", "notifications": replacement_notifications}), 200
+                return jsonify({"status": "success", 
+                                "report_id": new_report.id, 
+                                "message": "report was created successfully", 
+                                "notifications": replacement_notifications}), 200
 
             except Exception as e:
                 if os.path.exists(user_temp_folder):
@@ -181,7 +189,8 @@ def create_report_from_file():
                 return jsonify({"status": "error", "message": str(e)}), 500
 
         else:
-            return jsonify({"status": "error", "message": "Invalid file type"}), 400
+            return jsonify({"status": "error", 
+                            "message": "Invalid file type"}), 400
 
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
@@ -194,7 +203,8 @@ def create_report_from_existing_report():
     try:
         existing_report_id = request.form.get('existing_report_id')
         if not existing_report_id:
-            return jsonify({"status": "error", "message": "No report selected"}), 400
+            return jsonify({"status": "error", 
+                            "message": "No report selected"}), 400
 
         # Получаем данные для нового отчета
         report_name = request.form.get('report_name')
@@ -244,8 +254,160 @@ def create_report_from_existing_report():
                     sentence=sentence.sentence
                 )
 
-        return jsonify({"status": "success", "message": "Report created from existing report successfully", "report_id": new_report.id}), 200
+        return jsonify({"status": "success", 
+                        "message": "Report created from existing report successfully", 
+                        "report_id": new_report.id}), 200
 
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
+    
+    
+    
+@new_report_creation_bp.route('/create_report_from_existing_few', methods=['POST'])
+@auth_required()
+def create_report_from_existing_few():
+    try:
+        # Получаем данные из запроса
+        data = request.get_json()
+        report_name = data.get("report_name")
+        report_subtype = data.get("report_subtype")
+        comment = data.get("comment")
+        report_side = data.get("report_side")
+        additional_paragraphs = int(data.get("additional_paragraphs", 0))
+        selected_reports = data.get("selected_reports")
+        profile_id = g.current_profile.id
+        scanparam = 5
+        impression = 3
+
+        if not selected_reports or not isinstance(selected_reports, list):
+            return jsonify({"status": "error", 
+                            "message": "No reports selected or invalid format"}), 400
+
+
+        # Создаем новый отчет
+        new_report = Report.create(
+            profile_id=profile_id,
+            report_subtype=report_subtype,
+            report_name=report_name,
+            user_id=current_user.id,
+            comment=comment,
+            public=False,
+            report_side=report_side
+        )
+
+        paragraph_index = 2
+        scanparam_sentences = []
+        impression_sentences = []
+
+        # Копируем данные из выбранных отчетов
+        for idx, report_id in enumerate(selected_reports):
+            existing_report = Report.query.get(report_id)
+            if not existing_report:
+                return jsonify({"status": "error", 
+                                "message": f"Report with ID {report_id} not found"}), 404
+
+            # Получаем и сортируем параграфы по их индексу
+            sorted_paragraphs = sorted(existing_report.report_to_paragraphs, key=lambda p: p.paragraph_index)
+            
+            # Копируем параграфы и предложения
+            for paragraph in sorted_paragraphs:
+                if paragraph.type_paragraph_id == scanparam:
+                    for sentence in paragraph.paragraph_to_sentences:
+                        scanparam_sentences.append(sentence.sentence)
+                    continue
+                        
+                if paragraph.type_paragraph_id == impression:
+                    for sentence in paragraph.paragraph_to_sentences:
+                        impression_sentences.append(sentence.sentence)
+                    continue
+                
+                new_paragraph = Paragraph.create(
+                    paragraph_index=paragraph_index,
+                    report_id=new_report.id,
+                    paragraph=paragraph.paragraph,
+                    paragraph_visible=paragraph.paragraph_visible,
+                    title_paragraph=paragraph.title_paragraph,
+                    bold_paragraph=paragraph.bold_paragraph,
+                    type_paragraph_id=paragraph.type_paragraph_id,
+                    comment=paragraph.comment,
+                    paragraph_weight=paragraph.paragraph_weight
+                )
+                paragraph_index += 1
+
+                for sentence in paragraph.paragraph_to_sentences:
+                    Sentence.create(
+                        paragraph_id=new_paragraph.id,
+                        index=sentence.index,
+                        weight=sentence.weight,
+                        comment=sentence.comment,
+                        sentence=sentence.sentence
+                    )
+
+            # Добавляем дополнительные параграфы между отчетами, кроме последнего
+            if idx < len(selected_reports) - 1:
+                for _ in range(additional_paragraphs):
+                    Paragraph.create(
+                        paragraph_index=paragraph_index,
+                        report_id=new_report.id,
+                        paragraph="Автоматически добавленный параграф",
+                        paragraph_visible=True,
+                        title_paragraph=True,
+                        bold_paragraph=False,
+                        type_paragraph_id=8,  
+                        comment=None,
+                        paragraph_weight=1
+                    )
+                    paragraph_index += 1
+
+        # Добавляем параграфы и предложения из impression
+        new_paragraph_imression = Paragraph.create(
+            paragraph_index=paragraph_index,
+            report_id=new_report.id,
+            paragraph="Заключение",
+            paragraph_visible=True,
+            title_paragraph=True,
+            bold_paragraph=False,
+            type_paragraph_id=impression,
+            comment=None,
+            paragraph_weight=1
+        )
+        for sentence in impression_sentences:
+            Sentence.create(
+                paragraph_id=new_paragraph_imression.id,
+                index=1,
+                weight=1,
+                comment='',
+                sentence=sentence
+            )
+        
+        # Добавляем параграфы и предложения из scanparam
+        new_paragraph_scanparam = Paragraph.create(
+            paragraph_index=1,
+            report_id=new_report.id,
+            paragraph="Параметры сканирования",
+            paragraph_visible=True,
+            title_paragraph=True,
+            bold_paragraph=False,
+            type_paragraph_id= scanparam,
+            comment=None,
+            paragraph_weight=1
+        )
+        for sentence in scanparam_sentences:
+            Sentence.create(
+                paragraph_id=new_paragraph_scanparam.id,
+                index=1,
+                weight=1,
+                comment='',
+                sentence=sentence
+            )
+        
+        # Возвращаем успешный ответ
+        return jsonify({"status": "success", 
+                        "message": "Report created successfully", 
+                        "report_id": new_report.id}), 200
+
+    except Exception as e:
+        return jsonify({"status": "error", 
+                        "message": str(e)}), 500
+
 

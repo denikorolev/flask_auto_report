@@ -30,7 +30,7 @@ from openai_api import openai_api_bp
 from key_words import key_words_bp
 from admin import admin_bp
 
-version = "0.7.5"
+version = "0.7.6"
 
 app = Flask(__name__)
 app.config.from_object(get_config()) # Load configuration from file config.py
@@ -115,12 +115,10 @@ werkzeug_logger.addFilter(StaticFilter())
 werkzeug_logger.addFilter(RemoveHeadersFilter())
 
 # Routs
-@app.before_request
-def log_request_info():
-    app.logger.debug(f"Headers: {request.headers}")
-    app.logger.debug(f"Body: {request.get_data()}")
-
-
+# @app.before_request
+# def log_request_info():
+#     app.logger.debug(f"Headers: {request.headers}")
+#     app.logger.debug(f"Body: {request.get_data()}")
 
 
 # Логика для того, чтобы сделать данные профиля доступными в любом месте программы

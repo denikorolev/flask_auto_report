@@ -158,7 +158,7 @@ function displayData(data) {
 }
 
 
-
+// Функция внесения изменений в данные
 function handleEdit(id, tableName, rowElement, editButton) {
     const isEditing = editButton.textContent === "Save";
 
