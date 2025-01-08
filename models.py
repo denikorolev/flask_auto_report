@@ -4,6 +4,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_security import UserMixin, RoleMixin
 from sqlalchemy import Index
 from utils import ensure_list
+from datetime import datetime, timezone  # Добавим для временных меток
 
 db = SQLAlchemy()
 
@@ -26,25 +27,37 @@ roles_users = db.Table(
 class AppConfig(db.Model):
     __tablename__ = 'app_config'
     id = db.Column(db.Integer, primary_key=True)
+    profile_id = db.Column(db.BigInteger, db.ForeignKey('user_profiles.id'), nullable=True)  # Пока nullable=True
     config_key = db.Column(db.String(50), unique=True, nullable=False)
     config_value = db.Column(db.String(200), nullable=False)
-    config_user = db.Column(db.BigInteger, db.ForeignKey('users.id'), nullable=False)
+    config_type = db.Column(db.String(50), nullable=True)  # Новый столбец, необязательный
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=True)  # Новый столбец, необязательный
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=datetime.utcnow, nullable=True)  # Новый столбец, необязательный
 
-    user = db.relationship('User', lazy=True, backref=db.backref('app_config'))
+    profile = db.relationship("UserProfile", backref=db.backref("configs", lazy=True))
 
     @staticmethod
-    def get_config_value(key, user_id):
-        config = AppConfig.query.filter_by(config_key=key, config_user=user_id).first()
+    def get_config(profile_id, key):
+        """Retrieve a configuration value for a given profile and key."""
+        config = AppConfig.query.filter_by(profile_id=profile_id, config_key=key).first()
         return config.config_value if config else None
 
     @staticmethod
-    def set_config_value(key, value, user_id):
-        config = AppConfig.query.filter_by(config_key=key, config_user=user_id).first()
+    def set_config(profile_id, key, value, config_type=None):
+        """Set or update a configuration value for a given profile and key."""
+        config = AppConfig.query.filter_by(profile_id=profile_id, config_key=key).first()
         if config:
             config.config_value = value
+            if config_type:
+                config.config_type = config_type
         else:
-            config = AppConfig(config_key=key, config_value=value, config_user=user_id)
-        db.session.add(config)
+            config = AppConfig(
+                profile_id=profile_id, 
+                config_key=key, 
+                config_value=value, 
+                config_type=config_type
+            )
+            db.session.add(config)
         db.session.commit()
 
 
