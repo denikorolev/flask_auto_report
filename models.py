@@ -27,12 +27,12 @@ roles_users = db.Table(
 class AppConfig(db.Model):
     __tablename__ = 'app_config'
     id = db.Column(db.Integer, primary_key=True)
-    profile_id = db.Column(db.BigInteger, db.ForeignKey('user_profiles.id'), nullable=True)  # Пока nullable=True
+    profile_id = db.Column(db.BigInteger, db.ForeignKey('user_profiles.id'), nullable=False) 
     config_key = db.Column(db.String(50), unique=True, nullable=False)
     config_value = db.Column(db.String(200), nullable=False)
-    config_type = db.Column(db.String(50), nullable=True)  # Новый столбец, необязательный
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=True)  # Новый столбец, необязательный
-    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=datetime.utcnow, nullable=True)  # Новый столбец, необязательный
+    config_type = db.Column(db.String(50), nullable=True)  # необязательный
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)  
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)  
 
     profile = db.relationship("UserProfile", backref=db.backref("configs", lazy=True))
 
