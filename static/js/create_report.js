@@ -4,7 +4,7 @@ document.addEventListener("DOMContentLoaded", function() {
     // Инициализируем логику типа и подтипа через utils.js
     initializeSubtypeLogic("report_type", "report_subtype", "report-types-data");
     
-    let selectedReports = []; // тут мы сохраним последовательность выбора для кружков
+    let selectedReports = []; // тут мы сохраним последовательность выбора для кружков и отправки на сервер
 
     const reportForm = document.getElementById("report-creation-form");
     const actionSelect = document.getElementById("action");
@@ -25,6 +25,16 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // Показываем или скрываем поля в зависимости от выбора действия
     actionSelect.addEventListener("change", function() {
+        // вначале обновляем кружки, снимаем выбор и очищаем массив
+        inputReportListElements.forEach(input => {
+            input.checked = false; // Снимаем выбор со всех чекбоксов/радиокнопок
+        });
+        selectedReports = []; // Очищаем массив выбранных отчетов
+
+        if (typeof updateOrderCircles === "function") {
+            updateOrderCircles();
+        } // Обновляем кружки
+
         if (this.value === "file") {
             fileUploadContainer.style.display = "flex";  // Показываем поле загрузки файла
             existingReportContainer.style.display = "none";  // Скрываем список существующих отчетов
@@ -142,7 +152,7 @@ document.addEventListener("DOMContentLoaded", function() {
             });
         } else if (action === "existing") {
             // Логика для создания отчета на основе существующего
-            const selectedReportId = Array.from(existingReportList.querySelectorAll("input[type='checkbox']:checked"))
+            const selectedReportId = Array.from(existingReportList.querySelectorAll("input[type='radio']:checked"))
                 .map(checkbox => checkbox.value)[0];  // Получаем выбранный отчет
 
             if (!selectedReportId) {
