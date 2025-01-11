@@ -1,10 +1,12 @@
 # profile_settings.py
 
-from flask import Blueprint, render_template, request, redirect, url_for, current_app, session, g
+from flask import Blueprint, render_template, request, redirect, url_for, current_app, session, g, jsonify
 from flask_login import current_user
-from models import UserProfile, db
+from models import UserProfile, db, AppConfig
+from profile_constructor import ProfileSettingsManager
 from flask_security.decorators import auth_required
 from file_processing import sync_profile_files
+import json
 
 
 profile_settings_bp = Blueprint('profile_settings', __name__)
@@ -15,12 +17,12 @@ profile_settings_bp = Blueprint('profile_settings', __name__)
 @profile_settings_bp.route('/profile_settings/<int:profile_id>', methods=['GET'])
 @auth_required()
 def profile_settings(profile_id):
-    menu = current_app.config['MENU']
+    # menu = current_app.config['MENU']
     profile = UserProfile.find_by_id_and_user(profile_id, current_user.id)
     if profile:
         return render_template('profile_settings.html', 
                                title="Profile Settings", 
-                               menu=menu,
+                            #    menu=menu,
                                profile=profile)
     else:
         print('Profile not found.', 'danger')
@@ -34,6 +36,7 @@ def set_profile(profile_id):
     profile = UserProfile.find_by_id_and_user(profile_id, current_user.id)
     if profile:
         session['profile_id'] = profile.id
+        ProfileSettingsManager.load_profile_settings(g.current_profile.id)
         sync_profile_files(g.current_profile.id)
     else:
         print("Profile not found.", "danger")
@@ -65,7 +68,7 @@ def create_profile():
     return render_template('create_profile.html', title="Create Profile")
 
 
-# Маршрут для обновления настроек профиля
+# Маршрут для обновления имени и дескриптора профиля
 @profile_settings_bp.route('/update_profile_settings', methods=['POST'])
 @auth_required()
 def update_profile_settings():
@@ -102,3 +105,41 @@ def delete_profile(profile_id):
         print('Profile not found or you do not have permission to delete it.', 'danger')
 
     return redirect(url_for('index'))
+
+# Маршрут для сохранения настроек профиля
+@profile_settings_bp.route("/update_settings", methods=["POST"])
+@auth_required()
+def save_settings():
+    """
+    Сохраняет настройки профиля пользователя в таблице AppConfig.
+    """
+    data = request.json  # Получаем данные из запроса
+    profile_id = session.get("profile_id")
+
+    if not profile_id:
+        return jsonify({"status": "error", "message": "Profile not selected"}), 400
+
+    # Сохраняем каждую настройку в AppConfig
+    for key, value in data.items():
+        # Определяем тип данных для сохранения
+        if isinstance(value, bool):
+            config_type = "boolean"
+            value = str(value).lower()  # Преобразуем True/False в "true"/"false"
+        elif isinstance(value, int):
+            config_type = "integer"
+        elif isinstance(value, float):
+            config_type = "float"
+        elif isinstance(value, (dict, list)):
+            config_type = "json"
+            value = json.dumps(value)  # Преобразуем в JSON-строку
+        else:
+            config_type = "string"
+            value = str(value)  # Преобразуем в строку для универсальности
+
+        try: # Сохраняем настройку в AppConfig
+            AppConfig.set_config(profile_id, key, value, config_type=config_type)
+        except Exception as e:
+            return jsonify({"status": "error", "message": str(e)}), 400
+
+    ProfileSettingsManager.load_profile_settings(g.current_profile.id)
+    return jsonify({"status": "success", "message": "Settings saved successfully!"})

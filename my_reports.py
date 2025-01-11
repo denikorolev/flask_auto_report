@@ -13,13 +13,13 @@ my_reports_bp = Blueprint('my_reports', __name__)
 def reports_list(): 
     page_title = "List of the reports"
     # Initialize config variables
-    menu = current_app.config['MENU']
+    # menu = current_app.config['MENU']
     reports_type_with_subtypes = ReportType.get_types_with_subtypes(g.current_profile.id)
     profile_reports = Report.find_by_profile(g.current_profile.id)
                 
     return render_template("my_reports.html", 
                            title=page_title, 
-                           menu=menu,
+                        #    menu=menu,
                            reports_type_with_subtypes = reports_type_with_subtypes, 
                            profile_reports=profile_reports,
                            )

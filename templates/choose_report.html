@@ -10,28 +10,32 @@
 <h2>What report will we use for now?</h2>
 
 <!-- fields group with name, date of birth etc -->
-<form class="flex" id="exportForm" style="margin-bottom: 30px;">
-    <div class="flex_column">
-        <label for="patient-surname">Surname:</label>
-        <input class="input" type="text" id="patient-surname" name="patient_surname" value="{{ request.form.get('patient_surname', '') }}" required>
-    </div>
-    <div class="flex_column">
-        <label for="patient-name">Name:</label>
-        <input class="input" type="text" id="patient-name" name="patient_name" value="{{ request.form.get('patient_name', '') }}" required>
-    </div>
-    <div class="flex_column">
-        <label for="patient-patronymicname">Patronymic name:</label>
-        <input class="input" type="text" id="patient-patronymicname" name="patient_patronymicname" value="{{ request.form.get('patient_patronymicname', '') }}" required>
-    </div>
-    <div class="flex_column">
-        <label for="patient-birthdate">Birthdate:</label>
-        <input class="input" type="date" id="patient-birthdate" name="patient_birthdate" value="{{ request.form.get('patient_birthdate', '') }}" required>
-    </div>
-    <div class="flex_column">
-        <label for="report-number">Report Number:</label>
-        <input class="input" type="text" id="report-number" name="report_number" value="{{ request.form.get('report_number', '') }}" required>
-    </div>
-</form>
+ {% if user_settings.USE_WORD_REPORTS %}
+    <form class="flex" id="exportForm" style="margin-bottom: 30px;">
+        <div class="flex_column">
+            <label for="patient-surname">Surname:</label>
+            <input class="input" type="text" id="patient-surname" name="patient_surname" value="{{ request.form.get('patient_surname', '') }}" required>
+        </div>
+        <div class="flex_column">
+            <label for="patient-name">Name:</label>
+            <input class="input" type="text" id="patient-name" name="patient_name" value="{{ request.form.get('patient_name', '') }}" required>
+        </div>
+        <div class="flex_column">
+            <label for="patient-patronymicname">Patronymic name:</label>
+            <input class="input" type="text" id="patient-patronymicname" name="patient_patronymicname" value="{{ request.form.get('patient_patronymicname', '') }}" required>
+        </div>
+        <div class="flex_column">
+            <label for="patient-birthdate">Birthdate:</label>
+            <input class="input" type="date" id="patient-birthdate" name="patient_birthdate" value="{{ request.form.get('patient_birthdate', '') }}" required>
+        </div>
+        <div class="flex_column">
+            <label for="report-number">Report Number:</label>
+            <input class="input" type="text" id="report-number" name="report_number" value="{{ request.form.get('report_number', '') }}" required>
+        </div>
+    </form>
+ {% endif %}
+
+
 
 <!-- choosing report group -->
 <form class="flex" id="reportForm" method="POST">

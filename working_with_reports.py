@@ -19,7 +19,6 @@ working_with_reports_bp = Blueprint('working_with_reports', __name__)
 @working_with_reports_bp.route("/choosing_report", methods=['POST', 'GET'])
 @auth_required()
 def choosing_report(): 
-    menu = current_app.config['MENU']
     current_profile = g.current_profile
     report_types_and_subtypes = ReportType.get_types_with_subtypes(current_profile.id) 
     current_profile_reports = Report.find_by_profile(current_profile.id)
@@ -42,7 +41,7 @@ def choosing_report():
     return render_template(
         "choose_report.html",
         title="Report",
-        menu=menu,
+        # menu=menu,
         user_reports=current_profile_reports,
         report_types_and_subtypes=report_types_and_subtypes
     )
@@ -51,7 +50,7 @@ def choosing_report():
 @working_with_reports_bp.route("/working_with_reports", methods=['POST', 'GET'])
 @auth_required()
 def working_with_reports(): 
-    menu = current_app.config['MENU']
+    # menu = current_app.config['MENU']
     current_report_id = request.args.get("reportId")
     full_name = request.args.get("fullname")
     birthdate = request.args.get("birthdate")
@@ -64,8 +63,6 @@ def working_with_reports():
     if not report_data:
         print("there is no report_data")
         
-    
-    
     # Получаем ключевые слова для текущего пользователя
     
     key_words_obj = KeyWord.get_keywords_for_report(g.current_profile.id, current_report_id)
@@ -74,7 +71,7 @@ def working_with_reports():
     return render_template(
         "working_with_report.html", 
         title=report_data["report"]["report_name"],
-        menu=menu,
+        # menu=menu,
         report_data=report_data,
         full_name=full_name,
         birthdate=birthdate,
@@ -96,21 +93,6 @@ def update_sentence():
         db.session.commit()
         return jsonify({"status": "success", "message": "Sentence updated successfully!"}), 200
     return jsonify({"status": "error", "message": "Failed to update sentence."}), 400
-
-
-# @working_with_reports_bp.route("/update_paragraph", methods=["POST"])
-# @auth_required()
-# def update_paragraph():
-#     data = request.get_json()
-#     paragraph_id = data.get("paragraph_id")
-#     new_value = data.get("new_value")
-
-#     paragraph = Paragraph.query.get(paragraph_id)
-#     if paragraph:
-#         paragraph.paragraph = new_value
-#         db.session.commit()
-#         return jsonify({"message": "Paragraph updated successfully!"}), 200
-#     return jsonify({"message": "Failed to update paragraph."}), 400
 
 
 @working_with_reports_bp.route("/get_sentences_with_index_zero", methods=["POST"])
@@ -193,7 +175,7 @@ def export_to_word():
         if data is None:
                 return jsonify({"status": "error", "message": "No JSON data received"}), 400
         text = data.get("text")
-        name = data.get("name")
+        name = data.get("name") or "noname"
         subtype = data.get("subtype")
         report_type = data.get("report_type")
         birthdate = data.get("birthdate")

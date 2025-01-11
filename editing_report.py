@@ -17,7 +17,7 @@ editing_report_bp = Blueprint('editing_report', __name__)
 @auth_required()
 def edit_report():
     page_title = "Editing report"
-    menu = current_app.config['MENU']
+    # menu = current_app.config['MENU']
     report_id = request.args.get("report_id")
     report = None
 
@@ -39,7 +39,7 @@ def edit_report():
 
     return render_template('edit_report.html', 
                            title=page_title, 
-                           menu=menu, 
+                        #    menu=menu, 
                            report=report,
                            report_paragraphs=report_paragraphs,
                            paragraph_types=paragraph_types

@@ -17,7 +17,7 @@ key_words_bp = Blueprint("key_words", __name__)
 @key_words_bp.route("/key_words", methods=["POST","GET"])
 @auth_required()
 def key_words():
-    menu=current_app.config["MENU"]
+    # menu=current_app.config["MENU"]
     current_profile_reports=Report.find_by_profile(g.current_profile.id)
     
     # Prepare global key words
@@ -34,7 +34,7 @@ def key_words():
     
     return render_template("/key_words.html",
                            title="Key words",
-                           menu=menu,
+                        #    menu=menu,
                            user_reports=current_profile_reports,
                            global_key_words=global_key_words,
                            report_key_words=report_key_words)

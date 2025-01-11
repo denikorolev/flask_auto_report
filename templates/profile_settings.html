@@ -2,6 +2,9 @@
 {% extends "base.html" %}
 
 {% block container %}
+
+<input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
+
     <h2>Profile Settings</h2>
     <form method="POST" action="{{ url_for("profile_settings.update_profile_settings") }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -21,4 +24,32 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="submit">Delete Profile</button>
     </form>
+
+
+    <!-- Блок настроек для сохранения настроек профиля в БД -->
+    <div id="settings-block">
+        <div>
+            <label for="use_word_reports">Use Word Reports:</label>
+            <input type="checkbox" id="use_word_reports" name="use_word_reports" 
+                   {% if user_settings.USE_WORD_REPORTS %} checked {% endif %}>
+        </div>
+        <div>
+            <label for="theme">Theme:</label>
+            <select id="theme" name="theme">
+                <option value="light" {% if user_settings.theme == 'light' %}selected{% endif %}>Light</option>
+                <option value="dark" {% if user_settings.theme == 'dark' %}selected{% endif %}>Dark</option>
+            </select>
+        </div>
+        <button id="save-settings">Save Settings</button>
+    </div>
+    
+
+
 {% endblock container %}
+
+
+{% block scripts %}
+
+<script src="{{ url_for('static', filename='js/profile_settings.js') }}"></script>
+
+{% endblock scripts %}

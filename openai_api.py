@@ -19,11 +19,11 @@ def restrict_to_superadmin():
 @openai_api_bp.route("/start_openai_api", methods=["POST", "GET"])
 @auth_required()
 def start_openai_api():
-    menu = current_app.config["MENU"]
+    # menu = current_app.config["MENU"]
     return render_template(
         "openai_api.html",
         title="GPT",
-        menu=menu
+        # menu=menu
     )
 
 

@@ -75,37 +75,68 @@ class Config:
     OPENAI_PROJECT = os.getenv("OPENAI_PROJECT")
     OPENAI_ASSISTANT = os.getenv("OPENAI_ASSISTANT")
     
-    # Menu configuration
-    @staticmethod
-    def get_menu():
-        """Формирует меню с учетом текущего профиля"""
-        menu = [
-            {"name": "Главная", "url": url_for("index")},
-            {"name": "Протокол", "url": url_for("working_with_reports.choosing_report")},
-            {"name": "Список протоколов", "url": url_for("my_reports.reports_list")},
-            {"name": "Новый протокол", "url": url_for("new_report_creation.create_report")},
-            {"name": "Настройки", "url": url_for("report_settings.report_settings")},
-            {"name": "API", "url":url_for("openai_api.start_openai_api")},
-            {"name": "Ключевые слова", "url":url_for("key_words.key_words")},
-            {"name": "admin", "url":url_for("admin.admin")}
-        ]
+    
+    # # Словарь для хранения настроек профиля
+    # PROFILE_SETTINGS = {}
+    
+    # @classmethod
+    # def load_profile_settings(cls, profile_id):
+    #     """
+    #     Загружает настройки для указанного профиля из таблицы AppConfig.
+    #     """
         
-        # Добавляем настройки профиля, если профиль выбран
-        if g.current_profile:
-            menu.append({
-                "name": "Настройки профиля",
-                "url": url_for("profile_settings.profile_settings", profile_id=g.current_profile.id)
-            })
+    #     settings = AppConfig.query.filter_by(profile_id=profile_id).all()
+    #     cls.PROFILE_SETTINGS = {setting.config_key: cls._parse_value(setting) for setting in settings}
+
+    #     # Сохраняем в app.config для доступа через app.config
+    #     for key, value in cls.PROFILE_SETTINGS.items():
+    #         current_app.config[key.upper()] = value
+
+    # @staticmethod
+    # def _parse_value(setting):
+    #     """
+    #     Конвертирует значение настройки в правильный тип, основываясь на config_type.
+    #     """
+    #     if setting.config_type == "boolean":
+    #         return setting.config_value.lower() == "true"
+    #     elif setting.config_type == "integer":
+    #         return int(setting.config_value)
+    #     elif setting.config_type == "json":
+    #         import json
+    #         return json.loads(setting.config_value)
+    #     return setting.config_value
+
+    # @classmethod
+    # def get_profile_setting(cls, key, default=None):
+    #     """
+    #     Возвращает значение настройки профиля по ключу.
+    #     """
+    #     return cls.PROFILE_SETTINGS.get(key, default)
+    
+    # # Menu configuration
+    # @staticmethod
+    # def get_menu():
+    #     """Формирует меню с учетом текущего профиля"""
+    #     menu = [
+    #         {"name": "Главная", "url": url_for("index")},
+    #         {"name": "Протокол", "url": url_for("working_with_reports.choosing_report")},
+    #         {"name": "Список протоколов", "url": url_for("my_reports.reports_list")},
+    #         {"name": "Новый протокол", "url": url_for("new_report_creation.create_report")},
+    #         {"name": "Настройки", "url": url_for("report_settings.report_settings")},
+    #         {"name": "API", "url":url_for("openai_api.start_openai_api")},
+    #         {"name": "Ключевые слова", "url":url_for("key_words.key_words")},
+    #         {"name": "admin", "url":url_for("admin.admin")}
+    #     ]
         
-        return menu
+    #     # Добавляем настройки профиля, если профиль выбран
+    #     if g.current_profile:
+    #         menu.append({
+    #             "name": "Настройки профиля",
+    #             "url": url_for("profile_settings.profile_settings", profile_id=g.current_profile.id)
+    #         })
+        
+    #     return menu
 
-
-    @staticmethod
-    def load_user_config(user_id):
-        """
-        Load user-specific configuration from the database.
-        """
-        return None
     
     @staticmethod
     def get_user_upload_folder():

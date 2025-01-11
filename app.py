@@ -6,6 +6,8 @@ import logging
 from config import get_config, Config
 from flask_migrate import Migrate
 from models import db, User, UserProfile, Role
+from menu_constructor import build_menu
+
 import os
 import logging
 if os.getenv("FLASK_ENV") == "local":
@@ -30,20 +32,16 @@ from openai_api import openai_api_bp
 from key_words import key_words_bp
 from admin import admin_bp
 
-version = "0.7.7"
+version = "0.8.0"
 
 app = Flask(__name__)
 app.config.from_object(get_config()) # Load configuration from file config.py
-
-# Initialize default menu
-app.config['MENU'] = []
 
 # Initialize SQLAlchemy
 db.init_app(app)
 
 # Initialize Flask-Migrate
 migrate = Migrate(app, db)
-
 
 
 # Инициализирую Flask-security-too
@@ -70,6 +68,25 @@ app.register_blueprint(openai_api_bp, url_prefix="/openai_api")
 app.register_blueprint(key_words_bp, url_prefix="/key_words")
 app.register_blueprint(admin_bp, url_prefix="/admin")
 
+
+# Добавляю контекстные процессоры
+@app.context_processor
+def inject_menu():
+    """Добавляет меню в глобальный контекст Jinja."""
+    return {"menu": build_menu()}
+
+@app.context_processor
+def inject_user_settings():
+    """Добавляет все настройки профиля в глобальный контекст Jinja."""
+    user_settings = app.config.get("PROFILE_SETTINGS", {})
+    return {"user_settings": user_settings}
+
+
+@app.context_processor
+def inject_app_info():
+    """Добавляет информацию о приложении в глобальный контекст Jinja."""
+    app_info = {"version": version, "author": "dgk"}
+    return {"app_info": app_info}
 
 
 # Обработка ошибок
@@ -114,12 +131,6 @@ werkzeug_logger = logging.getLogger("werkzeug")
 werkzeug_logger.addFilter(StaticFilter())
 werkzeug_logger.addFilter(RemoveHeadersFilter())
 
-# Routs
-# @app.before_request
-# def log_request_info():
-#     app.logger.debug(f"Headers: {request.headers}")
-#     app.logger.debug(f"Body: {request.get_data()}")
-
 
 # Логика для того, чтобы сделать данные профиля доступными в любом месте программы
 @app.before_request
@@ -136,7 +147,7 @@ def load_current_profile():
         return None
         
     # Проверяем, установлена ли сессия пользователя и находится ли он на странице, требующей профиля
-    if current_user.is_authenticated:  # Убедимся, что пользователь вошел в систему
+    if current_user.is_authenticated:  
         user_profiles = UserProfile.get_user_profiles(current_user.id)
         if user_profiles:
             if 'profile_id' in session:
@@ -161,6 +172,9 @@ def load_current_profile():
                     g.current_profile = user_profiles[0]
                 else:
                     g.current_profile = None
+
+            
+            
         else:
             # Если у юзера нет профиля то создаю ему дефолтный профиль загружаю 
             # этот профиль в сессию и перекидываю его на главную страницу в противном 
@@ -171,8 +185,7 @@ def load_current_profile():
                 return redirect(url_for("error"))
             
             return redirect(url_for("index"))
-        # Меню обновляется на основе текущего профиля
-        app.config['MENU'] = Config.get_menu()
+        
 
     else:
         print("Все давай до свидания")
@@ -183,9 +196,6 @@ def load_current_profile():
 @auth_required()
 def index():
     user_profiles = UserProfile.get_user_profiles(current_user.id)
-    menu = app.config["MENU"]
-    
-    
     
     # Если у пользователя нет профиля в сессии, проверим количество профилей
     if 'profile_id' not in session:
@@ -202,7 +212,6 @@ def index():
     
     return render_template('index.html', 
                            title="Radiologary", 
-                           menu=menu,
                            user_profiles=user_profiles,
                            version=version
                            )

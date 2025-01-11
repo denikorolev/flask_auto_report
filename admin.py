@@ -51,12 +51,12 @@ def get_model_fields():
 @auth_required()
 def admin():
     
-    menu = current_app.config["MENU"]
+    # menu = current_app.config["MENU"]
     
     all_models, association_tables = get_model_fields()
     
     return render_template("admin.html",
-                           menu=menu,
+                        #    menu=menu,
                            title="Admin",
                            all_models=all_models,
                            association_tables=association_tables)

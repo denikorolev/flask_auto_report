@@ -1,67 +1,30 @@
 // choose_report.js
 
 
+
+
 // Логика обновления подтипов в зависимости от выбранного типа
 document.addEventListener("DOMContentLoaded", function () {
-    
-    // Получаем параметры из URL, для заполнения формы с ФИО если мы пришли сюда из working with report
-    const urlParams = new URLSearchParams(window.location.search);
-    const surname = urlParams.get('patient_surname');
-    const name = urlParams.get('patient_name');
-    const patronymicname = urlParams.get('patient_patronymicname');
-    const birthdate = urlParams.get('patient_birthdate');
-    const reportNumber = urlParams.get('report_number');
+    const exportForm = document.getElementById("exportForm");
+    if (!exportForm) {
+        // Получаем параметры из URL, для заполнения формы с ФИО если мы пришли сюда из working with report
+        const urlParams = new URLSearchParams(window.location.search);
+        const surname = urlParams.get('patient_surname');
+        const name = urlParams.get('patient_name');
+        const patronymicname = urlParams.get('patient_patronymicname');
+        const birthdate = urlParams.get('patient_birthdate');
+        const reportNumber = urlParams.get('report_number');
 
-    // Устанавливаем значения полей, если они переданы
-    if (surname) document.getElementById("patient-surname").value = surname;
-    if (name) document.getElementById("patient-name").value = name;
-    if (patronymicname) document.getElementById("patient-patronymicname").value = patronymicname;
-    if (birthdate) document.getElementById("patient-birthdate").value = birthdate;
-    if (reportNumber) document.getElementById("report-number").value = reportNumber;
+        // Устанавливаем значения полей, если они переданы
+        if (surname) document.getElementById("patient-surname").value = surname;
+        if (name) document.getElementById("patient-name").value = name;
+        if (patronymicname) document.getElementById("patient-patronymicname").value = patronymicname;
+        if (birthdate) document.getElementById("patient-birthdate").value = birthdate;
+        if (reportNumber) document.getElementById("report-number").value = reportNumber;
+    }
     
     // Инициализируем логику типа и подтипа через utils.js
     initializeSubtypeLogic("report_type", "report_subtype", "report-types-data");
-
-    
-    // // Далее идет формирование тип\подтип списков
-    // // Чтение данных из скрытого тега <script>
-    // const reportTypesDataScript = document.getElementById("report-types-data");
-    // const reportTypesAndSubtypes = JSON.parse(reportTypesDataScript.textContent);
-
-    // const reportTypeSelect = document.getElementById("report_type");
-    // const reportSubtypeSelect = document.getElementById("report_subtype");
-    // const allSubtypes = {};
-
-    // // Проходим по каждому типу и сохраняем его подтипы
-    // reportTypesAndSubtypes.forEach(type => {
-    //     allSubtypes[type.type_id] = type.subtypes;
-    // });
-
-    // // Функция для обновления подтипов на основе выбранного типа
-    // function updateSubtypes() {
-    //     const selectedTypeId = reportTypeSelect.value.trim(); // Убедитесь, что значение без пробелов
-    //     reportSubtypeSelect.innerHTML = ''; // Очистить текущие опции
-
-    //     const subtypes = allSubtypes[selectedTypeId] || [];
-
-    //     subtypes.forEach(subtype => {
-    //         const option = document.createElement("option");
-    //         option.value = subtype.subtype_id;
-    //         option.textContent = subtype.subtype_text;
-    //         reportSubtypeSelect.appendChild(option);
-    //     });
-
-    //     // Установить первую опцию как выбранную, если есть подтипы
-    //     if (subtypes.length > 0) {
-    //         reportSubtypeSelect.selectedIndex = 0;
-    //     }
-    // }
-
-    // // Добавление обработчика события для изменения типа
-    // reportTypeSelect.addEventListener("change", updateSubtypes);
-
-    // // Вызов функции для установки начального состояния при загрузке страницы
-    // updateSubtypes();
 });
 
 
@@ -108,28 +71,44 @@ document.addEventListener("DOMContentLoaded", function () {
             link.addEventListener("click", function (event) {
                 event.preventDefault(); // Останавливаем стандартное поведение ссылки
 
-                // Собираем данные формы
-                let surname = document.getElementById("patient-surname").value.trim();
-                let name = document.getElementById("patient-name").value.trim();
-                let patronymic = document.getElementById("patient-patronymicname").value.trim();
-                const birthdate = document.getElementById("patient-birthdate").value;
-                const reportNumber = document.getElementById("report-number").value;
+                let fullname = "";
+                let birthdate = "";
+                let reportNumber = "";
 
-                // Форматируем ФИО
-                surname = surname.charAt(0).toUpperCase() + surname.slice(1).toLowerCase();
-                name = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
-                patronymic = patronymic.charAt(0).toUpperCase() + patronymic.slice(1).toLowerCase();
+                // Проверяем наличие формы exportForm
+                const exportForm = document.getElementById("exportForm");
+                if (exportForm) {
+                    // Собираем данные формы, если она существует
+                    const surnameField = document.getElementById("patient-surname");
+                    const nameField = document.getElementById("patient-name");
+                    const patronymicField = document.getElementById("patient-patronymicname");
+                    const birthdateField = document.getElementById("patient-birthdate");
+                    const reportNumberField = document.getElementById("report-number");
 
-                const fullname = `${surname} ${name} ${patronymic}`;
+                    // Получаем значения полей с проверкой на их наличие
+                    let surname = surnameField ? surnameField.value.trim() : "";
+                    let name = nameField ? nameField.value.trim() : "";
+                    let patronymic = patronymicField ? patronymicField.value.trim() : "";
+                    birthdate = birthdateField ? birthdateField.value : "";
+                    reportNumber = reportNumberField ? reportNumberField.value : "";
+
+                    // Форматируем ФИО, если значения есть
+                    surname = surname ? surname.charAt(0).toUpperCase() + surname.slice(1).toLowerCase() : "";
+                    name = name ? name.charAt(0).toUpperCase() + name.slice(1).toLowerCase() : "";
+                    patronymic = patronymic ? patronymic.charAt(0).toUpperCase() + patronymic.slice(1).toLowerCase() : "";
+
+                    fullname = `${surname} ${name} ${patronymic}`.trim();
+                }
+
                 const reportId = this.getAttribute("data-report-id");
 
                 // Формируем URL с параметрами
-            const url = `/working_with_reports/working_with_reports?fullname=${encodeURIComponent(fullname)}&birthdate=${encodeURIComponent(birthdate)}&reportNumber=${encodeURIComponent(reportNumber)}&reportId=${reportId}`;
-            window.location.href = url;
-
+                const url = `/working_with_reports/working_with_reports?fullname=${encodeURIComponent(fullname)}&birthdate=${encodeURIComponent(birthdate)}&reportNumber=${encodeURIComponent(reportNumber)}&reportId=${reportId}`;
+                window.location.href = url;
             });
         });
     }
+
 
     // Обработка нажатия на кнопку "Show reports"
     document.getElementById("select_report_type_subtype").addEventListener("click", function (event) {

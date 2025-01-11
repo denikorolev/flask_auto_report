@@ -1,19 +1,65 @@
 // working_with_report.js
 
+
 // Объявляем глобальные переменные и запускаем стартовые функции, постепенно нужно перенести сюда и логику связанную с ключевыми словами и развешивание части слушателей
 document.addEventListener("DOMContentLoaded", function() {
 
     let activeSentence = null;  // Для отслеживания активного предложения
-    const popupList = document.getElementById("popupList"); // // Для обращения к PopUp
-
+    const popupList = document.getElementById("popupList");  // Для обращения к PopUp
+    const exportButton = document.getElementById("exportButton"); // Для обращения к кнопке "Экспорт в Word"
+    const copyButton = document.getElementById("copyButton"); // Для обращения к кнопке "Копировать текст"
+    const nextReportButton = document.getElementById("nextPatientButton"); // Для обращения к кнопке "Следующий пациент"
+    const editButton = document.getElementById("editFormButton"); // Для обращения к кнопке Edit Form
+    const addReportButton = document.getElementById("addReportButton"); // Для обращения к кнопке Add Report
+    const generateButton = document.getElementById("generateImpression"); // Для обращения к кнопке Generate Impression
+    const boxForAiResponse = document.getElementById("aiResponse");     // Для обращения к блоку с ответом от AI
+    const addImpressionButton = document.getElementById("addImpressionToReportButton"); // Для обращения к кнопке "Вставить заключение"
+    
     linkSentences(); // Связываем предложения с данными
+    
+    updateCoreParagraphText(); // Запускает выделение ключевых слов при загрузке страницы
+
     sentenceDoubleClickHandle () // Включаем логику двойного клика на предложение
+
+    addSentenceButtonLogic(); // Включаем логику кнопки "+"
+
+
+    // Проверяем наличие кнопки экспорт в Word и при ее наличии запускаем логику связанную с данным экспортом
+    if (exportButton) {
+        wordButtonLogic(exportButton);
+    }
+
+    // Проверяем наличие кнопки "Копировать текст" и при ее наличии запускаем логику связанную с копированием текста
+    if (copyButton) {
+        copyButtonLogic(copyButton);
+    }
+
+    // Проверяем наличие кнопки "Следующий пациент и при ее наличии запускаем логику связанную с созданием нового пациента и автоматическим увеличением номера отчета"
+    if (nextReportButton) {
+        nextButtonLogic(nextReportButton);
+    }
+
+    // Проверяем наличие кнопки "Edit Form" и при ее наличии запускаем логику связанную с редактированием формы
+    if (editButton) {
+        editButtonLogic(editButton);
+    }
+
+    // Проверяем наличие кнопки "Add Report" и при ее наличии запускаем логику связанную с добавлением нового отчета для текущего пациента
+    if (addReportButton) {
+        addReportButtonLogic(addReportButton);
+    }
+
+    if (generateButton) {
+        generateImpressionLogic(generateButton, boxForAiResponse);
+    }
+
+    if (addImpressionButton) {
+        addImpressionButtonLogic(addImpressionButton);
+    }
 });
 
-
-
 /**
- * Extracts the maximum number from the protocol number and increments it by 1.
+ * Extracts the maximum number from the protocol number and increments it by 1 used in working with report.
  * 
  * @param {string} reportNumber - The report number in format "XXXX-XXXX".
  * @returns {number} - The incremented report number.
@@ -45,10 +91,13 @@ function getMaxReportNumber(reportNumber) {
 
 
 /**
- * Creates an editable sentence element wrapped in a span.
+ * Создает редактируемый элемент предложения, обернутый в тег <span>.
  * 
- * @param {string} sentenceText - The text of the sentence.
- * @returns {HTMLElement} - A new span element containing the editable sentence.
+ * Функция создает HTML-элемент <span> с текстом предложения, который можно редактировать прямо на странице.
+ * 
+ * @param {string} sentenceText - Текст предложения, который будет добавлен в элемент.
+ * @returns {HTMLElement} - Новый элемент <span>, содержащий редактируемое предложение.
+ * 
  */
 function createEditableSentenceElement(sentenceText) {
     const newSentenceElement = document.createElement("span");
@@ -63,12 +112,11 @@ function createEditableSentenceElement(sentenceText) {
 }
 
 
-
 /**
- * Checks if an element is visible on the screen.
+ * Проверяет, виден ли элемент на экране.
  * 
- * @param {HTMLElement} element - The element to check.
- * @returns {boolean} - True if the element is visible, false otherwise.
+ * @param {HTMLElement} element - HTML-элемент, который нужно проверить.
+ * @returns {boolean} - Возвращает `true`, если элемент виден, и `false` в противном случае.
  */
 function isElementVisible(element) {
     const style = window.getComputedStyle(element);
@@ -77,10 +125,20 @@ function isElementVisible(element) {
 
 
 /**
- * Cleans text from <select> elements and buttons, leaving only the selected text.
+ * Очищает текст элемента, удаляя кнопки и HTML-теги, оставляя только выбранный текст из <select>.
  * 
- * @param {HTMLElement} element - The element containing the text to clean.
- * @returns {string} - The cleaned text.
+ * Функция предназначена для получения чистого текста из HTML-элемента. Удаляет все кнопки и HTML-теги, 
+ * заменяет теги <select> выбранным текстом и убирает лишние пробелы.
+ * 
+ * @param {HTMLElement} element - HTML-элемент, содержащий текст для очистки.
+ * @returns {string} - Очищенный текст.
+ * 
+ * Логика работы:
+ * - Удаляет все кнопки внутри элемента.
+ * - Заменяет <select> элементы их выбранным значением.
+ * - Удаляет все оставшиеся HTML-теги, оставляя только текст.
+ * - Преобразует HTML-сущности в обычные символы (например, &amp; → &).
+ * - Убирает лишние пробелы, оставляя только один пробел между словами.
  */
 function cleanSelectText(element) {
     let text = element.innerHTML;
@@ -111,12 +169,26 @@ function cleanSelectText(element) {
 }
 
 
-
-
 /**
- * Displays processed paragraphs and sentences that are suggested for the user to add to the database.
+ * Отображает обработанные абзацы и предложения, которые предлагаются для добавления в базу данных.
  * 
- * @param {Array} paragraphs - Array of paragraph objects to display.
+ * Функция очищает контейнер для отображения запросов на добавление предложений и создает элементы для 
+ * каждого абзаца и его предложений. Предоставляет возможность добавления предложений по отдельности или всех сразу.
+ * 
+ * @param {Array} paragraphs - Массив объектов абзацев, где каждый объект содержит `paragraph_id`, `paragraph_text`, 
+ *                             и массив `sentences` или строку `sentence`.
+ * 
+ * Логика работы:
+ * - Проверяет валидность переданных данных.
+ * - Очищает контейнер перед добавлением новых данных.
+ * - Для каждого предложения создает элемент с текстом предложения и кнопкой "Добавить".
+ * - Если общее количество предложений больше одного, добавляется кнопка "Отправить все", 
+ *   которая позволяет отправить все предложения одним запросом.
+ * 
+ * Вспомогательные функции:
+ * - `sendSentences(dataToSend)` — отправляет данные выбранных предложений на сервер.
+ * - `createSentenceElement(paragraphId, sentence)` — создает элемент предложения с текстом и кнопкой "Добавить".
+ * 
  */
 function displayProcessedParagraphs(paragraphs) {
     const container = document.getElementById('sentenceAddingRequestContainer');
@@ -243,12 +315,28 @@ function displayProcessedParagraphs(paragraphs) {
 }
 
 
-
 /**
- * Функция для выделения ключевых слов в тексте
- * @param {string} text - Текст для обработки
- * @param {Array} keyWordsGroups - Массив групп ключевых слов
- * @returns {string} - Обновленный текст с выделенными ключевыми словами
+ * Выделяет ключевые слова в тексте, оборачивая их в выпадающие списки.
+ * 
+ * Функция обрабатывает переданный текст, заменяя ключевые слова из заданных групп ключевых слов 
+ * на выпадающие списки (`<select>`), содержащие варианты из той же группы. Каждое ключевое слово 
+ * обрабатывается с использованием регулярных выражений для обеспечения корректного выделения.
+ * 
+ * @param {string} text - Текст для обработки.
+ * @param {Array} keyWordsGroups - Массив групп ключевых слов. Каждая группа представляет собой массив объектов, 
+ *                                 где каждый объект содержит свойство `word` с ключевым словом.
+ * @returns {string} - Обновленный текст с выделенными ключевыми словами.
+ * 
+ * Логика работы:
+ * - Для каждой группы ключевых слов создается регулярное выражение, которое находит ключевые слова в тексте.
+ * - Ключевые слова заменяются на элемент `<select>`, содержащий варианты из группы.
+ * - Обработанные ключевые слова получают уникальный индекс `data-match-index` для удобства взаимодействия.
+ * 
+ * @requires keyWordsGroups - Глобальная переменная, содержащая группы ключевых слов для выделения.
+ * 
+ * Ограничения:
+ * - Ключевые слова выделяются только если они находятся вне HTML-тегов.
+ * - При совпадении нескольких ключевых слов в одной позиции используется первый подходящий вариант.
  */
 function highlightKeyWords(text, keyWordsGroups) {
     const matchIndexes = {};
@@ -284,8 +372,25 @@ function highlightKeyWords(text, keyWordsGroups) {
     return text;
 }
 
+
 /**
- * Функция для обновления текста абзацев с классом core-paragraph-list и выделения ключевых слов.
+ * Обновляет текст абзацев с классом `core-paragraph-list` и выделяет ключевые слова.
+ * 
+ * Функция проходит по всем элементам с классом `core-paragraph-list`, извлекает текст абзацев 
+ * и выделяет ключевые слова, используя функцию `highlightKeyWords`. Выделение применяется только 
+ * если абзац еще не содержит выпадающих списков (`<select>`). Также сохраняется атрибут `data-index` 
+ * для каждого абзаца.
+ * 
+ * @requires highlightKeyWords - Функция для выделения ключевых слов в тексте.
+ * @requires keyWordsGroups - Глобальная переменная, содержащая группы ключевых слов для выделения.
+ *
+ * @global {NodeList} coreParagraphLists - Элементы с классом `core-paragraph-list`.
+ * 
+ * Логика работы:
+ * - Для каждого элемента `core-paragraph-list` находятся вложенные элементы `p` и `span`.
+ * - Из каждого элемента извлекается текст.
+ * - Если текст еще не содержит `<select>`, применяется выделение ключевых слов.
+ * - Восстанавливается атрибут `data-index` для каждого абзаца.
  */
 function updateCoreParagraphText() {
     const coreParagraphLists = document.querySelectorAll(".core-paragraph-list");
@@ -311,10 +416,25 @@ function updateCoreParagraphText() {
 }
 
 
-
 /**
  * Собирает данные абзацев и предложений для отправки на сервер.
- * @returns {Array} Массив с данными абзацев и предложений.
+ * 
+ * Функция проходит по всем абзацам с классом `core-paragraph-list`, извлекает текст абзацев, 
+ * их идентификаторы, а также вложенные предложения. Собранные данные возвращаются в формате массива объектов.
+ * Каждый объект содержит:
+ * - `paragraph_id` — идентификатор абзаца;
+ * - `paragraph_text` — текст абзаца;
+ * - `sentences` — массив текста всех предложений, принадлежащих данному абзацу.
+ * 
+ * @returns {Array<Object>} Массив объектов с данными абзацев и предложений.
+ * Каждый объект имеет структуру:
+ * {
+ *   paragraph_id: {string},
+ *   paragraph_text: {string},
+ *   sentences: {Array<string>}
+ * }
+ * @requires isElementVisible - Глобальная функция, которая проверяет, видим ли элемент на странице.
+ * @requires cleanSelectText - Глобальная функция, которая очищает текст предложения от HTML-тегов и других элементов.
  */
 function collectParagraphsData() {
     const coreParagraphLists = document.querySelectorAll(".core-paragraph-list"); // Ищем списки с классом core-paragraph-list
@@ -357,12 +477,18 @@ function collectParagraphsData() {
 }
 
 
-
 /**
  * Собирает текст из абзацев на основе указанного класса.
  * 
- * @param {string} paragraphClass - Класс, по которому будут собираться данные.
- * @returns {string} - Собранный и очищенный текст.
+ * Функция находит все абзацы с указанным классом, извлекает их текст, а также текст вложенных предложений,
+ * и возвращает полный текст в виде строки. Текст очищается от лишних пробелов и объединяется 
+ * с учетом структуры абзацев и предложений.
+ * 
+ * @param {string} paragraphClass - Класс абзацев, текст которых необходимо собрать.
+ * @returns {string} - Собранный текст абзацев и предложений.
+ * 
+ * @requires isElementVisible - Глобальная функция, которая проверяет, видим ли элемент на странице.
+ * @requires cleanSelectText - Глобальная функция, которая очищает текст предложения от HTML-тегов и других элементов.
  */
 function collectTextFromParagraphs(paragraphClass) {
     const paragraphLists = document.querySelectorAll(`.${paragraphClass}`); // Ищем списки по указанному классу
@@ -414,13 +540,23 @@ function collectTextFromParagraphs(paragraphClass) {
 }
 
 
-
 /**
  * Отображает всплывающее окно с предложениями для замены.
  * 
- * @param {number} x - Координата X для отображения окна.
- * @param {number} y - Координата Y для отображения окна.
- * @param {Array} sentenceList - Список предложений для выбора.
+ * Функция создает и отображает всплывающее окно (popup) с предложениями для выбора. 
+ * Пользователь может отфильтровать список предложений и выбрать нужное, после чего вызывается 
+ * переданная callback-функция с выбранным элементом.
+ * 
+ * @param {number} x - Координата X для отображения окна (в пикселях).
+ * @param {number} y - Координата Y для отображения окна (в пикселях).
+ * @param {Array} sentenceList - Список предложений для выбора, где каждый элемент 
+ * является объектом с текстом предложения (например, { sentence: "Текст предложения" }).
+ * @param {Function} onSelect - Callback-функция, которая вызывается при выборе предложения. 
+ * В функцию передается объект выбранного предложения.
+ * 
+ * @requires popup - Глобальный элемент, отвечающий за отображение всплывающего окна.
+ * @requires popupList - Глобальный элемент списка внутри popup.
+ * @requires hidePopup - Глобальная функция для скрытия popup.
  */
 function showPopup(x, y, sentenceList, onSelect) {
     popupList.innerHTML = ''; // Очищаем старые предложения
@@ -481,7 +617,35 @@ function hidePopup() {
 
 
 /**
- * Связывает предложения на странице с данными из reportData и связывает их с подходящими предложениями.
+ * Связывает предложения на странице с данными из объекта `reportData` и добавляет к ним связанные предложения.
+ * 
+ * Основная цель функции — обработать все предложения, отображаемые на странице (элементы с классом `report__sentence`), 
+ * и связать их с соответствующими предложениями из данных `reportData`. 
+ * Это позволяет обеспечить взаимодействие, например, замену или выбор альтернативных предложений.
+ * 
+ * Алгоритм работы:
+ * 1. Находит все элементы с классом `report__sentence` на странице.
+ * 2. Для каждого элемента:
+ *    - Получает идентификаторы параграфа (`data-paragraph-id`), индекс предложения (`data-index`) и ID предложения (`data-id`).
+ *    - Ищет соответствующий параграф в данных `reportData` по `paragraphId`.
+ *    - Фильтрует список предложений в найденном параграфе, исключая текущее предложение (по его ID). 
+ *    - Добавляет отфильтрованные предложения в свойство `linkedSentences` элемента предложения.
+ * 3. Если для предложения найдены связанные альтернативы:
+ *    - Вызывает функцию `highlightSentence`, чтобы визуально выделить такие предложения на странице.
+ * 
+ * @global
+ * @param {Object} reportData - Объект, содержащий данные параграфов и их предложений находится на странице working_with_report.html!!! 
+ *                              Ожидается, что он имеет следующую структуру:
+ *                              {
+ *                                  paragraphs: [
+ *                                      {
+ *                                          id: Number,
+ *                                          sentences: {
+ *                                              [index]: Array<{ id: Number, sentence: String }>
+ *                                          }
+ *                                      }
+ *                                  ]
+ *                              }
  */
 function linkSentences() {
     // Находим все предложения на странице
@@ -523,10 +687,27 @@ function highlightSentence(sentenceElement) {
 }
 
 
-
-
-
-// Обработчик двойного клика на предложение
+/**
+ * Добавляет обработчики двойного клика и ввода для элементов предложений на странице.
+ * 
+ * Функциональность:
+ * - При двойном клике отображает всплывающее окно с альтернативными предложениями, связанными с выбранным предложением.
+ * - Позволяет заменить текст предложения выбранным вариантом из всплывающего окна.
+ * - Обновляет текст абзацев после замены предложения.
+ * - Скрывает всплывающее окно при начале ввода текста в предложении или при клике за пределы всплывающего окна.
+ * 
+ * Требования:
+ * - Элементы предложений на странице должны иметь класс "report__sentence".
+ * - У каждого элемента предложения должен быть массив `linkedSentences`, содержащий связанные предложения.
+ * - Глобальная переменная `popup` должна быть доступна для отображения списка предложений.
+ * - Должны существовать функции:
+ *   - `showPopup(x, y, sentenceList, onSelect)` для отображения всплывающего окна.
+ *   - `hidePopup()` для скрытия всплывающего окна.
+ *   - `updateCoreParagraphText()` для обновления текста абзацев после изменений.
+ * 
+ * Использование:
+ * - Вызвать эту функцию после полной загрузки DOM и отрисовки предложений на странице.
+ */
 function sentenceDoubleClickHandle (){
     const sentencesOnPage = document.querySelectorAll(".report__sentence");
     console.log("logic started")
@@ -558,13 +739,36 @@ function sentenceDoubleClickHandle (){
     });
 }
 
-// Логика для кнопки "Next"
-document.addEventListener("DOMContentLoaded", function() {
-    const nextReportButton = document.querySelector(".icon-btn--next-report");
-
+/**
+ * Обрабатывает логику кнопки "Next".
+ * 
+ * Функциональность:
+ * - При нажатии на кнопку "Next" вычисляет новый номер протокола, увеличивая текущий номер на единицу.
+ * - Формирует URL для перехода на страницу выбора нового отчета с обновленным номером протокола.
+ * - Выполняет переход на указанную страницу.
+ * - После загрузки новой страницы автоматически ставит фокус на поле ввода фамилии пациента.
+ * 
+ * Требования:
+ * - Элемент кнопки, переданный в параметр `nextReportButton`, должен существовать на странице.
+ * - Поле с ID "report-number" должно содержать текущий номер протокола.
+ * - Должна быть доступна функция `getMaxReportNumber(reportNumber)` для вычисления нового номера протокола.
+ * - Поле с ID "patient-surname" должно присутствовать на целевой странице, чтобы фокус был установлен корректно.
+ * 
+ * Использование:
+ * - Вызвать эту функцию, передав элемент кнопки "Next", после полной загрузки DOM.
+ * 
+ * Примечания:
+ * - Если необходимые элементы не найдены, функция выведет сообщение об ошибке в консоль и прекратит выполнение.
+ */
+function nextButtonLogic(nextReportButton) {
     nextReportButton.addEventListener("click", function() {
         // Получаем текущий номер протокола и вычисляем новый номер
-        let reportNumber = document.getElementById("report-number").value.trim();
+        const reportNumberField = document.getElementById("report-number");
+        if (!reportNumberField) {
+            console.error("Поле 'report-number' не найдено.");
+            return;
+        }
+        const reportNumber = reportNumberField.value.trim();
         const maxReportNumber = getMaxReportNumber(reportNumber);
         const newReportNumber = maxReportNumber.toString();
 
@@ -582,51 +786,92 @@ document.addEventListener("DOMContentLoaded", function() {
             }
         }, 600); // Настройте время таймера по необходимости
     });
-});
+}
 
 
-// Логика для кнопки "Add Report"
-document.addEventListener("DOMContentLoaded", function() {
-    const addReportButton = document.querySelector(".icon-btn--add-report");
 
+/**
+ * Логика для кнопки "Add Report".
+ * 
+ * Функция обрабатывает нажатие на кнопку "Add Report" для формирования нового отчета.
+ * 
+ * Шаги выполнения:
+ * 1. Получает данные из следующих полей:
+ *    - `patient-name`: Имя, фамилия и отчество пациента (строка, разбивается на части).
+ *    - `patient-birthdate`: Дата рождения пациента.
+ *    - `report-number`: Номер текущего отчета.
+ * 2. Вычисляет новый номер отчета, увеличивая текущий на 1 с помощью функции `getMaxReportNumber`.
+ * 3. Формирует URL для перехода на страницу `choosing_report`, включая следующие параметры:
+ *    - Фамилия, имя, отчество пациента.
+ *    - Дата рождения пациента.
+ *    - Новый номер отчета.
+ * 4. Переходит на страницу `choosing_report` с указанными параметрами.
+ * 
+ * Требования:
+ * - Поля ввода с ID `patient-name`, `patient-birthdate`, `report-number`.
+ * - Кнопка, которая запускает данную логику, передается как аргумент функции.
+ * - Функция `getMaxReportNumber` для вычисления нового номера отчета.
+ * 
+ * @param {HTMLElement} addReportButton - Кнопка добавления нового отчета.
+ */
+function addReportButtonLogic(addReportButton) {
     addReportButton.addEventListener("click", function() {
         // Получаем значение из поля "surname" и разбиваем его на части
-        let surnameInput = document.getElementById("patient-name").value.trim();
-        let [surname = "", name = "", patronymic = ""] = surnameInput.split(" ");
+        const surnameInput = document.getElementById("patient-name")?.value.trim() || "";
+        const [surname = "", name = "", patronymic = ""] = surnameInput.split(" ");
 
-        const birthdate = document.getElementById("patient-birthdate").value;
-        let reportNumber = document.getElementById("report-number").value.trim();
+        const birthdate = document.getElementById("patient-birthdate")?.value || "";
+        const reportNumberField = document.getElementById("report-number");
 
-        // Преобразуем номер протокола к максимальному числу и прибавляем 1
+        if (!reportNumberField) {
+            console.error("Поле 'report-number' не найдено.");
+            return;
+        }
+
+        const reportNumber = reportNumberField.value.trim();
         const maxReportNumber = getMaxReportNumber(reportNumber);
-        const newReportNumber = (maxReportNumber).toString();
+        const newReportNumber = maxReportNumber.toString();
 
         // Формируем строку для передачи параметров через URL
-        const url = `choosing_report?patient_surname=${encodeURIComponent(surname)}&patient_name=${encodeURIComponent(name)}&patient_patronymicname=${encodeURIComponent(patronymic)}&patient_birthdate=${encodeURIComponent(birthdate)}&report_number=${encodeURIComponent(newReportNumber)}`;
+        const url = `choosing_report?patient_surname=${encodeURIComponent(surname)}
+        &patient_name=${encodeURIComponent(name)}
+        &patient_patronymicname=${encodeURIComponent(patronymic)}
+        &patient_birthdate=${encodeURIComponent(birthdate)}
+        &report_number=${encodeURIComponent(newReportNumber)}`;
 
-        // Переходим на страницу choose_report
+        // Переходим на страницу choosing_report
         window.location.href = url;
     });
-});
-
-
-// Логика для обновления текста и выделения ключевых слов. С нее начинается вся 
-// логика ключевых слов, по сути здесь просто запускается эта логика 
-// при старте страницы
-document.addEventListener("DOMContentLoaded", function() {
-    updateCoreParagraphText(); // Запускает выделение ключевых слов при загрузке страницы
-});
+}
 
 
 
-// Логика для кнопки "Edit Form" (редактирование имени, даты рождения и номера отчета)
-document.addEventListener("DOMContentLoaded", function() {
-    const editButton = document.querySelector(".icon-btn--edit-form");
+/**
+ * Логика для кнопки "Edit Form".
+ * 
+ * Функция обрабатывает нажатие на кнопку "Edit Form" для переключения режима редактирования формы.
+ * 
+ * Шаги выполнения:
+ * 1. Проверяет, являются ли поля формы с ID `exportForm` только для чтения.
+ * 2. В зависимости от текущего состояния (только для чтения или редактируемые):
+ *    - Удаляет атрибут `readonly` для переключения в режим редактирования.
+ *    - Добавляет атрибут `readonly` для возврата в режим только для чтения.
+ * 3. Изменяет иконку кнопки и текст подсказки (`title`) в зависимости от состояния:
+ *    - При включении режима редактирования устанавливается иконка сохранения и подсказка "Save Changes".
+ *    - При возврате в режим только для чтения устанавливается иконка редактирования и подсказка "Edit Form".
+ * 
+ * Требования:
+ * - Элемент с ID `exportForm`, содержащий поля ввода (input).
+ * - Элемент кнопки для редактирования передается в качестве аргумента функции.
+ * 
+ * @param {HTMLElement} editButton - Кнопка, запускающая логику редактирования формы.
+ */
+function editButtonLogic(editButton) {
     const formInputs = document.querySelectorAll("#exportForm input");
 
     editButton.addEventListener("click", function() {
         // Проверяем, являются ли поля формы только для чтения
-        const isReadOnly = formInputs[0].hasAttribute("readonly");
+        const isReadOnly = formInputs[0]?.hasAttribute("readonly");
 
         formInputs.forEach(input => {
             if (isReadOnly) {
@@ -645,361 +890,341 @@ document.addEventListener("DOMContentLoaded", function() {
             editButton.title = "Edit Form";
         }
     });
-});
-
-
-
-// Логика редактирования предложений и параграфов
-// document.addEventListener("DOMContentLoaded", function() {
-//     /**
-//      * Логика для кнопки "Edit" в предложениях.
-//      */
-//     document.querySelectorAll(".icon-btn--edit").forEach(button => {
-//         console.log("im here")
-//         button.addEventListener("click", function() {
-//             const container = this.closest(".edit-container");
-//             const sentenceElement = container.querySelector(".report__sentence");
-//             const selectElement = container.querySelector(".report__select");
-
-//             if (this.classList.contains("editing")) {
-//                 // Save logic
-//                 const sentenceId = sentenceElement ? sentenceElement.getAttribute("data-sentence-id") : selectElement.value;
-//                 const newValue = sentenceElement ? sentenceElement.innerText : container.querySelector(".report__input").value;
-
-//                 // Отправляем запрос на сервер с использованием sendRequest
-//                 sendRequest({
-//                     url: "/working_with_reports/update_sentence",
-//                     method: "POST",
-//                     data: {
-//                         sentence_id: sentenceId,
-//                         new_value: newValue
-//                     },
-//                     csrfToken: csrfToken
-//                 }).then(() => {
-//                     this.classList.remove("editing");
-//                     this.style.background = "url('/static/pic/edit_button.svg') no-repeat center center";
-//                     if (selectElement) {
-//                         const input = container.querySelector(".report__input");
-//                         const selectedOption = selectElement.selectedOptions[0];
-//                         selectedOption.setAttribute("data-sentence", input.value);
-//                         selectedOption.textContent = input.value;
-//                         input.remove();
-//                         selectElement.style.display = "inline-block";
-//                     } else {
-//                         sentenceElement.contentEditable = false;
-//                         sentenceElement.classList.remove("editing");
-//                     }
-//                 }).catch(error => {
-//                     alert("Failed to update sentence.");
-//                     console.error("Error updating sentence:", error);
-//                 });
-//             } else {
-//                 // Edit logic
-//                 this.classList.add("editing");
-//                 this.style.background = "url('/static/pic/save_button.svg') no-repeat center center";
-
-//                 if (selectElement) {
-//                     const selectedOption = selectElement.selectedOptions[0];
-//                     const sentenceText = selectedOption.getAttribute("data-sentence");
-//                     const input = document.createElement("input");
-//                     input.type = "text";
-//                     input.value = sentenceText;
-//                     input.className = "report__input";
-//                     container.insertBefore(input, selectElement);
-//                     selectElement.style.display = "none";
-//                 } else {
-//                     sentenceElement.contentEditable = true;
-//                     sentenceElement.classList.add("editing");
-//                 }
-//             }
-//         });
-//     });
-
-//     /**
-//      * Логика для кнопки "Edit" в параграфах.
-//      */
-//     document.querySelectorAll(".icon-btn--edit-paragraph").forEach(button => {
-//         button.addEventListener("click", function() {
-//             const paragraphElement = this.closest("li").querySelector(".paragraphTitle");
-
-//             // Проверка на null
-//             if (!paragraphElement) {
-//                 console.error("Paragraph element not found.");
-//                 return;
-//             }
-
-//             const paragraphId = paragraphElement.getAttribute("data-paragraph-id");
-
-//             if (this.classList.contains("editing")) {
-//                 // Save logic for paragraph
-//                 const newParagraphValue = paragraphElement.innerText;
-
-//                 // Отправляем запрос на сервер с использованием sendRequest
-//                 sendRequest({
-//                     url: "/working_with_reports/update_paragraph",
-//                     method: "POST",
-//                     data: {
-//                         paragraph_id: paragraphId,
-//                         new_value: newParagraphValue
-//                     },
-//                     csrfToken: csrfToken
-//                 }).then(() => {
-//                     this.classList.remove("editing");
-//                     paragraphElement.contentEditable = false;
-//                     paragraphElement.classList.remove("editing");
-//                     this.style.background = "url('/static/pic/edit_button.svg') no-repeat center center";
-//                 }).catch(error => {
-//                     alert("Failed to update paragraph.");
-//                     console.error("Error updating paragraph:", error);
-//                 });
-//             } else {
-//                 // Edit logic for paragraph
-//                 this.classList.add("editing");
-//                 paragraphElement.contentEditable = true;
-//                 paragraphElement.classList.add("editing");
-//                 this.style.background = "url('/static/pic/save_button.svg') no-repeat center center";
-//             }
-//         });
-//     });
-// });
+}
 
 
 /**
  * Логика для кнопки "+". Открывает popup с отфильтрованными предложениями.
+ * 
+ * Функциональность:
+ * - Добавляет обработчики событий для всех кнопок с классом "icon-btn--add-sentence".
+ * - При нажатии на кнопку создает пустое редактируемое предложение и добавляет его в DOM перед кнопкой.
+ * - Отправляет запрос на сервер для получения предложений, связанных с параграфом, к которому принадлежит кнопка.
+ * - Отображает popup с полученными предложениями, позволяя пользователю выбрать одно из них.
+ * - Выбранное предложение добавляется как новый элемент предложения.
+ * - Обновляет текст параграфа после добавления предложения.
+ * - Обрабатывает ситуации, когда popup скрывается или новое предложение остается пустым.
+ * 
+ * Требования:
+ * - Элементы кнопок с классом "icon-btn--add-sentence" должны присутствовать на странице.
+ * - Серверный маршрут "/working_with_reports/get_sentences_with_index_zero" должен возвращать данные в формате JSON с массивом предложений.
+ * - Должны быть доступны функции `createEditableSentenceElement`, `showPopup`, `updateCoreParagraphText`, и `hidePopup`.
+ * - Должен быть определен CSRF-токен для безопасности запросов.
+ * 
+ * Использование:
+ * - Вызвать эту функцию после полной загрузки DOM.
+ * 
+ * Примечания:
+ * - Если предложения для параграфа отсутствуют, будет выведено сообщение об ошибке в консоль.
+ * - Если текст нового предложения остается пустым после потери фокуса, оно автоматически удаляется.
  */
-document.querySelectorAll(".icon-btn--add-sentence").forEach(button => {
-    button.addEventListener("click", function(event) {
-        const paragraphId = this.getAttribute("data-paragraph-id");
+function addSentenceButtonLogic() {
+    document.querySelectorAll(".icon-btn--add-sentence").forEach(button => {
+        button.addEventListener("click", function(event) {
+            const paragraphId = this.getAttribute("data-paragraph-id");
 
-        // Создаем пустое предложение и добавляем перед кнопкой
-        const newSentenceElement = createEditableSentenceElement("");
-        button.parentNode.insertBefore(newSentenceElement, button);
-        newSentenceElement.focus(); // Устанавливаем фокус на новый элемент
+            // Создаем пустое предложение и добавляем перед кнопкой
+            const newSentenceElement = createEditableSentenceElement("");
+            button.parentNode.insertBefore(newSentenceElement, button);
+            newSentenceElement.focus(); // Устанавливаем фокус на новый элемент
 
-        // Получаем предложения с индексом 0 для этого параграфа
-        sendRequest({
-            url: "/working_with_reports/get_sentences_with_index_zero",
-            method: "POST",
-            data: { paragraph_id: paragraphId },
-            csrfToken: csrfToken
-        }).then(data => {
-            if (data.sentences && data.sentences.length > 0) {
-                // Используем общий popup для показа предложений
-                showPopup(event.pageX, event.pageY, data.sentences, function(selectedSentence) {
-                    // Логика при выборе предложения из popup
-                    const newSentenceElement = createEditableSentenceElement(selectedSentence.sentence);
-                    button.parentNode.insertBefore(newSentenceElement, button);
-                    updateCoreParagraphText(); // Обновляем текст абзаца после добавления предложения
-                });
-            } else {
-                console.error("No sentences available for this paragraph.");
-            }
-        }).catch(error => {
-            console.error("Error fetching sentences:", error);
+            // Получаем предложения с индексом 0 для этого параграфа
+            sendRequest({
+                url: "/working_with_reports/get_sentences_with_index_zero",
+                method: "POST",
+                data: { paragraph_id: paragraphId },
+                csrfToken: csrfToken
+            }).then(data => {
+                if (data.sentences && data.sentences.length > 0) {
+                    // Используем popup для показа предложений
+                    showPopup(event.pageX, event.pageY, data.sentences, function(selectedSentence) {
+                        // Логика при выборе предложения из popup
+                        const newSentenceElement = createEditableSentenceElement(selectedSentence.sentence);
+                        button.parentNode.insertBefore(newSentenceElement, button);
+                        updateCoreParagraphText(); // Обновляем текст абзаца после добавления предложения
+                    });
+                } else {
+                    console.error("No sentences available for this paragraph.");
+                }
+            }).catch(error => {
+                console.error("Error fetching sentences:", error);
+            });
+
+            // Логика скрытия popup или удаления предложения
+            newSentenceElement.addEventListener("input", function() {
+                hidePopup(); // Скрываем popup при начале ввода
+            });
+
+            newSentenceElement.addEventListener("blur", function() {
+                if (newSentenceElement.textContent.trim() === "") {
+                    // Удаляем пустое предложение, если потеряно фокус без ввода текста
+                    newSentenceElement.remove();
+                }
+            });
         });
-
-
-        // Логика скрытия popup или удаления предложения
-        newSentenceElement.addEventListener("input", function() {
-            hidePopup(); // Скрываем popup при начале ввода
-        });
-
-        newSentenceElement.addEventListener("blur", function() {
-            if (newSentenceElement.textContent.trim() === "") {
-                // Удаляем пустое предложение, если потеряно фокус без ввода текста
-                newSentenceElement.remove();
-            }
-        });
-
-
     });
-});
+}
 
 
+/**
+ * Обрабатывает логику кнопки "Copy to Clipboard".
+ * 
+ * Функциональность:
+ * - При нажатии на кнопку собирает текст из параграфов с классами "initial-paragraph-list", "core-paragraph-list", и "impression-paragraph-list".
+ * - Формирует общий текст, объединяя данные из указанных параграфов.
+ * - Копирует сформированный текст в буфер обмена.
+ * - Отправляет собранные данные абзацев на сервер для обработки.
+ * - При успешной обработке отображает обновленные данные абзацев на странице.
+ * 
+ * Требования:
+ * - Должна быть доступна функция `collectTextFromParagraphs` для извлечения текста из параграфов.
+ * - Должна быть доступна функция `collectParagraphsData` для сбора данных абзацев.
+ * - Должны быть доступны функции `sendRequest` для выполнения HTTP-запросов и `displayProcessedParagraphs` для отображения обновленных данных.
+ * - Должен быть подключен библиотека `toastr` для отображения уведомлений.
+ * - Серверный маршрут "/working_with_reports/new_sentence_adding" должен принимать данные абзацев и возвращать обработанные данные.
+ * - Должен быть определен CSRF-токен для безопасности запросов.
+ * 
+ * Использование:
+ * - Вызвать эту функцию и передать элемент кнопки "Copy to Clipboard" как аргумент.
+ * - Функция автоматически добавит обработчик событий к переданной кнопке.
+ * 
+ * Примечания:
+ * - В случае успешного копирования отображается уведомление с помощью `toastr.success`.
+ * - При возникновении ошибок копирования или отправки данных выводится сообщение об ошибке.
+ * 
+ * Аргументы:
+ * @param {HTMLElement} copyButton - Элемент кнопки "Copy to Clipboard".
+ */
+function copyButtonLogic(copyButton) {
+    copyButton.addEventListener("click", async function() {
+        // Собираем текст из параграфов: initial, core, impression
+        const initialText = collectTextFromParagraphs("initial-paragraph-list");
+        const coreText = collectTextFromParagraphs("core-paragraph-list");
+        const impressionText = collectTextFromParagraphs("impression-paragraph-list");
+
+        // Соединяем все части с пустой строкой между ними
+        const textToCopy = `${initialText}\n\n${coreText}\n\n${impressionText}`.trim();
+
+        try {
+            // Копируем текст в буфер обмена
+            await navigator.clipboard.writeText(textToCopy);
+            toastr.success("Text copied to clipboard successfully", "Success");
+
+            // После успешного копирования выполняем отправку данных
+            const paragraphsData = collectParagraphsData();
+
+            const response = await sendRequest({
+                url: "/working_with_reports/new_sentence_adding",
+                method: "POST",
+                data: {
+                    paragraphs: paragraphsData
+                },
+                csrfToken: csrfToken
+            });
+
+            // Если запрос успешен, отображаем обработанные абзацы
+            displayProcessedParagraphs(response.processed_paragraphs);
+
+        } catch (error) {
+            alert(error.message || "Failed to process paragraphs.");
+        }
+    });
+}
 
 
-// "Copy to clipboard" button logic
-document.getElementById("copyButton").addEventListener("click", async function() {
+/**
+ * Обрабатывает логику кнопки "Export to Word".
+ * 
+ * Функциональность:
+ * - Собирает текст из абзацев с классами "initial-paragraph-list", "core-paragraph-list", и "impression-paragraph-list".
+ * - Отправляет данные абзацев на сервер для обработки.
+ * - При успешной обработке данных выполняет экспорт текста в формат Word.
+ * - Формирует имя файла на основе имени пациента, типа отчета, подтипа отчета и текущей даты.
+ * - Позволяет пользователю скачать сгенерированный файл Word.
+ * 
+ * Требования:
+ * - Должна быть доступна функция `collectTextFromParagraphs` для извлечения текста из параграфов.
+ * - Должна быть доступна функция `collectParagraphsData` для сбора данных абзацев.
+ * - Должны быть доступны функции `sendRequest` для выполнения HTTP-запросов и `displayProcessedParagraphs` для отображения обновленных данных.
+ * - Должен быть подключен CSRF-токен для безопасности запросов.
+ * - Серверные маршруты:
+ *   - "/working_with_reports/new_sentence_adding" для обработки данных абзацев.
+ *   - "/working_with_reports/export_to_word" для создания файла Word.
+ * - Поля ввода с идентификаторами "patient-name", "patient-birthdate", "report-number" должны содержать соответствующие данные пациента.
+ * 
+ * Использование:
+ * - Вызвать эту функцию и передать элемент кнопки "Export to Word" как аргумент.
+ * - Функция автоматически добавит обработчик событий к переданной кнопке.
+ * 
+ * Примечания:
+ * - При успешном завершении операций отображается уведомление об успехе.
+ * - Если обработка данных или экспорт в Word завершились ошибкой, выводится сообщение об ошибке в консоль и пользователю.
+ * - Файл Word формируется и скачивается автоматически.
+ * 
+ * Аргументы:
+ * @param {HTMLElement} exportButton - Элемент кнопки "Export to Word".
+ */
+function wordButtonLogic(exportButton) {
+    
+    exportButton.addEventListener("click", async function() {
+        // Собираем текст из разных списков абзацев
+        const initialText = collectTextFromParagraphs("initial-paragraph-list");
+        const coreText = collectTextFromParagraphs("core-paragraph-list");
+        const impressionText = collectTextFromParagraphs("impression-paragraph-list");
 
-    // Собираем текст из параграфов: initial, core, impression
-    const initialText = collectTextFromParagraphs("initial-paragraph-list");
-    const coreText = collectTextFromParagraphs("core-paragraph-list");
-    const impressionText = collectTextFromParagraphs("impression-paragraph-list");
+        const textToExport = `${coreText}\n\n${impressionText}`.trim();
+        const scanParam = initialText.trim();
 
-    // Соединяем все части с пустой строкой между ними
-    const textToCopy = `${initialText}\n\n${coreText}\n\n${impressionText}`.trim();
-
-    try {
-        await navigator.clipboard.writeText(textToCopy.trim());
-        toastr.success("Text copied to clipboard successfully", "Success");
-
-        // После успешного копирования выполняем отправку данных
+        // Формируем данные абзацев
         const paragraphsData = collectParagraphsData();
-        console.log("This is paragraphsData from clipboard logic:    " + paragraphsData)
-       
-        console.log("This is paragraphsData from server in clipboard logic:    " + paragraphsData)
 
-        const response = await sendRequest({
-            url: "/working_with_reports/new_sentence_adding",
-            method: "POST",
-            data: {
-                paragraphs: paragraphsData
-            },
-            csrfToken: csrfToken
-        });
-        console.log("This is response from server in clipboard logic:    " + response.processed_paragraphs)
-        // Если запрос успешен, отображаем обработанные абзацы
-        displayProcessedParagraphs(response.processed_paragraphs);
+        try {
+            // Отправляем данные абзацев на сервер
+            const response = await sendRequest({
+                url: "/working_with_reports/new_sentence_adding",
+                method: "POST",
+                data: { paragraphs: paragraphsData },
+                csrfToken: csrfToken
+            });
 
-        
-    } catch (error) {
-        console.error("Error processing paragraphs:", error);
-        alert(error.message || "Failed to process paragraphs.");
-    }
-});
-
-// "Export to Word" button logic
-document.getElementById("exportButton").addEventListener("click", async function() {
-
-    // Собираем текст из initial, core и impression
-    const initialText = collectTextFromParagraphs("initial-paragraph-list");
-    const coreText = collectTextFromParagraphs("core-paragraph-list");
-    const impressionText = collectTextFromParagraphs("impression-paragraph-list");
-    
-    // Текст для экспорта в Word: initial идет в scanParam, core + impression идут в text
-    const textToExport = `${coreText}\n\n${impressionText}`.trim();
-    const scanParam = initialText.trim();  // Вставляем initial в scanParam
-    
-    
-    // Формируем данные параграфов и предложений
-    const paragraphsData = collectParagraphsData();
-
-    try {
-        // Отправляем данные абзацев на сервер, используя sendRequest
-        const response = await sendRequest({
-            url: "/working_with_reports/new_sentence_adding",
-            method: "POST",
-            data: {
-                paragraphs: paragraphsData
-            },
-            csrfToken: csrfToken
-        });
-
-        // Отображаем обработанные параграфы, если запрос успешен
-        displayProcessedParagraphs(response.processed_paragraphs);
-
-    } catch (error) {
-        console.error("Error processing paragraphs:", error);
-        alert(error.message || "Failed to process paragraphs.");
-        return; // Прекращаем выполнение, если отправка абзацев не удалась
-    }
-
-    // Если отправка абзацев успешна, выполняем экспорт в Word
-    try {
-        const name = document.getElementById("patient-name").value;
-        const birthdate = document.getElementById("patient-birthdate").value;
-        const reportnumber = document.getElementById("report-number").value;
-        // Извлекаем значения из data-атрибутов
-        const exportForm = document.getElementById("exportForm");
-        const subtype = exportForm.getAttribute("data-subtype");
-        const reportType = exportForm.getAttribute("data-report-type");
-
-        const reportSideElement = document.getElementById("report-side");
-        const reportSide = reportSideElement ? reportSideElement.value : "";
-
-        // Отправляем запрос на экспорт в Word, используя sendRequest и получаем Blob
-        const blob = await sendRequest({
-            url: "/working_with_reports/export_to_word",
-            method: "POST",
-            data: {
-                text: textToExport,
-                name: name,
-                birthdate: birthdate,
-                subtype: subtype,
-                report_type: reportType,
-                reportnumber: reportnumber,
-                scanParam: scanParam,
-                side: reportSide
-            },
-            responseType: "blob",
-            csrfToken: csrfToken
-        });
-
-        // Обрабатываем Blob для загрузки файла
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        const currentDate = new Date();
-        const day = currentDate.getDate();
-        const month = currentDate.getMonth() + 1;
-        const year = currentDate.getFullYear();
-        const formattedDate = `${day.toString().padStart(2, '0')}${month.toString().padStart(2, '0')}${year}`;
-
-        let fileReportSide;
-        if (reportSide === "right") {
-            fileReportSide = " правая сторона";
-        } else if (reportSide === "left") {
-            fileReportSide = " левая сторона";
-        } else {
-            fileReportSide = "";
+            // Отображаем обработанные абзацы, если запрос успешен
+            displayProcessedParagraphs(response.processed_paragraphs);
+        } catch (error) {
+            console.error("Ошибка обработки абзацев:", error);
+            alert(error.message || "Не удалось обработать абзацы.");
+            return;
         }
 
-        a.style.display = "none";
-        a.href = url;
-        a.download = `${name} ${reportType} ${subtype}${fileReportSide} ${formattedDate}.docx`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
+        // Если обработка абзацев успешна, выполняем экспорт в Word
+        try {
+            const name = document.getElementById("patient-name").value;
+            const birthdate = document.getElementById("patient-birthdate").value;
+            const reportnumber = document.getElementById("report-number").value;
 
-    } catch (error) {
-        console.error("Error exporting to Word:", error);
-        alert(error.message || "Failed to export to Word.");
-    }
-});
+            const exportForm = document.getElementById("exportForm");
+            const subtype = exportForm.getAttribute("data-subtype");
+            const reportType = exportForm.getAttribute("data-report-type");
 
+            const reportSideElement = document.getElementById("report-side");
+            const reportSide = reportSideElement ? reportSideElement.value : "";
 
-// "Generate expression" button logic
-document.getElementById("generateImpression").addEventListener("click", async function(){
-    const textToCopy = collectTextFromParagraphs("core-paragraph-list");
-    const assistantNames = [
-        "airadiologist"
-    ];
-    const boxForAiResponse = document.getElementById("aiResponse");
-    boxForAiResponse.textContent = "waiting for ai response...";
+            const blob = await sendRequest({
+                url: "/working_with_reports/export_to_word",
+                method: "POST",
+                data: {
+                    text: textToExport,
+                    name: name,
+                    birthdate: birthdate,
+                    subtype: subtype,
+                    report_type: reportType,
+                    reportnumber: reportnumber,
+                    scanParam: scanParam,
+                    side: reportSide
+                },
+                responseType: "blob",
+                csrfToken: csrfToken
+            });
 
-    try {
-        const aiResponse = await generateImpressionRequest(textToCopy, assistantNames);
-        boxForAiResponse.textContent = aiResponse || "No response received.";
-    } catch(error) {
-        console.log(error);
-        boxForAiResponse.textContent = "An error occurred. Please try again.";
-    }
+            // Создаем ссылку для скачивания файла
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            const currentDate = new Date();
+            const day = currentDate.getDate();
+            const month = currentDate.getMonth() + 1;
+            const year = currentDate.getFullYear();
+            const formattedDate = `${day.toString().padStart(2, '0')}${month.toString().padStart(2, '0')}${year}`;
 
-});
+            let fileReportSide = "";
+            if (reportSide === "right") {
+                fileReportSide = " правая сторона";
+            } else if (reportSide === "left") {
+                fileReportSide = " левая сторона";
+            }
 
+            a.style.display = "none";
+            a.href = url;
+            a.download = `${name} ${reportType} ${subtype}${fileReportSide} ${formattedDate}.docx`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
 
-// "Add Impression to Report" button logic
-document.getElementById("addImpressionToReportButton").addEventListener("click", function() {
-    // Получаем текст ответа ИИ
-    const aiResponseText = document.getElementById("aiResponse").innerText.trim();
-
-    if (!aiResponseText) {
-        alert("AI response is empty. Please generate an impression first.");
-        return;
-    }
-
-    // Ищем первый видимый элемент предложения в impression-paragraph-list
-    const impressionParagraphs = document.querySelectorAll(".impression-paragraph-list .report__sentence");
-    let foundVisibleSentence = false;
-
-    impressionParagraphs.forEach(sentenceElement => {
-        if (isElementVisible(sentenceElement) && !foundVisibleSentence) {
-            // Заменяем текст первого видимого предложения на ответ ИИ
-            sentenceElement.textContent = aiResponseText;
-            foundVisibleSentence = true;  // Останавливаем поиск после первого найденного
+        } catch (error) {
+            console.error("Ошибка экспорта в Word:", error);
+            alert(error.message || "Не удалось выполнить экспорт в Word.");
         }
     });
+}
 
-    if (!foundVisibleSentence) {
-        alert("No visible impression sentence found.");
-    }
-});
+
+/**
+ * Логика для кнопки "Generate Impression".
+ * 
+ * Функция обрабатывает нажатие на кнопку "Generate Impression". Она:
+ * 1. Собирает текст из абзацев с классом "core-paragraph-list".
+ * 2. Отправляет текст на сервер для генерации впечатления с помощью ассистента.
+ * 3. Отображает результат в поле `aiResponse`.
+ * 4. Обрабатывает ошибки, если запрос не удается.
+ */
+function generateImpressionLogic(generateButton, boxForAiResponse) {
+    generateButton.addEventListener("click", async function () {
+        const textToCopy = collectTextFromParagraphs("core-paragraph-list");
+        const assistantNames = ["airadiologist"];
+        boxForAiResponse.textContent = "Ожидаю ответа ИИ...";
+
+        try {
+            const aiResponse = await generateImpressionRequest(textToCopy, assistantNames);
+            boxForAiResponse.textContent = aiResponse || "No response received.";
+        } catch (error) {
+            console.error(error);
+            boxForAiResponse.textContent = "An error occurred. Please try again.";
+        }
+    });
+}
+
+/**
+ * Логика кнопки "Add Impression to Report".
+ * 
+ * Функция обрабатывает нажатие на кнопку "Add Impression to Report" для добавления сгенерированного ИИ заключения в отчет.
+ * 
+ * Шаги выполнения:
+ * 1. Извлекает текст заключения из элемента с ID `aiResponse`.
+ * 2. Если текст пуст, отображает предупреждение пользователю о необходимости сгенерировать заключение.
+ * 3. Ищет первый видимый элемент предложения в абзацах с классом `impression-paragraph-list`.
+ * 4. Заменяет текст найденного предложения на текст из `aiResponse`.
+ * 
+ * В случае отсутствия видимого предложения:
+ * - Отображает предупреждение о том, что не найдено видимых предложений для вставки.
+ * 
+ * Требования:
+ * - Элемент с ID `addImpressionToReportButton` (кнопка).
+ * - Элемент с ID `aiResponse` для получения текста заключения.
+ * - Элементы с классом `impression-paragraph-list .report__sentence` для вставки текста.
+ * - Функция `isElementVisible` для проверки видимости элементов.
+ */
+function addImpressionButtonLogic(addImpressionButton) {
+    addImpressionButton.addEventListener("click", function() {
+        // Получаем текст ответа ИИ
+        const aiResponseText = document.getElementById("aiResponse")?.innerText.trim();
+
+        if (!aiResponseText) {
+            alert("Ответ ИИ пуст. Пожалуйста, сначала сгенерируйте впечатление.");
+            return;
+        }
+
+        // Ищем первый видимый элемент предложения в impression-paragraph-list
+        const impressionParagraphs = document.querySelectorAll(".impression-paragraph-list .report__sentence");
+        let foundVisibleSentence = false;
+
+        impressionParagraphs.forEach(sentenceElement => {
+            if (isElementVisible(sentenceElement) && !foundVisibleSentence) {
+                // Заменяем текст первого видимого предложения на ответ ИИ
+                sentenceElement.textContent = aiResponseText;
+                foundVisibleSentence = true;  // Останавливаем поиск после первого найденного
+            }
+        });
+
+        if (!foundVisibleSentence) {
+            alert("Не найдено видимых предложений для впечатлений.");
+        }
+    });
+}

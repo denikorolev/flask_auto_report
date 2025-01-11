@@ -108,7 +108,7 @@ function filterReportsByType(reportTypeSelect, existingReportList) {
 
 
 /**
- * Finds the maximum numeric value among a collection of input elements.
+ * Finds the maximum numeric value among a collection of input elements, used in edit_report.
  * 
  * @param {NodeList|Array} indexInputs - A collection of input elements whose values are to be evaluated as integers.
  * @returns {number} - The highest integer value found among the input elements, or 0 if the collection is empty or contains no valid numbers.
@@ -131,6 +131,36 @@ function findMaxIndex(indexInputs) {
 }
 
 
+/**
+ * Extracts the maximum number from the protocol number and increments it by 1 used in working with report.
+ * 
+ * @param {string} reportNumber - The report number in format "XXXX-XXXX".
+ * @returns {number} - The incremented report number.
+ */
+function getMaxReportNumber(reportNumber) {
+    // Split the string by the "-" character
+    const parts = reportNumber.split('-');
+
+    if (parts.length < 2) {
+        // If there's no "-", simply convert the string to a number and return
+        return parseInt(reportNumber, 10) + 1;
+    }
+
+    // Get the right part (the last number)
+    const rightPart = parts[parts.length - 1];
+
+    // Get the left part (everything except the last part)
+    let leftPart = parts.slice(0, parts.length - 1).join('-');
+
+    // Determine the number of digits in the right part
+    const numDigitsInRightPart = rightPart.length;
+
+    // Replace the last characters of the left part with the right part
+    const newLeftPart = leftPart.slice(0, -numDigitsInRightPart) + rightPart;
+
+    // Convert the result to a number and add 1
+    return parseInt(newLeftPart, 10) + 1;
+}
 
 
 

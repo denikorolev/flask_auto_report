@@ -23,14 +23,14 @@ new_report_creation_bp = Blueprint('new_report_creation', __name__)
 @auth_required()
 def create_report():
     page_title = "New report creation"
-    menu = current_app.config['MENU']
+    # menu = current_app.config['MENU']
     report_types_and_subtypes = ReportType.get_types_with_subtypes(g.current_profile.id)
     current_profile_reports = Report.find_by_profile(g.current_profile.id)
             
     
     return render_template("create_report.html",
                            title=page_title,
-                           menu=menu,
+                        #    menu=menu,
                            user_reports=current_profile_reports,
                            report_types_and_subtypes=report_types_and_subtypes
                            )

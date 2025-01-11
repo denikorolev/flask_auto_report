@@ -32,10 +32,7 @@
                 </ul>
             </nav>
 
-            <!-- Сообщение о версии программы -->
-            {% if version %}
-                <p class="header__paragraph header__paragraph--version">v.{{ version }}</p>
-            {% endif %}
+            
             
             <!-- Сообщение о текущем профиле -->
             {% if g.current_profile %}
@@ -86,6 +83,11 @@
     <footer class="footer">
         <div class="container">
             <p class="footer__paragraph">&copy; 2023-2024 Radiologary</p>
+            <!-- Сообщение о версии программы -->
+            {% if version %}
+                <p class="header__paragraph header__paragraph--version">v.{{ app_info.version }}</p>
+                <p class="header__paragraph header__paragraph--author">author: {{ app_info.author }}</p>
+            {% endif %}
         </div>
     </footer>
 </div>
