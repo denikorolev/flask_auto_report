@@ -8,21 +8,15 @@ document.addEventListener("DOMContentLoaded", function(){
 
     deleteProfile();
 
+    initializeChangeListeners(); // Слушатели изменения для элементов чтобы отправлять только измененные данные
+
 });
 
 
 /**
  * Добавляет обработчик клика на кнопку "Сохранить настройки профиля",
- * собирает данные профиля и отправляет их на сервер.
- *
- * Шаги:
- * 1. Слушает клик по кнопке с ID "saveSettingProfile".
- * 2. Собирает данные профиля из блока с ID "profileSettingBlock":
- *    - ID профиля (из атрибута data-profile-id),
- *    - Имя профиля (значение поля #profileName),
- *    - Описание профиля (значение поля #profileDescription).
- * 3. Отправляет данные на сервер через `sendRequest`:
- *    - URL: "/profile_settings/update_profile_settings".
+ * собирает данные профиля и отправляет их на сервер.Сохраняет глобальные настройки - имя профиля и описание.
+ * Потом уберу его отсюда в настройки юзера
  */
 function profileGlobalSettingsSave() {
    
@@ -52,39 +46,73 @@ function profileGlobalSettingsSave() {
 
 /**
  * Добавляет обработчик клика на кнопку "Сохранить настройки", 
- * собирает данные профиля и отправляет их на сервер.
- *
- * Шаги:
- * 1. Слушает клик по кнопке с ID "saveSettings".
- * 2. Собирает данные настроек (включение Word Reports и выбранная тема).
- * 3. Отправляет данные на сервер с помощью `sendRequest`.
- * 4. Обрабатывает ответ: выводит сообщение об успехе или ошибке.
+ * проверяет наличие флага изменения для каждого элемента формы,
+ * собирает данные настроек и отправляет их на сервер.
+ * После успешного сохранения удаляет флаг изменения и убирает класс изменения.
  */
 function profileSettingsSave() {
     
     document.getElementById("saveSettings").addEventListener("click", () => {
-       
-        const settingsBlock = document.getElementById("settings-block");
-        // Собираем данные
-        const settingsData = {
-            USE_WORD_REPORTS: settingsBlock.querySelector("#use_word_reports").checked,
-            THEME: settingsBlock.querySelector("#theme").value,
-        };
+        const inputs = document.getElementById("settings-block").querySelectorAll("input, select");
+        const changedSettings = {};
 
+        inputs.forEach(input => {
+            if (input.dataset.changed === "true") { // Проверяем наличие флага
+                // Собираем значение если чекбокс то берем checked если нет то value
+                const value = input.type === "checkbox" ? input.checked : input.value;
+                changedSettings[input.name] = value;
+                }
+            });
+
+        console.log(changedSettings);
         // Отправляем данные на сервер
         sendRequest({
             url: "/profile_settings/update_settings",
             method: "POST",
             csrfToken: csrfToken,
-            data: settingsData
+            data: changedSettings
         }).then(response => {
-            console.log(response.message || "Settings updated successfully.");
+            inputs.forEach(input => delete input.dataset.changed);
+            inputs.forEach(input => {
+                const parentLi = input.closest(".settings-block__item");
+                if (parentLi) {
+                        parentLi.classList.remove("settings-block__item--changed");
+                }
+            });
         }).catch(error => {
             console.error("Failed to update settings:", error);
         });
     });
 }
 
+/** Инициализирует слушателей событий изменения для элементов формы настроек 
+ * и устанавливает флаг для измененных элементов.
+ * При изменении элемента добавляет класс изменения для родительского элемента <li>.
+*/
+function initializeChangeListeners() {
+    const settingsBlock = document.getElementById("settings-block");
+    const inputs = settingsBlock.querySelectorAll("input, select");
+
+    inputs.forEach(input => {
+        // Добавляем слушатель события изменения
+        input.addEventListener("change", () => {
+            input.dataset.changed = "true"; // Устанавливаем флаг для измененного элемента
+
+        // Находим родительский <li> элемент
+        const parentLi = input.closest(".settings-block__item");
+        if (parentLi) {
+            parentLi.classList.add("settings-block__item--changed"); // Добавляем класс
+        }
+        
+        });
+    });
+}
+
+
+/**
+ * Добавляет обработчик клика на кнопку "Удалить профиль".
+ * Отправляет запрос на сервер для удаления профиля.
+ */
 function deleteProfile() {
     
     document.getElementById("deleteProfile").addEventListener("click", () => {

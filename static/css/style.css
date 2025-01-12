@@ -742,3 +742,9 @@ body {
     font-size: 12px;
     margin-left: 10px;
 }
+
+/* Стили для настроек профиля */
+
+.settings-block__item--changed {
+    background-color: #a8acf5;
+}

@@ -33,15 +33,20 @@
         <h3 class="settings-block__title">Настройки</h3>
         <ul class="settings-block__list" id="settings-block">
             <li class="settings-block__item">
-                <label class="settings-block__label" for="use_word_reports">Use Word Reports:</label>
-                <input class="settings-block__input" type="checkbox" id="use_word_reports" name="use_word_reports" 
+                <label class="settings-block__label" for="USE_WORD_REPORTS">Использовать выгрузку протокола в word</label>
+                <input class="settings-block__input" type="checkbox" id="use_word_reports" name="USE_WORD_REPORTS" 
                     {% if user_settings.USE_WORD_REPORTS %} checked {% endif %}>
             </li>
             <li class="settings-block__item">
-                <label class="settings-block__label" for="theme">Theme:</label>
-                <select class="settings-block__select" id="theme" name="theme">
-                    <option value="light" {% if user_settings.theme == 'light' %}selected{% endif %}>Light</option>
-                    <option value="dark" {% if user_settings.theme == 'dark' %}selected{% endif %}>Dark</option>
+                <label class="settings-block__label" for="USE_SENTENCE_AUTOSAVE">Использовать автосохранение новых предложений</label>
+                <input class="settings-block__input" type="checkbox" id="use_excel_reports" name="USE_SENTENCE_AUTOSAVE" 
+                    {% if user_settings.USE_SENTENCE_AUTOSAVE %} checked {% endif %}>
+            </li>
+            <li class="settings-block__item">
+                <label class="settings-block__label" for="THEME">Theme:</label>
+                <select class="settings-block__select" id="theme" name="THEME">
+                    <option value="light" {% if user_settings.THEME == 'light' %}selected{% endif %}>Light</option>
+                    <option value="dark" {% if user_settings.THEME == 'dark' %}selected{% endif %}>Dark</option>
                 </select>
             </li>
         </ul>
