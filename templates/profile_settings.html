@@ -5,42 +5,47 @@
 
 <input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
 
-    <h2>Profile Settings</h2>
-    <form method="POST" action="{{ url_for("profile_settings.update_profile_settings") }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="profile_id" value="{{ profile.id }}">
-        <div>
-            <label for="profile_name">Profile Name:</label>
-            <input type="text" id="profile_name" name="profile_name" value="{{ profile.profile_name }}" required>
-        </div>
-        <div>
-            <label for="description">Description:</label>
-            <textarea id="description" name="description">{{ profile.description }}</textarea>
-        </div>
-        <button type="submit">Save Changes</button>
-    </form>
-
-    <form method="POST" action="{{ url_for("profile_settings.delete_profile", profile_id=profile.id) }}" onsubmit="return confirm('Are you sure you want to delete this profile?');">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button type="submit">Delete Profile</button>
-    </form>
+    <!-- Блок глобальных настроек самого профиля -->
+    <div class="profile-settings-block">
+        <h3 class="profile-settings-block__title">Profile Settings</h3>
+            <div class="profile-settings-block__container">
+                <ul class="profile-settings-block__list" data-profile-id="{{ profile.id }}" id="profileSettingBlock">
+                    <li class="profile-settings-block__item">
+                        <label class="profile-settings-block__label" for="profile_name">Profile Name:</label>
+                        <input class="profile-settings-block__input" type="text" id="profileName" name="profile_name" value="{{ profile.profile_name }}" required>
+                    </li>
+                    <li class="profile-settings-block__item">
+                        <label class="profile-settings-block__label" for="description">Description:</label>
+                        <textarea class="profile-settings-block__textarea" id="profileDescription" name="description">{{ profile.description }}</textarea>
+                    </li>
+                </ul>
+                <div class="profile-setting-block__wrapper--buttons">
+                    <button class="btn report__btn profile-settings-block__btn" id="saveSettingProfile" type="button">Сохранить изменения</button>
+                    <button class="btn report__btn profile-settings-block__btn" id="deleteProfile" type="button">Удалить профиль</button>
+                </div>
+            </div>
+    </div>
+    
 
 
     <!-- Блок настроек для сохранения настроек профиля в БД -->
-    <div id="settings-block">
-        <div>
-            <label for="use_word_reports">Use Word Reports:</label>
-            <input type="checkbox" id="use_word_reports" name="use_word_reports" 
-                   {% if user_settings.USE_WORD_REPORTS %} checked {% endif %}>
-        </div>
-        <div>
-            <label for="theme">Theme:</label>
-            <select id="theme" name="theme">
-                <option value="light" {% if user_settings.theme == 'light' %}selected{% endif %}>Light</option>
-                <option value="dark" {% if user_settings.theme == 'dark' %}selected{% endif %}>Dark</option>
-            </select>
-        </div>
-        <button id="save-settings">Save Settings</button>
+    <div class="settings-block">
+        <h3 class="settings-block__title">Настройки</h3>
+        <ul class="settings-block__list" id="settings-block">
+            <li class="settings-block__item">
+                <label class="settings-block__label" for="use_word_reports">Use Word Reports:</label>
+                <input class="settings-block__input" type="checkbox" id="use_word_reports" name="use_word_reports" 
+                    {% if user_settings.USE_WORD_REPORTS %} checked {% endif %}>
+            </li>
+            <li class="settings-block__item">
+                <label class="settings-block__label" for="theme">Theme:</label>
+                <select class="settings-block__select" id="theme" name="theme">
+                    <option value="light" {% if user_settings.theme == 'light' %}selected{% endif %}>Light</option>
+                    <option value="dark" {% if user_settings.theme == 'dark' %}selected{% endif %}>Dark</option>
+                </select>
+            </li>
+        </ul>
+        <button class="btn report__btn settings-block__btn" type="button" id="saveSettings">Сохранить</button>
     </div>
     
 

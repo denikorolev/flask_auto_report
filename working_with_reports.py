@@ -50,7 +50,6 @@ def choosing_report():
 @working_with_reports_bp.route("/working_with_reports", methods=['POST', 'GET'])
 @auth_required()
 def working_with_reports(): 
-    # menu = current_app.config['MENU']
     current_report_id = request.args.get("reportId")
     full_name = request.args.get("fullname")
     birthdate = request.args.get("birthdate")

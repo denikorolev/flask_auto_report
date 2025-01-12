@@ -149,6 +149,7 @@ def load_current_profile():
     # Проверяем, установлена ли сессия пользователя и находится ли он на странице, требующей профиля
     if current_user.is_authenticated:  
         user_profiles = UserProfile.get_user_profiles(current_user.id)
+            
         if user_profiles:
             if 'profile_id' in session:
                 g.current_profile = UserProfile.find_by_id(session['profile_id'])
@@ -178,7 +179,7 @@ def load_current_profile():
         else:
             # Если у юзера нет профиля то создаю ему дефолтный профиль загружаю 
             # этот профиль в сессию и перекидываю его на главную страницу в противном 
-            # случае отправляю его на страницу ошибки
+            # случае отправляю его на страницу ошибки (это дыра в безопасности и нужно будет это продумать нормально)
             user_first_profile = UserProfile.create(current_user.id, profile_name="Default") 
             session["profile_id"] = user_first_profile.id
             if not "profile_id" in session:
@@ -213,7 +214,6 @@ def index():
     return render_template('index.html', 
                            title="Radiologary", 
                            user_profiles=user_profiles,
-                           version=version
                            )
 
 

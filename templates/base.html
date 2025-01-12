@@ -42,7 +42,7 @@
             {% endif %}
 
             <!-- Сообщение о текущем юзере -->
-            <p class="header__paragraph">Привет, {{ current_user.user_role }}, {{ current_user.user_name }}!</p>
+            <p class="header__paragraph">Привет, {{ current_user.roles[0].name }}, {{ current_user.user_name }}!</p>
             <a class="header__link" href="{{ url_for("security.logout") }}">Выйти</a>
         </div>
 
@@ -84,9 +84,9 @@
         <div class="container">
             <p class="footer__paragraph">&copy; 2023-2024 Radiologary</p>
             <!-- Сообщение о версии программы -->
-            {% if version %}
-                <p class="header__paragraph header__paragraph--version">v.{{ app_info.version }}</p>
-                <p class="header__paragraph header__paragraph--author">author: {{ app_info.author }}</p>
+            {% if app_info %}
+                <span class="header__paragraph header__paragraph--version">v.{{ app_info.version }}</span>
+                <span class="header__paragraph header__paragraph--author">author: {{ app_info.author }}</span>
             {% endif %}
         </div>
     </footer>

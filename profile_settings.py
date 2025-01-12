@@ -8,9 +8,7 @@ from flask_security.decorators import auth_required
 from file_processing import sync_profile_files
 import json
 
-
 profile_settings_bp = Blueprint('profile_settings', __name__)
-
 
 
 # Маршрут для страницы настроек профиля
@@ -72,39 +70,34 @@ def create_profile():
 @profile_settings_bp.route('/update_profile_settings', methods=['POST'])
 @auth_required()
 def update_profile_settings():
-    print("im in profile settings")
-    profile_id = request.form.get('profile_id')
-    new_name = request.form.get('profile_name')
-    new_description = request.form.get('description')
-    print(profile_id)
-    print(new_name)
-    print(new_description)
-
+    data = request.get_json()
+    profile_id = data.get("profile_id")
+    new_name = data.get("profile_name")
+    new_description = data.get("description")
     profile = UserProfile.find_by_id_and_user(profile_id, current_user.id)
+    
     if profile:
         profile.profile_name = new_name
         profile.description = new_description
-        db.session.commit()
-        print('Profile updated successfully!', 'success')
+        profile.save()
+        return jsonify({"status": "success", "message": "Profile updated successfully!"}), 200
     else:
-        print('Profile not found or you do not have permission to edit it.', 'danger')
+        return jsonify({"status": "error", "message": "Profile not found or you do not have permission to update it."}), 400
 
-    return redirect(url_for('index'))
+
 
 # Маршрут для удаления профиля
-@profile_settings_bp.route('/delete_profile/<int:profile_id>', methods=['POST'])
+@profile_settings_bp.route('/delete_profile/<int:profile_id>', methods=["DELETE"])
 @auth_required()
 def delete_profile(profile_id):
     print("you are deleting profile")
     profile = UserProfile.find_by_id_and_user(profile_id, current_user.id)
     if profile:
-        db.session.delete(profile)
-        db.session.commit()
-        print('Profile deleted successfully!', 'success')
+        profile.delete()
+        return jsonify({"status": "success", "message": "Profile deleted successfully!"}), 200
     else:
-        print('Profile not found or you do not have permission to delete it.', 'danger')
+        return jsonify({"status": "error", "message": "Profile not found or you do not have permission to delete it."}), 400
 
-    return redirect(url_for('index'))
 
 # Маршрут для сохранения настроек профиля
 @profile_settings_bp.route("/update_settings", methods=["POST"])
