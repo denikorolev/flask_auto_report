@@ -586,9 +586,14 @@ body {
 }
 
 /* Блок стиля предложений у которых есть всплывающие предложения */
-.highlighted-sentence {
+.has-linked-sentences-highlighted-sentence {
     background-color: #daf7f7;  
     
+}
+
+/* Блок стиля предложений которые были изменены */
+.was-changed-highlighted-sentence {
+    background-color: #4ce0e0;      
 }
 
 

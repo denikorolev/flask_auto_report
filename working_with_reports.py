@@ -41,7 +41,6 @@ def choosing_report():
     return render_template(
         "choose_report.html",
         title="Report",
-        # menu=menu,
         user_reports=current_profile_reports,
         report_types_and_subtypes=report_types_and_subtypes
     )
@@ -66,6 +65,7 @@ def working_with_reports():
     
     key_words_obj = KeyWord.get_keywords_for_report(g.current_profile.id, current_report_id)
     key_words_group = group_keywords(key_words_obj)
+    print(key_words_group)
     
     return render_template(
         "working_with_report.html", 
@@ -132,6 +132,60 @@ def new_sentence_adding():
     except Exception as e:
         return jsonify({"status": "error", "message": f"Unexpected error: {e}"}), 500
     
+    
+# Сохраняем новые предложения в базу данных в автоматическом режиме учитывая индекс предложения
+@working_with_reports_bp.route("/save_modified_sentences", methods=["POST"])
+@auth_required()
+def save_modified_sentences():
+    """
+    Processes and saves new or modified sentences to the database.
+    """
+    try:
+        # Получаем данные из запроса
+        data = request.get_json()
+
+        if not data or "sentences" not in data:
+            return jsonify({"status": "error", "message": "Invalid data format"}), 400
+
+        sentences = data["sentences"]
+        if not isinstance(sentences, list) or not sentences:
+            return jsonify({"status": "error", "message": "No sentences provided"}), 400
+
+        saved_count = 0  # Счётчик сохранённых предложений
+        skipped_count = 0  # Счётчик пропущенных предложений
+        saved_sentences = []  # Для хранения информации о сохранённых предложениях
+
+        for sentence_data in sentences:
+            paragraph_id = sentence_data.get("paragraph_id")
+            sentence_index = sentence_data.get("sentence_index")
+            text = sentence_data.get("text")
+
+            # Проверяем корректность данных
+            if not paragraph_id or not text or sentence_index is None:
+                skipped_count += 1
+                continue
+
+            # Создаём новое предложение
+            new_sentence = Sentence.create(
+                paragraph_id=paragraph_id,
+                index=int(sentence_index),  # Используем переданный индекс
+                weight=10,  # Вес по умолчанию
+                comment="Added automatically",  # Комментарий
+                sentence=text
+            )
+            saved_sentences.append({"type": "added", "id": new_sentence.id})
+            saved_count += 1
+
+        return jsonify({
+            "status": "success",
+            "message": f"Processed {saved_count} sentences, skipped {skipped_count} sentences.",
+            "saved_sentences": saved_sentences
+        }), 200
+
+    except Exception as e:
+        return jsonify({"status": "error", "message": f"An error occurred: {str(e)}"}), 500
+
+
     
 @working_with_reports_bp.route("/add_sentence_to_paragraph", methods=["POST"])
 @auth_required()

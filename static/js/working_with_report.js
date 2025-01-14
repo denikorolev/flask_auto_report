@@ -56,6 +56,8 @@ document.addEventListener("DOMContentLoaded", function() {
     if (addImpressionButton) {
         addImpressionButtonLogic(addImpressionButton);
     }
+
+    addFocusListeners(); // Добавляем логику для автоматической отправки на сервер новых предложений
 });
 
 /**
@@ -91,25 +93,77 @@ function getMaxReportNumber(reportNumber) {
 
 
 /**
- * Создает редактируемый элемент предложения, обернутый в тег <span>.
- * 
- * Функция создает HTML-элемент <span> с текстом предложения, который можно редактировать прямо на странице.
- * 
- * @param {string} sentenceText - Текст предложения, который будет добавлен в элемент.
- * @returns {HTMLElement} - Новый элемент <span>, содержащий редактируемое предложение.
- * 
+ * Handles the focus event for a sentence element.
+ * Saves the original text in a data attribute.
  */
-function createEditableSentenceElement(sentenceText) {
+function handleSentenceFocus() {
+    if (!this.hasAttribute("data-original-text")) {
+        this.setAttribute("data-original-text", this.textContent.trim());
+        console.log("Focus: Original text saved:", this.textContent.trim());
+    }
+}
+
+/**
+ * Handles the blur event for a sentence element.
+ * Checks for changes and marks the sentence as modified if needed.
+ */
+function handleSentenceBlur() {
+    const originalText = this.getAttribute("data-original-text");
+    const currentText = this.textContent.trim();
+    const linkedSentences = this.linkedSentences || [];
+    const paragraphId = this.dataset.paragraphId;
+
+    console.log(`Blur: Handling sentence in paragraph ID ${paragraphId}`);
+
+    if (!currentText) {
+        console.log("Blur: Text is empty. Ignoring.");
+        return;
+    }
+
+    if (normalizeSentence(originalText, keyWordsGroups) === normalizeSentence(currentText, keyWordsGroups)) {
+        console.log("Blur: Text matches the original. No changes detected.");
+        return;
+    }
+
+    const isDuplicate = linkedSentences.some(sentence =>
+        normalizeSentence(sentence.sentence, keyWordsGroups) === normalizeSentence(currentText, keyWordsGroups)
+    );
+
+    if (isDuplicate) {
+        console.log("Blur: Text matches a linked sentence. No changes detected.");
+        return;
+    }
+
+    this.setAttribute("data-modified", "true");
+    this.classList.add("was-changed-highlighted-sentence");
+    console.log("Blur: Marked sentence as modified.");
+}
+
+/**
+ * Creates an editable sentence element wrapped in a <span>.
+ * Adds necessary attributes and attaches focus and blur event listeners.
+ * 
+ * @param {string} sentenceText - The text of the sentence to be added to the element.
+ * @param {string} paragraphId - The ID of the paragraph to which the sentence belongs.
+ * @returns {HTMLElement} - A new <span> element containing the editable sentence.
+ */
+function createEditableSentenceElement(sentenceText, paragraphId) {
     const newSentenceElement = document.createElement("span");
     newSentenceElement.classList.add("report__sentence");
-    newSentenceElement.dataset.index = "right-side-{{ paragraphId }}-{{ index }}"
+    newSentenceElement.dataset.paragraphId = paragraphId; // Set paragraph ID
+    newSentenceElement.dataset.index = "0"; // New sentences always start with index 0
     newSentenceElement.textContent = sentenceText;
 
     // Make the content editable
     newSentenceElement.contentEditable = "true";
 
+    // Attach event listeners
+    newSentenceElement.addEventListener("focus", handleSentenceFocus);
+    newSentenceElement.addEventListener("blur", handleSentenceBlur);
+
     return newSentenceElement;
 }
+
 
 
 /**
@@ -630,8 +684,6 @@ function hidePopup() {
  *    - Ищет соответствующий параграф в данных `reportData` по `paragraphId`.
  *    - Фильтрует список предложений в найденном параграфе, исключая текущее предложение (по его ID). 
  *    - Добавляет отфильтрованные предложения в свойство `linkedSentences` элемента предложения.
- * 3. Если для предложения найдены связанные альтернативы:
- *    - Вызывает функцию `highlightSentence`, чтобы визуально выделить такие предложения на странице.
  * 
  * @global
  * @param {Object} reportData - Объект, содержащий данные параграфов и их предложений находится на странице working_with_report.html!!! 
@@ -671,19 +723,10 @@ function linkSentences() {
 
             // Если есть связанные предложения, озеленяем текущее предложение
             if (sentenceElement.linkedSentences.length > 0) {
-                highlightSentence(sentenceElement);
+                sentenceElement.classList.add("has-linked-sentences-highlighted-sentence");
             }
         }
     });
-}
-
-/**
- * Изменяет стиль предложения. Нужно для выделения предложений у которых есть альтернатива.
- * 
- * @param {HTMLElement} sentenceElement - Элемент предложения для изменения цвета.
- */
-function highlightSentence(sentenceElement) {
-    sentenceElement.classList.add("highlighted-sentence");
 }
 
 
@@ -710,7 +753,6 @@ function highlightSentence(sentenceElement) {
  */
 function sentenceDoubleClickHandle (){
     const sentencesOnPage = document.querySelectorAll(".report__sentence");
-    console.log("logic started")
     sentencesOnPage.forEach(sentenceElement => {
         // Добавляю слушатель двойного клика на предложение
         sentenceElement.addEventListener("dblclick", function(event){
@@ -922,9 +964,9 @@ function addSentenceButtonLogic() {
     document.querySelectorAll(".icon-btn--add-sentence").forEach(button => {
         button.addEventListener("click", function(event) {
             const paragraphId = this.getAttribute("data-paragraph-id");
-
+            console.log("paragraphId", paragraphId);
             // Создаем пустое предложение и добавляем перед кнопкой
-            const newSentenceElement = createEditableSentenceElement("");
+            const newSentenceElement = createEditableSentenceElement("",paragraphId);
             button.parentNode.insertBefore(newSentenceElement, button);
             newSentenceElement.focus(); // Устанавливаем фокус на новый элемент
 
@@ -939,12 +981,13 @@ function addSentenceButtonLogic() {
                     // Используем popup для показа предложений
                     showPopup(event.pageX, event.pageY, data.sentences, function(selectedSentence) {
                         // Логика при выборе предложения из popup
-                        const newSentenceElement = createEditableSentenceElement(selectedSentence.sentence);
+                        const newSentenceElement = createEditableSentenceElement(selectedSentence.sentence, paragraphId);
                         button.parentNode.insertBefore(newSentenceElement, button);
                         updateCoreParagraphText(); // Обновляем текст абзаца после добавления предложения
+                        newSentenceElement.focus(); // Устанавливаем фокус на новый элемент
                     });
                 } else {
-                    console.error("No sentences available for this paragraph.");
+                    console.warn("No sentences available for this paragraph.");
                 }
             }).catch(error => {
                 console.error("Error fetching sentences:", error);
@@ -996,8 +1039,11 @@ function addSentenceButtonLogic() {
  * @param {HTMLElement} copyButton - Элемент кнопки "Copy to Clipboard".
  */
 function copyButtonLogic(copyButton) {
-    copyButton.addEventListener("click", async function() {
-        // Собираем текст из параграфов: initial, core, impression
+    copyButton.addEventListener("click", async function () {
+
+        await sendModifiedSentencesToServer();
+
+        // Собираем текст из параграфов
         const initialText = collectTextFromParagraphs("initial-paragraph-list");
         const coreText = collectTextFromParagraphs("core-paragraph-list");
         const impressionText = collectTextFromParagraphs("impression-paragraph-list");
@@ -1013,22 +1059,40 @@ function copyButtonLogic(copyButton) {
             // После успешного копирования выполняем отправку данных
             const paragraphsData = collectParagraphsData();
 
-            const response = await sendRequest({
-                url: "/working_with_reports/new_sentence_adding",
-                method: "POST",
-                data: {
-                    paragraphs: paragraphsData
-                },
-                csrfToken: csrfToken
-            });
+            // Отправляем данные параграфов
+            await sendParagraphsData(paragraphsData);
 
-            // Если запрос успешен, отображаем обработанные абзацы
-            displayProcessedParagraphs(response.processed_paragraphs);
-
+            // Здесь будет логика отправки изменённых предложений
+            console.log("copyButtonLogic: Placeholder for sending modified sentences.");
         } catch (error) {
             alert(error.message || "Failed to process paragraphs.");
         }
     });
+}
+
+
+/**
+ * Функция для отправки данных предложений на сервер.
+ * Это старая функция, я ее пока оставляю, но потом ее нужно будет переделать.
+ * 
+ * @param {Array} paragraphsData - The data of paragraphs to send.
+ */
+async function sendParagraphsData(paragraphsData) {
+    try {
+        const response = await sendRequest({
+            url: "/working_with_reports/new_sentence_adding",
+            method: "POST",
+            data: { paragraphs: paragraphsData },
+            csrfToken: csrfToken
+        });
+
+        // Если запрос успешен, отображаем обработанные абзацы
+        displayProcessedParagraphs(response.processed_paragraphs);
+        console.log("sendParagraphsData: Successfully sent paragraphs data.");
+    } catch (error) {
+        console.error("sendParagraphsData: Failed to send paragraphs data.", error);
+        alert(error.message || "Не удалось обработать абзацы.");
+    }
 }
 
 
@@ -1227,4 +1291,171 @@ function addImpressionButtonLogic(addImpressionButton) {
             alert("Не найдено видимых предложений для впечатлений.");
         }
     });
+}
+
+/** Функция для нормализации предложения.*/
+function normalizeSentence(sentence, keyWordsGroups) {
+    // Приводим текст к нижнему регистру
+    sentence = sentence.toLowerCase();
+
+    // Убираем лишние пробелы
+    sentence = sentence.replace(/\s+/g, " ").trim();
+
+    // Удаляем лишние символы пунктуации
+    sentence = sentence.replace(/[.,!?;:()"]/g, "");
+
+    // Проходим по группам ключевых слов
+    keyWordsGroups.forEach((group, groupIndex) => {
+        group.forEach(keyword => {
+            const regex = new RegExp(`\\b${keyword.word}\\b`, "gi");
+            sentence = sentence.replace(regex, `{${groupIndex}}`);
+        });
+    });
+
+    // Заменяем числа на плейсхолдеры
+    sentence = sentence.replace(/\b\d+(\.\d+)?\b/g, "{число}");
+
+    // Убираем повторяющиеся слова
+    sentence = sentence.replace(/\b(\w+)\b\s+\1\b/g, "$1");
+
+    return sentence;
+}
+
+
+/**
+ * Adds focus and blur listeners to sentence elements with logging.
+ * 
+ * - On `focus`: Saves the original text of the sentence in a `data-original-text` attribute.
+ * - On `blur`: Checks if the text has been modified and logs the decision-making process.
+ */
+function addFocusListeners() {
+    // Находим все предложения на странице
+    const sentenceElements = document.querySelectorAll(".report__sentence");
+
+    sentenceElements.forEach(sentenceElement => {
+        // Сохраняем оригинальный текст при получении фокуса
+        sentenceElement.addEventListener("focus", function () {
+            if (!this.hasAttribute("data-original-text")) {
+                this.setAttribute("data-original-text", this.textContent.trim());
+                console.log("Focus: Original text saved:", this.textContent.trim());
+            }
+        });
+
+        // Обрабатываем изменения при потере фокуса
+        sentenceElement.addEventListener("blur", function () {
+            const originalText = this.getAttribute("data-original-text");
+            const currentText = this.textContent.trim();
+            const paragraphId = this.getAttribute("data-paragraph-id");
+            const sentenceId = this.getAttribute("data-id");
+
+            
+            console.log(`Blur: Processing text for sentence (ID: ${sentenceId}, Paragraph: ${paragraphId})`);
+            console.log("Blur: normalized current text:", normalizeSentence(currentText, keyWordsGroups));
+            // Если текст пустой, ничего не делаем
+            if (!currentText) {
+                console.log("Blur: Text is empty. Ignoring.");
+                return;
+            }
+
+            // Если текст совпадает с оригиналом, ничего не делаем
+            if (normalizeSentence(originalText, keyWordsGroups) === normalizeSentence(currentText, keyWordsGroups)) {
+                console.log("Blur: Text matches the original. No changes detected.");
+                return;
+            }
+
+            // Сравниваем с linkedSentences
+            const linkedSentences = this.linkedSentences || [];
+            const isDuplicate = linkedSentences.some(sentence =>
+                normalizeSentence(sentence.sentence, keyWordsGroups) === normalizeSentence(currentText, keyWordsGroups)
+            );
+
+            if (isDuplicate) {
+                console.log("Blur: Text matches a linked sentence. No changes detected.");
+                return;
+            }
+
+            // Помечаем предложение как изменённое
+            this.setAttribute("data-modified", "true");
+            this.classList.add("was-changed-highlighted-sentence");
+            console.log("Blur: Text is unique. Marking as modified.");
+        });
+    });
+}
+
+
+/**
+ * Adds focus and blur listeners to all sentence elements on the page.
+ * Utilizes external handlers for focus and blur events.
+ */
+function addFocusListeners() {
+    // Находим все предложения на странице
+    const sentenceElements = document.querySelectorAll(".report__sentence");
+
+    sentenceElements.forEach(sentenceElement => {
+        // Attach focus and blur event listeners
+        sentenceElement.addEventListener("focus", handleSentenceFocus);
+        sentenceElement.addEventListener("blur", handleSentenceBlur);
+    });
+
+    console.log("Focus and blur listeners attached to all sentence elements.");
+}
+
+
+/**
+ * Collects data of modified sentences and sends it to the server.
+ * - Gathers all sentences with `data-modified="true"`.
+ * - Formats the data as a JSON object for sending to the server.
+ * - Uses `sendRequest` to make the API call.
+ */
+async function sendModifiedSentencesToServer() {
+    // Находим все предложения, помеченные как изменённые
+    const modifiedSentences = document.querySelectorAll("[data-modified='true']");
+
+    if (modifiedSentences.length === 0) {
+        console.log("No modified sentences to send.");
+        toastr.info("No changes detected to save.");
+        return;
+    }
+
+    const dataToSend = [];
+
+    modifiedSentences.forEach(sentenceElement => {
+        const paragraphId = sentenceElement.getAttribute("data-paragraph-id");
+        const sentenceIndex = sentenceElement.getAttribute("data-index") || 0;
+        const currentText = sentenceElement.textContent.trim();
+
+        // Собираем данные для одного предложения
+        dataToSend.push({
+            paragraph_id: paragraphId,
+            sentence_index: sentenceIndex,
+            text: currentText
+        });
+
+        console.log(`Collected modified sentence: ${currentText} (Paragraph ID: ${paragraphId}, Index: ${sentenceIndex})`);
+    });
+
+    // Формируем данные для отправки
+    const requestData = {
+        sentences: dataToSend
+    };
+
+    try {
+        // Отправляем запрос на сервер
+        const response = await sendRequest({
+            url: "/working_with_reports/save_modified_sentences",
+            method: "POST",
+            data: requestData,
+            csrfToken: csrfToken // предполагаем, что CSRF-токен доступен глобально
+        });
+        // Обрабатываем успешный ответ
+        console.log("Server response:", response);
+        // Убираем атрибут `data-modified` после успешного сохранения
+        modifiedSentences.forEach(sentenceElement => {
+            sentenceElement.removeAttribute("data-modified");
+            sentenceElement.classList.remove("was-changed-highlighted-sentence");
+        });
+    } catch (error) {
+        // Обработка ошибок
+        console.error("Error saving modified sentences:", error);
+    }
 }
