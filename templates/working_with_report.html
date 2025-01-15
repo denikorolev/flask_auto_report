@@ -6,8 +6,7 @@
 {% block container %}
 {% import 'macros.html' as macros %}
 
-<input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
-
+<input type="hidden" data-report-id=" {{report_data.report.id}} " id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
 <!-- Pre-filled form for the second page -->
 {% if user_settings.USE_WORD_REPORTS %}
     <form class="flex" id="exportForm" data-report-type="{{ report_data.report.report_type }}" data-subtype="{{ report_data.report.report_subtype }}" data-comment="{{ report_data.report.comment }}" data-key-words="{{ key_words | tojson | safe }}">

@@ -67,6 +67,7 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False # Отключает события SQLAlchemy что бережет память и избавляет от сообщения об ошибках в терминале.
     BASE_UPLOAD_FOLDER = os.getenv("UPLOAD_FOLDER", "/uploads")
     SESSION_TYPE = "filesystem"
+    APP_LANGUAGE = "ru"
     
     # OpenAI API configuration
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")

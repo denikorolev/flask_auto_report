@@ -1410,7 +1410,8 @@ function addFocusListeners() {
 async function sendModifiedSentencesToServer() {
     // Находим все предложения, помеченные как изменённые
     const modifiedSentences = document.querySelectorAll("[data-modified='true']");
-
+    const reportId = document.getElementById("csrf_token").dataset.reportId;
+    console.log("Report ID:", reportId);
     if (modifiedSentences.length === 0) {
         console.log("No modified sentences to send.");
         toastr.info("No changes detected to save.");
@@ -1436,7 +1437,8 @@ async function sendModifiedSentencesToServer() {
 
     // Формируем данные для отправки
     const requestData = {
-        sentences: dataToSend
+        sentences: dataToSend,
+        report_id: reportId
     };
 
     try {

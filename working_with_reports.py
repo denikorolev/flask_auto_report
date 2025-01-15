@@ -4,7 +4,7 @@ from flask import Blueprint, render_template, request, current_app, jsonify, sen
 import os
 from models import db, Report, ReportType, Paragraph, Sentence, KeyWord
 from file_processing import save_to_word
-from sentence_processing import split_sentences, get_new_sentences, group_keywords
+from sentence_processing import split_sentences, get_new_sentences, group_keywords, split_sentences_if_needed, clean_and_normalize_text
 from errors_processing import print_object_structure
 from utils import ensure_list
 from flask_security.decorators import auth_required
@@ -46,7 +46,7 @@ def choosing_report():
     )
 
 
-@working_with_reports_bp.route("/working_with_reports", methods=['POST', 'GET'])
+@working_with_reports_bp.route("/working_with_reports", methods=['GET'])
 @auth_required()
 def working_with_reports(): 
     current_report_id = request.args.get("reportId")
@@ -54,18 +54,20 @@ def working_with_reports():
     birthdate = request.args.get("birthdate")
     report_number = request.args.get("reportNumber")
     
-    report_data = Report.get_report_data(
-        current_report_id, 
-        g.current_profile.id
-        )
-    if not report_data:
-        print("there is no report_data")
+    try:
+        report_data = Report.get_report_data(
+            current_report_id, 
+            g.current_profile.id
+            )
+    except Exception as e:
+        return render_template("error.html", message=f"An error occurred: {e}")
+    
         
     # Получаем ключевые слова для текущего пользователя
     
     key_words_obj = KeyWord.get_keywords_for_report(g.current_profile.id, current_report_id)
     key_words_group = group_keywords(key_words_obj)
-    print(key_words_group)
+    
     
     return render_template(
         "working_with_report.html", 
@@ -132,13 +134,14 @@ def new_sentence_adding():
     except Exception as e:
         return jsonify({"status": "error", "message": f"Unexpected error: {e}"}), 500
     
-    
-# Сохраняем новые предложения в базу данных в автоматическом режиме учитывая индекс предложения
+
 @working_with_reports_bp.route("/save_modified_sentences", methods=["POST"])
 @auth_required()
 def save_modified_sentences():
     """
     Processes and saves new or modified sentences to the database.
+    Handles splitting of multi-sentence inputs and normalizes valid sentences.
+    Keeps track of saved, skipped, and missed sentences.
     """
     try:
         # Получаем данные из запроса
@@ -147,13 +150,17 @@ def save_modified_sentences():
         if not data or "sentences" not in data:
             return jsonify({"status": "error", "message": "Invalid data format"}), 400
 
-        sentences = data["sentences"]
-        if not isinstance(sentences, list) or not sentences:
-            return jsonify({"status": "error", "message": "No sentences provided"}), 400
+        sentences = data.get("sentences")
+        report_id = data.get("report_id")
+        if not isinstance(sentences, list) or not sentences or not report_id:
+            return jsonify({"status": "error", "message": "Some required data is missing."}), 400
 
-        saved_count = 0  # Счётчик сохранённых предложений
-        skipped_count = 0  # Счётчик пропущенных предложений
-        saved_sentences = []  # Для хранения информации о сохранённых предложениях
+        # Получаем ID текущего отчёта и ключевые слова
+        current_report_id = data.get("report_id")
+        key_words_obj = KeyWord.get_keywords_for_report(g.current_profile.id, current_report_id)
+        key_words_group = group_keywords(key_words_obj)
+
+        processed_sentences = []  # Для хранения обработанных предложений
 
         for sentence_data in sentences:
             paragraph_id = sentence_data.get("paragraph_id")
@@ -162,27 +169,56 @@ def save_modified_sentences():
 
             # Проверяем корректность данных
             if not paragraph_id or not text or sentence_index is None:
-                skipped_count += 1
-                continue
+                continue  # Пропускаем некорректные предложения
 
-            # Создаём новое предложение
-            new_sentence = Sentence.create(
-                paragraph_id=paragraph_id,
-                index=int(sentence_index),  # Используем переданный индекс
-                weight=10,  # Вес по умолчанию
-                comment="Added automatically",  # Комментарий
-                sentence=text
-            )
-            saved_sentences.append({"type": "added", "id": new_sentence.id})
-            saved_count += 1
+            # Проверяем текст на наличие нескольких предложений
+            valid_sentences, excluded_after_split = split_sentences_if_needed(text)
+
+            if excluded_after_split:
+                # Обрабатываем случаи с разделением
+                for idx, excluded_sentence in enumerate(excluded_after_split):
+                    processed_sentences.append({
+                        "paragraph_id": paragraph_id,
+                        "sentence_index": int(sentence_index) if idx == 0 else 0,
+                        "text": excluded_sentence.strip()
+                    })
+            else:
+                # Если предложение валидное, оставляем как есть
+                processed_sentences.append({
+                    "paragraph_id": paragraph_id,
+                    "sentence_index": int(sentence_index),
+                    "text": text.strip()
+                })
+
+        # Теперь работаем с нормализованными предложениями
+        saved_count = 0  # Счётчик сохранённых предложений
+        skipped_count = len(processed_sentences) - saved_count  # Разница между входными и обработанными
+
+        for sentence in processed_sentences:
+            paragraph_id = sentence["paragraph_id"]
+            sentence_index = sentence["sentence_index"]
+            text = clean_and_normalize_text(sentence["text"])
+            print(text)
+            try:
+                # Сохраняем предложение в базу данных
+                Sentence.create(
+                    paragraph_id=paragraph_id,
+                    index=sentence_index,
+                    weight=10,  # Вес по умолчанию
+                    comment="Added automatically",
+                    sentence=text
+                )
+                saved_count += 1
+            except Exception as e:
+                print(f"Failed to save sentence: {text}. Error: {e}")
 
         return jsonify({
             "status": "success",
             "message": f"Processed {saved_count} sentences, skipped {skipped_count} sentences.",
-            "saved_sentences": saved_sentences
         }), 200
 
     except Exception as e:
+        print(e)
         return jsonify({"status": "error", "message": f"An error occurred: {str(e)}"}), 500
 
 

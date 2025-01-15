@@ -1,9 +1,11 @@
 # sentence_processing.py
 
-from flask import g
+from flask import g, current_app
 from flask_login import current_user
 import re
 from docx import Document
+from nltk.tokenize import sent_tokenize, PunktSentenceTokenizer
+from nltk.tokenize.punkt import PunktParameters
 from models import Sentence, Paragraph, KeyWord, Report, User
 from collections import defaultdict
 from errors_processing import print_object_structure
@@ -223,7 +225,7 @@ def extract_paragraphs_and_sentences(file_path):
 
 
 
-def clean_text(sentence, key_words):
+def clean_text_with_keywords(sentence, key_words):
     """ Функция очистки текста от пробелов, знаков припенания, цифр и 
     ключевых слов с приведением всех слов предложения к нижнему 
     регистру """
@@ -238,6 +240,66 @@ def clean_text(sentence, key_words):
     sentence = re.sub(r'[,.!?0-9]', '', sentence)
     # Удаляем пробелы в начале и конце строки
     return sentence.strip()
+
+
+def clean_and_normalize_text(text):
+    """
+    Cleans the input text by handling punctuation, spaces, and formatting issues.
+    Args:
+        text (str): The text to be cleaned.
+    Returns:
+        str: The cleaned and normalized text.
+    """
+    
+    # Исключения для слов, которые должны начинаться с заглавной буквы
+    EXCEPTIONS_AFTER_PUNCTUATION = ["МРТ", "КТ", "УЗИ", "РКТ", "ПЭТ", "ПЭТ-КТ", "МСКТ", "РГ", "ЭКГ", "ФГДС"]
+
+    if not text:
+        return ""
+
+    # Убираем лишние пробелы
+    text = re.sub(r'\s+', ' ', text)  # Двойные пробелы → один пробел
+    text = re.sub(r'\s+([.,!?;:])', r'\1', text)  # Пробел перед знаками препинания
+    text = re.sub(r'\(\s+', r'(', text)  # Пробел после открывающей скобки
+    text = re.sub(r'\s+\)', r')', text)  # Пробел перед закрывающей скобкой
+
+    # Обрабатываем повторяющиеся знаки, кроме точки
+    text = re.sub(r'([,!?:;"\'\(\)])\1+', r'\1', text)  # Повторяющиеся знаки → один
+
+    # Обрабатываем многоточия отдельно
+    text = re.sub(r'\.\.\.\.+', '...', text)  # Четыре и более точек → многоточие
+    text = re.sub(r'(?<!\.)\.\.(?!\.)', '.', text)  # Две точки → одна
+    
+    text = re.sub(r'([,;:])(?!\s)', r'\1 ', text)  # Добавляем пробел после знаков препинания
+
+    # Убираем пробелы в начале и конце строки. 
+    # Это в тему именну тут, так как выше мы добавляем пробелы.
+    text = text.strip()
+
+    # Проверяем, начинается ли предложение с заглавной буквы
+    if text and text[0].islower():
+        text = text[0].upper() + text[1:]
+        
+    # Проверяем слова после двоеточий и запятых
+    def process_after_punctuation(match):
+        """
+        Обрабатывает слово после знака препинания.
+        Если слово не в исключениях, переводит его в нижний регистр.
+        """
+        punctuation = match.group(1)
+        word = match.group(2)
+        if word in EXCEPTIONS_AFTER_PUNCTUATION:
+            return f"{punctuation} {word}"  # Оставляем слово как есть
+        return f"{punctuation} {word.lower()}"  # Приводим к нижнему регистру
+    
+    # Регулярное выражение для поиска знаков препинания и последующего слова
+    text = re.sub(r'([,:]) (\w+)', process_after_punctuation, text)
+        
+    if not re.search(r'[.!?]$', text):
+        text += '.'
+
+    return text
+
 
 
 def split_sentences(paragraphs):
@@ -266,6 +328,54 @@ def split_sentences(paragraphs):
     return split_paragraphs
 
 
+def split_sentences_if_needed(text):
+    """
+    Splits a sentence into multiple sentences using NLTK tokenizer.
+    Supports English and Russian languages.
+    Args:
+        text (str): The input sentence text.
+
+    Returns:
+        tuple: (list of valid sentences, list of excluded sentences).
+    """
+
+    # Получаем текущий язык приложения
+    app_language = current_app.config.get("APP_LANGUAGE", "ru")  # Default to English
+    # Добавляю пробелы после знаков препинания, если их нет
+    text = re.sub(r'([.!?])(?!\s)', r'\1 ', text)
+    
+    if app_language not in ["eng", "ru"]:
+        raise ValueError("Unsupported language specified in APP_LANGUAGE. Use 'eng' or 'ru'.")
+
+
+    # Настраиваем токенайзер для русского языка
+    if app_language == "ru":
+        punkt_params = PunktParameters()
+        # Список русских аббревиатур. Нужно будет вынести в переменную и настраивать ее в настройках
+        punkt_params.abbrev_types = set([
+                    "г", "д", "см", "мм", "м", "мг", "мл", "л", "ч", "мин",  # Единицы измерения
+                    "КТ", "МРТ", "УЗИ", "ЭКГ", "РГ", "ФГС", "ФКС",  # Диагностика
+                    "см.", "т.е.", "и т.д.", "и др."  # Прочие
+                    ])  
+        tokenizer = PunktSentenceTokenizer(punkt_params)
+        sentences = tokenizer.tokenize(text)
+    else:
+        # Используем стандартный токенайзер для английского языка
+        sentences = sent_tokenize(text, language="english")
+
+
+    if len(sentences) > 1:
+        # Если найдено более одного предложения, добавляем в исключения
+        excluded_sentences = sentences
+        valid_sentences = []
+    else:
+        # Если это одно предложение, оно валидное
+        excluded_sentences = []
+        valid_sentences = sentences
+
+    return valid_sentences, excluded_sentences
+
+
 def get_new_sentences(processed_paragraphs):
     """ Получаем только новые предложения, игнорируя те, что уже 
     есть в базе данных, учитываем возможную разницу лишь в 
@@ -288,7 +398,7 @@ def get_new_sentences(processed_paragraphs):
         # Приводим существующие предложения к форме для сравнения (очищаем их)
         existing_sentences_texts = []
         for s in existing_sentences:
-            cleaned_sentence = clean_text(s.sentence.strip(), key_words)
+            cleaned_sentence = clean_text_with_keywords(s.sentence.strip(), key_words)
             existing_sentences_texts.append(cleaned_sentence)
 
         # Получаем текст параграфа из базы данных
@@ -296,7 +406,7 @@ def get_new_sentences(processed_paragraphs):
 
         # Проверяем каждое предложение из обработанных, есть ли оно уже в базе данных
         for sentence in sentences:
-            cleaned_sentence = clean_text(sentence.strip(), key_words)
+            cleaned_sentence = clean_text_with_keywords(sentence.strip(), key_words)
             
             if cleaned_sentence not in existing_sentences_texts:
                 new_sentences.append({
