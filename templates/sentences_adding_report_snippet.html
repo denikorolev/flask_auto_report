@@ -1,0 +1,35 @@
+<!--sentences_adding_report_snippet.html--> 
+
+<div>
+    <p><strong>{{ message }}</strong></p>
+    <ul>
+        <li>Сохраненные предложения: {{ saved_count }}</li>
+        <li>Дубликаты: {{ duplicates_count }}</li>
+        <li>Разница между общим количеством предложений и добавленными: {{ skipped_count }}</li>
+        <li>Ошибки сохранения: {{ missed_count }}</li>
+        <li>Ошибки логики сравнения: {{ errors_count }}</li>
+    </ul>
+
+    {% if saved_sentences %}
+        <h4>Сохраненные предложения:</h4>
+        <ul>
+        {% for sentence in saved_sentences %}
+            <li>{{ sentence.text }} (ID: {{ sentence.id }})</li>
+        {% endfor %}
+        </ul>
+    {% endif %}
+
+    {% if duplicates %}
+        <h4>Дубликаты:</h4>
+        <ul>
+        {% for duplicate in duplicates %}
+            <li>
+                Отправленное предложение: <strong>{{ duplicate.new_sentence.text }}</strong><br>
+                совпадает с имеющимся предложением: <strong>{{ duplicate.matched_with.text }}</strong><br>
+                на <strong>{{ duplicate.similarity }}</strong> %.
+               
+            </li>
+        {% endfor %}
+        </ul>
+    {% endif %}
+</div>

@@ -113,26 +113,13 @@ function handleSentenceBlur() {
     const linkedSentences = this.linkedSentences || [];
     const paragraphId = this.dataset.paragraphId;
 
-    console.log(`Blur: Handling sentence in paragraph ID ${paragraphId}`);
-
-    if (!currentText) {
-        console.log("Blur: Text is empty. Ignoring.");
-        return;
-    }
-
-    if (normalizeSentence(originalText, keyWordsGroups) === normalizeSentence(currentText, keyWordsGroups)) {
-        console.log("Blur: Text matches the original. No changes detected.");
-        return;
-    }
-
+    // Блок условий для проверки изменений в предложении
+    if (!currentText) {return;}
+    if (normalizeSentence(originalText, keyWordsGroups) === normalizeSentence(currentText, keyWordsGroups)) {return;}
     const isDuplicate = linkedSentences.some(sentence =>
         normalizeSentence(sentence.sentence, keyWordsGroups) === normalizeSentence(currentText, keyWordsGroups)
     );
-
-    if (isDuplicate) {
-        console.log("Blur: Text matches a linked sentence. No changes detected.");
-        return;
-    }
+    if (isDuplicate) {return;}
 
     this.setAttribute("data-modified", "true");
     this.classList.add("was-changed-highlighted-sentence");
@@ -1041,8 +1028,6 @@ function addSentenceButtonLogic() {
 function copyButtonLogic(copyButton) {
     copyButton.addEventListener("click", async function () {
 
-        await sendModifiedSentencesToServer();
-
         // Собираем текст из параграфов
         const initialText = collectTextFromParagraphs("initial-paragraph-list");
         const coreText = collectTextFromParagraphs("core-paragraph-list");
@@ -1060,10 +1045,9 @@ function copyButtonLogic(copyButton) {
             const paragraphsData = collectParagraphsData();
 
             // Отправляем данные параграфов
-            await sendParagraphsData(paragraphsData);
-
-            // Здесь будет логика отправки изменённых предложений
-            console.log("copyButtonLogic: Placeholder for sending modified sentences.");
+            // await sendParagraphsData(paragraphsData);
+            await sendModifiedSentencesToServer();
+            
         } catch (error) {
             alert(error.message || "Failed to process paragraphs.");
         }
@@ -1328,59 +1312,59 @@ function normalizeSentence(sentence, keyWordsGroups) {
  * - On `focus`: Saves the original text of the sentence in a `data-original-text` attribute.
  * - On `blur`: Checks if the text has been modified and logs the decision-making process.
  */
-function addFocusListeners() {
-    // Находим все предложения на странице
-    const sentenceElements = document.querySelectorAll(".report__sentence");
+// function addFocusListeners() {
+//     // Находим все предложения на странице
+//     const sentenceElements = document.querySelectorAll(".report__sentence");
 
-    sentenceElements.forEach(sentenceElement => {
-        // Сохраняем оригинальный текст при получении фокуса
-        sentenceElement.addEventListener("focus", function () {
-            if (!this.hasAttribute("data-original-text")) {
-                this.setAttribute("data-original-text", this.textContent.trim());
-                console.log("Focus: Original text saved:", this.textContent.trim());
-            }
-        });
+//     sentenceElements.forEach(sentenceElement => {
+//         // Сохраняем оригинальный текст при получении фокуса
+//         sentenceElement.addEventListener("focus", function () {
+//             if (!this.hasAttribute("data-original-text")) {
+//                 this.setAttribute("data-original-text", this.textContent.trim());
+//                 console.log("Focus: Original text saved:", this.textContent.trim());
+//             }
+//         });
 
-        // Обрабатываем изменения при потере фокуса
-        sentenceElement.addEventListener("blur", function () {
-            const originalText = this.getAttribute("data-original-text");
-            const currentText = this.textContent.trim();
-            const paragraphId = this.getAttribute("data-paragraph-id");
-            const sentenceId = this.getAttribute("data-id");
+//         // Обрабатываем изменения при потере фокуса
+//         sentenceElement.addEventListener("blur", function () {
+//             const originalText = this.getAttribute("data-original-text");
+//             const currentText = this.textContent.trim();
+//             const paragraphId = this.getAttribute("data-paragraph-id");
+//             const sentenceId = this.getAttribute("data-id");
 
             
-            console.log(`Blur: Processing text for sentence (ID: ${sentenceId}, Paragraph: ${paragraphId})`);
-            console.log("Blur: normalized current text:", normalizeSentence(currentText, keyWordsGroups));
-            // Если текст пустой, ничего не делаем
-            if (!currentText) {
-                console.log("Blur: Text is empty. Ignoring.");
-                return;
-            }
+//             console.log(`Blur: Processing text for sentence (ID: ${sentenceId}, Paragraph: ${paragraphId})`);
+//             console.log("Blur: normalized current text:", normalizeSentence(currentText, keyWordsGroups));
+//             // Если текст пустой, ничего не делаем
+//             if (!currentText) {
+//                 console.log("Blur: Text is empty. Ignoring.");
+//                 return;
+//             }
 
-            // Если текст совпадает с оригиналом, ничего не делаем
-            if (normalizeSentence(originalText, keyWordsGroups) === normalizeSentence(currentText, keyWordsGroups)) {
-                console.log("Blur: Text matches the original. No changes detected.");
-                return;
-            }
+//             // Если текст совпадает с оригиналом, ничего не делаем
+//             if (normalizeSentence(originalText, keyWordsGroups) === normalizeSentence(currentText, keyWordsGroups)) {
+//                 console.log("Blur: Text matches the original. No changes detected.");
+//                 return;
+//             }
 
-            // Сравниваем с linkedSentences
-            const linkedSentences = this.linkedSentences || [];
-            const isDuplicate = linkedSentences.some(sentence =>
-                normalizeSentence(sentence.sentence, keyWordsGroups) === normalizeSentence(currentText, keyWordsGroups)
-            );
+//             // Сравниваем с linkedSentences
+//             const linkedSentences = this.linkedSentences || [];
+//             const isDuplicate = linkedSentences.some(sentence =>
+//                 normalizeSentence(sentence.sentence, keyWordsGroups) === normalizeSentence(currentText, keyWordsGroups)
+//             );
 
-            if (isDuplicate) {
-                console.log("Blur: Text matches a linked sentence. No changes detected.");
-                return;
-            }
+//             if (isDuplicate) {
+//                 console.log("Blur: Text matches a linked sentence. No changes detected.");
+//                 return;
+//             }
 
-            // Помечаем предложение как изменённое
-            this.setAttribute("data-modified", "true");
-            this.classList.add("was-changed-highlighted-sentence");
-            console.log("Blur: Text is unique. Marking as modified.");
-        });
-    });
-}
+//             // Помечаем предложение как изменённое
+//             this.setAttribute("data-modified", "true");
+//             this.classList.add("was-changed-highlighted-sentence");
+//             console.log("Blur: Text is unique. Marking as modified.");
+//         });
+//     });
+// }
 
 
 /**
@@ -1423,8 +1407,13 @@ async function sendModifiedSentencesToServer() {
     modifiedSentences.forEach(sentenceElement => {
         const paragraphId = sentenceElement.getAttribute("data-paragraph-id");
         const sentenceIndex = sentenceElement.getAttribute("data-index") || 0;
-        const currentText = sentenceElement.textContent.trim();
 
+        const currentText = cleanSelectText(sentenceElement).trim();
+
+        if(!currentText) {
+            console.log("Empty sentence. Ignoring.");
+            return;
+        } 
         // Собираем данные для одного предложения
         dataToSend.push({
             paragraph_id: paragraphId,
@@ -1434,6 +1423,12 @@ async function sendModifiedSentencesToServer() {
 
         console.log(`Collected modified sentence: ${currentText} (Paragraph ID: ${paragraphId}, Index: ${sentenceIndex})`);
     });
+
+    // Если нет данных для отправки, выводим сообщение и завершаем выполнение
+    if (dataToSend.length === 0) {
+        toastr.info("No valid modified sentences to send.");
+        return;
+    }
 
     // Формируем данные для отправки
     const requestData = {
@@ -1449,13 +1444,23 @@ async function sendModifiedSentencesToServer() {
             data: requestData,
             csrfToken: csrfToken // предполагаем, что CSRF-токен доступен глобально
         });
-        // Обрабатываем успешный ответ
-        console.log("Server response:", response);
-        // Убираем атрибут `data-modified` после успешного сохранения
-        modifiedSentences.forEach(sentenceElement => {
-            sentenceElement.removeAttribute("data-modified");
-            sentenceElement.classList.remove("was-changed-highlighted-sentence");
-        });
+        
+        if (response.status === "success") {
+            const bottomContainer = document.getElementById("bottomContainer");
+            const reportContainer = document.getElementById("sentenceAddingReportContainer");
+
+            // Вставляем сгенерированный HTML в контейнер
+            reportContainer.innerHTML = response.html;
+            bottomContainer.style.display = "flex";
+            // Убираем атрибут `data-modified` после успешного сохранения
+            modifiedSentences.forEach(sentenceElement => {
+                sentenceElement.removeAttribute("data-modified");
+                sentenceElement.classList.remove("was-changed-highlighted-sentence");
+            });
+        }
+
+        
+        
     } catch (error) {
         // Обработка ошибок
         console.error("Error saving modified sentences:", error);

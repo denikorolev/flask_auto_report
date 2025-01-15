@@ -1,10 +1,10 @@
 #working_with_reports.py
 
-from flask import Blueprint, render_template, request, current_app, jsonify, send_file, g
+from flask import Blueprint, render_template, request, current_app, jsonify, send_file, g, flash
 import os
 from models import db, Report, ReportType, Paragraph, Sentence, KeyWord
 from file_processing import save_to_word
-from sentence_processing import split_sentences, get_new_sentences, group_keywords, split_sentences_if_needed, clean_and_normalize_text
+from sentence_processing import split_sentences, get_new_sentences, group_keywords, split_sentences_if_needed, clean_and_normalize_text, compare_sentences_by_paragraph
 from errors_processing import print_object_structure
 from utils import ensure_list
 from flask_security.decorators import auth_required
@@ -157,10 +157,16 @@ def save_modified_sentences():
 
         # Получаем ID текущего отчёта и ключевые слова
         current_report_id = data.get("report_id")
+        
         key_words_obj = KeyWord.get_keywords_for_report(g.current_profile.id, current_report_id)
-        key_words_group = group_keywords(key_words_obj)
-
+        key_words = [keyword.key_word for keyword in key_words_obj]
+        
+        existing_paragraphs = Paragraph.query.filter_by(report_id=current_report_id).all()
+        except_words = ["мм", "см", "до"] # Добавить в конфиг
+        similarity_threshold = 60  # Порог схожести для сравнения предложений. Добавить в конфиг
+        
         processed_sentences = []  # Для хранения обработанных предложений
+        missed_count = 0  # Счётчик пропущенных предложений
 
         for sentence_data in sentences:
             paragraph_id = sentence_data.get("paragraph_id")
@@ -169,6 +175,7 @@ def save_modified_sentences():
 
             # Проверяем корректность данных
             if not paragraph_id or not text or sentence_index is None:
+                missed_count += 1
                 continue  # Пропускаем некорректные предложения
 
             # Проверяем текст на наличие нескольких предложений
@@ -190,31 +197,66 @@ def save_modified_sentences():
                     "text": text.strip()
                 })
 
-        # Теперь работаем с нормализованными предложениями
+        # Теперь работаем с уже разделенными предложениями в processed_sentences
+        
+        # Сначала сравниваем их с существующими предложениями в базе данных
+        comparsion_result = compare_sentences_by_paragraph(
+                                                         
+                                                        existing_paragraphs, 
+                                                        processed_sentences,
+                                                        key_words, 
+                                                        except_words, 
+                                                        similarity_threshold)
+        
+        print(f"comparsion_result: {comparsion_result}")
+        new_sentences = comparsion_result["unique"]
+        duplicates = comparsion_result["duplicates"]
+        errors_count = comparsion_result["errors_count"]
+        
+        missed_count = 0  # Счётчик пропущенных предложений
         saved_count = 0  # Счётчик сохранённых предложений
         skipped_count = len(processed_sentences) - saved_count  # Разница между входными и обработанными
+        saved_sentences = []  # Для хранения сохранённых предложений и последующего включения в отчет
 
-        for sentence in processed_sentences:
+        for sentence in new_sentences:
             paragraph_id = sentence["paragraph_id"]
             sentence_index = sentence["sentence_index"]
-            text = clean_and_normalize_text(sentence["text"])
-            print(text)
+            new_sentence_text = clean_and_normalize_text(sentence["text"])
+            print(f"new_sentence_text: {new_sentence_text}")
             try:
                 # Сохраняем предложение в базу данных
-                Sentence.create(
+                new_sentence = Sentence.create(
                     paragraph_id=paragraph_id,
                     index=sentence_index,
                     weight=10,  # Вес по умолчанию
                     comment="Added automatically",
-                    sentence=text
+                    sentence=new_sentence_text
                 )
                 saved_count += 1
+                saved_sentences.append({"id": new_sentence.id, "text": new_sentence_text})
             except Exception as e:
-                print(f"Failed to save sentence: {text}. Error: {e}")
+                print(f"Failed to save sentence: {new_sentence_text}. Error: {e}")
+                missed_count += 1
 
+        sentences_adding_report = {
+            "message": f"Processed {len(processed_sentences)} sentences.",
+            "saved_count": saved_count,
+            "skipped_count": len(processed_sentences) - saved_count,
+            "missed_count": missed_count,
+            "duplicates_count": len(duplicates),
+            "errors_count": errors_count,
+            "saved_sentences": saved_sentences,
+            "duplicates": duplicates
+        }
+
+        rendered_html = render_template(
+            "sentences_adding_report_snippet.html", 
+            **sentences_adding_report)
+        
         return jsonify({
             "status": "success",
-            "message": f"Processed {saved_count} sentences, skipped {skipped_count} sentences.",
+            "message": f"Processed {len(processed_sentences)} sentences.",
+            "html": rendered_html
         }), 200
 
     except Exception as e:

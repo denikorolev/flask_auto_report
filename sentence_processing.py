@@ -223,25 +223,35 @@ def extract_paragraphs_and_sentences(file_path):
 
     return paragraphs_from_file
 
-
-
-def clean_text_with_keywords(sentence, key_words):
+# это обновленная функция очистки текста перед сравнением
+def clean_text_with_keywords(sentence, key_words, except_words=None):
     """ Функция очистки текста от пробелов, знаков припенания, цифр и 
     ключевых слов с приведением всех слов предложения к нижнему 
     регистру """
     # Приводим текст к строчным буквам
+    sentence = str(sentence)
+    
     sentence = sentence.lower()
     # Удаляем ключевые слова
-    for word in key_words:
-        sentence = re.sub(rf'\b{re.escape(word)}\b', '', sentence, flags=re.IGNORECASE)
-    # Удаляем лишние пробелы (больше одного пробела)
-    sentence = re.sub(r'\s+', ' ', sentence)
-    # Удаляем знаки препинания и цифры
-    sentence = re.sub(r'[,.!?0-9]', '', sentence)
-    # Удаляем пробелы в начале и конце строки
-    return sentence.strip()
+    if key_words:
+        for word in key_words:
+            sentence = re.sub(rf'\b{re.escape(word)}\b', '', sentence, flags=re.IGNORECASE)
+    
+    # Удаляем все кроме букв цифр и робелов
+    sentence = re.sub(r"[^\w\s]", "", sentence)
+    # Убираем цифры
+    sentence = re.sub(r"\d+", "", sentence)
+    # Удаляем лишние пробелы
+    sentence = re.sub(r"\s+", " ", sentence).strip()
+    # Убираем дополнительные слова
+    if except_words:
+        for word in except_words:
+            sentence = re.sub(rf"\b{re.escape(word)}\b", "", sentence)
+    
+    return sentence
 
 
+# это новая функция для окончательной очистки предложения в working_with_reports.py
 def clean_and_normalize_text(text):
     """
     Cleans the input text by handling punctuation, spaces, and formatting issues.
@@ -300,8 +310,7 @@ def clean_and_normalize_text(text):
 
     return text
 
-
-
+# Это старая функция ее нужно будет заменить на split_sentences_if_needed
 def split_sentences(paragraphs):
     """ Разделяем полученный текст на отдельные предложения 
     ориентируясь на знаки препинания .!? """
@@ -327,7 +336,7 @@ def split_sentences(paragraphs):
 
     return split_paragraphs
 
-
+# это новая функция
 def split_sentences_if_needed(text):
     """
     Splits a sentence into multiple sentences using NLTK tokenizer.
@@ -380,6 +389,7 @@ def get_new_sentences(processed_paragraphs):
     """ Получаем только новые предложения, игнорируя те, что уже 
     есть в базе данных, учитываем возможную разницу лишь в 
     ключевых словах key_words """
+    except_words = ["мм", "см", "до"] # Добавить в конфиг
     new_sentences = []
 
     # Получаем ключевые слова для текущего пользователя
@@ -398,7 +408,7 @@ def get_new_sentences(processed_paragraphs):
         # Приводим существующие предложения к форме для сравнения (очищаем их)
         existing_sentences_texts = []
         for s in existing_sentences:
-            cleaned_sentence = clean_text_with_keywords(s.sentence.strip(), key_words)
+            cleaned_sentence = clean_text_with_keywords(s.sentence.strip(), key_words, except_words)
             existing_sentences_texts.append(cleaned_sentence)
 
         # Получаем текст параграфа из базы данных
@@ -406,7 +416,7 @@ def get_new_sentences(processed_paragraphs):
 
         # Проверяем каждое предложение из обработанных, есть ли оно уже в базе данных
         for sentence in sentences:
-            cleaned_sentence = clean_text_with_keywords(sentence.strip(), key_words)
+            cleaned_sentence = clean_text_with_keywords(sentence.strip(), key_words, except_words)
             
             if cleaned_sentence not in existing_sentences_texts:
                 new_sentences.append({
@@ -511,3 +521,102 @@ def group_keywords(keywords, with_index=False, with_report=False):
     # Если with_index=False, возвращаем просто сгруппированные ключевые слова с их id
     return list(grouped_keywords.values())
 
+# Алгоритм для сравнения предложений и вычисления их схожести в %
+def calculate_jaccard_similarity(sentence1, sentence2):
+    """
+    Calculates the Jaccard similarity between two sentences.
+
+    Args:
+        sentence1 (str): The first sentence.
+        sentence2 (str): The second sentence.
+
+    Returns:
+        float: The Jaccard similarity as a percentage.
+    """
+    set1 = set(sentence1.split())
+    set2 = set(sentence2.split())
+
+    intersection = set1.intersection(set2)
+    union = set1.union(set2)
+
+    return len(intersection) / len(union) * 100 if union else 0
+
+
+def compare_sentences_by_paragraph(existing_paragraphs, new_sentences, key_words, except_words=None, similarity_threshold=85):
+    """
+    Compares new sentences with existing sentences in their respective paragraphs to determine uniqueness.
+
+    Args:
+        existing_paragraphs (list[Paragraph]): List of Paragraph objects with related sentences.
+        new_sentences (list[dict]): List of new sentences to be added.
+            Each dictionary should have the structure {"paragraph_id": int, "text": str}.
+        key_words (list[str]): List of key words to remove during cleaning.
+        except_words (list[str], optional): List of additional words to remove.
+        similarity_threshold (int, optional): Percentage threshold to consider sentences as duplicates.
+            Defaults to 85.
+
+    Returns:
+        dict: Contains "duplicates" and "unique" lists:
+            - "duplicates": List of new sentences that match existing ones.
+            - "unique": List of new sentences considered unique.
+    """
+    duplicates = []
+    unique_sentences = []
+    errors_count = 0
+    # Итерируем по новым предложениям
+    for new_sentence in new_sentences:
+        print(f"New sentence: {new_sentence}")
+        new_paragraph_id = int(new_sentence.get("paragraph_id"))
+        new_text = new_sentence.get("text")
+        new_text_index = new_sentence.get("sentence_index")
+        
+        if not new_paragraph_id or not new_text:
+            print("Видимо нет id параграфа")
+            errors_count += 1
+            continue  # Пропускаем некорректные данные
+        
+        # Находим соответствующий параграф
+        paragraph = next((p for p in existing_paragraphs if p.id == new_paragraph_id), None)
+        
+        if not paragraph:
+            unique_sentences.append(new_sentence)  # Если параграф не найден, считаем предложение уникальным
+            continue
+
+        print(new_text_index)
+        # Получаем те предложения этого параграфа чей индекс равен индексу нового предложения
+        existing_sentences = [
+            {"id": sent.id, "index": sent.index, "text": sent.sentence} for sent in paragraph.paragraph_to_sentences if sent.index == new_text_index
+        ]
+        print(f"Existing sentences: {existing_sentences}")
+
+        # Очищаем существующие предложения
+        cleaned_existing = [
+            {"id": sent.get("id"), "text": clean_text_with_keywords(sent.get("text"), key_words, except_words)} for sent in existing_sentences
+            ]
+        print(f"Cleaned existing: {cleaned_existing}")
+
+        # Очищаем новое предложение
+        cleaned_new_text = clean_text_with_keywords(new_text, key_words, except_words)
+        print(f"------------------------------------")
+        print(f"Cleaned new: {cleaned_new_text}")
+        print(f"------------------------------------")
+        # Проверяем на схожесть с существующими предложениями
+        is_duplicate = False
+        for existing in cleaned_existing:
+            print(f"New: {cleaned_new_text}")
+            print(f"Existing: {existing['text']}")
+            similarity = calculate_jaccard_similarity(cleaned_new_text, existing["text"])
+            print(f"Similarity: {similarity}")
+            if similarity >= similarity_threshold:
+                duplicates.append({
+                    "new_sentence": new_sentence,
+                    "matched_with": existing,
+                    "similarity": similarity
+                })
+                is_duplicate = True
+                break
+
+        if not is_duplicate:
+            unique_sentences.append(new_sentence)
+
+    return {"duplicates": duplicates, "unique": unique_sentences, "errors_count": errors_count}
