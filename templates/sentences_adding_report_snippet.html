@@ -26,7 +26,8 @@
             <li>
                 Отправленное предложение: <strong>{{ duplicate.new_sentence.text }}</strong><br>
                 совпадает с имеющимся предложением: <strong>{{ duplicate.matched_with.text }}</strong><br>
-                на <strong>{{ duplicate.similarity }}</strong> %.
+                на <strong>{{ duplicate.similarity }}</strong> % по методу Джаккарда <br> 
+                и на <strong>{{ duplicate.similarity_rapidfuzz }}</strong> % вычесленному с помощью RapidFuzz.
                
             </li>
         {% endfor %}

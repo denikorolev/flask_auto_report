@@ -2,6 +2,7 @@
 
 from flask import g, current_app
 from flask_login import current_user
+from rapidfuzz import fuzz, process
 import re
 from docx import Document
 from nltk.tokenize import sent_tokenize, PunktSentenceTokenizer
@@ -542,7 +543,23 @@ def calculate_jaccard_similarity(sentence1, sentence2):
     return len(intersection) / len(union) * 100 if union else 0
 
 
-def compare_sentences_by_paragraph(existing_paragraphs, new_sentences, key_words, except_words=None, similarity_threshold=85):
+def calculate_similarity_rapidfuzz(sentence1, sentence2):
+    """
+    Calculates the similarity between two sentences using the RapidFuzz library.
+
+    Args:
+        sentence1 (str): The first sentence.
+        sentence2 (str): The second sentence.
+
+    Returns:
+        float: The similarity as a percentage.
+    """
+    from rapidfuzz import fuzz
+
+    return fuzz.ratio(sentence1, sentence2)
+
+
+def compare_sentences_by_paragraph(existing_paragraphs, new_sentences, key_words, except_words=None, similarity_threshold=65, similarity_threshold_fuzz=95):    
     """
     Compares new sentences with existing sentences in their respective paragraphs to determine uniqueness.
 
@@ -606,12 +623,15 @@ def compare_sentences_by_paragraph(existing_paragraphs, new_sentences, key_words
             print(f"New: {cleaned_new_text}")
             print(f"Existing: {existing['text']}")
             similarity = calculate_jaccard_similarity(cleaned_new_text, existing["text"])
+            similarity_rapidfuzz = calculate_similarity_rapidfuzz(cleaned_new_text, existing["text"])
             print(f"Similarity: {similarity}")
-            if similarity >= similarity_threshold:
+            print(f"Similarity RapidFuzz: {similarity_rapidfuzz}")
+            if similarity >= similarity_threshold or similarity_rapidfuzz >= similarity_threshold_fuzz:
                 duplicates.append({
                     "new_sentence": new_sentence,
                     "matched_with": existing,
-                    "similarity": similarity
+                    "similarity": similarity,
+                    "similarity_rapidfuzz": similarity_rapidfuzz
                 })
                 is_duplicate = True
                 break

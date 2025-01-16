@@ -163,7 +163,8 @@ def save_modified_sentences():
         
         existing_paragraphs = Paragraph.query.filter_by(report_id=current_report_id).all()
         except_words = ["мм", "см", "до"] # Добавить в конфиг
-        similarity_threshold = 60  # Порог схожести для сравнения предложений. Добавить в конфиг
+        similarity_threshold = 65  # Порог схожести для сравнения предложений. Добавить в конфиг
+        similarity_threshold_fuzz = 85  # Порог схожести для сравнения предложений. Добавить в конфиг
         
         processed_sentences = []  # Для хранения обработанных предложений
         missed_count = 0  # Счётчик пропущенных предложений
@@ -206,7 +207,8 @@ def save_modified_sentences():
                                                         processed_sentences,
                                                         key_words, 
                                                         except_words, 
-                                                        similarity_threshold)
+                                                        similarity_threshold,
+                                                        similarity_threshold_fuzz)
         
         print(f"comparsion_result: {comparsion_result}")
         new_sentences = comparsion_result["unique"]
