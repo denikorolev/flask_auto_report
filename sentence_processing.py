@@ -5,7 +5,7 @@ from flask_login import current_user
 from rapidfuzz import fuzz, process
 import re
 from docx import Document
-import spacy
+from spacy_manager import SpacyModel
 from models import Sentence, Paragraph, KeyWord, Report, User
 from collections import defaultdict
 from errors_processing import print_object_structure
@@ -235,7 +235,8 @@ def preprocess_sentence(text):
     Returns:
         str: The preprocessed text.
     """
-    if not text:
+    # Проверяем, содержит ли текст хотя бы одну букву или цифру
+    if not re.search(r'[a-zA-Zа-яА-ЯёЁ0-9]', text):
         return ""
 
    # Обрабатываем повторяющиеся знаки, кроме точки
@@ -365,49 +366,31 @@ def split_sentences(paragraphs):
 # это новая функция используется в working_with_reports.py
 def split_sentences_if_needed(text):
     """
-    Splits a sentence into multiple sentences using NLTK tokenizer.
-    Supports English and Russian languages.
+    Splits a sentence into multiple sentences using SpaCy tokenizer.
     Args:
         text (str): The input sentence text.
-
     Returns:
         tuple: (list of valid sentences, list of excluded sentences).
     """
-
-    # Получаем текущий язык приложения
-    app_language = current_app.config.get("APP_LANGUAGE", "ru")  # Default to Russian
+    language = current_app.config.get("APP_LANGUAGE", "ru")
     
-    if app_language not in ["eng", "ru"]:
-        raise ValueError("Unsupported language specified in APP_LANGUAGE. Use 'eng' or 'ru'.")
-    if app_language == "ru":
-        nlp = spacy.load("ru_core_news_sm")  # модель для русского языка
-    # Настраиваем токенайзер для русского языка
-    # if app_language == "ru":
-    #     punkt_params = PunktParameters()
-    #     # Список русских аббревиатур. Нужно будет вынести в переменную и настраивать ее в настройках
-    #     punkt_params.abbrev_types = set([
-    #                 "г", "д", "см", "мм", "м", "мг", "мл", "л", "ч", "мин",  # Единицы измерения
-    #                 "КТ", "МРТ", "УЗИ", "ЭКГ", "РГ", "ФГС", "ФКС",  # Диагностика
-    #                 "т.е", "и т.д"  # Прочие
-    #                 ])  
-    #     tokenizer = PunktSentenceTokenizer(punkt_params)
-    #     sentences = tokenizer.tokenize(text)
-    # else:
-    #     # Используем стандартный токенайзер для английского языка
-    #     sentences = sent_tokenize(text, language="english")
+    # Загружаем модель SpaCy для текущего языка
+    try:
+        nlp = SpacyModel.get_instance(language)
+    except ValueError as e:
+        current_app.logger.error(f"Unsupported language '{language}' for SpaCy model: {e}")
+        return [], []
+    
     doc = nlp(text)
     sentences = [sent.text for sent in doc.sents]
+    for sentence in sentences:
+        if not re.search(r'[a-zA-Zа-яА-ЯёЁ0-9]', sentence):
+            sentences.remove(sentence)
 
     if len(sentences) > 1:
         # Если найдено более одного предложения, добавляем в исключения
-        splited_sentences = sentences
-        unsplited_sentences = []
-    else:
-        # Если это одно предложение, оно валидное
-        splited_sentences = []
-        unsplited_sentences = sentences
-
-    return unsplited_sentences, splited_sentences
+        return [], sentences # Splitted sentences
+    return sentences, [] # Unsplitted sentences
 
 
 def get_new_sentences(processed_paragraphs):

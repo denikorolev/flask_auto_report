@@ -165,29 +165,34 @@ def save_modified_sentences():
             nativ_text = sentence_data.get("text")
 
             # Проверяем корректность данных
-            if not paragraph_id or not nativ_text or sentence_index is None:
+            if not paragraph_id or not nativ_text.strip() or sentence_index is None:
                 missed_count += 1
                 continue  # Пропускаем некорректные предложения
             
             before_split_text = preprocess_sentence(nativ_text)
+            
+            if not before_split_text.strip():
+                missed_count += 1
+                continue  # Пропускаем некорректное предложение
+            
             # Проверяем текст на наличие нескольких предложений
             unsplited_sentences, splited_sentences = split_sentences_if_needed(before_split_text)
 
             if splited_sentences:
                 # Обрабатываем случаи с разделением
-                for idx, excluded_sentence in enumerate(splited_sentences):
+                for idx, splited_sentence in enumerate(splited_sentences):
                     processed_sentences.append({
                         "paragraph_id": paragraph_id,
                         "sentence_index": int(sentence_index) if idx == 0 else 0,
-                        "text": excluded_sentence.strip()
+                        "text": splited_sentence.strip()
                     })
             else:
-                # Если предложение валидное, оставляем как есть
-                processed_sentences.append({
-                    "paragraph_id": paragraph_id,
-                    "sentence_index": int(sentence_index),
-                    "text": before_split_text.strip()
-                })
+                for unsplited_sentence in unsplited_sentences:
+                    processed_sentences.append({
+                        "paragraph_id": paragraph_id,
+                        "sentence_index": int(sentence_index),
+                        "text": unsplited_sentence.strip()
+                    })
 
         # Теперь работаем с уже разделенными предложениями в processed_sentences
         
