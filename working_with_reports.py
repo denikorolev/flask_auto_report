@@ -4,7 +4,7 @@ from flask import Blueprint, render_template, request, current_app, jsonify, sen
 import os
 from models import db, Report, ReportType, Paragraph, Sentence, KeyWord
 from file_processing import save_to_word
-from sentence_processing import split_sentences, get_new_sentences, group_keywords, split_sentences_if_needed, clean_and_normalize_text, compare_sentences_by_paragraph
+from sentence_processing import split_sentences, get_new_sentences, group_keywords, split_sentences_if_needed, clean_and_normalize_text, compare_sentences_by_paragraph, preprocess_sentence
 from errors_processing import print_object_structure
 from utils import ensure_list
 from flask_security.decorators import auth_required
@@ -150,21 +150,11 @@ def save_modified_sentences():
         if not data or "sentences" not in data:
             return jsonify({"status": "error", "message": "Invalid data format"}), 400
 
-        sentences = data.get("sentences")
+        sentences = ensure_list(data.get("sentences"))
         report_id = data.get("report_id")
-        if not isinstance(sentences, list) or not sentences or not report_id:
+        
+        if not sentences or not report_id:
             return jsonify({"status": "error", "message": "Some required data is missing."}), 400
-
-        # Получаем ID текущего отчёта и ключевые слова
-        current_report_id = data.get("report_id")
-        
-        key_words_obj = KeyWord.get_keywords_for_report(g.current_profile.id, current_report_id)
-        key_words = [keyword.key_word for keyword in key_words_obj]
-        
-        existing_paragraphs = Paragraph.query.filter_by(report_id=current_report_id).all()
-        except_words = ["мм", "см", "до"] # Добавить в конфиг
-        similarity_threshold = 65  # Порог схожести для сравнения предложений. Добавить в конфиг
-        similarity_threshold_fuzz = 85  # Порог схожести для сравнения предложений. Добавить в конфиг
         
         processed_sentences = []  # Для хранения обработанных предложений
         missed_count = 0  # Счётчик пропущенных предложений
@@ -172,19 +162,20 @@ def save_modified_sentences():
         for sentence_data in sentences:
             paragraph_id = sentence_data.get("paragraph_id")
             sentence_index = sentence_data.get("sentence_index")
-            text = sentence_data.get("text")
+            nativ_text = sentence_data.get("text")
 
             # Проверяем корректность данных
-            if not paragraph_id or not text or sentence_index is None:
+            if not paragraph_id or not nativ_text or sentence_index is None:
                 missed_count += 1
                 continue  # Пропускаем некорректные предложения
-
+            
+            before_split_text = preprocess_sentence(nativ_text)
             # Проверяем текст на наличие нескольких предложений
-            valid_sentences, excluded_after_split = split_sentences_if_needed(text)
+            unsplited_sentences, splited_sentences = split_sentences_if_needed(before_split_text)
 
-            if excluded_after_split:
+            if splited_sentences:
                 # Обрабатываем случаи с разделением
-                for idx, excluded_sentence in enumerate(excluded_after_split):
+                for idx, excluded_sentence in enumerate(splited_sentences):
                     processed_sentences.append({
                         "paragraph_id": paragraph_id,
                         "sentence_index": int(sentence_index) if idx == 0 else 0,
@@ -195,29 +186,22 @@ def save_modified_sentences():
                 processed_sentences.append({
                     "paragraph_id": paragraph_id,
                     "sentence_index": int(sentence_index),
-                    "text": text.strip()
+                    "text": before_split_text.strip()
                 })
 
         # Теперь работаем с уже разделенными предложениями в processed_sentences
         
         # Сначала сравниваем их с существующими предложениями в базе данных
         comparsion_result = compare_sentences_by_paragraph(
-                                                         
-                                                        existing_paragraphs, 
                                                         processed_sentences,
-                                                        key_words, 
-                                                        except_words, 
-                                                        similarity_threshold,
-                                                        similarity_threshold_fuzz)
+                                                        report_id)
         
-        print(f"comparsion_result: {comparsion_result}")
         new_sentences = comparsion_result["unique"]
         duplicates = comparsion_result["duplicates"]
         errors_count = comparsion_result["errors_count"]
         
         missed_count = 0  # Счётчик пропущенных предложений
         saved_count = 0  # Счётчик сохранённых предложений
-        skipped_count = len(processed_sentences) - saved_count  # Разница между входными и обработанными
         saved_sentences = []  # Для хранения сохранённых предложений и последующего включения в отчет
 
         for sentence in new_sentences:
@@ -241,7 +225,7 @@ def save_modified_sentences():
                 missed_count += 1
 
         sentences_adding_report = {
-            "message": f"Processed {len(processed_sentences)} sentences.",
+            "message": f"Всего обработано предложений: {len(processed_sentences)}.",
             "saved_count": saved_count,
             "skipped_count": len(processed_sentences) - saved_count,
             "missed_count": missed_count,

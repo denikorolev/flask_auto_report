@@ -5,8 +5,7 @@ from flask_login import current_user
 from rapidfuzz import fuzz, process
 import re
 from docx import Document
-from nltk.tokenize import sent_tokenize, PunktSentenceTokenizer
-from nltk.tokenize.punkt import PunktParameters
+import spacy
 from models import Sentence, Paragraph, KeyWord, Report, User
 from collections import defaultdict
 from errors_processing import print_object_structure
@@ -224,7 +223,39 @@ def extract_paragraphs_and_sentences(file_path):
 
     return paragraphs_from_file
 
-# это обновленная функция очистки текста перед сравнением
+# Предварительная очистка. Проверяю на наличие предложения. 
+# Убираю только повторяющиеся знаки и лишние пробелы. 
+# Исключение - многоточие, обрабатывается отдельно. 
+# Добавляю пробелы после знаков препинания, если их нет
+def preprocess_sentence(text):
+    """
+    Performs a rough cleanup of the text to prepare it for further processing.
+    Args:
+        text (str): The input sentence or text.
+    Returns:
+        str: The preprocessed text.
+    """
+    if not text:
+        return ""
+
+   # Обрабатываем повторяющиеся знаки, кроме точки
+    text = re.sub(r'([,!?:;"\'\(\)])\1+', r'\1', text)  # Повторяющиеся знаки → один
+
+    # Обрабатываем многоточия отдельно
+    text = re.sub(r'\.\.\.\.+', '...', text)  # Четыре и более точек → многоточие
+    text = re.sub(r'(?<!\.)\.\.(?!\.)', '.', text)  # Две точки → одна
+    
+    # Добавляю пробелы после знаков препинания, если их нет
+    text = re.sub(r'([.!?,;:])(?!\s)', r'\1 ', text)
+    
+    # Убираем лишние пробелы
+    text = re.sub(r'\s+', ' ', text)  # Заменяем любые пробельные символы на один пробел
+
+    return text
+
+
+# это функция очистки текста перед сравнением 
+# используется в working_with_reports.py дважды
 def clean_text_with_keywords(sentence, key_words, except_words=None):
     """ Функция очистки текста от пробелов, знаков припенания, цифр и 
     ключевых слов с приведением всех слов предложения к нижнему 
@@ -252,7 +283,10 @@ def clean_text_with_keywords(sentence, key_words, except_words=None):
     return sentence
 
 
-# это новая функция для окончательной очистки предложения в working_with_reports.py
+# это функция для окончательной очистки предложения 
+# в working_with_reports.py.
+# Она не очищает двойные знаки, лишние пробелы и не проверяется текст на наличие
+# Должна применяться после функции preprocess_sentence
 def clean_and_normalize_text(text):
     """
     Cleans the input text by handling punctuation, spaces, and formatting issues.
@@ -265,23 +299,14 @@ def clean_and_normalize_text(text):
     # Исключения для слов, которые должны начинаться с заглавной буквы
     EXCEPTIONS_AFTER_PUNCTUATION = ["МРТ", "КТ", "УЗИ", "РКТ", "ПЭТ", "ПЭТ-КТ", "МСКТ", "РГ", "ЭКГ", "ФГДС"]
 
-    if not text:
-        return ""
-
+    # Убираем пронумерованные элементы с точкой или скобкой в начале строки
+    # Это в тему именно тут, так как ниже я обрабатываю скобки
+    text = re.sub(r'^\s*\d+[\.\)]\s*', '', text)
+    
     # Убираем лишние пробелы
-    text = re.sub(r'\s+', ' ', text)  # Двойные пробелы → один пробел
     text = re.sub(r'\s+([.,!?;:])', r'\1', text)  # Пробел перед знаками препинания
     text = re.sub(r'\(\s+', r'(', text)  # Пробел после открывающей скобки
     text = re.sub(r'\s+\)', r')', text)  # Пробел перед закрывающей скобкой
-
-    # Обрабатываем повторяющиеся знаки, кроме точки
-    text = re.sub(r'([,!?:;"\'\(\)])\1+', r'\1', text)  # Повторяющиеся знаки → один
-
-    # Обрабатываем многоточия отдельно
-    text = re.sub(r'\.\.\.\.+', '...', text)  # Четыре и более точек → многоточие
-    text = re.sub(r'(?<!\.)\.\.(?!\.)', '.', text)  # Две точки → одна
-    
-    text = re.sub(r'([,;:])(?!\s)', r'\1 ', text)  # Добавляем пробел после знаков препинания
 
     # Убираем пробелы в начале и конце строки. 
     # Это в тему именну тут, так как выше мы добавляем пробелы.
@@ -311,7 +336,7 @@ def clean_and_normalize_text(text):
 
     return text
 
-# Это старая функция ее нужно будет заменить на split_sentences_if_needed
+# Это СТАРАЯ функция ее нужно будет заменить на split_sentences_if_needed
 def split_sentences(paragraphs):
     """ Разделяем полученный текст на отдельные предложения 
     ориентируясь на знаки препинания .!? """
@@ -337,7 +362,7 @@ def split_sentences(paragraphs):
 
     return split_paragraphs
 
-# это новая функция
+# это новая функция используется в working_with_reports.py
 def split_sentences_if_needed(text):
     """
     Splits a sentence into multiple sentences using NLTK tokenizer.
@@ -350,40 +375,39 @@ def split_sentences_if_needed(text):
     """
 
     # Получаем текущий язык приложения
-    app_language = current_app.config.get("APP_LANGUAGE", "ru")  # Default to English
-    # Добавляю пробелы после знаков препинания, если их нет
-    text = re.sub(r'([.!?])(?!\s)', r'\1 ', text)
+    app_language = current_app.config.get("APP_LANGUAGE", "ru")  # Default to Russian
     
     if app_language not in ["eng", "ru"]:
         raise ValueError("Unsupported language specified in APP_LANGUAGE. Use 'eng' or 'ru'.")
-
-
-    # Настраиваем токенайзер для русского языка
     if app_language == "ru":
-        punkt_params = PunktParameters()
-        # Список русских аббревиатур. Нужно будет вынести в переменную и настраивать ее в настройках
-        punkt_params.abbrev_types = set([
-                    "г", "д", "см", "мм", "м", "мг", "мл", "л", "ч", "мин",  # Единицы измерения
-                    "КТ", "МРТ", "УЗИ", "ЭКГ", "РГ", "ФГС", "ФКС",  # Диагностика
-                    "см.", "т.е.", "и т.д.", "и др."  # Прочие
-                    ])  
-        tokenizer = PunktSentenceTokenizer(punkt_params)
-        sentences = tokenizer.tokenize(text)
-    else:
-        # Используем стандартный токенайзер для английского языка
-        sentences = sent_tokenize(text, language="english")
-
+        nlp = spacy.load("ru_core_news_sm")  # модель для русского языка
+    # Настраиваем токенайзер для русского языка
+    # if app_language == "ru":
+    #     punkt_params = PunktParameters()
+    #     # Список русских аббревиатур. Нужно будет вынести в переменную и настраивать ее в настройках
+    #     punkt_params.abbrev_types = set([
+    #                 "г", "д", "см", "мм", "м", "мг", "мл", "л", "ч", "мин",  # Единицы измерения
+    #                 "КТ", "МРТ", "УЗИ", "ЭКГ", "РГ", "ФГС", "ФКС",  # Диагностика
+    #                 "т.е", "и т.д"  # Прочие
+    #                 ])  
+    #     tokenizer = PunktSentenceTokenizer(punkt_params)
+    #     sentences = tokenizer.tokenize(text)
+    # else:
+    #     # Используем стандартный токенайзер для английского языка
+    #     sentences = sent_tokenize(text, language="english")
+    doc = nlp(text)
+    sentences = [sent.text for sent in doc.sents]
 
     if len(sentences) > 1:
         # Если найдено более одного предложения, добавляем в исключения
-        excluded_sentences = sentences
-        valid_sentences = []
+        splited_sentences = sentences
+        unsplited_sentences = []
     else:
         # Если это одно предложение, оно валидное
-        excluded_sentences = []
-        valid_sentences = sentences
+        splited_sentences = []
+        unsplited_sentences = sentences
 
-    return valid_sentences, excluded_sentences
+    return unsplited_sentences, splited_sentences
 
 
 def get_new_sentences(processed_paragraphs):
@@ -522,27 +546,7 @@ def group_keywords(keywords, with_index=False, with_report=False):
     # Если with_index=False, возвращаем просто сгруппированные ключевые слова с их id
     return list(grouped_keywords.values())
 
-# Алгоритм для сравнения предложений и вычисления их схожести в %
-def calculate_jaccard_similarity(sentence1, sentence2):
-    """
-    Calculates the Jaccard similarity between two sentences.
-
-    Args:
-        sentence1 (str): The first sentence.
-        sentence2 (str): The second sentence.
-
-    Returns:
-        float: The Jaccard similarity as a percentage.
-    """
-    set1 = set(sentence1.split())
-    set2 = set(sentence2.split())
-
-    intersection = set1.intersection(set2)
-    union = set1.union(set2)
-
-    return len(intersection) / len(union) * 100 if union else 0
-
-
+# Алгоритм для сравнения предложений и вычисления их схожести в %. Используется в compare_sentences_by_paragraph()
 def calculate_similarity_rapidfuzz(sentence1, sentence2):
     """
     Calculates the similarity between two sentences using the RapidFuzz library.
@@ -558,8 +562,8 @@ def calculate_similarity_rapidfuzz(sentence1, sentence2):
 
     return fuzz.ratio(sentence1, sentence2)
 
-
-def compare_sentences_by_paragraph(existing_paragraphs, new_sentences, key_words, except_words=None, similarity_threshold=65, similarity_threshold_fuzz=95):    
+# Сравниваю 2 предложения. Используется в working_with_report/save_modified_sentences %
+def compare_sentences_by_paragraph(new_sentences, report_id):    
     """
     Compares new sentences with existing sentences in their respective paragraphs to determine uniqueness.
 
@@ -568,21 +572,24 @@ def compare_sentences_by_paragraph(existing_paragraphs, new_sentences, key_words
         new_sentences (list[dict]): List of new sentences to be added.
             Each dictionary should have the structure {"paragraph_id": int, "text": str}.
         key_words (list[str]): List of key words to remove during cleaning.
-        except_words (list[str], optional): List of additional words to remove.
-        similarity_threshold (int, optional): Percentage threshold to consider sentences as duplicates.
-            Defaults to 85.
 
     Returns:
         dict: Contains "duplicates" and "unique" lists:
             - "duplicates": List of new sentences that match existing ones.
             - "unique": List of new sentences considered unique.
     """
+    similarity_threshold_fuzz = 95  # Порог схожести для сравнения предложений. Добавить в конфиг
+    except_words = ["мм", "см", "до"] # Добавить в конфиг
+    
+    existing_paragraphs = Paragraph.query.filter_by(report_id=report_id).all()
+    key_words_obj = KeyWord.get_keywords_for_report(g.current_profile.id, report_id)
+    key_words = [keyword.key_word for keyword in key_words_obj]
+    
     duplicates = []
     unique_sentences = []
     errors_count = 0
     # Итерируем по новым предложениям
     for new_sentence in new_sentences:
-        print(f"New sentence: {new_sentence}")
         new_paragraph_id = int(new_sentence.get("paragraph_id"))
         new_text = new_sentence.get("text")
         new_text_index = new_sentence.get("sentence_index")
@@ -599,38 +606,29 @@ def compare_sentences_by_paragraph(existing_paragraphs, new_sentences, key_words
             unique_sentences.append(new_sentence)  # Если параграф не найден, считаем предложение уникальным
             continue
 
-        print(new_text_index)
         # Получаем те предложения этого параграфа чей индекс равен индексу нового предложения
         existing_sentences = [
             {"id": sent.id, "index": sent.index, "text": sent.sentence} for sent in paragraph.paragraph_to_sentences if sent.index == new_text_index
         ]
-        print(f"Existing sentences: {existing_sentences}")
-
         # Очищаем существующие предложения
         cleaned_existing = [
-            {"id": sent.get("id"), "text": clean_text_with_keywords(sent.get("text"), key_words, except_words)} for sent in existing_sentences
+            {"id": sent.get("id"), "original_text": sent["text"], "cleaned_text": clean_text_with_keywords(sent.get("text"), key_words, except_words)} for sent in existing_sentences
             ]
-        print(f"Cleaned existing: {cleaned_existing}")
-
         # Очищаем новое предложение
         cleaned_new_text = clean_text_with_keywords(new_text, key_words, except_words)
-        print(f"------------------------------------")
-        print(f"Cleaned new: {cleaned_new_text}")
-        print(f"------------------------------------")
         # Проверяем на схожесть с существующими предложениями
         is_duplicate = False
         for existing in cleaned_existing:
-            print(f"New: {cleaned_new_text}")
-            print(f"Existing: {existing['text']}")
-            similarity = calculate_jaccard_similarity(cleaned_new_text, existing["text"])
-            similarity_rapidfuzz = calculate_similarity_rapidfuzz(cleaned_new_text, existing["text"])
-            print(f"Similarity: {similarity}")
-            print(f"Similarity RapidFuzz: {similarity_rapidfuzz}")
-            if similarity >= similarity_threshold or similarity_rapidfuzz >= similarity_threshold_fuzz:
+            similarity_rapidfuzz = calculate_similarity_rapidfuzz(cleaned_new_text, existing["cleaned_text"])
+            if similarity_rapidfuzz >= similarity_threshold_fuzz:
                 duplicates.append({
                     "new_sentence": new_sentence,
-                    "matched_with": existing,
-                    "similarity": similarity,
+                    "new_sentence_index": new_sentence.get("sentence_index"),
+                    "new_sentence_paragraph": new_sentence.get("paragraph_id"),
+                    "matched_with": {
+                                "id": existing["id"],
+                                "text": existing["original_text"]
+                            },
                     "similarity_rapidfuzz": similarity_rapidfuzz
                 })
                 is_duplicate = True

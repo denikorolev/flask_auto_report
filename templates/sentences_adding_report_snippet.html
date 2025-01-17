@@ -2,6 +2,7 @@
 
 <div>
     <p><strong>{{ message }}</strong></p>
+    <p></p>
     <ul>
         <li>Сохраненные предложения: {{ saved_count }}</li>
         <li>Дубликаты: {{ duplicates_count }}</li>
@@ -26,8 +27,7 @@
             <li>
                 Отправленное предложение: <strong>{{ duplicate.new_sentence.text }}</strong><br>
                 совпадает с имеющимся предложением: <strong>{{ duplicate.matched_with.text }}</strong><br>
-                на <strong>{{ duplicate.similarity }}</strong> % по методу Джаккарда <br> 
-                и на <strong>{{ duplicate.similarity_rapidfuzz }}</strong> % вычесленному с помощью RapidFuzz.
+                на <strong>{{ duplicate.similarity_rapidfuzz }}</strong> %.
                
             </li>
         {% endfor %}
