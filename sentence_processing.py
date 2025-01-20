@@ -372,7 +372,8 @@ def split_sentences_if_needed(text):
     Returns:
         tuple: (list of valid sentences, list of excluded sentences).
     """
-    language = current_app.config.get("APP_LANGUAGE", "ru")
+    language = current_app.config["PROFILE_SETTINGS"]["APP_LANGUAGE"]
+    print(f"APP_LANGUAGE: {language}")
     
     # Загружаем модель SpaCy для текущего языка
     try:
@@ -578,7 +579,6 @@ def compare_sentences_by_paragraph(new_sentences, report_id):
         new_text_index = new_sentence.get("sentence_index")
         
         if not new_paragraph_id or not new_text:
-            print("Видимо нет id параграфа")
             errors_count += 1
             continue  # Пропускаем некорректные данные
         

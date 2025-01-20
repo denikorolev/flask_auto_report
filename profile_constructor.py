@@ -15,7 +15,7 @@ class ProfileSettingsManager:
         """
         settings = AppConfig.query.filter_by(profile_id=profile_id).all()
         profile_settings = {setting.config_key: ProfileSettingsManager._parse_value(setting) for setting in settings}
-
+        print(f"PROFILE_SETTINGS: {profile_settings}")
         # Сохраняем все настройки в app.config под ключом PROFILE_SETTINGS
         current_app.config["PROFILE_SETTINGS"] = profile_settings
 

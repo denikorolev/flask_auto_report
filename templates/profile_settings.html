@@ -39,8 +39,15 @@
             </li>
             <li class="settings-block__item">
                 <label class="settings-block__label" for="USE_SENTENCE_AUTOSAVE">Использовать автосохранение новых предложений</label>
-                <input class="settings-block__input" type="checkbox" id="use_excel_reports" name="USE_SENTENCE_AUTOSAVE" 
+                <input class="settings-block__input" type="checkbox" id="useSentenceAutosave" name="USE_SENTENCE_AUTOSAVE" 
                     {% if user_settings.USE_SENTENCE_AUTOSAVE %} checked {% endif %}>
+            </li>
+            <li class="settings-block__item">
+                <label class="settings-block__label" for="APP_LANGUAGE">Theme:</label>
+                <select class="settings-block__select" id="language" name="APP_LANGUAGE">
+                    <option value="русский" {% if user_settings.APP_LANGUAGE == 'ru' %}selected{% endif %}>русский</option>
+                    <option value="английский" {% if user_settings.APP_LANGUAGE == 'eng' %}selected{% endif %}>английский</option>
+                </select>
             </li>
             <li class="settings-block__item">
                 <label class="settings-block__label" for="THEME">Theme:</label>

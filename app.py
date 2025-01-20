@@ -189,6 +189,10 @@ def load_current_profile():
         
 
     else:
+        if 'profile_id' in session:
+            print("Удаляю профиль из сессии")
+            session.pop('profile_id', None)
+            g.current_profile = None
         print("Все давай до свидания")
         return None
 
