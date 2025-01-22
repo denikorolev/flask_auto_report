@@ -118,66 +118,18 @@ class User(BaseModel, db.Model, UserMixin):
     user_to_reports = db.relationship('Report', lazy=True)
 
 
-
-    # def set_password(self, password):
-    #     print("зашел в set_password")
-    #     """Set password using bcrypt."""
-    #     self.password = bcrypt.hash(password)
-
-    # def check_password(self, password):
-    #     print("old check pass started")
-    #     return bcrypt.verify(password, self.password)
-         
-         
-    # def verify_and_update_password(self, password):
-    #     """
-    #     Verify if the provided password matches the stored password.
-    #     If the hash is outdated, update it.
-    #     """
-    #     print("im in the verify pass logic")
-    #     # Проверяем пароль с текущим хэшем
-    #     if verify_password(password, self.password):
-    #         print("pass was verified")
-    #         # Если хэш устарел, обновляем
-    #         if self.password != hash_password(password):
-    #             self.password = hash_password(password)
-    #             db.session.commit()
-    #         return True
-        # print("этого я видеть не должен и удалю эту сроку сразу после заливки на сервер")
-        # # self.password = hash_password(password)
-        # # db.session.commit()    # не забудь удалить эти строки НЕ ЗАБУДЬ
-        # print("pass wrong")
-        # return False
-         
-         
-    
-    # @classmethod
-    # def create(cls, email, password, username="User", active=True):
-    #     """
-    #     Creates a new user and saves them to the database.
-    #     Args:
-    #         email (str): The email of the user.
-    #         username (str): The username.
-    #         password (str): The password (will be hashed).
-    #         role (str): The role of the user, defaults to 'user'.
-    #     Returns:
-    #         User: The created user object.
-    #     """
-    #     # Проверяем, существует ли пользователь с таким email
-    #     if cls.query.filter_by(email=email).first():
-    #         raise ValueError("A user with that email already exists")
+    def get_max_rank(self):
+        """
+        Возвращает максимальный ранг пользователя на основе его ролей.
         
-    #     user = cls(
-    #         email=email,
-    #         user_name=username,
-    #         active=active,
-    #         fs_uniquifier=str(uuid.uuid4())
-    #     )
-    #     user.set_password(password)  # Хэшируем пароль
-    #     db.session.add(user)
-    #     db.session.commit()
-    #     return user
-
+        Returns:
+            int: Максимальный ранг пользователя, если роли есть.
+            None: Если у пользователя нет ролей.
+        """
+        if not self.roles:
+            return None  # У пользователя нет ролей
+        return max(role.rank for role in self.roles if role.rank is not None)
+    
 
     def has_role(self, role_name):
         """Проверяет, есть ли у пользователя определенная роль."""

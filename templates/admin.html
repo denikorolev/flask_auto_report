@@ -5,26 +5,84 @@
 <input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
 <h1>Welcome to Admin panel</h1>
 
+ <!-- Блок с поиском и правкой пользователя -->
+{% if user_max_rank and user_max_rank == 4 %}
+    <div class="user-management">
+        <h2 class="user-management__title">Управление пользователями</h2>
+        
+        <!-- Поиск пользователя -->
+        <div class="user-management__search">
+            <label for="search-user" class="user-management__label">Поиск пользователя:</label>
+            <input type="text" id="search-user" class="user-management__input user-management__input--search" 
+                placeholder="Введите имя или email или ID" required>
+            <button type="button" id="search-user-button" class="btn btn_report user-management__button user-management__button--search">
+                Найти
+            </button>
+        </div>
+        <!-- Результаты поиска -->
+        <div class="user-management__results" id="user-results" style="display: none;">
+            <h3>Результаты поиска</h3>
+            <table class="user-management__table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Имя</th>
+                        <th>Email</th>
+                        <th>Текущая роль</th>
+                        <th>Действие</th>
+                    </tr>
+                </thead>
+                <tbody id="user-results-body">
+                    <!-- Динамически заполняется -->
+                </tbody>
+            </table>
+        </div>
 
+        <!-- Детали выбранного пользователя -->
+        <div class="user-management__details" id="user-details" style="display: none;">
+            <h3>Детали пользователя</h3>
+            <form>
+                <input type="hidden" id="user-id">
+                <div>
+                    <label for="user-name">Имя:</label>
+                    <input type="text" id="user-name">
+                </div>
+                <div>
+                    <label for="user-email">Email:</label>
+                    <input type="email" id="user-email">
+                </div>
+                <div>
+                    <label for="user-role">Роль:</label>
+                    <select id="user-role"></select>
+                </div>
+                <button type="button" id="save-user-button" class="btn">Сохранить изменения</button>
+            </form>
+        </div>
+                </div>
+
+    </div>
+{% endif %}
+
+ <!-- Блок с таблицами -->
 <div class="container flex">
     <div class="box admin-filters">
         <h2>Панель фильтров</h2>
-    
+        <!-- Основные таблицы -->
         {% if all_models %}
             <div class="admin-filters__form">
+                <h3>Основные таблицы:</h3>
                 {% for table, columns in all_models.items() %}
                     <ul class="admin-filters__list">
                         <!-- Чекбокс для названия таблицы -->
                         <li class="admin-filters__item">
                             <input type="checkbox" class="admin-filter__checkbox admin-filter__checkbox--table" 
-                                   value="{{ table }}" id="table-{{ table }}" 
-                                   onclick="toggleFields('{{ table }}')">
+                                   value="{{ table }}" id="table-{{ table }}">
                             <label for="table-{{ table }}" 
                                    class="admin-filters__label admin-filters__label--table">Название таблицы: {{ table }}</label>
                         </li>
                         
                         <!-- Список полей, изначально скрыт -->
-                        <div class="admin-filters__fields" id="fields-{{ table }}" style="display: none;">
+                        <div class="admin-filters__fields admin-filters__field--columns" id="fields-{{ table }}" style="display: none;">
                             {% for column in columns %}
                                 <li class="admin-filters__item">
                                     <input type="checkbox" class="admin-filter__checkbox admin-filter__checkbox--column" 
@@ -37,10 +95,6 @@
                         </div>
                     </ul>
                 {% endfor %}
-    
-                <!-- Кнопка для отправки данных через JavaScript -->
-                
-                <button type="button" class="admin-filters__submit" onclick="sendSelectedData()">Получить данные</button>
             </div>
         {% else %}
             <p>Нет данных для отображения моделей</p>
@@ -54,12 +108,11 @@
                     <ul class="admin-filters__list">
                         <li class="admin-filters__item">
                             <input type="checkbox" class="admin-filter__checkbox admin-filter__checkbox--table" 
-                                   value="{{ table }}" id="table-{{ table }}" 
-                                   onclick="toggleFields('{{ table }}')">
+                                   value="{{ table }}" id="table-{{ table }}"
                             <label for="table-{{ table }}" 
                                    class="admin-filters__label admin-filters__label--table">{{ table }}</label>
                         </li>
-                        <div class="admin-filters__fields" id="fields-{{ table }}" style="display: none;">
+                        <div class="admin-filters__fields admin-filters__field--columns" id="fields-{{ table }}" style="display: none;">
                             {% for column in columns %}
                                 <li class="admin-filters__item">
                                     <input type="checkbox" class="admin-filter__checkbox admin-filter__checkbox--column" 
@@ -72,11 +125,14 @@
                         </div>
                     </ul>
                 {% endfor %}
-                <button type="button" class="admin-filters__submit" onclick="sendSelectedData()">Получить данные</button>
+                
             </div>
         {% else %}
             <p>Нет данных для ассоциативных таблиц</p>
         {% endif %}
+
+        <button type="button" class="btn btn_report admin-filters__submit" id="sendSelectedData">Получить данные</button>
+
     </div>
     
 

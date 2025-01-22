@@ -1,6 +1,4 @@
 from flask import Blueprint, render_template, request, jsonify, current_app
-from sqlalchemy.ext.declarative import DeclarativeMeta
-from flask_login import login_required
 from models import *
 import re
 from flask_security.decorators import auth_required, roles_required
@@ -9,6 +7,9 @@ from flask_security.decorators import auth_required, roles_required
 
 admin_bp = Blueprint("admin", __name__)
 
+
+# Функция для проверки роли пользователя и сопоствления 
+# с позицией superadmin, если пользователь не является суперадмином то выдает ошибку
 @admin_bp.before_request
 @roles_required("superadmin")  
 def restrict_to_superadmin():
@@ -60,8 +61,7 @@ def admin():
                            title="Admin",
                            all_models=all_models,
                            association_tables=association_tables)
-    
-    
+
 
 @admin_bp.route("/fetch_data", methods=["POST"])
 @auth_required()
@@ -196,6 +196,89 @@ def update_record(table_name, record_id):
         print(f"Ошибка при обновлении записи: {e}")
         return jsonify({"status": "error", "message": "Ошибка при обновлении записи"}), 500
 
-    
-    
-    
+# Маршрут для поиска пользоватея и отправки его данных на клиент
+@admin_bp.route("/search_user", methods=["POST"])
+@auth_required()
+@roles_required("superadmin") 
+def search_user():
+    """Ищет пользователя по имени, email или ID."""
+    data = request.get_json()
+    search_value = data.get("search", "").strip()
+
+    if not search_value:
+        return jsonify({"status": "error", "message": "Не указано значение для поиска."}), 400
+
+    # Попробуем найти пользователя по ID, email или имени
+    try:
+        # Фильтр по ID, email или имени пользователя
+        users = []
+        if search_value.isdigit():
+            users = User.query.filter(
+                (User.id == int(search_value)) |
+                (User.user_name.ilike(f"%{search_value}%"))
+            ).all()
+        else:
+            users = User.query.filter(
+                (User.email.ilike(f"%{search_value}%")) |
+                (User.user_name.ilike(f"%{search_value}%"))
+            ).all()
+
+        if not users:
+            return jsonify({"status": "error", "message": "Пользователь не найден."}), 404
+
+        all_roles = Role.query.all()
+        # Формируем список пользователей с их данными
+        users_data = []
+        for user in users:
+            users_data.append({
+                "id": user.id,
+                "user_name": user.user_name,
+                "email": user.email,
+                "all_roles": [role.name for role in all_roles],
+                "current_role": user.roles[0].name if user.roles else None
+            })
+
+        return jsonify({
+            "status": "success",
+            "data": users_data
+        }), 200
+
+    except Exception as e:
+        current_app.logger.error(f"Ошибка поиска пользователя: {str(e)}")
+        return jsonify({"status": "error", "message": "Ошибка поиска пользователя."}), 500
+
+
+@admin_bp.route("/update_user/<int:user_id>", methods=["PUT"])
+@auth_required()
+@roles_required("superadmin")  # Доступ только для суперадминов
+def update_user(user_id):
+    """Обновляет данные пользователя."""
+    data = request.get_json()
+
+    try:
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({"status": "error", "message": "Пользователь не найден."}), 404
+
+        # Обновление имени и email
+        user.user_name = data.get("user_name", user.user_name).strip()
+        user.email = data.get("email", user.email).strip()
+
+        # Обновление роли
+        new_role_name = data.get("role")
+        if new_role_name:
+            new_role = Role.query.filter_by(name=new_role_name).first()
+            if not new_role:
+                return jsonify({"status": "error", "message": f"Роль '{new_role_name}' не найдена в списке допустимых ролей."}), 400
+
+            # Обновляем роль пользователя (заменяем старую)
+            user.roles = [new_role]
+
+        user.save()
+
+        return jsonify({"status": "success", "message": "Данные пользователя успешно обновлены."}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Ошибка обновления пользователя: {str(e)}")
+        return jsonify({"status": "error", "message": "Ошибка сервера."}), 500

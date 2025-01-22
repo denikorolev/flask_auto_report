@@ -667,6 +667,11 @@ body {
 
 
 /* Стили для блока данных в admin-data */
+
+.admin-filters__field--columns {
+    margin-left: 20px;
+}
+
 .admin-data__table {
     margin-bottom: 20px;
     padding: 10px;

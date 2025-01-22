@@ -32,21 +32,26 @@ from openai_api import openai_api_bp
 from key_words import key_words_bp
 from admin import admin_bp
 
-version = "0.8.5"
+version = "0.8.6"
 
 app = Flask(__name__)
 app.config.from_object(get_config()) # Load configuration from file config.py
 
-# Initialize SQLAlchemy
+# Инициализация базы данных
 db.init_app(app)
 
-# Initialize Flask-Migrate
+# Инициализация миграций
 migrate = Migrate(app, db)
-
 
 # Инициализирую Flask-security-too
 user_datastore = SQLAlchemyUserDatastore(db, User, Role)
 security = Security(app, user_datastore)
+
+# Инициализация CSRF-защиты
+csrf = CSRFProtect(app)
+csrf.init_app(app) # Инициализация CSRF-защиты
+
+
 
 # Обработчик сигнала user_registered и автоматическое назначение роли 'user'
 @user_registered.connect_via(app)
@@ -70,35 +75,36 @@ app.register_blueprint(admin_bp, url_prefix="/admin")
 
 
 # Добавляю контекстные процессоры
+
+# Добавляю контекстный процессор для меню
 @app.context_processor
 def inject_menu():
     """Добавляет меню в глобальный контекст Jinja."""
     return {"menu": build_menu()}
 
+# Добавляю контекстный процессор для настроек профиля
 @app.context_processor
 def inject_user_settings():
     """Добавляет все настройки профиля в глобальный контекст Jinja."""
     user_settings = app.config.get("PROFILE_SETTINGS", {})
     return {"user_settings": user_settings}
 
-
+# Добавляю контекстный процессор для версии приложения
 @app.context_processor
 def inject_app_info():
     """Добавляет информацию о приложении в глобальный контекст Jinja."""
     app_info = {"version": version, "author": "dgk"}
     return {"app_info": app_info}
 
+# Добавляю контекстный процессор для ранга пользователя
+@app.context_processor
+def inject_user_rank():
+    if not current_user.is_authenticated:
+        return {"user_max_rank": 0}
+    return {"user_max_rank": current_user.get_max_rank()}
 
-# Обработка ошибок
-@app.errorhandler(Exception)
-def handle_exception(e):
-    app.logger.error(f"My errorhandler Exception occurred: {str(e)}")
-    er = str(e)
-    return f"Internal Server Error: {er}", 500
 
 
-csrf = CSRFProtect(app)
-csrf.init_app(app) # Инициализация CSRF-защиты
 
 # Functions 
 
@@ -236,6 +242,14 @@ def error():
     message = request.args.get("message") or "no message"
     return render_template("error.html",
                            message=message)
+
+
+# Обработка ошибок
+@app.errorhandler(Exception)
+def handle_exception(e):
+    app.logger.error(f"My errorhandler Exception occurred: {str(e)}")
+    er = str(e)
+    return f"Internal Server Error: {er}", 500
 
 
 # Это обязательная часть для разрыва сессии базы данных после каждого обращения
