@@ -26,9 +26,11 @@ roles_users = db.Table(
 
 class AppConfig(db.Model):
     __tablename__ = 'app_config'
+    __table_args__ = (db.UniqueConstraint("profile_id", "config_key", name="uq_profile_config"),)
+    
     id = db.Column(db.Integer, primary_key=True)
     profile_id = db.Column(db.BigInteger, db.ForeignKey('user_profiles.id'), nullable=False) 
-    config_key = db.Column(db.String(50), unique=True, nullable=False)
+    config_key = db.Column(db.String(50), nullable=False)
     config_value = db.Column(db.String(200), nullable=False)
     config_type = db.Column(db.String(50), nullable=True)  # необязательный
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)  
@@ -36,28 +38,47 @@ class AppConfig(db.Model):
 
     profile = db.relationship("UserProfile", backref=db.backref("configs", lazy=True))
 
-    @staticmethod
-    def get_config(profile_id, key):
-        """Retrieve a configuration value for a given profile and key."""
-        config = AppConfig.query.filter_by(profile_id=profile_id, config_key=key).first()
-        return config.config_value if config else None
 
     @staticmethod
-    def set_config(profile_id, key, value, config_type=None):
-        """Set or update a configuration value for a given profile and key."""
+    def get_setting(profile_id, key, default=None):
+        """Возвращает значение настройки для профиля."""
+        try:
+            config = AppConfig.query.filter_by(profile_id=profile_id, config_key=key).first()
+            return config.config_value if config else default
+        except Exception as e:
+            print(f"Ошибка получения настройки: {e}")
+            return default
+    
+
+    @staticmethod
+    def set_setting(profile_id, key, value, config_type=None):
+        """
+        Устанавливает или обновляет значение настройки для указанного профиля и ключа.
+
+        Args:
+            profile_id (int): ID профиля.
+            config_key (str): Ключ настройки.
+            config_value (str): Значение настройки.
+            config_type (str, optional): Тип настройки (например, 'string', 'boolean').
+        """
+        # Ищем существующую настройку
         config = AppConfig.query.filter_by(profile_id=profile_id, config_key=key).first()
+
         if config:
+            # Обновляем существующую настройку
             config.config_value = value
             if config_type:
                 config.config_type = config_type
         else:
+            # Создаем новую настройку
             config = AppConfig(
-                profile_id=profile_id, 
-                config_key=key, 
-                config_value=value, 
+                profile_id=profile_id,
+                config_key=key,
+                config_value=value,
                 config_type=config_type
             )
             db.session.add(config)
+
         db.session.commit()
 
 
@@ -88,7 +109,7 @@ class Role(db.Model, RoleMixin):
     id = db.Column(db.BigInteger, primary_key=True)
     name = db.Column(db.String(80), unique=True, nullable=False)  
     description = db.Column(db.String(255), nullable=True) 
-    rank = db.Column(db.Integer, nullable=False)  # Ранг роли
+    rank = db.Column(db.Integer, nullable=False)  
 
 class User(BaseModel, db.Model, UserMixin):
     __tablename__ = 'users'

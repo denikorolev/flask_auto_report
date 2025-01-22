@@ -7,15 +7,15 @@
 
     <!-- Блок глобальных настроек самого профиля -->
     <div class="profile-settings-block">
-        <h3 class="profile-settings-block__title">Profile Settings</h3>
+        <h3 class="profile-settings-block__title">Настройки профиля</h3>
             <div class="profile-settings-block__container">
                 <ul class="profile-settings-block__list" data-profile-id="{{ profile.id }}" id="profileSettingBlock">
                     <li class="profile-settings-block__item">
-                        <label class="profile-settings-block__label" for="profile_name">Profile Name:</label>
+                        <label class="profile-settings-block__label" for="profile_name">Название профиля:</label>
                         <input class="profile-settings-block__input" type="text" id="profileName" name="profile_name" value="{{ profile.profile_name }}" required>
                     </li>
                     <li class="profile-settings-block__item">
-                        <label class="profile-settings-block__label" for="description">Description:</label>
+                        <label class="profile-settings-block__label" for="description">Описание профиля:</label>
                         <textarea class="profile-settings-block__textarea" id="profileDescription" name="description">{{ profile.description }}</textarea>
                     </li>
                 </ul>

@@ -3,7 +3,7 @@
 from flask import Flask, redirect, url_for, render_template, request, session, g
 from flask_login import current_user
 import logging
-from config import get_config, Config
+from config import get_config
 from flask_migrate import Migrate
 from models import db, User, UserProfile, Role
 from menu_constructor import build_menu
@@ -32,7 +32,7 @@ from openai_api import openai_api_bp
 from key_words import key_words_bp
 from admin import admin_bp
 
-version = "0.8.6"
+version = "0.8.7"
 
 app = Flask(__name__)
 app.config.from_object(get_config()) # Load configuration from file config.py
@@ -96,7 +96,9 @@ def inject_app_info():
     app_info = {"version": version, "author": "dgk"}
     return {"app_info": app_info}
 
-# Добавляю контекстный процессор для ранга пользователя
+# Добавляю контекстный процессор для ранга пользователя 
+# сейчас не используется, но потом буду так ограничивать 
+# доступ к некоторым частям страниц
 @app.context_processor
 def inject_user_rank():
     if not current_user.is_authenticated:
@@ -168,8 +170,8 @@ def load_current_profile():
                 # Проверяем, если у пользователя только один профиль
                 if user_profiles[0] == "Default":
                     render_template("welcome_page.html",
-                                    title="Welcome",
-                                    menu=[])
+                                    title="Welcome"
+                                    )
                     
                 if len(user_profiles) == 1:
                     g.current_profile = user_profiles[0]
@@ -230,11 +232,8 @@ def index():
 
 @app.route("/welcome_page", methods=["GET"])
 def welcome_page():
-    print("welcome page started")
-    menu = []
     return render_template("welcome_page.html",
-                           menu=menu,
-                           title="Welcome")
+                           title="Добро пожаловать")
 
 
 @app.route("/error", methods=["POST", "GET"])

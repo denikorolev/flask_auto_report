@@ -11,7 +11,7 @@ class ProfileSettingsManager:
     @staticmethod
     def load_profile_settings(profile_id):
         """
-        Загружает настройки для указанного профиля из таблицы AppConfig.
+        Загружает настройки для указанного профиля из таблицы AppConfig в current_app.config.
         """
         settings = AppConfig.query.filter_by(profile_id=profile_id).all()
         profile_settings = {setting.config_key: ProfileSettingsManager._parse_value(setting) for setting in settings}

@@ -13,8 +13,14 @@ def require_role_rank(min_rank):
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            user_max_rank = current_user.get_max_rank()
-            if user_max_rank is None or user_max_rank < min_rank:
+            # Если пользователь не аутентифицирован, ранг считается 0
+            if not current_user.is_authenticated:
+                user_max_rank = 0
+            else:
+                user_max_rank = current_user.get_max_rank()
+
+            # Проверка ранга
+            if user_max_rank < min_rank:
                 abort(403)
             return func(*args, **kwargs)
         return wrapper

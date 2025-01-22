@@ -130,7 +130,7 @@ def save_settings():
             value = str(value)  # Преобразуем в строку для универсальности
 
         try: # Сохраняем настройку в AppConfig
-            AppConfig.set_config(profile_id, key, value, config_type=config_type)
+            AppConfig.set_setting(profile_id, key, value, config_type=config_type)
         except Exception as e:
             return jsonify({"status": "error", "message": str(e)}), 400
 
