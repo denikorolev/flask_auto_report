@@ -88,7 +88,7 @@ class Role(db.Model, RoleMixin):
     id = db.Column(db.BigInteger, primary_key=True)
     name = db.Column(db.String(80), unique=True, nullable=False)  
     description = db.Column(db.String(255), nullable=True) 
-
+    rank = db.Column(db.Integer, nullable=True)
 
 class User(BaseModel, db.Model, UserMixin):
     __tablename__ = 'users'
