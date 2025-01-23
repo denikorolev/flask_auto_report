@@ -7,9 +7,12 @@
 </head>
 <body>
     <p>This is the error page</p><br>
-    <p>{{ message }} </p> <br><br><br>
-    <a href="/auth/login">link to the login page</a><br>
-    <a href="/">link to the main page</a>
+    {% if message %}
+        <p>{{ message }} </p> <br><br><br>
+    {% endif %}
+    
+    <a href="{{url_for("security.login")}}">link to the login page</a><br>
+    <a href="{{url_for("index")}}">link to the main page</a>
     
 </body>
 </html>

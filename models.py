@@ -191,30 +191,19 @@ class UserProfile(BaseModel):
         Raises:
             ValueError: Если профиль по умолчанию уже существует для данного пользователя.
         """
+        if default_profile:
+            existing_default_profile = cls.get_default_profile(user_id)
+            if existing_default_profile:
+                raise ValueError("Профиль по умолчанию уже существует для данного пользователя.")
+        
         new_profile = cls(
             user_id=user_id,
             profile_name=profile_name,
             description=description,
             default_profile=default_profile
         )
-        new_profile.save()  # Используем метод save для сохранения профиля с логикой проверки
+        new_profile.save()  
         return new_profile
-
-    def save(self):
-        """
-        Сохраняет профиль в базу данных с проверкой на наличие другого профиля по умолчанию.
-        
-        Raises:
-            ValueError: Если профиль по умолчанию уже существует для данного пользователя.
-        """
-        # Проверка на наличие другого профиля по умолчанию, если флаг default установлен в True
-        if self.default_profile:
-            existing_default_profile = UserProfile.get_default_profile(self.user_id)
-            if existing_default_profile and existing_default_profile.id != self.id:
-                raise ValueError("Профиль по умолчанию уже существует для данного пользователя.")
-        
-        # Вызываем метод save из базовой модели
-        super(UserProfile, self).save()
         
     @classmethod
     def get_default_profile(cls, user_id):
@@ -225,7 +214,7 @@ class UserProfile(BaseModel):
         Returns:
             UserProfile: Профиль по умолчанию или None, если его нет.
         """
-        return cls.query.filter_by(user_id=user_id, default_profile=True).first()
+        return cls.query.filter_by(user_id=user_id, default_profile=True).first() or None
 
 
     @classmethod

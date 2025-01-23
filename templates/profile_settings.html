@@ -1,4 +1,4 @@
-<!-- templates/profile_settings.html -->
+<!-- profile_settings.html -->
 {% extends "base.html" %}
 
 {% block container %}
@@ -29,35 +29,52 @@
 
 
     <!-- Блок настроек для сохранения настроек профиля в БД -->
-    <div class="settings-block">
-        <h3 class="settings-block__title">Настройки</h3>
-        <ul class="settings-block__list" id="settings-block">
-            <li class="settings-block__item">
-                <label class="settings-block__label" for="USE_WORD_REPORTS">Использовать выгрузку протокола в word</label>
-                <input class="settings-block__input" type="checkbox" id="use_word_reports" name="USE_WORD_REPORTS" 
-                    {% if user_settings.USE_WORD_REPORTS %} checked {% endif %}>
-            </li>
-            <li class="settings-block__item">
-                <label class="settings-block__label" for="USE_SENTENCE_AUTOSAVE">Использовать автосохранение новых предложений</label>
-                <input class="settings-block__input" type="checkbox" id="useSentenceAutosave" name="USE_SENTENCE_AUTOSAVE" 
-                    {% if user_settings.USE_SENTENCE_AUTOSAVE %} checked {% endif %}>
-            </li>
-            <li class="settings-block__item">
-                <label class="settings-block__label" for="APP_LANGUAGE">Theme:</label>
-                <select class="settings-block__select" id="language" name="APP_LANGUAGE">
-                    <option value="русский" {% if user_settings.APP_LANGUAGE == 'ru' %}selected{% endif %}>русский</option>
-                    <option value="английский" {% if user_settings.APP_LANGUAGE == 'eng' %}selected{% endif %}>английский</option>
-                </select>
-            </li>
-            <li class="settings-block__item">
-                <label class="settings-block__label" for="THEME">Theme:</label>
-                <select class="settings-block__select" id="theme" name="THEME">
-                    <option value="light" {% if user_settings.THEME == 'light' %}selected{% endif %}>Light</option>
-                    <option value="dark" {% if user_settings.THEME == 'dark' %}selected{% endif %}>Dark</option>
-                </select>
-            </li>
-        </ul>
-        <button class="btn report__btn settings-block__btn" type="button" id="saveSettings">Сохранить</button>
+    <div class="flex container">
+        <div class="settings-block">
+            <h3 class="settings-block__title">Настройки</h3>
+            <ul class="settings-block__list" id="settings-block">
+                <li class="settings-block__item">
+                    <label class="settings-block__label" for="USE_WORD_REPORTS">Использовать выгрузку протокола в word</label>
+                    <input class="settings-block__input" type="checkbox" id="use_word_reports" name="USE_WORD_REPORTS"
+                        {% if user_settings.USE_WORD_REPORTS %} checked {% endif %}>
+                </li>
+                <li class="settings-block__item">
+                    <label class="settings-block__label" for="USE_SENTENCE_AUTOSAVE">Использовать автосохранение новых предложений</label>
+                    <input class="settings-block__input" type="checkbox" id="useSentenceAutosave" name="USE_SENTENCE_AUTOSAVE"
+                        {% if user_settings.USE_SENTENCE_AUTOSAVE %} checked {% endif %}>
+                </li>
+                <li class="settings-block__item">
+                    <label class="settings-block__label" for="APP_LANGUAGE">Theme:</label>
+                    <select class="settings-block__select" id="language" name="APP_LANGUAGE">
+                        <option value="русский" {% if user_settings.APP_LANGUAGE == 'ru' %}selected{% endif %}>русский</option>
+                        <option value="английский" {% if user_settings.APP_LANGUAGE == 'eng' %}selected{% endif %}>английский</option>
+                    </select>
+                </li>
+                <li class="settings-block__item">
+                    <label class="settings-block__label" for="THEME">Theme:</label>
+                    <select class="settings-block__select" id="theme" name="THEME">
+                        <option value="light" {% if user_settings.THEME == 'light' %}selected{% endif %}>Light</option>
+                        <option value="dark" {% if user_settings.THEME == 'dark' %}selected{% endif %}>Dark</option>
+                    </select>
+                </li>
+            </ul>
+            <button class="btn report__btn settings-block__btn" type="button" id="saveSettings">Сохранить</button>
+        </div>
+        
+        <div class="settings-block">
+            {% if user_settings %}
+                <ul>
+                    {% for key, value in user_settings.items() %}
+        
+                        <li class="flex">
+                            <p>{{ key }}: </p> <p>{{ value }}</p>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>Настройки не найдены</p>
+            {% endif %}
+        </div>
     </div>
     
 

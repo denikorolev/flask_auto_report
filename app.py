@@ -7,14 +7,11 @@ from config import get_config
 from flask_migrate import Migrate
 from models import db, User, UserProfile, Role
 from menu_constructor import build_menu
+from profile_constructor import ProfileSettingsManager
 
 import os
 import logging
-if os.getenv("FLASK_ENV") == "local":
-    from flask_debugtoolbar import DebugToolbarExtension
     
-
-
 
 from flask_wtf.csrf import CSRFProtect
 from flask_security import Security, SQLAlchemyUserDatastore
@@ -87,6 +84,17 @@ def inject_menu():
 def inject_user_settings():
     """Добавляет все настройки профиля в глобальный контекст Jinja."""
     user_settings = app.config.get("PROFILE_SETTINGS", {})
+    print("Inside inject_user_settings")
+    print(f"User settings from app.config: {user_settings}")
+    excluded_endpoints = {"error", "security.login", "security.logout", "index", "profile_settings.create_profile"}
+    if request.endpoint in excluded_endpoints:
+        return {}
+    
+    if not user_settings:
+        print("User settings not found in app.config, loading from ProfileSettingsManager")
+        user_settings = ProfileSettingsManager.load_profile_settings()
+        print(f"returned from ProfileSettingsManager {user_settings}")
+    print(f"User settings from context processor: {user_settings}")
     return {"user_settings": user_settings}
 
 # Добавляю контекстный процессор для версии приложения
@@ -121,123 +129,88 @@ def test_db_connection():
         return False
 
 
-# Фильтруем запросы к статическим ресурсам
-class StaticFilter(logging.Filter):
-    def filter(self, record):
-        return not record.getMessage().startswith("GET /static")
-
-
-class RemoveHeadersFilter(logging.Filter):
-    """Фильтр для исключения заголовков запросов из логов."""
-    def filter(self, record):
-        return not record.getMessage().startswith("Headers:")
-    
-    
-# Добавляем фильтр в логгер
-app.logger.addFilter(RemoveHeadersFilter())
-werkzeug_logger = logging.getLogger("werkzeug")
-werkzeug_logger.addFilter(StaticFilter())
-werkzeug_logger.addFilter(RemoveHeadersFilter())
-
 
 # Логика для того, чтобы сделать данные профиля доступными в любом месте программы
 @app.before_request
 def load_current_profile():
-    # Исключения для маршрутов, которые не требуют авторизации
     
-    if request.path.startswith('/static/') or request.path.startswith('/_debug_toolbar/'):
-        return None
-    
-    if request.endpoint in [
+    # Исключения для статических файлов и маршрутов, которые не требуют профиля
+    if request.path.startswith('/static/') or request.endpoint in [
         "security.login", "security.logout", "security.register", 
-        "security.forgot_password", "security.reset_password", "security.change_password"
+        "security.forgot_password", "security.reset_password", 
+        "security.change_password","profile_settings.choosing_profile", 
+        "error", "index", "profile_settings.create_profile"
     ]:
         return None
-        
-    # Проверяем, установлена ли сессия пользователя и находится ли он на странице, требующей профиля
-    if current_user.is_authenticated:  
-        user_profiles = UserProfile.get_user_profiles(current_user.id)
-            
-        if user_profiles:
-            if 'profile_id' in session:
-                g.current_profile = UserProfile.find_by_id(session['profile_id'])
-                
-                # Если профиль не найден или не принадлежит текущему пользователю, удаляем его из сессии
-                if not g.current_profile or g.current_profile.user_id != current_user.id:
-                    session.pop('profile_id', None)
-                    g.current_profile = None
-            else:
-                # Проверяем, если у пользователя только один профиль
-                if user_profiles[0] == "Default":
-                    render_template("welcome_page.html",
-                                    title="Welcome"
-                                    )
-                    
-                if len(user_profiles) == 1:
-                    g.current_profile = user_profiles[0]
-                    session['profile_id'] = g.current_profile.id
-                    return redirect(url_for("working_with_reports.choosing_report"))
-                elif len(user_profiles) > 1:
-                    g.current_profile = user_profiles[0]
-                else:
-                    g.current_profile = None
-
-            
-            
+    # Если пользователь не авторизован, удаляем профиль из g и сессии    
+    if not current_user.is_authenticated:
+        g.current_profile = None
+        session.pop("profile_id", None)
+        return
+    
+    # Если профиль уже установлен в g, пропускаем
+    if hasattr(g, "current_profile") and g.current_profile:
+        print("skipping - profile is already set in g")
+        return
+    
+    # Если я здесь, значит пользователь авторизован и у него нет профиля в g
+    profile_id = session.get("profile_id")
+    
+    if profile_id:
+        # Пытаемся загрузить профиль из базы тот профиль, который висит 
+        # в сессии и установить его в g
+        profile = UserProfile.find_by_id_and_user(profile_id, current_user.id)
+        if profile:
+            g.current_profile = profile
+            print("Profile loaded to g from session")
+            return
         else:
-            # Если у юзера нет профиля то создаю ему дефолтный профиль загружаю 
-            # этот профиль в сессию и перекидываю его на главную страницу в противном 
-            # случае отправляю его на страницу ошибки (это дыра в безопасности и нужно будет это продумать нормально)
-            user_first_profile = UserProfile.create(current_user.id, profile_name="Default") 
-            session["profile_id"] = user_first_profile.id
-            if not "profile_id" in session:
-                return redirect(url_for("error"))
-            
-            return redirect(url_for("index"))
-        
-
-    else:
-        if 'profile_id' in session:
-            print("Удаляю профиль из сессии")
-            session.pop('profile_id', None)
-            g.current_profile = None
-        print("Все давай до свидания")
-        return None
-
-
-@app.route("/", methods=['POST', 'GET'])
-@auth_required()
-def index():
+            # Если профиль из сессии не найден в базе или не 
+            # соответствует текущему пользователю, удаляем его из 
+            # сессии и идем ниже и ищем профиль текущего пользователя
+            print("Profile not found in db or doesn't belong to current user")
+            session.pop("profile_id", None)
+    
     user_profiles = UserProfile.get_user_profiles(current_user.id)
-    
-    # Если у пользователя нет профиля в сессии, проверим количество профилей
-    if 'profile_id' not in session:
-        if user_profiles[0].profile_name == "Default":
-                session['profile_id'] = user_profiles[0].id
-                print("Зашел в блок default на главной странице")
-                return redirect(url_for("welcome_page"))
-        if len(user_profiles) == 1:
-            session['profile_id'] = user_profiles[0].id
-            return redirect(url_for("working_with_reports.choosing_report"))
-        elif len(user_profiles) > 1:
-            pass
-        
-    
-    return render_template('index.html', 
-                           title="Radiologary", 
-                           user_profiles=user_profiles,
-                           )
+    # Если профиля нет ни в сессии ни в g то выясняем если ли вообще 
+    # у пользователя профили, сколько их и в зависимости 
+    # от этого маршрутизируем
+    if not user_profiles:
+        print("User has no profiles")
+        # Если у пользователя нет профилей отпраляем его создавать профиль
+        return redirect(url_for("profile_settings.choosing_profile"))
+    elif len(user_profiles) == 1:
+        print("User has only one profile")
+        # Если только один профиль, устанавливаем его и отправляем на выбор отчета
+        profile = user_profiles[0]
+        session["profile_id"] = profile.id
+        g.current_profile = profile
+        ProfileSettingsManager.load_profile_settings()
+        return redirect(url_for("working_with_reports.choosing_report"))
+    elif len(user_profiles) > 1 and UserProfile.get_default_profile(current_user.id):
+        print("User has multiple profiles and has default profile")
+        # Если у пользователя несколько профилей и есть дефолтный, устанавливаем его и отправляем на выбор отчета
+        profile = UserProfile.get_default_profile(current_user.id)
+        session["profile_id"] = profile.id
+        g.current_profile = profile
+        ProfileSettingsManager.load_profile_settings()
+        return redirect(url_for("working_with_reports.choosing_report"))
+    else:
+        print("User has multiple profiles and no default profile")
+        # Если профилей несколько и дефолтный не выбран, перенаправляем для выбора профиля
+        return redirect(url_for("profile_settings.choosing_profile"))
+                               
 
-
-
-@app.route("/welcome_page", methods=["GET"])
-def welcome_page():
-    return render_template("welcome_page.html",
-                           title="Добро пожаловать")
+# Маршрут для главной страницы
+@app.route("/", methods=['POST', 'GET'])
+def index():
+    return render_template("index.html", title="Главная страница")
+                           
 
 
 @app.route("/error", methods=["POST", "GET"])
 def error():
+    print("inside error route")
     message = request.args.get("message") or "no message"
     return render_template("error.html",
                            message=message)
@@ -246,15 +219,60 @@ def error():
 # Обработка ошибок
 @app.errorhandler(Exception)
 def handle_exception(e):
-    app.logger.error(f"My errorhandler Exception occurred: {str(e)}")
+    app.logger.error(f"Errorhandler: {str(e)}")
     er = str(e)
-    return f"Internal Server Error: {er}", 500
+    return f"Internal Server Error {er}", 500
 
 
 # Это обязательная часть для разрыва сессии базы данных после каждого обращения
 @app.teardown_appcontext 
 def close_db(error):
     db.session.remove()
+
+
+
+# Фильтруем логи 
+if os.getenv("FLASK_ENV") == "local":
+    from flask_debugtoolbar import DebugToolbarExtension
+    class StaticFilter(logging.Filter):
+        """Фильтр для исключения запросов к /static/."""
+        def filter(self, record):
+            return not record.getMessage().startswith("GET /static/")
+
+    class DebugToolbarFilter(logging.Filter):
+        """Фильтр для исключения запросов к /_debug_toolbar/static/."""
+        def filter(self, record):
+            return not record.getMessage().startswith("GET /_debug_toolbar/static/")
+
+    class RemoveHeadersFilter(logging.Filter):
+        """Фильтр для исключения заголовков запросов из логов."""
+        def filter(self, record):
+            return not record.getMessage().startswith("Headers:")
+    
+    class IgnoreFaviconFilter(logging.Filter):
+        """Исключает запросы к favicon.ico из логов."""
+        def filter(self, record):
+            return not record.getMessage().startswith("GET /favicon.ico")
+        
+    
+    
+    # Подключаем фильтры к логгеру Flask
+    app.logger.addFilter(StaticFilter())
+    app.logger.addFilter(DebugToolbarFilter())
+    app.logger.addFilter(RemoveHeadersFilter())
+    app.logger.addFilter(IgnoreFaviconFilter())
+   
+
+    # Подключаем фильтры к логгеру Werkzeug
+    werkzeug_logger = logging.getLogger("werkzeug")
+    
+    werkzeug_logger.addFilter(StaticFilter())
+    werkzeug_logger.addFilter(DebugToolbarFilter())
+    werkzeug_logger.addFilter(RemoveHeadersFilter())
+    werkzeug_logger.addFilter(IgnoreFaviconFilter())
+
+
+
 
 
 if __name__ == "__main__":

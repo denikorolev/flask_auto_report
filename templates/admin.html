@@ -78,7 +78,7 @@
                             <input type="checkbox" class="admin-filter__checkbox admin-filter__checkbox--table" 
                                    value="{{ table }}" id="table-{{ table }}">
                             <label for="table-{{ table }}" 
-                                   class="admin-filters__label admin-filters__label--table">Название таблицы: {{ table }}</label>
+                                   class="admin-filters__label admin-filters__label--table">Таблица:   {{ table }}</label>
                         </li>
                         
                         <!-- Список полей, изначально скрыт -->
@@ -89,7 +89,7 @@
                                            data-table="{{ table }}" value="{{ column }}" 
                                            id="column-{{ table }}-{{ column }}" checked>
                                     <label class="admin-filters__label admin-filters__label--column" 
-                                           for="column-{{ table }}-{{ column }}">Название поля в таблице: {{ column }}</label>
+                                           for="column-{{ table }}-{{ column }}">Поле:   {{ column }}</label>
                                 </li>
                             {% endfor %}
                         </div>

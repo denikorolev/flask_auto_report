@@ -18,7 +18,9 @@
     
     <header class="header">
         <div class="container container--header">
-            <img class="header__logo" src="{{ url_for("static", filename="pic/favi2.png")}}" alt="logo ">
+            <a href="{{ url_for("index")}}" class="header__logo--link">
+                <img class="header__logo" src="{{ url_for("static", filename="pic/favi2.png")}}" alt="logo ">
+            </a>
             
             <nav class="header__nav">
                 <ul class="header__menu">
@@ -35,11 +37,15 @@
             
             
             <!-- Сообщение о текущем профиле -->
-            {% if g.current_profile %}
-                <p class="header__paragraph">Профиль: {{ g.current_profile.profile_name }}</p>
-            {% else %}
-                <p class="header__paragraph">No profile selected!</p>
-            {% endif %}
+            
+                {% if g.current_profile %}
+                    <a href="{{ url_for("profile_settings.choosing_profile") }}">
+                        <p class="header__paragraph">Профиль: {{ g.current_profile.profile_name }}</p>
+                    </a>
+                {% else %}
+                    <p class="header__paragraph">No profile selected!</p>
+                {% endif %}
+            
 
             <!-- Сообщение о текущем юзере -->
             <p class="header__paragraph">Привет, {{ current_user.roles[0].name }}, {{ current_user.user_name }}!</p>

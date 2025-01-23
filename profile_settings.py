@@ -11,59 +11,82 @@ import json
 profile_settings_bp = Blueprint('profile_settings', __name__)
 
 
-# Маршрут для страницы настроек профиля
-@profile_settings_bp.route('/profile_settings/<int:profile_id>', methods=['GET'])
+# Маршрут для загрузки страницы настроек профиля
+@profile_settings_bp.route("/profile_settings", methods=["GET"])
 @auth_required()
-def profile_settings(profile_id):
-    # menu = current_app.config['MENU']
-    profile = UserProfile.find_by_id_and_user(profile_id, current_user.id)
+def profile_settings():
+    profile = g.current_profile
     if profile:
         return render_template('profile_settings.html', 
-                               title="Profile Settings", 
-                            #    menu=menu,
+                               title="Настройки профиля", 
                                profile=profile)
     else:
         print('Profile not found.', 'danger')
         return redirect(url_for('index'))
 
-
-# Логика для того чтобы установить выбранный профайл
-@profile_settings_bp.route("/set_profile/<int:profile_id>")
+# Маршрут для выбора существующего профиля
+@profile_settings_bp.route("/choosing_profile", methods=["GET"])
 @auth_required()
-def set_profile(profile_id):
-    profile = UserProfile.find_by_id_and_user(profile_id, current_user.id)
-    if profile:
-        session['profile_id'] = profile.id
-        ProfileSettingsManager.load_profile_settings(g.current_profile.id)
-        sync_profile_files(g.current_profile.id)
-    else:
-        print("Profile not found.", "danger")
-    return redirect(url_for("working_with_reports.choosing_report"))
+def choosing_profile():
+    # Вот пользователь авторизован и у него либо нет профиля 
+    # либо их несколько и нет дефолтного
+    print(getattr(g,"current_profile", None))
+    print(f"session profile: {session.get('profile_id')}")
+    user_profiles = UserProfile.get_user_profiles(current_user.id)
+    print(f"user_profiles: {user_profiles}")
+    if not user_profiles:
+        return render_template("choosing_profile.html",
+                           title="Выбор профиля")
+    profile_id = request.args.get("profile_id") or None
+    print(f"profile_id from url: {profile_id}")
+    if profile_id:
+        print("inside profile_id from url logic")
+        profile = UserProfile.find_by_id_and_user(profile_id, current_user.id)
+        if profile:
+            session["profile_id"] = profile.id
+            g.current_profile = profile
+            ProfileSettingsManager.load_profile_settings()
+            # Синхронизацию файлов пока оставлю здесь, но ее нужно будет перенести
+            sync_profile_files(profile.id)
+            return redirect(url_for("working_with_reports.choosing_report"))
+        else:
+            return render_template(url_for("error"),
+                           title="Данные о выбранном профиле не получены"
+                           )
+    print("not dive into profile_id from url logic")
+    return render_template("choosing_profile.html",
+                           title="Выбор профиля",
+                           user_profiles=user_profiles)
 
 
-# Новый маршрут для создания профиля
-@profile_settings_bp.route("/create_profile", methods=['POST',"GET"])
+# Маршрут для создания профиля
+@profile_settings_bp.route("/create_profile", methods=["POST"])
 @auth_required()
 def create_profile():
-    print("started route 'create profile'")
-    if request.method == 'POST':
-        profile_name = request.form.get('profile_name')
-        description = request.form.get('description')
-        default_profile = False
-        if profile_name:
-            # Создаем профиль пользователя
+    data = request.get_json()
+    if not data:
+        return jsonify({"status": "error", "message": "No data received."}), 400
+    
+    profile_name = data.get('profile_name')
+    description = data.get('description')
+    is_default = data.get('is_default')
+    
+    # if is_default:
+    #     UserProfile.set_default_profile(current_user.id)
+    if profile_name:
+        try:
             UserProfile.create(
                 current_user.id, 
                 profile_name, 
                 description,
-                default_profile=default_profile
+                default_profile=is_default
                 )
-            print("Profile created successfully!", "success")
-            return redirect(url_for('index'))
-        else:
-            print("Profile name is required.", "danger")
-
-    return render_template('create_profile.html', title="Create Profile")
+        except Exception as e:
+            return jsonify({"status": "error", "message": str(e)}), 400
+       
+        return jsonify({"status": "success", "message": "Profile created successfully!"}), 200
+    
+    return jsonify({"status": "error", "message": "Profile name is required."}), 400
 
 
 # Маршрут для обновления имени и дескриптора профиля
@@ -134,5 +157,5 @@ def save_settings():
         except Exception as e:
             return jsonify({"status": "error", "message": str(e)}), 400
 
-    ProfileSettingsManager.load_profile_settings(g.current_profile.id)
+    ProfileSettingsManager.load_profile_settings()
     return jsonify({"status": "success", "message": "Settings saved successfully!"})

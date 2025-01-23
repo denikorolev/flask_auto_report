@@ -48,8 +48,8 @@ class Config:
     SECURITY_SEND_REGISTER_EMAIL = False  # Отключить отправку писем при регистрации
     SECURITY_SEND_PASSWORD_CHANGE_EMAIL = False  # Отключить отправку писем при изменении пароля
     SECURITY_SEND_PASSWORD_RESET_EMAIL = False
-    SECURITY_POST_LOGIN_VIEW = "/"  # URL после успешного входа
-    SECURITY_POST_LOGOUT_VIEW = "/login"  
+    SECURITY_POST_LOGIN_VIEW = "/working_with_reports/choosing_report"  # URL после успешного входа
+    SECURITY_POST_LOGOUT_VIEW = "/" # URL после выхода
     REMEMBER_COOKIE_DURATION = 3600 * 24 * 7  # Продолжительность в секундах (7 дней)
     REMEMBER_COOKIE_HTTPONLY = True          # Безопасность cookie
     SECURITY_REMEMBER_ME = True              # Включить "запомнить меня"# URL после выхода
@@ -74,68 +74,6 @@ class Config:
     OPENAI_ORGANIZATION = os.getenv("OPENAI_ORGANIZATION")
     OPENAI_PROJECT = os.getenv("OPENAI_PROJECT")
     OPENAI_ASSISTANT = os.getenv("OPENAI_ASSISTANT")
-    
-    
-    # # Словарь для хранения настроек профиля
-    # PROFILE_SETTINGS = {}
-    
-    # @classmethod
-    # def load_profile_settings(cls, profile_id):
-    #     """
-    #     Загружает настройки для указанного профиля из таблицы AppConfig.
-    #     """
-        
-    #     settings = AppConfig.query.filter_by(profile_id=profile_id).all()
-    #     cls.PROFILE_SETTINGS = {setting.config_key: cls._parse_value(setting) for setting in settings}
-
-    #     # Сохраняем в app.config для доступа через app.config
-    #     for key, value in cls.PROFILE_SETTINGS.items():
-    #         current_app.config[key.upper()] = value
-
-    # @staticmethod
-    # def _parse_value(setting):
-    #     """
-    #     Конвертирует значение настройки в правильный тип, основываясь на config_type.
-    #     """
-    #     if setting.config_type == "boolean":
-    #         return setting.config_value.lower() == "true"
-    #     elif setting.config_type == "integer":
-    #         return int(setting.config_value)
-    #     elif setting.config_type == "json":
-    #         import json
-    #         return json.loads(setting.config_value)
-    #     return setting.config_value
-
-    # @classmethod
-    # def get_profile_setting(cls, key, default=None):
-    #     """
-    #     Возвращает значение настройки профиля по ключу.
-    #     """
-    #     return cls.PROFILE_SETTINGS.get(key, default)
-    
-    # # Menu configuration
-    # @staticmethod
-    # def get_menu():
-    #     """Формирует меню с учетом текущего профиля"""
-    #     menu = [
-    #         {"name": "Главная", "url": url_for("index")},
-    #         {"name": "Протокол", "url": url_for("working_with_reports.choosing_report")},
-    #         {"name": "Список протоколов", "url": url_for("my_reports.reports_list")},
-    #         {"name": "Новый протокол", "url": url_for("new_report_creation.create_report")},
-    #         {"name": "Настройки", "url": url_for("report_settings.report_settings")},
-    #         {"name": "API", "url":url_for("openai_api.start_openai_api")},
-    #         {"name": "Ключевые слова", "url":url_for("key_words.key_words")},
-    #         {"name": "admin", "url":url_for("admin.admin")}
-    #     ]
-        
-    #     # Добавляем настройки профиля, если профиль выбран
-    #     if g.current_profile:
-    #         menu.append({
-    #             "name": "Настройки профиля",
-    #             "url": url_for("profile_settings.profile_settings", profile_id=g.current_profile.id)
-    #         })
-        
-    #     return menu
 
     
     @staticmethod
