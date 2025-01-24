@@ -3,25 +3,33 @@
 document.addEventListener('DOMContentLoaded', function() {
     const filterTypeSelect = document.getElementById('filter_type');
     const reportList = document.getElementById('reports_list');
-    // Инициализируем фильтрацию отчетов по типу при изменении фильтра
+
+    // Инициализируем фильтрацию отчетов по типу при изменении фильтра. 
+    // Функция filterReportsByType находится в utils.js
     filterTypeSelect.addEventListener('change', function() {
         filterReportsByType(filterTypeSelect, reportList);
     });
 
     // Инициализирую слушатель кнопки удалить отчет
-
+    document.querySelectorAll('.my-report-list__button--delete').forEach(button => {
+        button.addEventListener('click', deleteReport);
+    });
 });
 
 
-function deleteReport(button){
-    const reportId = button.getAttribute("data-report-id") 
-    
+
+//Функции
+
+// Функция удаления отчета
+function deleteReport(event){
+    button = event.currentTarget;
+    const reportId = button.dataset.reportId;
     if (!reportId) {
-        toastr.error('report ID is missing.');
+        console.error('report ID is missing.');
         return;
     }
     
-    const confirmation = confirm('Are you sure you want to delete this report?');
+    const confirmation = confirm('Вы действительно хотите удалить протокол? Это действие нельзя отменить.');
     if (!confirmation) return;
 
         sendRequest({

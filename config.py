@@ -75,6 +75,13 @@ class Config:
     OPENAI_PROJECT = os.getenv("OPENAI_PROJECT")
     OPENAI_ASSISTANT = os.getenv("OPENAI_ASSISTANT")
 
+
+    # Дефолтные настройки для профиля
+    DEFAULT_PROFILE_SETTINGS = {"USE_WORD_REPORTS": False,
+                                "USE_SENTENCE_AUTOSAVE": True,
+                                "APP_LANGUAGE": "ru",
+                                "APP_THEME": "light",}
+        
     
     @staticmethod
     def get_user_upload_folder():

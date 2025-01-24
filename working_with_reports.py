@@ -40,7 +40,7 @@ def choosing_report():
         
     return render_template(
         "choose_report.html",
-        title="Report",
+        title="Выбор шаблона протокола",
         user_reports=current_profile_reports,
         report_types_and_subtypes=report_types_and_subtypes
     )

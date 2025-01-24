@@ -4,9 +4,9 @@
 
 <input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
 
-<div class="container">
+<div class="container my-reports-list">
     {% if profile_reports %}
-    <h3>List of reports</h3>
+    <h3 class="my-report-list__title" >List of reports</h3>
     
     <!-- Form for filtering by report type -->
     <div class="form-group">
@@ -29,11 +29,10 @@
     </ul>
     
     <!-- Reports list as an unordered list with list items -->
-    <ul style="display: grid;" id="reports_list">
+    <ul style="display: grid;" id="reports_list" class="my-report-list__list">
         {% for report in profile_reports %}
-            <li data-report-type="{{ report.report_to_subtype.subtype_to_type.id }}">
+            <li data-report-type="{{ report.report_to_subtype.subtype_to_type.id }}" class="my-report-list__item">
                 <form method="POST" action="{{ url_for("my_reports.reports_list") }}">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="report_id" value="{{ report.id }}">
                     
                     <ul class="report_grid" data-report-type = "{{report.report_to_subtype.subtype_to_type.id}}">
@@ -41,7 +40,7 @@
                             <input class="report_input__item" value="{{ report.report_to_subtype.subtype_to_type.type_text }}" name="type" id="type" readonly>
                         </li data-report-type="{{ report.report_to_subtype.subtype_to_type.id }}">
                         <li class="report_form_item" data-report-type="{{ report.report_to_subtype.subtype_to_type.id }}">
-                            <input class="report_input__item" value="{{ report.report_subtype.subtype_text }}" name="subtype" id="subtype" readonly>
+                            <input class="report_input__item" value="{{ report.report_to_subtype.subtype_text }}" name="subtype" id="subtype" readonly>
                         </li>
                         <li class="report_form_item" data-report-type="{{ report.report_to_subtype.subtype_to_type.id }}">
                             <input class="report_input__item" value="{{ report.report_name }}" name="report_name" id="report_name" readonly>
@@ -51,10 +50,10 @@
                         </li>
                         <!-- Interaction buttons as list items -->
                         <li class="report_form_item" data-report-type="{{ report.report_to_subtype.subtype_to_type.id }}">
-                            <button class="btn report__btn" type="button" onclick="deleteReport(this)" data-report-id="{{ report.id }}" name="report_delete">Delete</button>
+                            <button class="btn report__btn my-report-list__button my-report-list__button--delete" type="button" data-report-id="{{ report.id }}" name="report_delete">Delete</button>
                         </li>
                         <li class="report_form_item" data-report-type="{{ report.report_to_subtype.subtype_to_type.id }}">
-                            <a class="btn report__btn" href="{{ url_for("editing_report.edit_report", report_id=report.id) }}">Edit</a>
+                            <a class="btn report__btn my-report-list__button my-report-list__button--edit" href="{{ url_for("editing_report.edit_report", report_id=report.id) }}">Edit</a>
                         </li>
                     </ul>
                 </form>

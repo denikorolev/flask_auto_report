@@ -14,8 +14,6 @@ report_settings_bp = Blueprint('report_settings', __name__)
 @report_settings_bp.route('/report_settings', methods=['GET', 'POST'])
 @auth_required()
 def report_settings():
-    # menu = current_app.config["MENU"]
-    
     profile_types = ReportType.find_by_profile(g.current_profile.id)
     profile_subtypes = []
     for type_ in profile_types:
@@ -28,8 +26,7 @@ def report_settings():
     paragraph_types = ParagraphType.query.all() 
         
     return render_template('report_settings.html', 
-                           title = "Report settings",
-                        #    menu = menu,
+                           title = "Настройки протоколов",
                            user_types=profile_types,
                            user_subtypes=profile_subtypes,
                            paragraph_types=paragraph_types 

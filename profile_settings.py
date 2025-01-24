@@ -30,13 +30,17 @@ def profile_settings():
 def choosing_profile():
     # Вот пользователь авторизован и у него либо нет профиля 
     # либо их несколько и нет дефолтного
-    print(getattr(g,"current_profile", None))
-    print(f"session profile: {session.get('profile_id')}")
+    print("profile settings started-------------")
+    print(f"profile settings started and profile in g = {getattr(g,'current_profile', None)}")
+    print(f"profile settings, looking for profile in session, profile = {session.get('profile_id')}")
+    print("not use profile from session")
     user_profiles = UserProfile.get_user_profiles(current_user.id)
-    print(f"user_profiles: {user_profiles}")
+    print(f"looking for user_profiles: {user_profiles}")
     if not user_profiles:
+        print("profile settings end work with success if it's new user -------------")
         return render_template("choosing_profile.html",
-                           title="Выбор профиля")
+                           title="Создание нового профиля",
+                           new_user=True)
     profile_id = request.args.get("profile_id") or None
     print(f"profile_id from url: {profile_id}")
     if profile_id:
@@ -48,8 +52,10 @@ def choosing_profile():
             ProfileSettingsManager.load_profile_settings()
             # Синхронизацию файлов пока оставлю здесь, но ее нужно будет перенести
             sync_profile_files(profile.id)
+            print("profile settings end work with success -------------")
             return redirect(url_for("working_with_reports.choosing_report"))
         else:
+            print("profile settings end work with error -------------")
             return render_template(url_for("error"),
                            title="Данные о выбранном профиле не получены"
                            )
@@ -63,6 +69,7 @@ def choosing_profile():
 @profile_settings_bp.route("/create_profile", methods=["POST"])
 @auth_required()
 def create_profile():
+    print("creating profile started--------")
     data = request.get_json()
     if not data:
         return jsonify({"status": "error", "message": "No data received."}), 400
@@ -71,9 +78,8 @@ def create_profile():
     description = data.get('description')
     is_default = data.get('is_default')
     
-    # if is_default:
-    #     UserProfile.set_default_profile(current_user.id)
     if profile_name:
+        print("creating profile name found")
         try:
             UserProfile.create(
                 current_user.id, 
@@ -82,10 +88,11 @@ def create_profile():
                 default_profile=is_default
                 )
         except Exception as e:
+            print("creating profile end work {e} --------")
             return jsonify({"status": "error", "message": str(e)}), 400
-       
+        print("creating profile end work SUCCESS --------")
         return jsonify({"status": "success", "message": "Profile created successfully!"}), 200
-    
+    print("creating profile end work ERROR no profile name --------")
     return jsonify({"status": "error", "message": "Profile name is required."}), 400
 
 

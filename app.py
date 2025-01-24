@@ -77,24 +77,32 @@ app.register_blueprint(admin_bp, url_prefix="/admin")
 @app.context_processor
 def inject_menu():
     """Добавляет меню в глобальный контекст Jinja."""
+    print("inject_menu started-------")
+    excluded_endpoints = {"error", "security.login", "security.logout", "index"}
+    if request.endpoint in excluded_endpoints:
+        print("inject_menu end work because of exclusion-------")
+        return {}
+    
     return {"menu": build_menu()}
 
 # Добавляю контекстный процессор для настроек профиля
 @app.context_processor
 def inject_user_settings():
     """Добавляет все настройки профиля в глобальный контекст Jinja."""
-    user_settings = app.config.get("PROFILE_SETTINGS", {})
-    print("Inside inject_user_settings")
-    print(f"User settings from app.config: {user_settings}")
+    print("inject_user_settings started-------")
     excluded_endpoints = {"error", "security.login", "security.logout", "index", "profile_settings.create_profile"}
     if request.endpoint in excluded_endpoints:
+        print("inject_user_settings end work because of exclusion-------")
         return {}
     
+    user_settings = app.config.get("PROFILE_SETTINGS", {})
+
+    print(f"User settings from app.config: {user_settings}")
     if not user_settings:
         print("User settings not found in app.config, loading from ProfileSettingsManager")
         user_settings = ProfileSettingsManager.load_profile_settings()
-        print(f"returned from ProfileSettingsManager {user_settings}")
-    print(f"User settings from context processor: {user_settings}")
+        
+    print(f"inject_user_settings end work. User settings from context processor: {user_settings}")
     return {"user_settings": user_settings}
 
 # Добавляю контекстный процессор для версии приложения
@@ -109,9 +117,16 @@ def inject_app_info():
 # доступ к некоторым частям страниц
 @app.context_processor
 def inject_user_rank():
+    print("inject_user_rank started-------")
     if not current_user.is_authenticated:
+        print("inject_user_rank end work because of user is not authenticated end user's rank is 0 -------")
         return {"user_max_rank": 0}
-    return {"user_max_rank": current_user.get_max_rank()}
+    user_max_rank = current_user.get_max_rank()
+    if not user_max_rank:
+        print("user_max_rank from get_max_rank has returtned as None")
+        user_max_rank = 0   
+    print(f"inject_user_rank end work. User's rank is {user_max_rank} -------")
+    return {"user_max_rank": user_max_rank}
 
 
 

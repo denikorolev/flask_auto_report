@@ -1,17 +1,124 @@
-<!-- index.html -->
-
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ title }}</title>
+    <title>Radiologary</title>
+    <link rel="stylesheet" href="static/css/css_landing.css">
 </head>
 <body>
-    <div>
-        <p>Добро пожаловать на главную страницу</p>
-        <a href="{{ url_for('security.login') }}">Войти</a>
-        <a href="{{ url_for('security.register') }}">Зарегистрироваться</a>
-    </div>
+    <header class="header">
+        <nav class="navbar">
+            <a href="#" class="navbar__logo">Radiologary</a>
+            <ul class="navbar__links">
+                <li><a href="#features">Возможности</a></li>
+                <li><a href="#ai-capabilities">Возможности ИИ</a></li>
+                <li><a href="#testimonials">Отзывы</a></li>
+                <li><a href="#contact">Контакты</a></li>
+            </ul>
+        </nav>
+        <div class="header__content">
+            <h1 class="header__title">Radiologary – Новые возможности в лучевой диагностике</h1>
+            <p class="header__subtitle">Создавайте, редактируйте и управляйте протоколами исследований быстрее, умнее и точнее.</p>
+            <div>
+                <a href="{{ url_for('security.login') }}" class="btn btn--primary">Войти</a>
+                <a href="{{ url_for('security.register') }}" class="btn btn--secondary">Зарегистрироваться</a>
+            </div>
+            <img src="{{ url_for('static', filename='pic/radiologists.jpg') }}" alt="Radiologists" class="header__image">
+        </div>
+    </header>
+
+    <section id="features" class="features">
+        <div class="container">
+            <h2 class="section__title">Основные возможности</h2>
+            <div class="features__grid">
+                <div class="feature">
+                    <h3>Настраиваемые шаблоны</h3>
+                    <p>Создавайте свои собственные шаблоны для КТ, МРТ, ПЭТ-КТ, рентгенографии и других исследований. Полностью под ваши нужды.</p>
+                </div>
+                <div class="feature">
+                    <h3>Интеграция искусственного интеллекта</h3>
+                    <p>Проверка орфографии, логики и структуры. Быстрое формирование заключений на основе введенных данных.</p>
+                </div>
+                <div class="feature">
+                    <h3>Автоматическое обучение</h3>
+                    <p>Система запоминает ваши изменения и адаптирует шаблоны автоматически для повышения эффективности.</p>
+                </div>
+                <div class="feature">
+                    <h3>Работа с ключевыми словами</h3>
+                    <p>Глобальные и специфические ключевые слова для упрощения работы и улучшения структуры протоколов.</p>
+                </div>
+                <div class="feature">
+                    <h3>Диагностическая поддержка</h3>
+                    <p>Задавайте вопросы ИИ о патологиях, признаках и дифференциальных диагнозах – мгновенные ответы.</p>
+                </div>
+                <div class="feature">
+                    <h3>Экспорт и интеграция</h3>
+                    <p>Экспортируйте отчеты в Word или копируйте текст одним нажатием.</p>
+                </div>
+            </div>
+            <img src="{{ url_for('static', filename='pic/radiologists.jpg') }}" alt="Features" class="features__image">
+        </div>
+    </section>
+
+    <section id="ai-capabilities" class="ai">
+        <div class="container">
+            <h2 class="section__title">Возможности искусственного интеллекта</h2>
+            <p>Radiologary использует мощные алгоритмы ИИ, которые:</p>
+            <ul>
+                <li>Автоматически формируют заключения на основе данных протокола.</li>
+                <li>Проверяют логику, грамматику и последовательность вашего отчета.</li>
+                <li>Отвечают на вопросы о патологиях, находках и дифференциальной диагностике.</li>
+            </ul>
+            <a href="/ai-demo" class="btn btn--secondary">Попробовать возможности ИИ</a>
+        </div>
+    </section>
+<!--
+    <section id="testimonials" class="testimonials">
+        <div class="container">
+            <h2 class="section__title">Отзывы врачей</h2>
+            <div class="testimonials__grid">
+                <div class="testimonial">
+                    <p>"Radiologary значительно упростил мою работу. Формирование заключений стало в разы быстрее!"</p>
+                    <span>- Д-р Иван Петров</span>
+                </div>
+                <div class="testimonial">
+                    <p>"Создание собственных шаблонов – это просто находка. Экономлю часы каждую неделю."</p>
+                    <span>- Д-р Мария Смирнова</span>
+                </div>
+                <div class="testimonial">
+                    <p>"ИИ-помощник – это как вторая пара глаз. Всегда можно получить нужную информацию."</p>
+                    <span>- Д-р Алексей Кузнецов</span>
+                </div>
+            </div>
+            <img src="{{ url_for('static', filename='pic/radiologists.jpg') }}" alt="Testimonials" class="testimonials__image">
+        </div>
+    </section>
+-->
+<!--
+    <section id="contact" class="contact">
+        <div class="container">
+            <h2 class="section__title">Свяжитесь с нами</h2>
+            <p>Есть вопросы? Хотите узнать больше? Напишите нам!</p>
+            <form class="contact__form">
+                <input type="text" placeholder="Ваше имя" required>
+                <input type="email" placeholder="Ваш email" required>
+                <textarea placeholder="Ваше сообщение"></textarea>
+                <button type="submit" class="btn btn--primary">Отправить</button>
+            </form>
+        </div>
+    </section>
+-->
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2025 Radiologary. Все права защищены.</p>
+            <ul class="footer__links">
+                <li><a href="#features">Возможности</a></li>
+                <li><a href="#ai-capabilities">ИИ</a></li>
+                <li><a href="#contact">Контакты</a></li>
+            </ul>
+        </div>
+    </footer>
 </body>
 </html>
