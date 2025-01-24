@@ -197,7 +197,7 @@ body {
     color: var(--main-text-color);
 }
 
-.wrapper--auth {
+.auth-register__item {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -210,7 +210,7 @@ body {
     color: inherit;
 }
 
-.label--auth {
+.auth-register__label {
     width: 70px;
     margin-right: 10px;
 }
