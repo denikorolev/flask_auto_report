@@ -27,6 +27,7 @@ function profileGlobalSettingsSave() {
             profile_id: profileSettingBlock.dataset.profileId,
             profile_name: profileSettingBlock.querySelector("#profileName").value,
             description: profileSettingBlock.querySelector("#profileDescription").value,
+            is_default: profileSettingBlock.querySelector("#isDefauleProfile").checked,
         };
 
         // Отправляем данные на сервер

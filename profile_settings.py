@@ -38,7 +38,32 @@ def set_profile_settings(profile_id, settings):
             return False
     return True
 
-# Маршрут для загрузки страницы настроек профиля (checked)
+def set_profile_as_default(profile_id):
+    """
+    Устанавливает профиль по умолчанию для пользователя.
+    """
+    print("set_profile_as_default started----------------")
+    print(f"profile_id = {profile_id}")
+    user_profiles = UserProfile.get_user_profiles(current_user.id)
+    if not user_profiles:
+        return False
+    try:
+        for profile in user_profiles:
+            if profile.id == int(profile_id):
+                profile.default_profile = True
+                print(f"set profile {profile.id} as default")
+            else:
+                print(f"set profile {profile.id} as NOT default")
+                profile.default_profile = False
+            profile.save()
+    except Exception as e:
+        print(f"Error while setting default profile: {e}")
+        return False
+    print("End of set_profile_as_default----------------")
+    return True
+    
+
+# Маршрут для загрузки страницы настроек профиля 
 @profile_settings_bp.route("/profile_settings", methods=["GET"])
 @auth_required()
 def profile_settings():
@@ -51,7 +76,7 @@ def profile_settings():
         print('Profile not found.', 'danger')
         return redirect(url_for('index'))
 
-# Маршрут для выбора существующего профиля (checked)
+# Маршрут для выбора существующего профиля
 @profile_settings_bp.route("/choosing_profile", methods=["GET"])
 @auth_required()
 def choosing_profile():
@@ -92,7 +117,7 @@ def choosing_profile():
                            user_profiles=user_profiles)
 
 
-# Маршрут для создания профиля (checked)
+# Маршрут для создания профиля
 @profile_settings_bp.route("/create_profile", methods=["POST"])
 @auth_required()
 def create_profile():
@@ -136,7 +161,7 @@ def create_profile():
     return jsonify({"status": "error", "message": "Profile name is required."}), 400
 
 
-# Маршрут для обновления имени и дескриптора профиля (checked)
+# Маршрут для обновления имени и дескриптора профиля и выбора профиля по умолчанию
 @profile_settings_bp.route('/update_profile_settings', methods=['POST'])
 @auth_required()
 def update_profile_settings():
@@ -144,13 +169,21 @@ def update_profile_settings():
     profile_id = data.get("profile_id")
     new_name = data.get("profile_name")
     new_description = data.get("description")
+    is_default = data.get("is_default")
+    print(f"this profile default = {is_default}")
     profile = UserProfile.find_by_id_and_user(profile_id, current_user.id)
     
     if profile:
         profile.profile_name = new_name
         profile.description = new_description
         profile.save()
-        return jsonify({"status": "success", "message": "Profile updated successfully!"}), 200
+        if is_default:
+            set_default = set_profile_as_default(profile_id)
+            print(f"Профиль установлен как дефолтный = {set_default}")
+            if not set_default:
+                notification_message = ["не получилось установить профиль по умолчанию"]
+                return jsonify({"status": "succuss","notifications": notification_message, "message": "Изменения сохранены, но"}), 400
+        return jsonify({"status": "success", "message": "Данные профиля успешно обновлены!"}), 200
     else:
         return jsonify({"status": "error", "message": "Profile not found or you do not have permission to update it."}), 400
 
@@ -160,6 +193,7 @@ def update_profile_settings():
 @profile_settings_bp.route('/delete_profile/<int:profile_id>', methods=["DELETE"])
 @auth_required()
 def delete_profile(profile_id):
+    print("deleting profile started--------")
     print(f"you are deleting profile and profile_id = {profile_id}")
     profile = UserProfile.find_by_id_and_user(profile_id, current_user.id)
     if profile:
@@ -195,3 +229,15 @@ def save_settings():
 
     ProfileSettingsManager.load_profile_settings()
     return jsonify({"status": "success", "message": "Settings saved successfully!"})
+
+
+# Маршрут для установки профиля по умолчанию
+@profile_settings_bp.route("/set_default_profile/<int:profile_id>", methods=["POST"])
+@auth_required()
+def set_default_profile(profile_id):
+    if not profile_id:
+        return jsonify({"status": "error", "message": "Профиль не выбран"}), 400
+    set_default = set_profile_as_default(profile_id)
+    if not set_default:
+        return jsonify({"status": "error", "message": "Не получилось установить профиль по умолчанию"}), 400
+    return jsonify({"status": "success", "message": "Профиль установлен как дефолтный"}), 200

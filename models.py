@@ -192,7 +192,7 @@ class UserProfile(BaseModel):
         if default_profile:
             existing_default_profile = cls.get_default_profile(user_id)
             if existing_default_profile:
-                raise ValueError("Профиль по умолчанию уже существует для данного пользователя.")
+                existing_default_profile.default_profile = False
         
         new_profile = cls(
             user_id=user_id,

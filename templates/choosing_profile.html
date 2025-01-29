@@ -47,8 +47,23 @@
 
     <div class="flex choosing-profile__buttons-block">
         <button class="btn btn_report" id="profileCreationButton">Создать профиль</button>
-        <button class="btn btn_report" id="changeDefaulProfileButton">Сменить профиль по умолчанию</button>
+        <button class="btn btn_report" id="changeDefaultProfileButton">Сменить профиль по умолчанию</button>
     </div>
+
+    <!-- Блок для создания нового профиля -->
+     <div class="make-profile-default" id="makeProfileDefaultBlock" style="display: none;">
+        <h3>Выберите профиль по умолчанию:</h3>
+        <ul class="make-profile-default__list">
+            {% for profile in user_profiles %}
+                <li class="make-profile-default__item">
+                    <input class="make-profile-default__radio" id="profile{{ profile.id }}" type="radio" data-profile-id="{{ profile.id }}" name="default_profile" value="{{ profile.id }}" {% if profile.default_profile %} checked {% endif %}>
+                    <label for="profile{{ profile.id }}">{{ profile.profile_name }}</label>
+                </li>
+            {% endfor %}
+        </ul>
+        <button class="btn btn_report" id="saveDefaultProfileButton">Сохранить</button>
+
+     </div>
 
     <!-- Блок для создания нового профиля -->
     <form class="creation-profile" id="profileCreationForm" style="display: none;">

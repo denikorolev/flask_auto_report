@@ -18,6 +18,10 @@
                         <label class="profile-settings-block__label" for="description">Описание профиля:</label>
                         <textarea class="profile-settings-block__textarea" id="profileDescription" name="description">{{ profile.description }}</textarea>
                     </li>
+                    <li class="profile-settings-block__item">
+                        <label class="profile-settings-block__label" for="default_profile">Профиль по умолчанию:</label>
+                        <input class="profile-settings-block__input" type="checkbox" id="isDefauleProfile" name="default_profile" {% if profile.default_profile %} checked {% endif %}>
+                    </li>
                 </ul>
                 <div class="profile-setting-block__wrapper--buttons">
                     <button class="btn report__btn profile-settings-block__btn" id="saveSettingProfile" type="button">Сохранить изменения</button>
