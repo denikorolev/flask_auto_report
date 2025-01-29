@@ -20,6 +20,9 @@
                 {% for profile in user_profiles %}
                     <li class="choosing-profile__item">
                         <a href="{{ url_for("profile_settings.choosing_profile", profile_id=profile.id) }}">{{ profile.profile_name }}</a>
+                        {% if profile.default_profile %}
+                            <span> (по умолчанию)</span>
+                        {% endif %}
                     </li>
                 {% endfor %}
             </ul>
@@ -42,7 +45,10 @@
         
     {% endif %}
 
-    <button class="btn btn_report" id="profileCreationButton">Создать профиль</button>
+    <div class="flex choosing-profile__buttons-block">
+        <button class="btn btn_report" id="profileCreationButton">Создать профиль</button>
+        <button class="btn btn_report" id="changeDefaulProfileButton">Сменить профиль по умолчанию</button>
+    </div>
 
     <!-- Блок для создания нового профиля -->
     <form class="creation-profile" id="profileCreationForm" style="display: none;">

@@ -10,8 +10,35 @@ import json
 
 profile_settings_bp = Blueprint('profile_settings', __name__)
 
+# Functions
+def set_profile_settings(profile_id, settings):
+    """
+    Сохраняет настройки профиля пользователя в таблице AppConfig.
+    """
+    for key, value in settings.items():
+        # Определяем тип данных для сохранения
+        if isinstance(value, bool):
+            config_type = "boolean"
+            value = str(value).lower() # Преобразуем True/False в "true"/"false"
+        elif isinstance(value, int):
+            config_type = "integer"
+        elif isinstance(value, float):
+            config_type = "float"
+        elif isinstance(value, (dict, list)):
+            config_type = "json"
+            value = json.dumps(value) # Преобразуем в JSON-строку
+        else:
+            config_type = "string"
+            value = str(value)
+        
+        try:
+            AppConfig.set_setting(profile_id, key, value, config_type=config_type)
+        except Exception as e:
+            print(f"Error while saving settings: {e}")
+            return False
+    return True
 
-# Маршрут для загрузки страницы настроек профиля
+# Маршрут для загрузки страницы настроек профиля (checked)
 @profile_settings_bp.route("/profile_settings", methods=["GET"])
 @auth_required()
 def profile_settings():
@@ -24,7 +51,7 @@ def profile_settings():
         print('Profile not found.', 'danger')
         return redirect(url_for('index'))
 
-# Маршрут для выбора существующего профиля
+# Маршрут для выбора существующего профиля (checked)
 @profile_settings_bp.route("/choosing_profile", methods=["GET"])
 @auth_required()
 def choosing_profile():
@@ -65,7 +92,7 @@ def choosing_profile():
                            user_profiles=user_profiles)
 
 
-# Маршрут для создания профиля
+# Маршрут для создания профиля (checked)
 @profile_settings_bp.route("/create_profile", methods=["POST"])
 @auth_required()
 def create_profile():
@@ -78,25 +105,38 @@ def create_profile():
     description = data.get('description')
     is_default = data.get('is_default')
     
+        
     if profile_name:
         print("creating profile name found")
         try:
-            UserProfile.create(
+            new_profile = UserProfile.create(
                 current_user.id, 
                 profile_name, 
                 description,
                 default_profile=is_default
                 )
+            
+            print("logic of creating profile settings")
+            default_settings = dict(current_app.config.get("DEFAULT_PROFILE_SETTINGS", {}))
+            print(f"new settings for new profile: {profile_settings}")
+            save_settings = set_profile_settings(new_profile.id, default_settings)
+    
         except Exception as e:
             print("creating profile end work {e} --------")
             return jsonify({"status": "error", "message": str(e)}), 400
+        
+    
+    
+        if not save_settings:
+            return jsonify({"status": "error", "message": "Не получилось сохранить настройки по умолчанию для нового профиля"}), 400
         print("creating profile end work SUCCESS --------")
         return jsonify({"status": "success", "message": "Profile created successfully!"}), 200
+    
     print("creating profile end work ERROR no profile name --------")
     return jsonify({"status": "error", "message": "Profile name is required."}), 400
 
 
-# Маршрут для обновления имени и дескриптора профиля
+# Маршрут для обновления имени и дескриптора профиля (checked)
 @profile_settings_bp.route('/update_profile_settings', methods=['POST'])
 @auth_required()
 def update_profile_settings():
@@ -120,10 +160,17 @@ def update_profile_settings():
 @profile_settings_bp.route('/delete_profile/<int:profile_id>', methods=["DELETE"])
 @auth_required()
 def delete_profile(profile_id):
-    print("you are deleting profile")
+    print(f"you are deleting profile and profile_id = {profile_id}")
     profile = UserProfile.find_by_id_and_user(profile_id, current_user.id)
     if profile:
-        profile.delete()
+        try:
+            profile.delete()
+            print(f"profile {profile_id} deleted")
+        except Exception as e:
+            return jsonify({"status": "error", "message": str(e)}), 400
+        
+        session.pop("profile_id", None)
+        g.current_profile = None
         return jsonify({"status": "success", "message": "Profile deleted successfully!"}), 200
     else:
         return jsonify({"status": "error", "message": "Profile not found or you do not have permission to delete it."}), 400
@@ -136,33 +183,15 @@ def save_settings():
     """
     Сохраняет настройки профиля пользователя в таблице AppConfig.
     """
-    data = request.json  # Получаем данные из запроса
+    settings = request.json  # Получаем данные из запроса
     profile_id = session.get("profile_id")
 
     if not profile_id:
         return jsonify({"status": "error", "message": "Profile not selected"}), 400
 
-    # Сохраняем каждую настройку в AppConfig
-    for key, value in data.items():
-        # Определяем тип данных для сохранения
-        if isinstance(value, bool):
-            config_type = "boolean"
-            value = str(value).lower()  # Преобразуем True/False в "true"/"false"
-        elif isinstance(value, int):
-            config_type = "integer"
-        elif isinstance(value, float):
-            config_type = "float"
-        elif isinstance(value, (dict, list)):
-            config_type = "json"
-            value = json.dumps(value)  # Преобразуем в JSON-строку
-        else:
-            config_type = "string"
-            value = str(value)  # Преобразуем в строку для универсальности
-
-        try: # Сохраняем настройку в AppConfig
-            AppConfig.set_setting(profile_id, key, value, config_type=config_type)
-        except Exception as e:
-            return jsonify({"status": "error", "message": str(e)}), 400
+    save_settings = set_profile_settings(profile_id, settings)
+    if not save_settings:
+        return jsonify({"status": "error", "message": "Не получилось сохранить настройки"}), 400
 
     ProfileSettingsManager.load_profile_settings()
     return jsonify({"status": "success", "message": "Settings saved successfully!"})

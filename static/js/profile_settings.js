@@ -117,6 +117,14 @@ function deleteProfile() {
     
     document.getElementById("deleteProfile").addEventListener("click", () => {
         const profileID = document.getElementById("profileSettingBlock").dataset.profileId;
+        
+        // Запрашиваем подтверждение перед удалением
+        const confirmation = confirm("Вы уверены, что хотите удалить этот профиль? Это действие нельзя отменить.");
+        if (!confirmation) return;
+
+        // Запрашиваем подтверждение перед удалением
+        const secondConfirmation = confirm("Удаление профиля приведет к удалению всех связанных с ним протоколов, включая историю уже написанных в профиле протоколов. Удалятся также все связанные с профилем ключевые слова и созданные в этом профиле типы и подтипы протоколов. Вы уверены, что хотите удалить профиль?");
+        if (!secondConfirmation) return;
 
         // Отправляем данные на сервер
         sendRequest({
@@ -124,7 +132,10 @@ function deleteProfile() {
             method: "DELETE",
             csrfToken: csrfToken,
         }).then(response => {
-            location.reload();
+            if (response.status === "success"){
+                window.location.href = "/profile_settings/choosing_profile";
+                console.log(response.message || "Profile deleted successfully.");
+            }
         }).catch(error => {
             console.error("Failed to delete profile:", error);
         });

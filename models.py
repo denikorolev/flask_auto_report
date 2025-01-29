@@ -29,14 +29,12 @@ class AppConfig(db.Model):
     __table_args__ = (db.UniqueConstraint("profile_id", "config_key", name="uq_profile_config"),)
     
     id = db.Column(db.Integer, primary_key=True)
-    profile_id = db.Column(db.BigInteger, db.ForeignKey('user_profiles.id'), nullable=False) 
+    profile_id = db.Column(db.BigInteger, db.ForeignKey('user_profiles.id', ondelete="CASCADE"), nullable=False) 
     config_key = db.Column(db.String(50), nullable=False)
     config_value = db.Column(db.String(200), nullable=False)
     config_type = db.Column(db.String(50), nullable=True)  # необязательный
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)  
     updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)  
-
-    profile = db.relationship("UserProfile", backref=db.backref("configs", lazy=True))
 
 
     @staticmethod
@@ -172,7 +170,7 @@ class UserProfile(BaseModel):
     description = db.Column(db.String(500), nullable=True)
     default_profile = db.Column(db.Boolean, default=False, nullable=False)
     
-    
+    profile_to_configs = db.relationship("AppConfig", lazy=True, backref="profile", cascade="all, delete-orphan")
     profile_to_reports = db.relationship('Report', lazy=True, backref=db.backref("report_to_profile"), cascade="all, delete-orphan")
     profile_to_files = db.relationship("FileMetadata", lazy=True, backref=db.backref("file_to_profile"), cascade="all, delete-orphan")
     profile_to_key_words = db.relationship("KeyWord", lazy=True, backref=db.backref("key_word_to_profile"), cascade="all, delete-orphan")

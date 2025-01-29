@@ -17,7 +17,8 @@ def build_menu():
         {"name": "ИИ", "url": url_for("openai_api.start_openai_api"), "min_rank": 3},
         {"name": "Ключевые слова", "url": url_for("key_words.key_words"), "min_rank": 2},
         {"name": "Админ", "url": url_for("admin.admin"), "min_rank": 4},
-        {"name": "Настройки профиля", "url": url_for("profile_settings.profile_settings"), "min_rank": 1}
+        {"name": "Настройки профиля", "url": url_for("profile_settings.profile_settings"), "min_rank": 1},
+        {"name": "Playground", "url": url_for("playground"), "min_rank": 4}
     ]
 
 

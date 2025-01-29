@@ -4,34 +4,35 @@
 {{ super() }}
 
 
-<h1 class="title title-auth">Авторизация</h1>
-<form action="{{ url_for('security.login') }}" method="POST" class="flex_column" id="loginForm" name="login_form">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-    <div class="wrapper wrapper--auth">
-        <label class="label label--auth" for="email">E-mail:</label>
-        <input class="input input--auth" type="email" id="email" name="email" required autocomplete="email"><br>
-    </div>
-
-    <div class="wrapper wrapper--auth">
-        <label class="label label--auth" for="password">Password:</label>
-        <input class="input input--auth" type="password" id="password" name="password" required autocomplete="current-password"><br>
-    </div>
-
-
-    <div class="" id="remember">
-        <label for="remember">Remember Me</label> 
-        <input id="remember" name="remember" type="checkbox" value="y">
-    </div>
-
-    <button class="btn btn--auth" type="submit">Войти</button>
-</form>
+<div class="auth-register">
+    <h1 class="title auth-register__title">Авторизация</h1>
+    <form action="{{ url_for('security.login') }}" method="POST" class="flex_column" id="loginForm" name="login_form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    
+        <ul class="auth-register__list">
+            <li class="wrapper auth-register__item">
+                <label class="label auth-register__label" for="email">E-mail:</label>
+                <input class="input auth-register__input" type="email" id="email" name="email" required autocomplete="email"><br>
+            </li>
+            <li class="wrapper auth-register__item">
+                <label class="label auth-register__label" for="password">Password:</label>
+                <input class="input auth-register__input" type="password" id="password" name="password" required autocomplete="current-password"><br>
+            </li>
+            <li class="wrapper auth-register__item" id="remember">
+                <label class="label auth-register__label" for="remember">Remember Me</label>
+                <input class="checkbox auth-register__checkbox" id="remember" name="remember" type="checkbox" value="y">
+            </li>
+        </ul>
+    
+        <button class="btn btn_report auth-register__btn" type="submit">Войти</button>
+    </form>
+</div>
 
 {% if login_user_form.errors %}
-    <ul>
+    <ul class="auth-register__errors-list">
     {% for field, errors in login_user_form.errors.items() %}
         {% for error in errors %}
-            <li>
+            <li class="auth-register__error">
                 <p>В поле {{ field }}</p> 
                 <p>ошибка:  {{ error }}</p>
             </li>
@@ -41,7 +42,8 @@
 {% endif %}
 
 <p>Нет аккаунта? 
-    <a class="link--auth" href="{{ url_for('security.register') }}">Создать</a>
+    <a class="auth-register__link" href="{{ url_for('security.register') }}">Создать</a> <br>
+    <a class="auth-register__link" href="{{ url_for('index') }}">На главную</a>
 </p>
 
 

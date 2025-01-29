@@ -15,7 +15,7 @@ import logging
 
 from flask_wtf.csrf import CSRFProtect
 from flask_security import Security, SQLAlchemyUserDatastore
-from flask_security.decorators import auth_required
+from flask_security.decorators import auth_required, roles_required
 from flask_security.signals import user_registered
 
 # Импортирую блюпринты
@@ -243,6 +243,16 @@ def handle_exception(e):
 @app.teardown_appcontext 
 def close_db(error):
     db.session.remove()
+
+
+
+# Playgroung
+
+@app.route("/playground", methods=["GET", "POST"])
+@auth_required()
+@roles_required("superadmin")
+def playground():
+    return render_template("playground.html", title="Playground")
 
 
 

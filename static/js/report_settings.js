@@ -67,7 +67,7 @@ function initAddTypeListener() {
 
 // Логика для удаления типа отчета
 function initDeleteTypeListener() {
-    const deleteButtons = document.querySelectorAll('.report-section__btn--delete');
+    const deleteButtons = document.querySelectorAll('.report-settings__btn--delete');
     deleteButtons.forEach(button => {
         button.addEventListener('click', async function(event) {
             event.preventDefault();
@@ -102,11 +102,11 @@ function initDeleteTypeListener() {
 
 // Логика для редактирования типа отчета
 function initEditTypeListener() {
-    const editButtons = document.querySelectorAll('.report-section__btn--edit');
+    const editButtons = document.querySelectorAll('.report-settings__btn--edit');
     editButtons.forEach(button => {
         button.addEventListener('click', function() {
             const typeId = this.dataset.typeId;
-            const typeInput = this.closest('li').querySelector('.report-section__input--type');  // Найти поле ввода для редактирования
+            const typeInput = this.closest('li').querySelector('.report-settings__input--type');  // Найти поле ввода для редактирования
             const newTypeName = typeInput.value.trim();
 
             if (!newTypeName) {
