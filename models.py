@@ -530,6 +530,7 @@ class Paragraph(BaseModel):
     bold_paragraph = db.Column(db.Boolean, default=False, nullable=False)
     comment = db.Column(db.String(255), nullable=True)
     paragraph_weight = db.Column(db.SmallInteger, nullable=False) 
+    tags = db.Column(db.String(255), nullable=True)
 
     paragraph_to_sentences = db.relationship("Sentence", lazy=True, backref=db.backref("sentence_to_paragraph"), cascade="all, delete-orphan")
     paragraph_to_types = db.relationship("ParagraphType") # Связь с типом параграфа
@@ -544,21 +545,45 @@ class Paragraph(BaseModel):
     )
     
     @classmethod
-    def create(cls, paragraph_index, report_id, paragraph, paragraph_visible, title_paragraph, bold_paragraph, type_paragraph_id, comment=None, paragraph_weight=1):
+    def create(cls, report_id, paragraph_index, paragraph, type_paragraph_id, paragraph_visible=True, title_paragraph=False, bold_paragraph=False, paragraph_weight=1, tags=None, comment=None):
+        """
+        Создает новый параграф.
+
+        Args:
+            report_id (int): ID отчета.
+            paragraph_index (int): Индекс параграфа.
+            paragraph (str): Текст параграфа.
+            type_paragraph_id (int): ID типа параграфа.
+            paragraph_visible (bool, optional): Видимость параграфа. Default=True.
+            title_paragraph (bool, optional): Является ли заголовком. Default=False.
+            bold_paragraph (bool, optional): Должен ли быть жирным. Default=False.
+            paragraph_weight (int, optional): Вес параграфа. Default=1.
+            tags (str, optional): Теги в виде строки. Default=None.
+            comment (str, optional): Комментарий. Default=None.
+
+        Returns:
+            Paragraph: Созданный объект параграфа.
+        """
         new_paragraph = cls(
-            paragraph_index=paragraph_index,
             report_id=report_id,
+            paragraph_index=paragraph_index,
             paragraph=paragraph,
-            paragraph_visible = paragraph_visible,
+            type_paragraph_id=type_paragraph_id,
+            paragraph_visible=paragraph_visible,
             title_paragraph=title_paragraph,
             bold_paragraph=bold_paragraph,
-            type_paragraph_id=type_paragraph_id,
-            comment=comment,
-            paragraph_weight=paragraph_weight
+            paragraph_weight=paragraph_weight,
+            tags=tags,
+            comment=comment
         )
         db.session.add(new_paragraph)
         db.session.commit()
         return new_paragraph
+    
+    @classmethod
+    def get_paragraphs_by_tag(cls, tag):
+        """Возвращает все параграфы с указанным тегом."""
+        return cls.query.filter(cls.tags.like(f"%{tag}%")).all()
     
     
     def is_linked(self):
@@ -580,7 +605,6 @@ class Paragraph(BaseModel):
         if paragraph2 not in paragraph1.linked_paragraphs:
             paragraph1.linked_paragraphs.append(paragraph2)
             db.session.commit()
-        
         return True
     
     
@@ -600,16 +624,33 @@ class Sentence(BaseModel):
     weight = db.Column(db.SmallInteger, nullable=False)
     comment = db.Column(db.String(100), nullable=False)
     sentence = db.Column(db.String(400), nullable=False)
-    is_main = db.Column(db.Boolean, default=False, nullable=True)
-
+    is_main = db.Column(db.Boolean, default=False, nullable=False)
+    tags = db.Column(db.String(255), nullable=True)
 
 
     @classmethod
-    def create(cls, paragraph_id, index, weight, comment, sentence):
+    def create(cls, paragraph_id, index, weight, sentence, is_main=False, tags=None, comment=None):
+        """
+        Создает новое предложение.
+
+        Args:
+            paragraph_id (int): ID параграфа.
+            index (int): Индекс предложения в параграфе.
+            weight (int): Вес предложения.
+            sentence (str): Текст предложения.
+            is_main (bool, optional): Является ли основным предложением. Default=False.
+            tags (str, optional): Теги в виде строки. Default=None.
+            comment (str, optional): Комментарий. Default=None.
+
+        Returns:
+            Sentence: Созданный объект предложения.
+        """
         new_sentence = cls(
             paragraph_id=paragraph_id,
             index=index,
             weight=weight,
+            is_main=is_main,
+            tags=tags,
             comment=comment,
             sentence=sentence
         )
@@ -622,9 +663,18 @@ class Sentence(BaseModel):
         return cls.query.filter_by(paragraph_id=paragraph_id).all()
 
 
+    @classmethod
+    def find_main_sentences_for_paragraph(cls, paragraph_id):
+        """Возвращает все основные предложения (is_main=True) для указанного параграфа."""
+        return cls.query.filter_by(paragraph_id=paragraph_id, is_main=True).all()
 
 
-
+    @classmethod
+    def get_sentences_by_tag(cls, tag):
+        """Возвращает все предложения с указанным тегом."""
+        return cls.query.filter(cls.tags.like(f"%{tag}%")).all()
+    
+    
 class KeyWord(BaseModel):
     __tablename__ = 'key_words_group'
     profile_id = db.Column(db.BigInteger, db.ForeignKey('user_profiles.id'), nullable=False)
