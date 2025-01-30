@@ -155,7 +155,7 @@ def load_current_profile():
         "security.login", "security.logout", "security.register", 
         "security.forgot_password", "security.reset_password", 
         "security.change_password","profile_settings.choosing_profile", 
-        "error", "index", "profile_settings.create_profile"
+        "error", "index", "profile_settings.create_profile", "profile_settings.set_default_profile"
     ]:
         return None
     # Если пользователь не авторизован, удаляем профиль из g и сессии    
@@ -216,7 +216,7 @@ def load_current_profile():
         # Если профилей несколько и дефолтный не выбран, перенаправляем для выбора профиля
         return redirect(url_for("profile_settings.choosing_profile"))
                                
-
+# Запускаем различные синхронизаторы при первом запуске сессии
 @app.before_request
 def one_time_sync_tasks():
     """
