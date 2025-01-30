@@ -73,13 +73,9 @@ function profileSettingsSave() {
             csrfToken: csrfToken,
             data: changedSettings
         }).then(response => {
-            inputs.forEach(input => delete input.dataset.changed);
-            inputs.forEach(input => {
-                const parentLi = input.closest(".settings-block__item");
-                if (parentLi) {
-                        parentLi.classList.remove("settings-block__item--changed");
+            if (response.status === "success") {   
+                window.location.reload();
                 }
-            });
         }).catch(error => {
             console.error("Failed to update settings:", error);
         });

@@ -2,6 +2,7 @@
 
 from flask_sqlalchemy import SQLAlchemy
 from flask_security import UserMixin, RoleMixin
+from sqlalchemy.orm import foreign, remote, relationship
 from sqlalchemy import Index
 from utils import ensure_list
 from datetime import datetime, timezone  # Добавим для временных меток
@@ -23,6 +24,14 @@ roles_users = db.Table(
     db.Column('user_id', db.BigInteger, db.ForeignKey('users.id', ondelete="CASCADE"), primary_key=True),
     db.Column('role_id', db.BigInteger, db.ForeignKey('roles.id', ondelete="CASCADE"), primary_key=True),
     Index('ix_roles_users_user_id_role_id', 'user_id', 'role_id')
+)
+
+#  Ассоциативная таблица для связи параграфов между собой
+paragraph_links = db.Table(
+    "paragraph_links",
+    db.Column("paragraph_id_1", db.BigInteger, db.ForeignKey("report_paragraphs.id", ondelete="CASCADE"), primary_key=True),
+    db.Column("paragraph_id_2", db.BigInteger, db.ForeignKey("report_paragraphs.id", ondelete="CASCADE"), primary_key=True),
+    db.Index("ix_paragraph_links_paragraphs", "paragraph_id_1", "paragraph_id_2")
 )
 
 class AppConfig(db.Model):
@@ -511,6 +520,7 @@ class Report(BaseModel):
 
 class Paragraph(BaseModel):
     __tablename__ = "report_paragraphs"
+    id = db.Column(db.BigInteger, primary_key=True)
     report_id = db.Column(db.BigInteger, db.ForeignKey("reports.id"), nullable=False)
     type_paragraph_id = db.Column(db.Integer, db.ForeignKey('paragraph_types.id'), nullable=False)
     paragraph_index = db.Column(db.Integer, nullable=False)
@@ -523,7 +533,15 @@ class Paragraph(BaseModel):
 
     paragraph_to_sentences = db.relationship('Sentence', lazy=True, backref=db.backref("sentence_to_paragraph"), cascade="all, delete-orphan")
     paragraph_to_types = db.relationship('ParagraphType')
-    
+    # Связь многие-ко-многим с другими параграфами
+    linked_paragraphs = relationship(
+        "Paragraph",
+        secondary=paragraph_links,
+        primaryjoin=id == paragraph_links.c.paragraph_id_1,
+        secondaryjoin=id == paragraph_links.c.paragraph_id_2,
+        backref="linked_to_paragraphs",
+        remote_side=[id]
+    )
     
     @classmethod
     def create(cls, paragraph_index, report_id, paragraph, paragraph_visible, title_paragraph, bold_paragraph, type_paragraph_id, comment=None, paragraph_weight=1):
@@ -541,6 +559,38 @@ class Paragraph(BaseModel):
         db.session.add(new_paragraph)
         db.session.commit()
         return new_paragraph
+    
+    
+    def is_linked(self):
+        """ Проверяет, есть ли у параграфа хотя бы одна связь. """
+        return bool(self.linked_paragraphs)
+    
+    
+    @classmethod
+    def link_paragraphs(cls, paragraph1_id, paragraph2_id):
+        """
+        Создает связь между двумя параграфами, если её нет.
+        """
+        paragraph1 = cls.query.get(paragraph1_id)
+        paragraph2 = cls.query.get(paragraph2_id)
+
+        if not paragraph1 or not paragraph2:
+            return False  # Один из параграфов не найден
+        
+        if paragraph2 not in paragraph1.linked_paragraphs:
+            paragraph1.linked_paragraphs.append(paragraph2)
+            db.session.commit()
+        
+        return True
+    
+    
+    @classmethod
+    def get_linked_paragraphs(cls, paragraph_id):
+        """
+        Возвращает список всех связанных параграфов.
+        """
+        paragraph = cls.query.get(paragraph_id)
+        return paragraph.linked_paragraphs if paragraph else []
 
 
 class Sentence(BaseModel):

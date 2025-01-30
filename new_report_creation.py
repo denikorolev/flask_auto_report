@@ -19,6 +19,7 @@ new_report_creation_bp = Blueprint('new_report_creation', __name__)
 
 # Routes
 
+# Загрузка основной страницы создания отчета
 @new_report_creation_bp.route('/create_report', methods=['GET', 'POST'])
 @auth_required()
 def create_report():
@@ -35,7 +36,7 @@ def create_report():
                            report_types_and_subtypes=report_types_and_subtypes
                            )
     
-    
+# Создание нового отчета вручную
 @new_report_creation_bp.route('/create_manual_report', methods=['POST'])
 @auth_required()
 def create_manual_report():
@@ -68,7 +69,7 @@ def create_manual_report():
         return jsonify({"status": "error", "message": str(e)}), 500    
 
     
-
+# Создание нового отчета из загруженного файла
 @new_report_creation_bp.route('/create_report_from_file', methods=['POST'])
 @auth_required()
 def create_report_from_file():
@@ -195,7 +196,7 @@ def create_report_from_file():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
-
+# Создание нового отчета на основе существующего
 @new_report_creation_bp.route('/create_report_from_existing_report', methods=['POST'])
 @auth_required()
 def create_report_from_existing_report():
@@ -262,7 +263,7 @@ def create_report_from_existing_report():
         return jsonify({"status": "error", "message": str(e)}), 500
     
     
-    
+# Создание нового отчета на основе нескольких существующих
 @new_report_creation_bp.route('/create_report_from_existing_few', methods=['POST'])
 @auth_required()
 def create_report_from_existing_few():

@@ -34,7 +34,8 @@ class Config:
     
     ASSOCIATIVE_TABLES = [
         "key_word_report_link",
-        "roles_users"
+        "roles_users",
+        "paragraph_links"
     ]
     
     # Flask-Security Configuration
