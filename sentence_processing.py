@@ -298,7 +298,7 @@ def clean_and_normalize_text(text):
     """
     
     # Исключения для слов, которые должны начинаться с заглавной буквы
-    EXCEPTIONS_AFTER_PUNCTUATION = ["МРТ", "КТ", "УЗИ", "РКТ", "ПЭТ", "ПЭТ-КТ", "МСКТ", "РГ", "ЭКГ", "ФГДС"]
+    exeptions_after_punctuation =current_app.config["PROFILE_SETTINGS"]["EXCEPTIONS_AFTER_PUNCTUATION"]
 
     # Убираем пронумерованные элементы с точкой или скобкой в начале строки
     # Это в тему именно тут, так как ниже я обрабатываю скобки
@@ -325,7 +325,7 @@ def clean_and_normalize_text(text):
         """
         punctuation = match.group(1)
         word = match.group(2)
-        if word in EXCEPTIONS_AFTER_PUNCTUATION:
+        if word in exeptions_after_punctuation:
             return f"{punctuation} {word}"  # Оставляем слово как есть
         return f"{punctuation} {word.lower()}"  # Приводим к нижнему регистру
     
@@ -372,7 +372,7 @@ def split_sentences_if_needed(text):
     Returns:
         tuple: (list of valid sentences, list of excluded sentences).
     """
-    language = current_app.config["PROFILE_SETTINGS"]["APP_LANGUAGE"]
+    language = current_app.config.get("PROFILE_SETTINGS", {}).get("APP_LANGUAGE", "ru")
     print(f"APP_LANGUAGE: {language}")
     
     # Загружаем модель SpaCy для текущего языка
@@ -398,7 +398,8 @@ def get_new_sentences(processed_paragraphs):
     """ Получаем только новые предложения, игнорируя те, что уже 
     есть в базе данных, учитываем возможную разницу лишь в 
     ключевых словах key_words """
-    except_words = ["мм", "см", "до"] # Добавить в конфиг
+    except_words = current_app.config["PROFILE_SETTINGS"]["EXCEPT_WORDS"]
+    print(f"EXCEPT_WORDS: {except_words}")
     new_sentences = []
 
     # Получаем ключевые слова для текущего пользователя
@@ -562,8 +563,10 @@ def compare_sentences_by_paragraph(new_sentences, report_id):
             - "duplicates": List of new sentences that match existing ones.
             - "unique": List of new sentences considered unique.
     """
-    similarity_threshold_fuzz = 95  # Порог схожести для сравнения предложений. Добавить в конфиг
-    except_words = ["мм", "см", "до"] # Добавить в конфиг
+    similarity_threshold_fuzz = current_app.config["PROFILE_SETTINGS"]["SIMILARITY_THRESHOLD_FUZZ"]
+    except_words = current_app.config["PROFILE_SETTINGS"]["EXCEPT_WORDS"]
+    print(f"SIMILARITY_THRESHOLD_FUZZ: {similarity_threshold_fuzz}")
+    print(f"EXCEPT_WORDS: {except_words}")
     
     existing_paragraphs = Paragraph.query.filter_by(report_id=report_id).all()
     key_words_obj = KeyWord.get_keywords_for_report(g.current_profile.id, report_id)

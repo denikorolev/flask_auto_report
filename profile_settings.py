@@ -13,30 +13,13 @@ profile_settings_bp = Blueprint('profile_settings', __name__)
 # Functions
 def set_profile_settings(profile_id, settings):
     """
-    Сохраняет настройки профиля пользователя в таблице AppConfig.
+    Сохраняет настройки профиля пользователя.
     """
     for key, value in settings.items():
-        # Определяем тип данных для сохранения
-        if isinstance(value, bool):
-            config_type = "boolean"
-            value = str(value).lower() # Преобразуем True/False в "true"/"false"
-        elif isinstance(value, int):
-            config_type = "integer"
-        elif isinstance(value, float):
-            config_type = "float"
-        elif isinstance(value, (dict, list)):
-            config_type = "json"
-            value = json.dumps(value) # Преобразуем в JSON-строку
-        else:
-            config_type = "string"
-            value = str(value)
-        
-        try:
-            AppConfig.set_setting(profile_id, key, value, config_type=config_type)
-        except Exception as e:
-            print(f"Error while saving settings: {e}")
-            return False
+        if not AppConfig.set_setting(profile_id, key, value):
+            return False  # Если ошибка — сразу выход
     return True
+
 
 def set_profile_as_default(profile_id):
     """

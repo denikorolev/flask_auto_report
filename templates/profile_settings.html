@@ -33,35 +33,66 @@
 
 
     <!-- Блок настроек для сохранения настроек профиля в БД -->
+     <!-- Имя инпута должно обязательно совпадать с ключом настройки 
+      в DEFAULT_PROFILE_SETTINGS в config.py  -->
     <div class="flex container">
         <div class="settings-block">
             <h3 class="settings-block__title">Настройки</h3>
             <ul class="settings-block__list" id="settings-block">
                 <li class="settings-block__item">
-                    <label class="settings-block__label" for="USE_WORD_REPORTS">Использовать выгрузку протокола в word</label>
-                    <input class="settings-block__input" type="checkbox" id="use_word_reports" name="USE_WORD_REPORTS"
+                    <label class="settings-block__label" for="useWordReports">Использовать выгрузку протокола в word</label>
+                    <input class="settings-block__input" type="checkbox" id="useWordReports" name="USE_WORD_REPORTS"
                         {% if user_settings.USE_WORD_REPORTS %} checked {% endif %}>
                 </li>
                 <li class="settings-block__item">
-                    <label class="settings-block__label" for="USE_SENTENCE_AUTOSAVE">Использовать автосохранение новых предложений</label>
+                    <label class="settings-block__label" for="useSentenceAutosave">Использовать автосохранение новых предложений</label>
                     <input class="settings-block__input" type="checkbox" id="useSentenceAutosave" name="USE_SENTENCE_AUTOSAVE"
                         {% if user_settings.USE_SENTENCE_AUTOSAVE %} checked {% endif %}>
                 </li>
                 <li class="settings-block__item">
-                    <label class="settings-block__label" for="APP_LANGUAGE">Theme:</label>
-                    <select class="settings-block__select" id="language" name="APP_LANGUAGE">
-                        <option value="русский" {% if user_settings.APP_LANGUAGE == 'ru' %}selected{% endif %}>русский</option>
-                        <option value="английский" {% if user_settings.APP_LANGUAGE == 'eng' %}selected{% endif %}>английский</option>
+                    <label class="settings-block__label" for="appLanguage">Theme:</label>
+                    <select class="settings-block__select" id="appLanguage" name="APP_LANGUAGE">
+                        <option value="ru" {% if user_settings.APP_LANGUAGE == 'ru' %}selected{% endif %}>русский</option>
+                        <option value="eng" {% if user_settings.APP_LANGUAGE == 'eng' %}selected{% endif %}>английский</option>
                     </select>
                 </li>
                 <li class="settings-block__item">
-                    <label class="settings-block__label" for="THEME">Theme:</label>
-                    <select class="settings-block__select" id="theme" name="THEME">
+                    <label class="settings-block__label" for="appTheme">Theme:</label>
+                    <select class="settings-block__select" id="appTheme" name="APP_THEME">
                         <option value="light" {% if user_settings.THEME == 'light' %}selected{% endif %}>Light</option>
                         <option value="dark" {% if user_settings.THEME == 'dark' %}selected{% endif %}>Dark</option>
                     </select>
                 </li>
+                <li class="settings-block__item">
+                    <label class="settings-block__label" for="similarityThesholdFuzz">Порог схожести предложений:</label>
+                    <input class="settings-block__select" id="similarityThesholdFuzz" name="SIMILARITY_THRESHOLD_FUZZ" value="{{ user_settings.SIMILARITY_THRESHOLD_FUZZ }}">
+                    
+                </li>
+                <li class="settings-block__item">
+                    <label class="settings-block__label" for="exceptWords">Слова исключения для фильтрации текста:</label>
+                    <!--<div class="settings-block__block" id="exceptWords">
+                        {% for word in user_settings.EXCEPT_WORDS  %}
+                        <span>{{ word }}  </span>
+                        {% endfor %}
+                    </div>-->
+                    <input class="settings-block__input" id="exceptWords" name="EXCEPT_WORDS" value="{{ user_settings.EXCEPT_WORDS }}">
+                   
+                </li>
+                <li class="settings-block__item">
+                    <label class="settings-block__label" for="exceptionsAfterPunctuation">Слова исключения аббревиатуры:</label>
+                    <!--<div class="settings-block__block" id="exceptionsAfterPunctuation">
+                        {% for word in user_settings.EXCEPT_WORDS  %}
+                        <span>{{ word }}  </span>
+                        {% endfor %} 
+                    </div>-->
+                    
+                    <input class="settings-block__input" id="exceptionsAfterPunctuation" name="EXCEPTIONS_AFTER_PUNCTUATION" value="{{ user_settings.EXCEPTIONS_AFTER_PUNCTUATION }}">
+                    
+                </li>
             </ul>
+            <br>
+            <br>
+            <span>--------------------------------------------------------------</span><br>
             <button class="btn report__btn settings-block__btn" type="button" id="saveSettings">Сохранить</button>
         </div>
         

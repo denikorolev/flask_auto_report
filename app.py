@@ -8,6 +8,7 @@ from flask_migrate import Migrate
 from models import db, User, UserProfile, Role
 from menu_constructor import build_menu
 from profile_constructor import ProfileSettingsManager
+from db_processing import sync_all_profiles_settings
 
 import os
 import logging
@@ -29,7 +30,7 @@ from openai_api import openai_api_bp
 from key_words import key_words_bp
 from admin import admin_bp
 
-version = "0.8.8"
+version = "0.8.9"
 
 app = Flask(__name__)
 app.config.from_object(get_config()) # Load configuration from file config.py
@@ -215,6 +216,21 @@ def load_current_profile():
         # Если профилей несколько и дефолтный не выбран, перенаправляем для выбора профиля
         return redirect(url_for("profile_settings.choosing_profile"))
                                
+
+@app.before_request
+def one_time_sync_tasks():
+    """
+    Запускает одноразовые фоновые задачи для пользователя при первом входе в сессию:
+    - Синхронизация настроек профилей.
+    - (В будущем) другие одноразовые задачи, например, обновления данных.
+    """
+    if not current_user.is_authenticated:
+        return  # Если пользователь не вошел — ничего не делаем
+
+    if not session.get("synced"):  # Проверяем, была ли уже выполнена синхронизация
+        sync_all_profiles_settings(current_user.id)
+        session["synced"] = True  # Помечаем, что синхронизация выполнена
+
 
 # Маршрут для главной страницы
 @app.route("/", methods=['POST', 'GET'])

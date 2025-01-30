@@ -5,6 +5,7 @@ from flask_security import UserMixin, RoleMixin
 from sqlalchemy import Index
 from utils import ensure_list
 from datetime import datetime, timezone  # Добавим для временных меток
+import json
 
 db = SQLAlchemy()
 
@@ -49,36 +50,57 @@ class AppConfig(db.Model):
     
 
     @staticmethod
-    def set_setting(profile_id, key, value, config_type=None):
+    def set_setting(profile_id, key, value):
         """
         Устанавливает или обновляет значение настройки для указанного профиля и ключа.
+        Автоматически определяет тип и выполняет нужные преобразования.
 
         Args:
             profile_id (int): ID профиля.
-            config_key (str): Ключ настройки.
-            config_value (str): Значение настройки.
-            config_type (str, optional): Тип настройки (например, 'string', 'boolean').
+            key (str): Ключ настройки.
+            value (Any): Значение настройки (любого типа).
         """
-        # Ищем существующую настройку
-        config = AppConfig.query.filter_by(profile_id=profile_id, config_key=key).first()
-
-        if config:
-            # Обновляем существующую настройку
-            config.config_value = value
-            if config_type:
-                config.config_type = config_type
+        # Определяем тип данных
+        if isinstance(value, bool):
+            config_type = "boolean"
+            value = str(value).lower()  # True → "true", False → "false"
+        elif isinstance(value, int):
+            config_type = "integer"
+            value = str(value)
+        elif isinstance(value, float):
+            config_type = "float"
+            value = str(value)
+        elif isinstance(value, (dict, list)):
+            config_type = "json"
+            value = json.dumps(value, ensure_ascii=False)  # Храним JSON строкой
         else:
-            # Создаем новую настройку
-            config = AppConfig(
-                profile_id=profile_id,
-                config_key=key,
-                config_value=value,
-                config_type=config_type
-            )
-            db.session.add(config)
+            config_type = "string"
+            value = str(value)
 
-        db.session.commit()
+        try:
+            # Ищем существующую настройку
+            config = AppConfig.query.filter_by(profile_id=profile_id, config_key=key).first()
 
+            if config:
+                # Обновляем существующую настройку
+                config.config_value = value
+                config.config_type = config_type
+            else:
+                # Создаем новую настройку
+                config = AppConfig(
+                    profile_id=profile_id,
+                    config_key=key,
+                    config_value=value,
+                    config_type=config_type
+                )
+                db.session.add(config)
+
+            db.session.commit()
+        except Exception as e:
+            print(f"Ошибка при сохранении настройки ({key}): {e}")
+            db.session.rollback()
+            return False
+        return True
 
 class BaseModel(db.Model):
     __abstract__ = True

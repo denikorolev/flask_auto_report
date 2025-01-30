@@ -16,7 +16,7 @@ class SpacyModel:
         if cls._instance is None or language != cls._language:
             if not language:
                 # Получаем язык из конфигурации приложения
-                language = current_app.config.get("APP_LANGUAGE", "ru")
+                language = current_app.config.get("PROFILE_SETTINGS", {}).get("APP_LANGUAGE", "ru")
             
             # Загрузка соответствующей модели
             if language == "ru":

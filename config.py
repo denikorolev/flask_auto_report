@@ -80,7 +80,11 @@ class Config:
     DEFAULT_PROFILE_SETTINGS = {"USE_WORD_REPORTS": False,
                                 "USE_SENTENCE_AUTOSAVE": True,
                                 "APP_LANGUAGE": "ru",
-                                "APP_THEME": "light",}
+                                "APP_THEME": "light",
+                                "SIMILARITY_THRESHOLD_FUZZ": 95,
+                                "EXCEPT_WORDS": ["мм", "см"],
+                                "EXCEPTIONS_AFTER_PUNCTUATION": ["МРТ", "КТ", "УЗИ", "РКТ", "ПЭТ", "ПЭТ-КТ", "МСКТ", "РГ", "ЭКГ", "ФГДС"]
+                                }
         
     
     @staticmethod
