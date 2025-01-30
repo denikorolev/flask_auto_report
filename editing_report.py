@@ -86,15 +86,16 @@ def new_paragraph():
             return jsonify({"status": "error", "message": "Default paragraph type 'text' not found."}), 400
         
         Paragraph.create(
-            paragraph_index=paragraph_index,
             report_id=report.id,
+            paragraph_index=paragraph_index,
             paragraph="insert your text",
+            type_paragraph_id=default_paragraph_type.id,
             paragraph_visible=True,
             title_paragraph=False,
             bold_paragraph=False,
-            type_paragraph_id=default_paragraph_type.id,
-            comment=None,
-            paragraph_weight=1
+            paragraph_weight=1,
+            tags="",
+            comment=None
         )
         return jsonify({"status": "success", "message": "Paragraph added successfully"}), 200
     except Exception as e:
@@ -180,7 +181,6 @@ def edit_sentences_bulk():
         return jsonify({"status": "error", "message": "Invalid request format"}), 400
 
     data = request.get_json()
-    print(data)
     try:
         for sentence_data in data["sentences"]:
             if sentence_data["sentence_id"] == "new":
@@ -193,6 +193,8 @@ def edit_sentences_bulk():
                         paragraph_id=paragraph_id,
                         index=sentence_index,
                         weight=sentence_data["sentence_weight"],
+                        is_main=data.get("is_main") == "true",
+                        tags="",
                         comment=sentence_data["sentence_comment"],
                         sentence=sentence_data["sentence_sentence"]
                     )

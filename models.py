@@ -520,7 +520,7 @@ class Report(BaseModel):
 
 class Paragraph(BaseModel):
     __tablename__ = "report_paragraphs"
-    id = db.Column(db.BigInteger, primary_key=True)
+    id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
     report_id = db.Column(db.BigInteger, db.ForeignKey("reports.id"), nullable=False)
     type_paragraph_id = db.Column(db.Integer, db.ForeignKey('paragraph_types.id'), nullable=False)
     paragraph_index = db.Column(db.Integer, nullable=False)

@@ -143,15 +143,16 @@ def create_report_from_file():
 
                     # Создаем новый параграф
                     new_paragraph = Paragraph.create(
-                        paragraph_index=idx,
                         report_id=new_report.id,
+                        paragraph_index=idx,
                         paragraph=paragraph['title'],
+                        type_paragraph_id=paragraph_type_id,
                         paragraph_visible=paragraph.get('visible', True),
                         title_paragraph=paragraph.get('is_title', False),
                         bold_paragraph=paragraph.get('bold', False),
-                        type_paragraph_id=paragraph_type_id,
-                        comment=None,
-                        paragraph_weight=1
+                        paragraph_weight=1,
+                        tags="",
+                        comment=None
                     )
 
                     # Обрабатываем предложения
@@ -162,6 +163,8 @@ def create_report_from_file():
                                     paragraph_id=new_paragraph.id,
                                     index=sentence_index,
                                     weight=weight,
+                                    is_main=True if weight == 1 else False,
+                                    tags="",
                                     comment='',
                                     sentence=split_sentence.strip()
                                 )
@@ -170,6 +173,8 @@ def create_report_from_file():
                                 paragraph_id=new_paragraph.id,
                                 index=sentence_index,
                                 weight=1,
+                                is_main=True,
+                                tags="",
                                 comment='',
                                 sentence=sentence_data.strip()
                             )
@@ -235,15 +240,16 @@ def create_report_from_existing_report():
         # Копируем абзацы и предложения из существующего отчета в новый
         for paragraph in existing_report.report_to_paragraphs:
             new_paragraph = Paragraph.create(
-                paragraph_index=paragraph.paragraph_index,
                 report_id=new_report.id,
+                paragraph_index=paragraph.paragraph_index,
                 paragraph=paragraph.paragraph,
+                type_paragraph_id=paragraph.type_paragraph_id,
                 paragraph_visible=paragraph.paragraph_visible,
                 title_paragraph=paragraph.title_paragraph,
                 bold_paragraph=paragraph.bold_paragraph,
-                type_paragraph_id=paragraph.type_paragraph_id,
-                comment=paragraph.comment,
-                paragraph_weight=paragraph.paragraph_weight or 1
+                paragraph_weight=paragraph.paragraph_weight or 1,
+                tags="",
+                comment=paragraph.comment
             )
 
             for sentence in paragraph.paragraph_to_sentences:
@@ -251,6 +257,8 @@ def create_report_from_existing_report():
                     paragraph_id=new_paragraph.id,
                     index=sentence.index,
                     weight=sentence.weight,
+                    is_main=sentence.is_main,
+                    tags="",
                     comment=sentence.comment,
                     sentence=sentence.sentence
                 )
@@ -314,24 +322,25 @@ def create_report_from_existing_few():
             for paragraph in sorted_paragraphs:
                 if paragraph.type_paragraph_id == scanparam:
                     for sentence in paragraph.paragraph_to_sentences:
-                        scanparam_sentences.append(sentence.sentence)
+                        scanparam_sentences.append(sentence)
                     continue
                         
                 if paragraph.type_paragraph_id == impression:
                     for sentence in paragraph.paragraph_to_sentences:
-                        impression_sentences.append(sentence.sentence)
+                        impression_sentences.append(sentence)
                     continue
                 
                 new_paragraph = Paragraph.create(
-                    paragraph_index=paragraph_index,
                     report_id=new_report.id,
+                    paragraph_index=paragraph_index,
                     paragraph=paragraph.paragraph,
+                    type_paragraph_id=paragraph.type_paragraph_id,
                     paragraph_visible=paragraph.paragraph_visible,
                     title_paragraph=paragraph.title_paragraph,
                     bold_paragraph=paragraph.bold_paragraph,
-                    type_paragraph_id=paragraph.type_paragraph_id,
-                    comment=paragraph.comment,
-                    paragraph_weight=paragraph.paragraph_weight
+                    paragraph_weight=paragraph.paragraph_weight,
+                    tags="",
+                    comment=paragraph.comment
                 )
                 paragraph_index += 1
 
@@ -340,6 +349,8 @@ def create_report_from_existing_few():
                         paragraph_id=new_paragraph.id,
                         index=sentence.index,
                         weight=sentence.weight,
+                        is_main=sentence.is_main,
+                        tags="",
                         comment=sentence.comment,
                         sentence=sentence.sentence
                     )
@@ -348,58 +359,63 @@ def create_report_from_existing_few():
             if idx < len(selected_reports) - 1:
                 for _ in range(additional_paragraphs):
                     Paragraph.create(
-                        paragraph_index=paragraph_index,
                         report_id=new_report.id,
+                        paragraph_index=paragraph_index,
                         paragraph="Автоматически добавленный параграф",
+                        type_paragraph_id=8,  
                         paragraph_visible=True,
                         title_paragraph=True,
                         bold_paragraph=False,
-                        type_paragraph_id=8,  
-                        comment=None,
-                        paragraph_weight=1
+                        paragraph_weight=1,
+                        tags="",
+                        comment=None
                     )
                     paragraph_index += 1
 
         # Добавляем параграфы и предложения из impression
         new_paragraph_imression = Paragraph.create(
-            paragraph_index=paragraph_index,
             report_id=new_report.id,
+            paragraph_index=paragraph_index,
             paragraph="Заключение",
+            type_paragraph_id=impression,
             paragraph_visible=True,
             title_paragraph=True,
-            bold_paragraph=False,
-            type_paragraph_id=impression,
+            bold_paragraph=True,
             comment=None,
             paragraph_weight=1
         )
         for sentence in impression_sentences:
             Sentence.create(
                 paragraph_id=new_paragraph_imression.id,
-                index=1,
-                weight=1,
+                index=sentence.index,
+                weight=sentence.weight,
+                is_main=sentence.is_main,
                 comment='',
-                sentence=sentence
+                sentence=sentence.sentence
             )
         
         # Добавляем параграфы и предложения из scanparam
         new_paragraph_scanparam = Paragraph.create(
-            paragraph_index=1,
             report_id=new_report.id,
+            paragraph_index=1,
             paragraph="Параметры сканирования",
+            type_paragraph_id= scanparam,
             paragraph_visible=True,
             title_paragraph=True,
             bold_paragraph=False,
-            type_paragraph_id= scanparam,
+            paragraph_weight=1,
+            tags="",
             comment=None,
-            paragraph_weight=1
         )
         for sentence in scanparam_sentences:
             Sentence.create(
                 paragraph_id=new_paragraph_scanparam.id,
-                index=1,
-                weight=1,
+                index=sentence.index,
+                weight=sentence.weight,
+                is_main=sentence.is_main,
+                tags="",
                 comment='',
-                sentence=sentence
+                sentence=sentence.sentence
             )
         
         # Возвращаем успешный ответ

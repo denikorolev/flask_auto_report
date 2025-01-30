@@ -220,6 +220,8 @@ def save_modified_sentences():
                     paragraph_id=paragraph_id,
                     index=sentence_index,
                     weight=10,  # Вес по умолчанию
+                    is_main=False,
+                    tags="",
                     comment="Added automatically",
                     sentence=new_sentence_text
                 )
@@ -280,7 +282,14 @@ def add_sentence_to_paragraph():
             # Перебираем список предложений и добавляем их в базу данных
             for sentence_text in sentences_list:
                 if sentence_text:
-                    Sentence.create(paragraph_id=paragraph_id, index=0, weight=1, comment="", sentence=sentence_text)
+                    Sentence.create(paragraph_id=paragraph_id, 
+                                    index=0, 
+                                    weight=10, # Вес по умолчанию
+                                    is_main=False,
+                                    tags="",
+                                    comment="", 
+                                    sentence=sentence_text
+                                    )
 
         db.session.commit()  # Сохраняем все изменения в базе данных
 
