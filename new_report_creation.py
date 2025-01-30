@@ -211,7 +211,7 @@ def create_report_from_existing_report():
         report_name = request.form.get('report_name')
         report_type = request.form.get('report_type')
         report_subtype = request.form.get('report_subtype')
-        comment = request.form.get('comment')
+        comment = request.form.get('comment', "")
         report_side = request.form.get('report_side') == 'true'
         profile_id = g.current_profile.id
 
@@ -242,8 +242,8 @@ def create_report_from_existing_report():
                 title_paragraph=paragraph.title_paragraph,
                 bold_paragraph=paragraph.bold_paragraph,
                 type_paragraph_id=paragraph.type_paragraph_id,
-                comment=None,
-                paragraph_weight=1
+                comment=paragraph.comment,
+                paragraph_weight=paragraph.paragraph_weight or 1
             )
 
             for sentence in paragraph.paragraph_to_sentences:

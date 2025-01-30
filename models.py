@@ -531,8 +531,8 @@ class Paragraph(BaseModel):
     comment = db.Column(db.String(255), nullable=True)
     paragraph_weight = db.Column(db.SmallInteger, nullable=False) 
 
-    paragraph_to_sentences = db.relationship('Sentence', lazy=True, backref=db.backref("sentence_to_paragraph"), cascade="all, delete-orphan")
-    paragraph_to_types = db.relationship('ParagraphType')
+    paragraph_to_sentences = db.relationship("Sentence", lazy=True, backref=db.backref("sentence_to_paragraph"), cascade="all, delete-orphan")
+    paragraph_to_types = db.relationship("ParagraphType") # Связь с типом параграфа
     # Связь многие-ко-многим с другими параграфами
     linked_paragraphs = relationship(
         "Paragraph",
@@ -600,6 +600,7 @@ class Sentence(BaseModel):
     weight = db.Column(db.SmallInteger, nullable=False)
     comment = db.Column(db.String(100), nullable=False)
     sentence = db.Column(db.String(400), nullable=False)
+    is_main = db.Column(db.Boolean, default=False, nullable=True)
 
 
 
