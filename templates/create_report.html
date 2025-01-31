@@ -49,8 +49,7 @@
             <select class="report__select form-control" id="action" name="action" required>
                 <option value="manual">Вручную</option>
                 <option value="file">Из файла</option>
-                <option value="existing">Из существующего протокола</option>
-                <option value="existing_few">Из нескольких существующих протоколов</option>
+                <option value="existing_few">Из существующих протоколов</option>
             </select>
         </div>
 
@@ -59,7 +58,7 @@
             <input class="report_input__item form-control" type="file" id="report_file" name="report_file" accept=".doc, .docx">
         </div>
         
-        <button class="btn report__btn" type="button" name="report_creation">Создать протокол</button>
+        <button class="btn report__btn" id="createReportButton" type="button" name="report_creation">Создать протокол</button>
 
     </form>
 
@@ -78,7 +77,7 @@
             <li class="existing-fewreports__item" data-report-type="{{ report.report_to_subtype.subtype_to_type.id }}">
                 
                 
-                <input class="existing-fewreports__input--checkbox" type="radio" id="report_{{ report.id }}" name="existing_report_id" value="{{ report.id }}">
+                <input class="existing-fewreports__input--checkbox" type="checkbox" id="report_{{ report.id }}" name="existing_report_id" value="{{ report.id }}">
                 <label class="existing-fewreports__label--checkbox" for="report_{{ report.id }}">{{ report.report_name }}</label>
                 <span class="existing-fewreports__order-circle"></span>
             </li>
@@ -88,10 +87,7 @@
 
 </div>
 
-<!-- Hidden element to pass subtype data -->
-<script id="report-types-data" type="application/json">
-    {{ report_types_and_subtypes|tojson }}
-</script>
+
 
 
 <pre style="font-size: 12px; width: 800px; margin-top: 20px;"> Инструкция по подготовке текста в Word для создания шаблона:
@@ -136,6 +132,13 @@
     Теперь вы знаете, как подготовить документ Word для создания шаблона. Правильно отформатируйте ваш текст, 
     и программа автоматически обработает его, создавая удобный шаблон!
 </pre>
+
+
+
+<!-- Hidden element to pass subtype data -->
+<script id="report-types-data" type="application/json">
+    {{ report_types_and_subtypes|tojson }}
+</script>
 
 {% endblock container %}
 

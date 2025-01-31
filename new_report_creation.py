@@ -42,13 +42,14 @@ def create_report():
 def create_manual_report():
     
     try:
-        report_name = request.form.get('report_name')
-        report_type = request.form.get('report_type')
-        report_subtype = request.form.get('report_subtype')
+        data = request.get_json()
+        
+        report_name = data.get('report_name')
+        report_subtype = data.get('report_subtype')
+        comment = data.get('comment', "")
+        report_side = data.get('report_side', False)
+        
         profile_id = g.current_profile.id
-        comment = request.form.get('comment')
-        public = False
-        report_side = request.form.get('report_side') == 'true'
         
 
         # Create new report
@@ -58,7 +59,7 @@ def create_manual_report():
             report_name=report_name,
             user_id=current_user.id,
             comment=comment,
-            public=public,
+            public=False,
             report_side=report_side
         )
         return jsonify({"status": "success", 
@@ -76,10 +77,10 @@ def create_report_from_file():
     
     try:
         report_name = request.form.get('report_name')
-        report_type = request.form.get('report_type')
         report_subtype = request.form.get('report_subtype')
         comment = request.form.get('comment')
         report_side = request.form.get('report_side') == 'true'
+        
         profile_id = g.current_profile.id
 
         # Обрабатываем загруженный файл
@@ -201,89 +202,23 @@ def create_report_from_file():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
-# Создание нового отчета на основе существующего
-@new_report_creation_bp.route('/create_report_from_existing_report', methods=['POST'])
-@auth_required()
-def create_report_from_existing_report():
     
-    try:
-        existing_report_id = request.form.get('existing_report_id')
-        if not existing_report_id:
-            return jsonify({"status": "error", 
-                            "message": "No report selected"}), 400
-
-        # Получаем данные для нового отчета
-        report_name = request.form.get('report_name')
-        report_type = request.form.get('report_type')
-        report_subtype = request.form.get('report_subtype')
-        comment = request.form.get('comment', "")
-        report_side = request.form.get('report_side') == 'true'
-        profile_id = g.current_profile.id
-
-        # Получаем существующий отчет
-        existing_report = Report.query.get(existing_report_id)
-        if not existing_report:
-            return jsonify({"status": "error", "message": "Report not found"}), 404
-
-        public = False
-        # Создаем новый отчет на основе существующего
-        new_report = Report.create(
-            profile_id=profile_id,
-            report_subtype=report_subtype,
-            report_name=report_name,
-            user_id=current_user.id,
-            comment=comment,
-            public=public,
-            report_side=report_side
-        )
-
-        # Копируем абзацы и предложения из существующего отчета в новый
-        for paragraph in existing_report.report_to_paragraphs:
-            new_paragraph = Paragraph.create(
-                report_id=new_report.id,
-                paragraph_index=paragraph.paragraph_index,
-                paragraph=paragraph.paragraph,
-                type_paragraph_id=paragraph.type_paragraph_id,
-                paragraph_visible=paragraph.paragraph_visible,
-                title_paragraph=paragraph.title_paragraph,
-                bold_paragraph=paragraph.bold_paragraph,
-                paragraph_weight=paragraph.paragraph_weight or 1,
-                tags="",
-                comment=paragraph.comment
-            )
-
-            for sentence in paragraph.paragraph_to_sentences:
-                Sentence.create(
-                    paragraph_id=new_paragraph.id,
-                    index=sentence.index,
-                    weight=sentence.weight,
-                    is_main=sentence.is_main,
-                    tags="",
-                    comment=sentence.comment,
-                    sentence=sentence.sentence
-                )
-
-        return jsonify({"status": "success", 
-                        "message": "Report created from existing report successfully", 
-                        "report_id": new_report.id}), 200
-
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
-    
-    
-# Создание нового отчета на основе нескольких существующих
+# Создание нового отчета на основе одного или нескольких существующих
 @new_report_creation_bp.route('/create_report_from_existing_few', methods=['POST'])
 @auth_required()
 def create_report_from_existing_few():
     try:
         # Получаем данные из запроса
         data = request.get_json()
+        
         report_name = data.get("report_name")
         report_subtype = data.get("report_subtype")
         comment = data.get("comment")
-        report_side = data.get("report_side")
+        report_side = data.get("report_side", False)
         additional_paragraphs = int(data.get("additional_paragraphs", 0))
         selected_reports = data.get("selected_reports")
+        
+        
         profile_id = g.current_profile.id
         scanparam = 5
         impression = 3
@@ -291,7 +226,6 @@ def create_report_from_existing_few():
         if not selected_reports or not isinstance(selected_reports, list):
             return jsonify({"status": "error", 
                             "message": "No reports selected or invalid format"}), 400
-
 
         # Создаем новый отчет
         new_report = Report.create(
@@ -400,8 +334,8 @@ def create_report_from_existing_few():
             paragraph_index=1,
             paragraph="Параметры сканирования",
             type_paragraph_id= scanparam,
-            paragraph_visible=True,
-            title_paragraph=True,
+            paragraph_visible=False,
+            title_paragraph=False,
             bold_paragraph=False,
             paragraph_weight=1,
             tags="",
