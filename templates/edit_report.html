@@ -96,7 +96,9 @@
                                             <hr class="sentence-separator">
                                         {% endif %}  <!-- check the separator marker -->
                                         <li class="">
-                                            <form class="flex edit-paragraph__form--sentence" data-sentence-id="{{ sentence.id }}">
+                                            <form class="flex edit-paragraph__form--sentence 
+                                            {% if sentence.is_main %} sentence_is_main {% endif %}" 
+                                            data-sentence-id="{{ sentence.id }}">
                                                 {{ render_sentence(sentence, loop.index == 1) }}
                                             </form>
                                         </li>
@@ -113,7 +115,7 @@
             <div>
                 <form method="POST" action="{{ url_for('editing_report.edit_report', report_id=report.id) }}" class="new-paragraph-form">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <label class="label edit-paragraph__label" for="new_paragraph">Добавить новый параграф</label>
+                    <label class="label edit-paragraph__label" for="new_paragraph">Добавить новый параграф</label> <!--Нужно еще сделать логику js-->
                     <button class="btn report__btn edit-paragraph__button" type="button" id="new_paragraph" name="new_paragraph" onclick="newParagraphCreate()">Добавить</button>
                 </form>
             </div>

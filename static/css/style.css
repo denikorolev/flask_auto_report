@@ -758,3 +758,42 @@ body {
 .settings-block__item--changed {
     background-color: #a8acf5;
 }
+
+/* Это стиль для выделения главного предложения при изменении настроек профиля */
+.sentence_is_main {
+    background-color: var(--main-background-color);
+}
+
+/* Это стиль для заглушки лоадера */
+#global-loader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.3);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.loader-overlay {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.loader-spinner {
+    width: 50px;
+    height: 50px;
+    border: 5px solid #fff;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}

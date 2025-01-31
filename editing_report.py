@@ -172,40 +172,40 @@ def delete_paragraph():
     except Exception as e:
         return jsonify({"status": "error", "message": f"Failed to delete paragraph. Error code: {e}"}), 400
 
-
+# Массовое редактирование предложений
 @editing_report_bp.route('/edit_sentences_bulk', methods=['POST'])
 @auth_required()
 def edit_sentences_bulk():
 
-    if not request.is_json:
-        return jsonify({"status": "error", "message": "Invalid request format"}), 400
-
     data = request.get_json()
+
     try:
-        for sentence_data in data["sentences"]:
-            if sentence_data["sentence_id"] == "new":
+        for sentence_data in data:
+            if sentence_data.get("sentence_id") == "new":
                 # Логика для создания нового предложения
-                print(f"Creating new sentence for paragraph_id={sentence_data['add_sentence_paragraph']}")
-                sentence_index = sentence_data["sentence_index"]
-                paragraph_id = sentence_data["add_sentence_paragraph"]
+                print(f"Creating new sentence for paragraph_id={sentence_data.get('add_sentence_paragraph')}")
+                print(f"Данные из редактирования отчета, для проверки, теперь тут только main!!!!!! {sentence_data.get('is_main')}")
+                sentence_index = sentence_data.get("sentence_index")
+                paragraph_id = sentence_data.get("add_sentence_paragraph")
                 try:
                     Sentence.create(
                         paragraph_id=paragraph_id,
                         index=sentence_index,
-                        weight=sentence_data["sentence_weight"],
-                        is_main=data.get("is_main") == "true",
+                        weight=sentence_data.get("sentence_weight"),
+                        is_main=sentence_data.get("is_main"),
                         tags="",
-                        comment=sentence_data["sentence_comment"],
-                        sentence=sentence_data["sentence_sentence"]
+                        comment=sentence_data.get("sentence_comment"),
+                        sentence=sentence_data.get("sentence_sentence")
                     )
                 except Exception as e:
-                    print("can't create new sentence")
+                    print(f"can't create new sentence - {e}")
                     return jsonify({"status": "error", "message": "can't create new sentence"}), 500
                     
             else:
                 # Логика для обновления существующего предложения
                 sentence_for_edit = Sentence.query.get(sentence_data["sentence_id"])
                 print(f"Updating sentence with id={sentence_for_edit.id}")
+                print(f"Данные по статусу предложения, is_main={sentence_data['is_main']}")
                 sentence_for_edit.index = sentence_data["sentence_index"]
                 sentence_for_edit.weight = sentence_data["sentence_weight"]
                 sentence_for_edit.comment = sentence_data["sentence_comment"]

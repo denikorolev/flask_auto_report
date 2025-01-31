@@ -17,6 +17,14 @@
     </div>
     <div class="flex_column">
         {% if is_first %}
+            <label class="label" for="sentenceIsMain">isMain:</label>
+        {% endif %}
+        <input class="input--checkbox" type="checkbox" id="sentenceIsMain" name="is_main" value="{{ sentence.is_main }}" data-sentence-id="{{ sentence.id }}" {% if sentence.is_main %}checked{% endif %} disabled>
+        <input type="hidden" name="is_main" value="{{ sentence.is_main }}">
+    </div>
+
+    <div class="flex_column">
+        {% if is_first %}
             <label class="label" for="sentence_comment">Comment:</label>
         {% endif %}
         <input class="input input--short" type="text" id="sentence_comment" name="sentence_comment" value="{{ sentence.comment }}" data-sentence-id="{{ sentence.id }}">
@@ -27,8 +35,8 @@
         {% endif %}
         <input class="input input--wide" type="text" id="sentence_sentence" name="sentence_sentence" value="{{ sentence.sentence }}" data-sentence-id="{{ sentence.id }}">
     </div>
-    
-    <button class="btn report__btn edit-paragraph__btn--delete-sentence" type="button" data-sentence-id="{{ sentence.id }}" onclick="deleteSentenceButton(this)">delete_sentence</button>
+    <button class="btn report__btn edit-paragraph__btn--update-sentence" type="button" data-sentence-id="{{ sentence.id }}">Сделать главным</button>
+    <button class="btn report__btn edit-paragraph__btn--delete-sentence" type="button" data-sentence-id="{{ sentence.id }}" onclick="deleteSentenceButton(this)">Удалить</button>
 </div>
 {% endmacro %}
 

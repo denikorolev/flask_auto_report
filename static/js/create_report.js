@@ -1,6 +1,25 @@
 // create_report.js
 
 document.addEventListener("DOMContentLoaded", function() {
+    // Инициализация подтипов
+    initializeSubtypeLogic("report_type", "report_subtype", "report-types-data"); 
+    // Вешаем обработчик
+    document.getElementById("action").addEventListener("change", handleActionChange); 
+    // Триггерим для начальной настройки(имитируем нажатие от пользователя, чтобы запустить логику выбора)
+    document.getElementById("action").dispatchEvent(new Event("change")); 
+});
+
+
+
+
+
+
+
+
+
+
+
+document.addEventListener("DOMContentLoaded", function() {
     // Инициализируем логику типа и подтипа через utils.js
     initializeSubtypeLogic("report_type", "report_subtype", "report-types-data");
     
@@ -122,7 +141,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 method: "POST",
                 data: formData,
                 responseType: "json",
-                csrfToken: csrfToken
+                // csrfToken: csrfToken 
             }).then(response => {
                 if (response.status === "success") {
                     toastr.success(response.message);
@@ -139,7 +158,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 method: "POST",
                 data: formData,
                 responseType: "json",
-                csrfToken: csrfToken
+                // csrfToken: csrfToken
             }).then(response => {
                 if (response.status === "success") {
                     toastr.success(response.message);
@@ -167,7 +186,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 method: "POST",
                 data: formData,
                 responseType: "json",
-                csrfToken: csrfToken
+                // csrfToken: csrfToken
             }).then(response => {
                 if (response.status === "success") {
                     toastr.success(response.message);
@@ -201,7 +220,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 method: "POST",
                 data: jsonData,
                 responseType: "json",
-                csrfToken: csrfToken
+                // csrfToken: csrfToken
             })
                 .then(response => {
                     if (response.status === "success") {

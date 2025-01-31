@@ -23,7 +23,7 @@ function newParagraphCreate(){
     sendRequest({
         url: `/editing_report/new_paragraph`,
         data: {"report_id": reportId},
-        csrfToken: csrfToken
+        // csrfToken: csrfToken
     }).then(response => {
         if (response.status === "success") {
             window.location.reload();
@@ -55,7 +55,7 @@ function deleteParagraph(button){
             url: `/editing_report/delete_paragraph`,
             method: "DELETE",
             data: { paragraph_id: paragraphId },
-            csrfToken: csrfToken
+            // csrfToken: csrfToken
         }).then(response => {
             window.location.reload();
         }).catch(error => {
@@ -88,6 +88,8 @@ function expandSentencesOfParagraph(button){
             const formData = new FormData(form);
             const jsonData = Object.fromEntries(formData.entries());
             jsonData["sentence_id"] = form.getAttribute("data-sentence-id");
+            jsonData["is_main"] = form.querySelector("input[name='is_main']").checked;
+            
 
             sentenceData.push(jsonData);
         });
@@ -95,8 +97,8 @@ function expandSentencesOfParagraph(button){
         // Отправляем данные предложений на сервер
         sendRequest({
             url: "/editing_report/edit_sentences_bulk",
-            data: { sentences: sentenceData },
-            csrfToken: csrfToken
+            data: sentenceData,
+            // csrfToken: csrfToken
         }).then(response => {
             if (response.success) {
                 window.location.reload();
@@ -130,6 +132,7 @@ function newSentenceCreate(button){
         <input type="hidden" name="add_sentence_paragraph" value="${paragraphId}">
         <input class="input input--short edit-paragraph__input" type="text" name="sentence_index" value="${newSentenceIndex}">
         <input class="input input--short edit-paragraph__input" type="text" name="sentence_weight" value="1">
+        <input class="input--checkbox" type="checkbox" name="is_main">
         <input class="input input--short edit-paragraph__input" type="text" name="sentence_comment" value="">
         <input class="input input--wide edit-paragraph__input" type="text" name="sentence_sentence" value="New sentence">
         <button class="btn report__btn edit-paragraph__btn--delete-sentence" type="button" data-sentence-id="new" onclick="deleteSentenceButton(this)">Delete Sentence</button>

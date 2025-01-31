@@ -563,7 +563,7 @@ def compare_sentences_by_paragraph(new_sentences, report_id):
             - "duplicates": List of new sentences that match existing ones.
             - "unique": List of new sentences considered unique.
     """
-    similarity_threshold_fuzz = current_app.config["PROFILE_SETTINGS"]["SIMILARITY_THRESHOLD_FUZZ"]
+    similarity_threshold_fuzz = float(current_app.config["PROFILE_SETTINGS"]["SIMILARITY_THRESHOLD_FUZZ"])
     except_words = current_app.config["PROFILE_SETTINGS"]["EXCEPT_WORDS"]
     print(f"SIMILARITY_THRESHOLD_FUZZ: {similarity_threshold_fuzz}")
     print(f"EXCEPT_WORDS: {except_words}")
