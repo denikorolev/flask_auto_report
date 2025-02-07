@@ -446,7 +446,7 @@ class Report(BaseModel):
             user_id (int): ID пользователя (для проверки безопасности).
         
         Returns:
-            dict: Данные отчета, включая параграфы, предложения и ключевые слова.
+            dict: Данные отчета, включая параграфы и предложения.
         """
         # Ищем отчет по ID и пользователю
         report = cls.query.filter_by(id=report_id, profile_id=profile_id).first()
@@ -460,6 +460,7 @@ class Report(BaseModel):
         # Преобразуем параграфы и предложения в словари
         paragraph_data = []
         for paragraph in paragraphs:
+            # Тут предложения находятся в базе и сразу сортируются по индексу и весу
             sentences = Sentence.query.filter_by(paragraph_id=paragraph.id).order_by(Sentence.index, Sentence.weight).all()
             
             grouped_sentences = {}
@@ -472,7 +473,9 @@ class Report(BaseModel):
                     "index": sentence.index,
                     "weight": sentence.weight,
                     "comment": sentence.comment,
-                    "sentence": sentence.sentence
+                    "sentence": sentence.sentence,
+                    "is_main": sentence.is_main,
+                    "tags": sentence.tags
                 })
             
             paragraph_data.append({
@@ -484,19 +487,9 @@ class Report(BaseModel):
                 "bold_paragraph": paragraph.bold_paragraph,
                 "paragraph_type": paragraph.paragraph_to_types.type_name,
                 "paragraph_comment": paragraph.comment,
+                "paragraph_weight": paragraph.paragraph_weight,
+                "tags": paragraph.tags,
                 "sentences": grouped_sentences
-            })
-        
-        # Получаем ключевые слова, связанные с отчетом
-        key_words = KeyWord.get_keywords_for_report(profile_id, report_id)
-
-        keywords_data = []
-        for key_word in key_words:
-            keywords_data.append({
-                "group_index": key_word.group_index,
-                "index": key_word.index,
-                "key_word": key_word.key_word,
-                "key_word_comment": key_word.key_word_comment
             })
 
         # Формируем структуру данных для отчета
@@ -511,8 +504,7 @@ class Report(BaseModel):
                 "user_id": report.user_id,
                 "report_public": report.public
             },
-            "paragraphs": paragraph_data,
-            "keywords": keywords_data
+            "paragraphs": paragraph_data
         }
 
         return report_data
@@ -617,6 +609,7 @@ class Paragraph(BaseModel):
         return paragraph.linked_paragraphs if paragraph else []
 
 
+
 class Sentence(BaseModel):
     __tablename__ = "sentences"
     paragraph_id = db.Column(db.BigInteger, db.ForeignKey("report_paragraphs.id"), nullable=False)
@@ -645,6 +638,13 @@ class Sentence(BaseModel):
         Returns:
             Sentence: Созданный объект предложения.
         """
+        # Проверка наличия существующего is_main=True для данного index в данном paragraph_id
+        if is_main:
+            existing_main_sentence = cls.query.filter_by(paragraph_id=paragraph_id, index=index, is_main=True).first()
+            if existing_main_sentence:
+                print(f"Ошибка: Уже существует основное предложение с index={index} в параграфе {paragraph_id}.")
+                return None  # Возвращаем None, если нарушается ограничение
+            
         new_sentence = cls(
             paragraph_id=paragraph_id,
             index=index,
@@ -657,6 +657,7 @@ class Sentence(BaseModel):
         db.session.add(new_sentence)
         db.session.commit()
         return new_sentence
+    
     
     @classmethod
     def find_by_paragraph_id(cls, paragraph_id):

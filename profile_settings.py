@@ -6,6 +6,8 @@ from models import UserProfile, db, AppConfig
 from profile_constructor import ProfileSettingsManager
 from flask_security.decorators import auth_required
 from file_processing import sync_profile_files
+from models import Report
+
 import json
 
 profile_settings_bp = Blueprint('profile_settings', __name__)
@@ -224,3 +226,32 @@ def set_default_profile(profile_id):
     if not set_default:
         return jsonify({"status": "error", "message": "Не получилось установить профиль по умолчанию"}), 400
     return jsonify({"status": "success", "message": "Профиль установлен как дефолтный"}), 200
+
+
+# Маршрут для запуска разных чекеров
+@profile_settings_bp.route("/run_checker", methods=["POST"])
+@auth_required()
+def run_checker():
+    """
+    Запускает различные чекеры для проверки настроек профиля.
+    """
+    from utils import check_main_sentences
+    
+    profile_id = session.get("profile_id")
+    if not profile_id:
+        return jsonify({"status": "error", "message": "Profile not selected"}), 400
+
+    checker = request.json.get("checker")
+    
+    reports = Report.find_by_profile(profile_id)
+    
+    if checker == "main_sentences":
+        global_errors = []
+        for report in reports:
+            errors = check_main_sentences(report)
+            global_errors.extend(errors)
+        
+        return jsonify({"status": "success", "message": "Проверка выявила следующие ошибки", "errors": global_errors}), 200
+       
+    else:
+        return jsonify({"status": "error", "message": "Unknown checker"}), 400

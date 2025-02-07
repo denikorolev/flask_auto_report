@@ -9,7 +9,7 @@
 <input type="hidden" data-report-id=" {{report_data.report.id}} " id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
 <!-- Предзаполненная форма с ФИО и тд на странице протокола -->
 {% if user_settings.USE_WORD_REPORTS %}
-    <form class="flex" id="exportForm" data-report-type="{{ report_data.report.report_type }}" data-subtype="{{ report_data.report.report_subtype }}" data-comment="{{ report_data.report.comment }}" data-key-words="{{ key_words | tojson | safe }}">
+    <form class="flex" id="exportForm" data-report-type="{{ report_data.report.report_type }}" data-subtype="{{ report_data.report.report_subtype }}" data-comment="{{ report_data.report.comment }}">
         <div>
             <label for="patient-name">ФИО:</label>
             <input style="margin-right: 10px;" type="text" id="patient-name" name="patient_name" value="{{ full_name }}"readonly>
@@ -55,24 +55,24 @@
     </form>
 {% endif %}
 
+<!-- Сам протокол -->
 <div class="flex">
-    
     <!-- Основной блок с отчетом -->
     <div class=" report-container">
         {% for paragraph in report_data.paragraphs  %}
             {% if paragraph.paragraph_type == "scanparam" or paragraph.paragraph_type == "custom" %}
-                <ul class="initial-paragraph-list" id="initial-paragraph-list-{{ paragraph.id }}">
+                <ul class="paragraph__list--initial" id="paragraphListInitial-{{ paragraph.id }}">
                     {{ macros.render_paragraph_and_sentence(paragraph) }}
                 </ul>
             {% endif %}
             
             {% if paragraph.paragraph_type == "text" or paragraph.paragraph_type == "title" %}
-                <ul class="core-paragraph-list" id="core-paragraph-list-{{ paragraph.id }}">
+                <ul class="paragraph__list--core" id="paragraphListCore-{{ paragraph.id }}">
                     {{ macros.render_paragraph_and_sentence(paragraph) }}
                 </ul>
             {% endif %}
             {% if paragraph.paragraph_type == "impression" %}
-                <ul class="impression-paragraph-list" id="impression-paragraph-list-{{ paragraph.id }}">
+                <ul class="paragraph__list--impression" id="paragraphListImpression-{{ paragraph.id }}">
                     {{ macros.render_paragraph_and_sentence(paragraph) }}
                 </ul>
             {% endif %}

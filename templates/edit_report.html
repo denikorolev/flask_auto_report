@@ -127,6 +127,25 @@
     <!-- List of tables and buttons for editing -->
     {% endif %}
 </div>
+
+<div class="report-check">
+    <div class="report-check__buttons-block">
+        <h3 class="report-check_title">Возможные проверки для данного протокола</h3>
+        <button class"btn report__btn report-check__btn" id="btnCheckIsMain" data-report-id={{report.id}} onclick="reportCheckIsMainSentensesUnic(this)">Проверка на лишние is_main</button>
+    </div>
+
+    <ul class="report-check__list">
+        <li class="report-check__item" id="reportCheckIsMain" style="display: none;">
+            <h4 class="report-check__item--title">Проверка на лишние главные предложения</h4>
+            <ul class="report-check__item-list" id="reportCheckIsMainList">
+                <!-- Отчет с сервера, заполню динамически через js -->
+            </ul>
+    
+    
+        </li>
+    
+    </ul>
+</div>
     
 {% endblock container %}
 

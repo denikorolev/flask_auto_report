@@ -72,7 +72,6 @@ def working_with_reports():
     return render_template(
         "working_with_report.html", 
         title=report_data["report"]["report_name"],
-        # menu=menu,
         report_data=report_data,
         full_name=full_name,
         birthdate=birthdate,

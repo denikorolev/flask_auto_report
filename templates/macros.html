@@ -7,19 +7,19 @@
         {% if is_first %}
             <label class="label" for="sentence_index">Index:</label>
         {% endif %}
-        <input class="input input--short" type="text" id="sentence_index" name="sentence_index" value="{{ sentence.index }}" data-sentence-id="{{ sentence.id }}">
+        <input class="input input--short" type="text" name="sentence_index" value="{{ sentence.index }}" data-sentence-id="{{ sentence.id }}">
     </div>
     <div class="flex_column">
         {% if is_first %}
             <label class="label" for="sentence_weight">Weight:</label>
         {% endif %}
-        <input class="input input--short" type="text" id="sentence_weight" name="sentence_weight" value="{{ sentence.weight }}" data-sentence-id="{{ sentence.id }}">
+        <input class="input input--short" type="text" name="sentence_weight" value="{{ sentence.weight }}" data-sentence-id="{{ sentence.id }}">
     </div>
     <div class="flex_column">
         {% if is_first %}
             <label class="label" for="sentenceIsMain">isMain:</label>
         {% endif %}
-        <input class="input--checkbox" type="checkbox" id="sentenceIsMain" name="is_main" value="{{ sentence.is_main }}" data-sentence-id="{{ sentence.id }}" {% if sentence.is_main %}checked{% endif %} disabled>
+        <input class="input--checkbox" type="checkbox" name="is_main" value="{{ sentence.is_main }}" data-sentence-id="{{ sentence.id }}" {% if sentence.is_main %}checked{% endif %} disabled>
         <input type="hidden" name="is_main" value="{{ sentence.is_main }}">
     </div>
 
@@ -27,15 +27,15 @@
         {% if is_first %}
             <label class="label" for="sentence_comment">Comment:</label>
         {% endif %}
-        <input class="input input--short" type="text" id="sentence_comment" name="sentence_comment" value="{{ sentence.comment }}" data-sentence-id="{{ sentence.id }}">
+        <input class="input input--short" type="text" name="sentence_comment" value="{{ sentence.comment }}" data-sentence-id="{{ sentence.id }}">
     </div>
     <div class="flex_column edit-sentence__wrapper--sentence-text">
         {% if is_first %}
             <label class="label" for="sentence_sentence">Sentence text:</label>
         {% endif %}
-        <input class="input input--wide" type="text" id="sentence_sentence" name="sentence_sentence" value="{{ sentence.sentence }}" data-sentence-id="{{ sentence.id }}">
+        <input class="input input--wide" type="text" name="sentence_sentence" value="{{ sentence.sentence }}" data-sentence-id="{{ sentence.id }}">
     </div>
-    <button class="btn report__btn edit-paragraph__btn--update-sentence" type="button" data-sentence-id="{{ sentence.id }}">Сделать главным</button>
+    <button class="btn report__btn edit-paragraph__btn--main-sentence" type="button" data-sentence-id="{{ sentence.id }}" data-sentence-paragraph-id={{ sentence.sentence_to_paragraph.id }} data-sentence-index={{sentence.index }} onclick="makeSentenceMainButton(this)">Сделать главным</button>
     <button class="btn report__btn edit-paragraph__btn--delete-sentence" type="button" data-sentence-id="{{ sentence.id }}" onclick="deleteSentenceButton(this)">Удалить</button>
 </div>
 {% endmacro %}
@@ -63,15 +63,20 @@
             {% if paragraph.sentences %}
                 {% for index, sentence_group in paragraph.sentences.items() %}
                     {% if sentence_group[0].index != 0 %}
-                        <span contenteditable="true"
+                        {% for sentence in sentence_group %}
+                            {% if sentence.is_main %}
+                            <span contenteditable="true"
                             class="report__sentence sentence" 
                             data-paragraph-id="{{ paragraph.id }}" 
                             data-index="{{ index }}"
                             data-id="{{ sentence_group[0].id }}"> 
-                            {{ sentence_group[0].sentence }} 
-                        </span>
-                        <!-- Кнопка "+" для добавления предложения -->
-                        <button class="icon-btn icon-btn--add-sentence" type="button" title="Add Sentence" data-paragraph-id="{{ paragraph.id }}">+</button>
+                            {{ sentence.sentence }} 
+                            </span>
+                            <!-- Кнопка "+" для добавления предложения -->
+                            <button class="icon-btn icon-btn--add-sentence" type="button" title="Add Sentence" data-paragraph-id="{{ paragraph.id }}">+</button>
+                            {% endif %}
+                        {% endfor %}
+                        
                     {% endif %}
                 {% endfor %}
             {% endif %}

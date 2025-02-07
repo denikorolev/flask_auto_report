@@ -1,6 +1,8 @@
 // edit_report.js
 
 
+
+
 // Обработчик для кнопки update report работает через onclick
 function handleUpdateReportButtonClick() {
     const reportId = document.querySelector(".edit-report").getAttribute("data-report-id");
@@ -144,7 +146,6 @@ function newSentenceCreate(button){
     
 
 
-
 // Delete sentence deleteSentenceButton()
 function deleteSentenceButton(button) {
     const sentenceId = button.getAttribute("data-sentence-id");
@@ -156,7 +157,6 @@ function deleteSentenceButton(button) {
             url: `/editing_report/delete_sentence`,
             method: "DELETE",
             data: {sentence_id: sentenceId},
-            csrfToken: csrfToken
         }).then(response => {
             if (response.status === "success") {
                 button.closest("li").remove();
@@ -166,4 +166,59 @@ function deleteSentenceButton(button) {
 };
    
 
+// Обработчик для кнопки edit-paragraph__btn--main-sentence работает через onclick
+function makeSentenceMainButton(button) {
+    const sentenceId = button.dataset.sentenceId;
+    const sentenceParagraphId = button.dataset.sentenceParagraphId;
+    const sentenceIndex = button.dataset.sentenceIndex;
 
+    console.log("sentenceId", sentenceId);
+    console.log("sentenceParagraphId", sentenceParagraphId);
+    console.log("sentenceIndex", sentenceIndex);
+
+    sendRequest({
+        url: `/editing_report/make_sentence_main`,
+        method: "POST",
+        data: {sentence_id: sentenceId,
+                paragraph_id: sentenceParagraphId,
+                sentence_index: sentenceIndex
+        },
+    }).then(response => {
+        if (response.status === "success") {
+            window.location.reload();
+        } 
+    });
+};
+
+// Обработчик для кнопки btnCheckIsMain работает через onclick 
+// отправляет запрос на сервер для проверки на наличие лишних is_main предложений
+function reportCheckIsMainSentensesUnic(button) {
+    const reportId = button.dataset.reportId;
+    const blockForMessage = document.getElementById("reportCheckIsMain");
+    const messageList = document.getElementById("reportCheckIsMainList");
+
+    sendRequest({
+        url: "/editing_report/check_report_for_excess_ismain",
+        data: { report_id: reportId },
+    }).then(response => {
+        if (response.status === "success") {
+            messageList.innerHTML = ""; // Очищаем старые ошибки перед обновлением
+
+            if (response.errors.length === 0) {
+                // Если ошибок нет — показываем сообщение об успехе
+                messageList.innerHTML = `<li class="report-check__item-success">✅ Все предложения корректны!</li>`;
+            } else {
+                // Если есть ошибки — добавляем их в список
+                response.errors.forEach(error => {
+                    const errorItem = document.createElement("li");
+                    errorItem.classList.add("report-check__item-error");
+                    errorItem.textContent = `🔴 Параграф ${error.paragraph_index}  ${error.paragraph}, содержит группу предложений с индексом=${error.index} со следующими ошибками:  ${error.issue} (Лишних главных предложений: ${error.extra_main_count})`;
+                    messageList.appendChild(errorItem);
+                });
+            }
+
+            // Показываем блок с сообщением
+            blockForMessage.style.display = "block";
+        }
+    });
+}

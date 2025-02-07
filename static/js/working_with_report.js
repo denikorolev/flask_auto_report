@@ -415,9 +415,9 @@ function highlightKeyWords(text, keyWordsGroups) {
 
 
 /**
- * Обновляет текст абзацев с классом `core-paragraph-list` и выделяет ключевые слова.
+ * Обновляет текст абзацев с классом `paragraph__list--core` и выделяет ключевые слова.
  * 
- * Функция проходит по всем элементам с классом `core-paragraph-list`, извлекает текст абзацев 
+ * Функция проходит по всем элементам с классом `paragraph__list--core`, извлекает текст абзацев 
  * и выделяет ключевые слова, используя функцию `highlightKeyWords`. Выделение применяется только 
  * если абзац еще не содержит выпадающих списков (`<select>`). Также сохраняется атрибут `data-index` 
  * для каждого абзаца.
@@ -425,16 +425,16 @@ function highlightKeyWords(text, keyWordsGroups) {
  * @requires highlightKeyWords - Функция для выделения ключевых слов в тексте.
  * @requires keyWordsGroups - Глобальная переменная, содержащая группы ключевых слов для выделения.
  *
- * @global {NodeList} coreParagraphLists - Элементы с классом `core-paragraph-list`.
+ * @global {NodeList} coreParagraphLists - Элементы с классом `paragraph__list--core`.
  * 
  * Логика работы:
- * - Для каждого элемента `core-paragraph-list` находятся вложенные элементы `p` и `span`.
+ * - Для каждого элемента `paragraph__list--core` находятся вложенные элементы `p` и `span`.
  * - Из каждого элемента извлекается текст.
  * - Если текст еще не содержит `<select>`, применяется выделение ключевых слов.
  * - Восстанавливается атрибут `data-index` для каждого абзаца.
  */
 function updateCoreParagraphText() {
-    const coreParagraphLists = document.querySelectorAll(".core-paragraph-list");
+    const coreParagraphLists = document.querySelectorAll(".paragraph__list--core");
 
     coreParagraphLists.forEach(paragraphList => {
         paragraphList.querySelectorAll("p, span").forEach(paragraph => {
@@ -460,7 +460,7 @@ function updateCoreParagraphText() {
 /**
  * Собирает данные абзацев и предложений для отправки на сервер.
  * 
- * Функция проходит по всем абзацам с классом `core-paragraph-list`, извлекает текст абзацев, 
+ * Функция проходит по всем абзацам с классом `paragraph__list--core`, извлекает текст абзацев, 
  * их идентификаторы, а также вложенные предложения. Собранные данные возвращаются в формате массива объектов.
  * Каждый объект содержит:
  * - `paragraph_id` — идентификатор абзаца;
@@ -478,17 +478,17 @@ function updateCoreParagraphText() {
  * @requires cleanSelectText - Глобальная функция, которая очищает текст предложения от HTML-тегов и других элементов.
  */
 function collectParagraphsData() {
-    const coreParagraphLists = document.querySelectorAll(".core-paragraph-list"); // Ищем списки с классом core-paragraph-list
+    const coreParagraphLists = document.querySelectorAll(".paragraph__list--core"); // Ищем списки с классом paragraph__list--core
     const paragraphsData = [];
 
     coreParagraphLists.forEach(paragraphList => {
-        // Находим элемент абзаца внутри текущего списка (core-paragraph-list)
+        // Находим элемент абзаца внутри текущего списка (paragraph__list--core)
         const paragraphElement = paragraphList.querySelector(".report__paragraph > p");
         
 
         // Проверяем, что элемент абзаца существует
         if (!paragraphElement) {
-            console.error("Paragraph element not found in core-paragraph-list.");
+            console.error("Paragraph element not found in paragraph__list--core.");
             return;
         }
 
@@ -708,7 +708,7 @@ function linkSentences() {
             // Связываем видимое предложение с отфильтрованными предложениями из reportData
             sentenceElement.linkedSentences = filteredSentences;
 
-            // Если есть связанные предложения, озеленяем текущее предложение
+            // Если есть связанные предложения, выделяем цветом текущее предложение
             if (sentenceElement.linkedSentences.length > 0) {
                 sentenceElement.classList.add("has-linked-sentences-highlighted-sentence");
             }
@@ -1000,7 +1000,7 @@ function addSentenceButtonLogic() {
  * Обрабатывает логику кнопки "Copy to Clipboard".
  * 
  * Функциональность:
- * - При нажатии на кнопку собирает текст из параграфов с классами "initial-paragraph-list", "core-paragraph-list", и "impression-paragraph-list".
+ * - При нажатии на кнопку собирает текст из параграфов с классами "paragraph__list--initial", "paragraph__list--core", и "paragraph__list--impression".
  * - Формирует общий текст, объединяя данные из указанных параграфов.
  * - Копирует сформированный текст в буфер обмена.
  * - Отправляет собранные данные абзацев на сервер для обработки.
@@ -1029,9 +1029,9 @@ function copyButtonLogic(copyButton) {
     copyButton.addEventListener("click", async function () {
 
         // Собираем текст из параграфов
-        const initialText = collectTextFromParagraphs("initial-paragraph-list");
-        const coreText = collectTextFromParagraphs("core-paragraph-list");
-        const impressionText = collectTextFromParagraphs("impression-paragraph-list");
+        const initialText = collectTextFromParagraphs("paragraph__list--initial");
+        const coreText = collectTextFromParagraphs("paragraph__list--core");
+        const impressionText = collectTextFromParagraphs("paragraph__list--impression");
 
         // Соединяем все части с пустой строкой между ними
         const textToCopy = `${initialText}\n\n${coreText}\n\n${impressionText}`.trim();
@@ -1084,7 +1084,7 @@ async function sendParagraphsData(paragraphsData) {
  * Обрабатывает логику кнопки "Export to Word".
  * 
  * Функциональность:
- * - Собирает текст из абзацев с классами "initial-paragraph-list", "core-paragraph-list", и "impression-paragraph-list".
+ * - Собирает текст из абзацев с классами "paragraph__list--initial", "paragraph__list--core", и "paragraph__list--impression".
  * - Отправляет данные абзацев на сервер для обработки.
  * - При успешной обработке данных выполняет экспорт текста в формат Word.
  * - Формирует имя файла на основе имени пациента, типа отчета, подтипа отчета и текущей даты.
@@ -1116,9 +1116,9 @@ function wordButtonLogic(exportButton) {
     
     exportButton.addEventListener("click", async function() {
         // Собираем текст из разных списков абзацев
-        const initialText = collectTextFromParagraphs("initial-paragraph-list");
-        const coreText = collectTextFromParagraphs("core-paragraph-list");
-        const impressionText = collectTextFromParagraphs("impression-paragraph-list");
+        const initialText = collectTextFromParagraphs("paragraph__list--initial");
+        const coreText = collectTextFromParagraphs("paragraph__list--core");
+        const impressionText = collectTextFromParagraphs("paragraph__list--impression");
 
         const textToExport = `${coreText}\n\n${impressionText}`.trim();
         const scanParam = initialText.trim();
@@ -1208,14 +1208,14 @@ function wordButtonLogic(exportButton) {
  * Логика для кнопки "Generate Impression".
  * 
  * Функция обрабатывает нажатие на кнопку "Generate Impression". Она:
- * 1. Собирает текст из абзацев с классом "core-paragraph-list".
+ * 1. Собирает текст из абзацев с классом "paragraph__list--core".
  * 2. Отправляет текст на сервер для генерации впечатления с помощью ассистента.
  * 3. Отображает результат в поле `aiResponse`.
  * 4. Обрабатывает ошибки, если запрос не удается.
  */
 function generateImpressionLogic(generateButton, boxForAiResponse) {
     generateButton.addEventListener("click", async function () {
-        const textToCopy = collectTextFromParagraphs("core-paragraph-list");
+        const textToCopy = collectTextFromParagraphs("paragraph__list--core");
         const assistantNames = ["airadiologist"];
         boxForAiResponse.textContent = "Ожидаю ответа ИИ...";
 
@@ -1237,7 +1237,7 @@ function generateImpressionLogic(generateButton, boxForAiResponse) {
  * Шаги выполнения:
  * 1. Извлекает текст заключения из элемента с ID `aiResponse`.
  * 2. Если текст пуст, отображает предупреждение пользователю о необходимости сгенерировать заключение.
- * 3. Ищет первый видимый элемент предложения в абзацах с классом `impression-paragraph-list`.
+ * 3. Ищет первый видимый элемент предложения в абзацах с классом `paragraph__list--impression`.
  * 4. Заменяет текст найденного предложения на текст из `aiResponse`.
  * 
  * В случае отсутствия видимого предложения:
@@ -1246,7 +1246,7 @@ function generateImpressionLogic(generateButton, boxForAiResponse) {
  * Требования:
  * - Элемент с ID `addImpressionToReportButton` (кнопка).
  * - Элемент с ID `aiResponse` для получения текста заключения.
- * - Элементы с классом `impression-paragraph-list .report__sentence` для вставки текста.
+ * - Элементы с классом `paragraph__list--impression .report__sentence` для вставки текста.
  * - Функция `isElementVisible` для проверки видимости элементов.
  */
 function addImpressionButtonLogic(addImpressionButton) {
@@ -1259,8 +1259,8 @@ function addImpressionButtonLogic(addImpressionButton) {
             return;
         }
 
-        // Ищем первый видимый элемент предложения в impression-paragraph-list
-        const impressionParagraphs = document.querySelectorAll(".impression-paragraph-list .report__sentence");
+        // Ищем первый видимый элемент предложения в paragraph__list--impression
+        const impressionParagraphs = document.querySelectorAll(".paragraph__list--impression .report__sentence");
         let foundVisibleSentence = false;
 
         impressionParagraphs.forEach(sentenceElement => {

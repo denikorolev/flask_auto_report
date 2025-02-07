@@ -10,6 +10,7 @@ document.addEventListener("DOMContentLoaded", function(){
 
     initializeChangeListeners(); // Слушатели изменения для элементов чтобы отправлять только измененные данные
 
+    isMainChecker(); // Проверка на наличие ошибок, связанных с is_main в протоколах этого профиля
 });
 
 
@@ -138,3 +139,39 @@ function deleteProfile() {
         });
     });
 }   
+
+// Проверка на наличие ошибок, связанных с is_main в протоколах этого профиля
+function isMainChecker(){
+    document.getElementById("btnCheckIsMain").addEventListener("click", () => {
+        
+        const blockForMessage = document.getElementById("reportCheckMessageBlock");
+        const title = document.getElementById("reportCheckMessageTitle");
+        const messageList = document.getElementById("reportCheckMessageList");
+        
+        title.textContent = "Проверка на наличие ошибок, связанных с is_main в протоколах этого профиля";
+        sendRequest({
+            url: "/profile_settings/run_checker",
+            data: { checker: "main_sentences" },
+        }).then(response => {
+            if (response.status === "success") {
+                messageList.innerHTML = ""; // Очищаем старые ошибки перед обновлением
+
+                if (response.errors.length === 0) {
+                    // Если ошибок нет — показываем сообщение об успехе
+                    messageList.innerHTML = `<li class="report-check__item-success">✅ Не выявлено ни одной ошибки связанной с is_main в протоколах этого профиля!</li>`;
+                } else {
+                    // Если есть ошибки — добавляем их в список
+                    response.errors.forEach(error => {
+                        const errorItem = document.createElement("li");
+                        errorItem.classList.add("report-check__item-error");
+                        errorItem.textContent = `🔴 В протоколе ${error.report} -  Параграф ${error.paragraph_index}  ${error.paragraph}, содержит группу предложений с индексом=${error.index} со следующими ошибками:  ${error.issue} (Лишних главных предложений: ${error.extra_main_count})`;
+                        messageList.appendChild(errorItem);
+                    });
+                }
+
+                // Показываем блок с сообщением
+                blockForMessage.style.display = "block";
+            }
+        });
+    });
+}

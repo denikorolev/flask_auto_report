@@ -3,7 +3,7 @@
 from flask import Blueprint, render_template, request, current_app, jsonify, g
 from models import db, Report, Paragraph, Sentence, ParagraphType
 from errors_processing import print_object_structure
-from utils import get_max_index
+from utils import get_max_index, check_main_sentences
 from flask_security.decorators import auth_required
 
 
@@ -17,7 +17,6 @@ editing_report_bp = Blueprint('editing_report', __name__)
 @auth_required()
 def edit_report():
     page_title = "Editing report"
-    # menu = current_app.config['MENU']
     report_id = request.args.get("report_id")
     report = None
 
@@ -39,7 +38,6 @@ def edit_report():
 
     return render_template('edit_report.html', 
                            title=page_title, 
-                        #    menu=menu, 
                            report=report,
                            report_paragraphs=report_paragraphs,
                            paragraph_types=paragraph_types
@@ -240,5 +238,62 @@ def delete_sentence():
         return jsonify({"status": "error", "message": f"Failed to delete sentence. Error code: {e}"}), 400
 
 
+@editing_report_bp.route("make_sentence_main", methods=["POST"])
+@auth_required()
+def make_sentence_main():
+    print("make_sentence_main start--------------------------------")
+    if not request.is_json:
+        return jsonify({"status": "error", "message": "Invalid request format"}), 400
+
+    data = request.get_json()
+    print(data)
+    sentence_id = int(data.get("sentence_id"))
+    paragraph_id = int(data.get("paragraph_id"))
+    sentence_index = int(data.get("sentence_index"))
+    
+    if not sentence_id or not paragraph_id or not sentence_index:
+        print("There is no sentence_id or paragraph_id or sentence_index in request")
+        return jsonify({"status": "error", "message": "В запросе не хватает данных"}), 400
+
+    paragraph = Paragraph.query.get(paragraph_id)
+    if not paragraph or paragraph.paragraph_to_report.profile_id != g.current_profile.id:
+        return jsonify({"status": "error", "message": "Paragraph not found or data of this paragraph doesn't match with current profile"}), 404
+
+    try:
+        sentences = Sentence.query.filter_by(paragraph_id = paragraph_id, index = sentence_index).all()
+        for sentence in sentences:
+            print(f"sentence id={sentence.id} checked sentence_id={sentence_id}")
+            if sentence.id == sentence_id:
+                print(f"make sentence main id={sentence.id}!!!!!!!!!!!!!!!!")
+                sentence.is_main = True
+            else:
+                sentence.is_main = False
+            sentence.save()
+        print("make_sentence_main end--------------------------------")
+        return jsonify({"status": "success", "message": "Sentence is now main"}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": f"Failed to make sentence main. Error code: {e}"}), 400
 
 
+
+@editing_report_bp.route('/check_report_for_excess_ismain', methods=['POST'])
+@auth_required()
+def check_report_for_excess_ismain():
+    """
+    Проверяет, есть ли в каждом наборе предложений с одинаковым index ровно одно is_main.
+    Если index = 0, то в этом наборе не должно быть is_main.
+    Возвращает отчет с информацией о проблемах в параграфах.
+    """
+    if not request.is_json:
+        return jsonify({"status": "error", "message": "Invalid request format"}), 400
+
+    data = request.get_json()
+    report_id = data.get("report_id")
+    report = Report.query.get(report_id)
+
+    if not report or report.profile_id != g.current_profile.id:
+        return jsonify({"status": "error", "message": "Report not found or data of this report doesn't match with current profile"}), 404
+
+    errors = check_main_sentences(report)
+    
+    return jsonify({"status": "success", "errors": errors}), 200
