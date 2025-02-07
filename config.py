@@ -7,8 +7,6 @@ from flask_login import current_user
 import os
 from dotenv import load_dotenv
 from models import *
-# импорты для flask security
-# from  import CustomRegisterForm
 import logging
 
 load_dotenv()
@@ -126,7 +124,39 @@ class Config:
         else:
             return f"postgresql://{db_user}@{db_host}:{db_port}/{db_name}"
         
-        
+    # Логирование
+    LOG_LEVEL = os.getenv("LOG_LEVEL", "WARNING").upper()  # Получаем уровень логирования
+    LOG_TO_FILE = os.getenv("LOG_TO_FILE", "false").lower() == "true"  # Запись логов в файл
+    
+    @classmethod
+    def setup_logging(cls):
+        """Настраивает логирование для приложения"""
+    #Создаем глобальный логгер (делаем его статическим)
+    logger = logging.getLogger("flask_app")
+    logger.setLevel(getattr(logging, LOG_LEVEL, logging.WARNING))
+
+    @staticmethod
+    def setup_logging():
+        """Настраивает логирование один раз"""
+        if not Config.logger.hasHandlers():  # Проверяем, настроен ли уже логгер
+            formatter = logging.Formatter("[%(asctime)s] %(levelname)s in %(module)s: %(message)s")
+
+            # Логирование в консоль
+            console_handler = logging.StreamHandler()
+            console_handler.setFormatter(formatter)
+            Config.logger.addHandler(console_handler)
+
+            # Логирование в файл, если включено в конфиге
+            if Config.LOG_TO_FILE:
+                file_handler = logging.FileHandler("app.log", encoding="utf-8")
+                file_handler.setFormatter(formatter)
+                Config.logger.addHandler(file_handler)
+
+            logging.getLogger("werkzeug").setLevel(logging.ERROR)
+            Config.logger.info(f"Логирование настроено. Уровень: {Config.LOG_LEVEL}, Логи в файл: {Config.LOG_TO_FILE}")
+
+        return Config.logger
+    
 class DevelopmentConfig(Config):
     """Конфигурация для локальной разработки"""
     DB_HOST = os.getenv("DB_HOST", "localhost")  # По умолчанию подключение к localhost

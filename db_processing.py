@@ -3,8 +3,11 @@
 from flask import g, session, current_app
 from flask_login import current_user
 from models import KeyWord, db, AppConfig, UserProfile
+from config import Config
 from utils import get_max_index
 import json
+
+logger = Config.logger
 
 def add_keywords_to_db(key_words, report_ids):
     """
@@ -38,10 +41,10 @@ def sync_all_profiles_settings(user_id):
     
     Выполняется 1 раз за сессию.
     """
-    print("Синхронизация настроек начата")
+    logger.info(f"Начало синхронизации настроек для всех профилей пользователя {user_id}")  
     DEFAULT_PROFILE_SETTINGS = current_app.config.get("DEFAULT_PROFILE_SETTINGS")
     if not DEFAULT_PROFILE_SETTINGS:
-        print("DEFAULT_PROFILE_SETTINGS не найдены")
+        logger.error("DEFAULT_PROFILE_SETTINGS not found in current_app.config. Syncing aborted.")
         return
     profiles = UserProfile.get_user_profiles(user_id)  # Получаем все профили пользователя
     
@@ -66,4 +69,4 @@ def sync_all_profiles_settings(user_id):
         # Фиксируем изменения
         db.session.commit()
 
-    print(f" Синхронизация настроек завершена для всех профилей пользователя {user_id}")
+    logger.info(f"Синхронизация настроек для всех профилей пользователя {user_id} завершена")

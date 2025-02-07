@@ -2,12 +2,16 @@
 
 from flask import url_for, g
 from flask_login import current_user
+from config import Config
+
+
+
+logger = Config.logger
 
 def build_menu():
     """
     Формирует меню на основе текущего профиля.
     """
-    print("build_menu started")
     menu = [
         
         {"name": "Протокол", "url": url_for("working_with_reports.choosing_report"), "min_rank": 1},
@@ -29,15 +33,10 @@ def build_menu():
     else:
         user_rank = current_user.get_max_rank()
         if user_rank is None:
-            print("user_rank from get_max_rank has returtned as None")
+            logger.warning(f"User {current_user.email} has no rank. Using default rank=0.")
             user_rank = 0
-    
-    print(f"in build menu, user_rank={user_rank}")
 
     # Фильтруем пункты меню в зависимости от ранга
     filtered_menu = [item for item in menu if item["min_rank"] <= user_rank]
         
-    
-    print("build_menu end work")
-    print(f"inject_menu get menu ===== {filtered_menu}  ")
     return filtered_menu

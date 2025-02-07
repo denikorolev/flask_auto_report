@@ -49,6 +49,8 @@ security = Security(app, user_datastore)
 csrf = CSRFProtect(app)
 csrf.init_app(app) # Инициализация CSRF-защиты
 
+# Инициализация логирования
+logger = get_config().setup_logging()
 
 
 # Обработчик сигнала user_registered и автоматическое назначение роли 'user'
@@ -78,39 +80,31 @@ app.register_blueprint(admin_bp, url_prefix="/admin")
 @app.context_processor
 def inject_menu():
     """Добавляет меню в глобальный контекст Jinja."""
-    print("inject_menu started-------")
     excluded_endpoints = {"error", "security.login", "security.logout", "index"}
     if request.endpoint in excluded_endpoints:
-        print("inject_menu end work because of exclusion-------")
         return {}
-    
     return {"menu": build_menu()}
 
 # Добавляю контекстный процессор для настроек профиля
 @app.context_processor
 def inject_user_settings():
     """Добавляет все настройки профиля в глобальный контекст Jinja."""
-    print("inject_user_settings started-------")
     excluded_endpoints = {"error", "security.login", "security.logout", "index", "profile_settings.create_profile"}
     if request.endpoint in excluded_endpoints:
-        print("inject_user_settings end work because of exclusion-------")
         return {}
     
     user_settings = app.config.get("PROFILE_SETTINGS", {})
 
-    print(f"User settings from app.config: {user_settings}")
     if not user_settings:
-        print("User settings not found in app.config, loading from ProfileSettingsManager")
         user_settings = ProfileSettingsManager.load_profile_settings()
         
-    print(f"inject_user_settings end work. User settings from context processor: {user_settings}")
     return {"user_settings": user_settings}
 
 # Добавляю контекстный процессор для версии приложения
 @app.context_processor
 def inject_app_info():
     """Добавляет информацию о приложении в глобальный контекст Jinja."""
-    app_info = {"version": version, "author": "dgk"}
+    app_info = {"version": version, "author": "radiologary ltd"}
     return {"app_info": app_info}
 
 # Добавляю контекстный процессор для ранга пользователя 
@@ -118,38 +112,18 @@ def inject_app_info():
 # доступ к некоторым частям страниц
 @app.context_processor
 def inject_user_rank():
-    print("inject_user_rank started-------")
     if not current_user.is_authenticated:
-        print("inject_user_rank end work because of user is not authenticated end user's rank is 0 -------")
         return {"user_max_rank": 0}
     user_max_rank = current_user.get_max_rank()
     if not user_max_rank:
-        print("user_max_rank from get_max_rank has returtned as None")
         user_max_rank = 0   
-    print(f"inject_user_rank end work. User's rank is {user_max_rank} -------")
     return {"user_max_rank": user_max_rank}
-
-
-
-
-# Functions 
-
-
-def test_db_connection():
-    try:
-        db.engine.connect()
-        print("Database connection successful", "success")
-        return True
-    except Exception as e:
-        print(f"Database connection failed: {e}", "error")
-        return False
 
 
 
 # Логика для того, чтобы сделать данные профиля доступными в любом месте программы
 @app.before_request
 def load_current_profile():
-    
     # Исключения для статических файлов и маршрутов, которые не требуют профиля
     if request.path.startswith('/static/') or request.endpoint in [
         "security.login", "security.logout", "security.register", 
@@ -162,11 +136,12 @@ def load_current_profile():
     if not current_user.is_authenticated:
         g.current_profile = None
         session.pop("profile_id", None)
+        logger.info("User is not authenticated")
         return
     
     # Если профиль уже установлен в g, пропускаем
     if hasattr(g, "current_profile") and g.current_profile:
-        print("skipping - profile is already set in g")
+        logger.info("Profile is already set in g")
         return
     
     # Если я здесь, значит пользователь авторизован и у него нет профиля в g
@@ -178,7 +153,6 @@ def load_current_profile():
         profile = UserProfile.find_by_id_and_user(profile_id, current_user.id)
         if profile:
             g.current_profile = profile
-            print("Profile loaded to g from session")
             return
         else:
             # Если профиль из сессии не найден в базе или не 
@@ -192,11 +166,11 @@ def load_current_profile():
     # у пользователя профили, сколько их и в зависимости 
     # от этого маршрутизируем
     if not user_profiles:
-        print("User has no profiles")
+        logger.info("User has no profiles")
         # Если у пользователя нет профилей отпраляем его создавать профиль
         return redirect(url_for("profile_settings.choosing_profile"))
     elif len(user_profiles) == 1:
-        print("User has only one profile")
+        logger.info("User has only one profile")
         # Если только один профиль, устанавливаем его и отправляем на выбор отчета
         profile = user_profiles[0]
         session["profile_id"] = profile.id
@@ -204,7 +178,7 @@ def load_current_profile():
         ProfileSettingsManager.load_profile_settings()
         return redirect(url_for("working_with_reports.choosing_report"))
     elif len(user_profiles) > 1 and UserProfile.get_default_profile(current_user.id):
-        print("User has multiple profiles and has default profile")
+        logger.info("User has multiple profiles and default profile")
         # Если у пользователя несколько профилей и есть дефолтный, устанавливаем его и отправляем на выбор отчета
         profile = UserProfile.get_default_profile(current_user.id)
         session["profile_id"] = profile.id
@@ -212,7 +186,7 @@ def load_current_profile():
         ProfileSettingsManager.load_profile_settings()
         return redirect(url_for("working_with_reports.choosing_report"))
     else:
-        print("User has multiple profiles and no default profile")
+        logger.info("User has multiple profiles and no default profile")
         # Если профилей несколько и дефолтный не выбран, перенаправляем для выбора профиля
         return redirect(url_for("profile_settings.choosing_profile"))
                                
@@ -224,11 +198,13 @@ def one_time_sync_tasks():
     - Синхронизация настроек профилей.
     - (В будущем) другие одноразовые задачи, например, обновления данных.
     """
+            
     if not current_user.is_authenticated:
         return  # Если пользователь не вошел — ничего не делаем
 
     if not session.get("synced"):  # Проверяем, была ли уже выполнена синхронизация
         sync_all_profiles_settings(current_user.id)
+        logger.debug("Synced profile settings")
         session["synced"] = True  # Помечаем, что синхронизация выполнена
 
 
@@ -273,6 +249,8 @@ def playground():
 
 
 # Фильтруем логи 
+
+
 if os.getenv("FLASK_ENV") == "local":
     from flask_debugtoolbar import DebugToolbarExtension
     class StaticFilter(logging.Filter):

@@ -3,6 +3,9 @@
 from flask import current_app, g, session
 import json
 from models import AppConfig
+from config import Config
+
+logger = Config.logger
 
 class ProfileSettingsManager:
     """
@@ -13,31 +16,26 @@ class ProfileSettingsManager:
         """
         Загружает настройки для указанного профиля из таблицы AppConfig в current_app.config.
         """
-        print("load_profile_settings started")
+        
         try:
-            
             profile = getattr(g, "current_profile", None)
             profile_id = profile.id if profile else session.get("profile_id") or None
-            print(f"profile_id found ={profile_id}")
-            
             if profile_id:
-                print(f"Loading settings for profile_id={profile_id}")
                 settings = AppConfig.query.filter_by(profile_id=profile_id).all()
                 profile_settings = {setting.config_key: ProfileSettingsManager._parse_value(setting) for setting in settings}
                 # Сохраняем все настройки в app.config под ключом PROFILE_SETTINGS
                 current_app.config["PROFILE_SETTINGS"] = profile_settings
                 
                 if not profile_settings:
-                    print("Loading default settings")
+                    logger.warning(f"No settings found for profile_id={profile_id}. Using default settings.")
                     profile_settings = current_app.config.get("DEFAULT_PROFILE_SETTINGS", {})
                     current_app.config["PROFILE_SETTINGS"] = profile_settings
                     
                 return profile_settings
                 
         except Exception as e:
-            print(f"Error loading settings for profile_id={profile_id}: {str(e)}")
-            current_app.logger.error(f"Error loading settings for profile_id={profile_id}: {str(e)}")
-        print("load_profile_settings end work. No settings found")
+            logger.error(f"Error loading settings for profile_id={profile_id}: {str(e)}")
+        logger.warning("No profile settings loaded. Using empty dict.")
         return {}
 
     @staticmethod
