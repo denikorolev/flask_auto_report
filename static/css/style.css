@@ -479,7 +479,7 @@ body {
 /* Создаем сетку для заголовков и строк */
 .report_grid {
     display: grid;
-    grid-template-columns: 0.3fr 0.8fr 0.8fr 1.5fr 0.3fr 0.3fr; /* Настраиваем ширину каждого столбца */
+    grid-template-columns: 0.3fr 0.8fr 0.8fr 1.5fr 0.1fr 0.3fr 0.3fr; /* Настраиваем ширину каждого столбца */
     gap: 10px;
     align-items: center;
 }
@@ -797,3 +797,102 @@ body {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
 }
+
+
+/* Стили для попапа в my_reports*/
+.popup {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+.popup-content {
+    background: white;
+    padding: 20px;
+    width: 70%;
+    margin: 10% auto;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    text-align: center;
+}
+.close {
+    position: absolute;
+    top: 10px;
+    right: 20px;
+    font-size: 24px;
+    cursor: pointer;
+}
+
+.paragraph-block {
+    padding: 10px;
+    border-radius: 6px;
+    background: #f1f3f5; /* Светлый фон */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Легкая тень */
+    border-left: 4px solid #007bff; /* Цветной левый бордер */
+    margin-bottom: 8px;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.paragraph-block:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.paragraph-block p {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #333;
+}
+
+/* Разные цвета для отчетов разные цвета не работают, нужно разобраться с кодом js позже настрою чтобы разными цветами подсвечивались разные варианты (например одним цветом, когда текст параграфа совпадает)*/
+.paragraph-block[data-report="1"] { border-left-color: #28a745; } /* Зеленый */
+.paragraph-block[data-report="2"] { border-left-color: #dc3545; } /* Красный */
+.paragraph-block[data-report="3"] { border-left-color: #ffc107; } /* Желтый */
+.paragraph-block[data-report="4"] { border-left-color: #17a2b8; } /* Голубой */
+
+
+.paragraph-block.dragging {
+    opacity: 0.5;
+    border: 2px dashed #007bff;
+}
+
+.paragraph-block.linked {
+    background-color: rgba(0, 123, 255, 0.2);
+    border: 2px solid #007bff;
+    position: relative;
+}
+
+.link-indicator {
+    position: absolute;
+    bottom: 5px;
+    left: 5px;
+    background: #007bff;
+    color: white;
+    padding: 2px 5px;
+    font-size: 12px;
+    border-radius: 3px;
+}
+
+.link-button {
+    display: block;
+    width: 100%;
+    margin-top: 10px;
+    padding: 10px;
+    background: #28a745;
+    color: white;
+    border: none;
+    cursor: pointer;
+    text-align: center;
+    font-size: 16px;
+    border-radius: 5px;
+}
+
+.link-button:hover {
+    background: #218838;
+}
+

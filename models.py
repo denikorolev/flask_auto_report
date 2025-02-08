@@ -3,6 +3,7 @@
 from flask_sqlalchemy import SQLAlchemy
 from flask_security import UserMixin, RoleMixin
 from sqlalchemy.orm import foreign, remote, relationship
+from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy import Index
 from utils import ensure_list
 from datetime import datetime, timezone  # Добавим для временных меток
@@ -10,7 +11,12 @@ import json
 
 db = SQLAlchemy()
 
-# Association table between KeyWord and Report
+link_type_enum = ENUM(
+    "equivalent", "expanding", "excluding", "additional",
+    name="paragraph_link_type", create_type=True
+)
+
+# Ассоциативная таблица для связи ключевых слов с отчетами
 key_word_report_link = db.Table(
     'key_word_report_link',
     db.Column('key_word_id', db.BigInteger, db.ForeignKey('key_words_group.id', ondelete="CASCADE"), primary_key=True),
@@ -18,7 +24,7 @@ key_word_report_link = db.Table(
     Index('ix_key_word_report_link_keyword_report', 'key_word_id', 'report_id')
 )
 
-# Association table between Users and Roles
+# Ассоциативная таблица для связи пользователей и ролей
 roles_users = db.Table(
     'roles_users',
     db.Column('user_id', db.BigInteger, db.ForeignKey('users.id', ondelete="CASCADE"), primary_key=True),
@@ -31,6 +37,7 @@ paragraph_links = db.Table(
     "paragraph_links",
     db.Column("paragraph_id_1", db.BigInteger, db.ForeignKey("report_paragraphs.id", ondelete="CASCADE"), primary_key=True),
     db.Column("paragraph_id_2", db.BigInteger, db.ForeignKey("report_paragraphs.id", ondelete="CASCADE"), primary_key=True),
+    db.Column("link_type", link_type_enum, nullable=True),
     db.Index("ix_paragraph_links_paragraphs", "paragraph_id_1", "paragraph_id_2")
 )
 
@@ -408,6 +415,11 @@ class Report(BaseModel):
         return cls.query.filter_by(profile_id=profile_id).all()
     
     @classmethod
+    def find_by_id(cls, report_id):
+        """Ищет отчет по его ID."""
+        return cls.query.get(report_id)
+    
+    @classmethod
     def find_by_subtypes(cls, report_subtype):
         """Возвращает все отчеты, связанные с данным подтипом"""
         return cls.query.filter_by(report_subtype=report_subtype).all()
@@ -571,6 +583,16 @@ class Paragraph(BaseModel):
         db.session.add(new_paragraph)
         db.session.commit()
         return new_paragraph
+    
+    @classmethod
+    def find_by_id(cls, paragraph_id):
+        """Ищет параграф по его ID."""
+        return cls.query.get(paragraph_id)
+    
+    @classmethod
+    def find_by_report_id(cls, report_id):
+        """Ищет параграфы по ID отчета."""
+        return cls.query.filter_by(report_id=report_id).all()
     
     @classmethod
     def get_paragraphs_by_tag(cls, tag):
