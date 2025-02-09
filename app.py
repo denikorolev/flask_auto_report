@@ -11,8 +11,6 @@ from profile_constructor import ProfileSettingsManager
 from db_processing import sync_all_profiles_settings
 
 import os
-import logging
-    
 
 from flask_wtf.csrf import CSRFProtect
 from flask_security import Security, SQLAlchemyUserDatastore

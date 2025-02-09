@@ -268,6 +268,9 @@ def make_sentence_main():
                 sentence.is_main = True
             else:
                 sentence.is_main = False
+                
+                # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Не учтены связи параграфов!!!!!!!!!!
+                # !!!!!!!!!!!!!!!!!!!!!!!!!!!!И новая логика save для Sentence!!!!!!!!!!!!!!!!!!!!!!!!!!
             sentence.save()
         print("make_sentence_main end--------------------------------")
         return jsonify({"status": "success", "message": "Sentence is now main"}), 200

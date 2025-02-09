@@ -8,12 +8,15 @@ from sqlalchemy import Index
 from utils import ensure_list
 from datetime import datetime, timezone  # Добавим для временных меток
 import json
+# from config import Config
+
+# logger = Config.logger
 
 db = SQLAlchemy()
 
 link_type_enum = ENUM(
     "equivalent", "expanding", "excluding", "additional",
-    name="paragraph_link_type", create_type=True
+    name="paragraph_link_type", create_type=False
 )
 
 # Ассоциативная таблица для связи ключевых слов с отчетами
@@ -37,7 +40,7 @@ paragraph_links = db.Table(
     "paragraph_links",
     db.Column("paragraph_id_1", db.BigInteger, db.ForeignKey("report_paragraphs.id", ondelete="CASCADE"), primary_key=True),
     db.Column("paragraph_id_2", db.BigInteger, db.ForeignKey("report_paragraphs.id", ondelete="CASCADE"), primary_key=True),
-    db.Column("link_type", link_type_enum, nullable=True),
+    db.Column("link_type", link_type_enum, nullable=False),
     db.Index("ix_paragraph_links_paragraphs", "paragraph_id_1", "paragraph_id_2")
 )
 
@@ -602,34 +605,161 @@ class Paragraph(BaseModel):
     
     def is_linked(self):
         """ Проверяет, есть ли у параграфа хотя бы одна связь. """
-        return bool(self.linked_paragraphs)
-    
+        exists = db.session.execute(
+            db.select(paragraph_links.c.paragraph_id_1)
+            .where(
+                (paragraph_links.c.paragraph_id_1 == self.id) | 
+                (paragraph_links.c.paragraph_id_2 == self.id)
+            )
+        ).fetchone()  # Получаем одну строку, если связь найдена
+
+        return exists is not None  # Если что-то найдено — значит, есть связь
     
     @classmethod
-    def link_paragraphs(cls, paragraph1_id, paragraph2_id):
-        """
-        Создает связь между двумя параграфами, если её нет.
-        """
-        paragraph1 = cls.query.get(paragraph1_id)
-        paragraph2 = cls.query.get(paragraph2_id)
-
-        if not paragraph1 or not paragraph2:
-            return False  # Один из параграфов не найден
+    def link_paragraphs(cls, paragraph1_id, paragraph2_id, link_type="expanding"):
+        """Создает связь между двумя параграфами, гарантируя, что X-Y и Y-X не дублируются."""
         
-        if paragraph2 not in paragraph1.linked_paragraphs:
-            paragraph1.linked_paragraphs.append(paragraph2)
-            db.session.commit()
+        # Гарантируем порядок: всегда записываем (меньший ID, больший ID)
+        if paragraph1_id > paragraph2_id:
+            paragraph1_id, paragraph2_id = paragraph2_id, paragraph1_id
+        
+        # Проверяем, существует ли уже такая связь (в любом направлении)
+        existing_link = db.session.execute(
+            db.select(paragraph_links).where(
+                ((paragraph_links.c.paragraph_id_1 == paragraph1_id) & 
+                (paragraph_links.c.paragraph_id_2 == paragraph2_id)) |
+                ((paragraph_links.c.paragraph_id_1 == paragraph2_id) & 
+                (paragraph_links.c.paragraph_id_2 == paragraph1_id))
+            )
+        ).fetchone()
+        
+        if existing_link:
+            return False  # Связь уже существует
+
+        # Добавляем связь
+        stmt = paragraph_links.insert().values(
+            paragraph_id_1=paragraph1_id,
+            paragraph_id_2=paragraph2_id,
+            link_type=link_type
+        )
+        db.session.execute(stmt)
+        db.session.commit()
         return True
-    
+        
+    @classmethod
+    def unlink_paragraphs(cls, paragraph1_id, paragraph2_id):
+        """
+        Удаляет связь между двумя параграфами.
+
+        Args:
+            paragraph1_id (int): ID первого параграфа.
+            paragraph2_id (int): ID второго параграфа.
+
+        Returns:
+            bool: True, если связь удалена, False если её не было.
+        """
+        stmt = paragraph_links.delete().where(
+        ((paragraph_links.c.paragraph_id_1 == paragraph1_id) & 
+        (paragraph_links.c.paragraph_id_2 == paragraph2_id)) |
+        ((paragraph_links.c.paragraph_id_1 == paragraph2_id) & 
+        (paragraph_links.c.paragraph_id_2 == paragraph1_id))
+)
+        result = db.session.execute(stmt)
+        db.session.commit()
+
+        return result.rowcount > 0  # True, если удалена хотя бы одна запись
     
     @classmethod
-    def get_linked_paragraphs(cls, paragraph_id):
+    def get_linked_paragraphs(cls, paragraph_id, link_type=None, depth=1, visited=None):
         """
-        Возвращает список всех связанных параграфов.
-        """
-        paragraph = cls.query.get(paragraph_id)
-        return paragraph.linked_paragraphs if paragraph else []
+        Возвращает список всех связанных параграфов с учетом глубины и типа связи.
 
+        Args:
+            paragraph_id (int): ID параграфа, для которого ищем связи.
+            link_type (str, optional): Тип связи, если нужно фильтровать (equivalent, expanding и т.д.).
+            depth (int or None, optional): Глубина поиска (1 - только прямые связи, 2 - +связи 2-го уровня и т.д., None - все).
+            visited (set, optional): Внутренний параметр для отслеживания уже посещенных параграфов (предотвращает циклы).
+
+        Returns:
+            list[dict]: Список словарей с `paragraph_id` и `link_type`.
+        """
+        if depth == 0:
+            return []
+
+        if visited is None:
+            visited = set()
+
+        if paragraph_id in visited:
+            return []  # Предотвращаем зацикливание
+
+        visited.add(paragraph_id)
+
+        # Формируем условия для запроса
+        where_conditions = (
+            (paragraph_links.c.paragraph_id_1 == paragraph_id) | 
+            (paragraph_links.c.paragraph_id_2 == paragraph_id)
+        )
+
+        # Добавляем фильтр по link_type, если он указан
+        if link_type:
+            where_conditions &= (paragraph_links.c.link_type == link_type)
+
+        results = db.session.execute(
+            db.select(
+                paragraph_links.c.paragraph_id_1,
+                paragraph_links.c.paragraph_id_2,
+                paragraph_links.c.link_type
+            ).where(where_conditions)
+        ).fetchall()
+
+        # Если связей нет, дальше ничего не делаем
+        if not results:
+            return []
+
+        # Формируем список найденных связей
+        linked_paragraphs = []
+        for row in results:
+            p1, p2, l_type = row
+            linked_id = p2 if p1 == paragraph_id else p1  # Получаем ID связанного параграфа
+            linked_paragraphs.append({"paragraph_id": linked_id, "link_type": l_type})
+
+        # Если depth = 1, возвращаем только прямые связи
+        if depth == 1:
+            return linked_paragraphs
+
+        # Если требуется идти глубже, ищем связи рекурсивно
+        for item in linked_paragraphs.copy():  # .copy() чтобы избежать изменения списка во время итерации
+            deeper_links = cls.get_linked_paragraphs(
+                paragraph_id=item["paragraph_id"],
+                link_type=link_type,
+                depth=None if depth is None else depth - 1,
+                visited=visited
+            )
+            linked_paragraphs.extend(deeper_links)
+
+        return linked_paragraphs
+    
+    @classmethod
+    def get_link_type(cls, paragraph1_id, paragraph2_id):
+        """
+        Возвращает тип связи между двумя параграфами, если она существует.
+
+        Args:
+            paragraph1_id (int): ID первого параграфа.
+            paragraph2_id (int): ID второго параграфа.
+
+        Returns:
+            str or None: Тип связи ('equivalent', 'expanding', и т. д.) или None, если связи нет.
+        """
+        result = db.session.execute(
+            db.select(paragraph_links.c.link_type)
+            .where(
+                ((paragraph_links.c.paragraph_id_1 == paragraph1_id) & (paragraph_links.c.paragraph_id_2 == paragraph2_id))
+                | ((paragraph_links.c.paragraph_id_1 == paragraph2_id) & (paragraph_links.c.paragraph_id_2 == paragraph1_id))
+            )
+        ).fetchone()
+        
+        return result[0] if result else None  # Возвращаем тип связи или None
 
 
 class Sentence(BaseModel):
@@ -641,6 +771,111 @@ class Sentence(BaseModel):
     sentence = db.Column(db.String(400), nullable=False)
     is_main = db.Column(db.Boolean, default=False, nullable=False)
     tags = db.Column(db.String(255), nullable=True)
+
+
+
+    def save(self):
+        """
+        Сохраняет предложение и синхронизирует его в связанных параграфах, если связь equivalent.
+        Если изменяется индекс главного предложения, обновляет индекс у всех предложений с таким же индексом.
+        """
+        # Проверяем, является ли предложение главным
+        # logger.info(f"Начато сохранение предложения")
+        if not self.is_main:
+            super().save()
+            # logger.info(f"Предложение не главное, просто сохранено")
+            return  # Если не главное предложение, просто сохраняем
+
+        # logger.info(f"Предложение главное, начато сохранение в связанных параграфах")
+        
+        # Получаем все предложения с текущим индексом ДО изменения
+        same_index_sentences = Sentence.query.filter_by(
+            paragraph_id=self.paragraph_id, index=self.index
+        ).update({"index": self.index}, synchronize_session=False)  # Обновляем индекс сразу в БД
+
+        # logger.info(f"Найдено {same_index_sentences} предложений с индексом {self.index} для обновления")
+        
+        # Получаем связанные параграфы с типом связи equivalent
+        linked_paragraphs = Paragraph.get_linked_paragraphs(self.paragraph_id, link_type="equivalent", depth=2)
+
+        if linked_paragraphs:
+            # **Обновляем предложения во всех equivalent-параграфах**
+            for linked in linked_paragraphs:
+                linked_paragraph_id = linked["paragraph_id"]
+
+                # Получаем все предложения с таким же индексом в связанном параграфе
+                linked_sentences = Sentence.query.filter_by(
+                    paragraph_id=linked["paragraph_id"], index=self.index, is_main=False
+                ).all()
+
+                if linked_sentences:
+                    for linked_sentence in linked_sentences:
+                        linked_sentence.index = self.index  # Обновляем индекс
+                        if linked_sentence.is_main:  # Только для главного предложения
+                            linked_sentence.sentence = self.sentence
+                            linked_sentence.weight = self.weight
+                else:
+                    # Если в связанном параграфе нет такого главного предложения, создаем его
+                    new_sentence = Sentence(
+                        paragraph_id=linked_paragraph_id,
+                        index=self.index,
+                        weight=self.weight,
+                        sentence=self.sentence,
+                        is_main=True
+                    )
+                    db.session.add(new_sentence)
+                    
+        db.session.add(self)
+        db.session.commit()  
+    
+
+    def delete(self):
+        """
+        Удаляет главное предложение (`is_main=True`) в текущем и `equivalent`-параграфах.
+        Если предложение **не главное**, просто удаляется.
+        Если главное, все предложения с таким же `index` в связанных `equivalent`-параграфах получают `index=0`.
+        """
+        # logger.info(f"Начато удаление предложения")
+        if not self.is_main:
+            super().delete()
+            # logger.info(f"Предложение не главное, просто удалено")
+            return
+        
+        # logger.info(f"Предложение главное, начато удаление в связанных параграфах")
+        
+        sentences_to_update = Sentence.query.filter_by(
+                            paragraph_id=self.paragraph_id, 
+                            index=self.index).update({"index": 0}, 
+                                                    synchronize_session=False)
+                            
+        # logger.info(f"Найдено {sentences_to_update} предложений для обновления индекса")
+        
+        linked_paragraphs = Paragraph.get_linked_paragraphs(self.paragraph_id, link_type="equivalent", depth=1)
+
+        if linked_paragraphs:
+            # logger.info(f"Найдено {len(linked_paragraphs)} связанных параграфов")
+           
+            linked_sentences_count = 0
+            linked_main_deleted = 0
+            
+            for linked in linked_paragraphs:
+                linked_main_deleted += Sentence.query.filter_by(
+                    paragraph_id=linked["paragraph_id"],
+                    index=self.index,
+                    is_main=True
+                ).delete(synchronize_session=False) # Сразу удаляем главное предложение прямо в БД
+                
+                linked_sentences_count += Sentence.query.filter_by(
+                    paragraph_id=linked["paragraph_id"], 
+                    index=self.index
+                ).update({"index": 0},synchronize_session=False)  # Меняем сразу у всех предложений
+            # logger.info(f"Удалено {linked_main_deleted} главных предложений и обновлено индекс у {linked_sentences_count} предложений в связанных параграфах")
+            
+        db.session.delete(self)
+        db.session.commit()
+        # logger.info(f"Удаление успешно завершено")
+
+
 
 
     @classmethod

@@ -515,7 +515,7 @@ body {
 
 /* Блок PopUp */
 
-/* Основной стиль для всплывающего окна */
+/* Основной стиль для всплывающего окна working_with_report */
 .popup {
     position: absolute;  /* Позволяет динамически задавать координаты через JS */
     background-color: #fff;  /* Белый фон */
@@ -800,7 +800,7 @@ body {
 
 
 /* Стили для попапа в my_reports*/
-.popup {
+.popup-my-reports {
     display: none;
     position: fixed;
     z-index: 1000;
