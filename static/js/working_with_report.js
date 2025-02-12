@@ -17,7 +17,7 @@ document.addEventListener("DOMContentLoaded", function() {
     
     linkSentences(); // Связываем предложения с данными
     
-    updateCoreParagraphText(); // Запускает выделение ключевых слов при загрузке страницы
+    updateCoreAndImpessionParagraphText(); // Запускает выделение ключевых слов при загрузке страницы
 
     sentenceDoubleClickHandle () // Включаем логику двойного клика на предложение
 
@@ -60,6 +60,10 @@ document.addEventListener("DOMContentLoaded", function() {
     addFocusListeners(); // Добавляем логику для автоматической отправки на сервер новых предложений
 });
 
+
+
+
+
 /**
  * Extracts the maximum number from the protocol number and increments it by 1 used in working with report.
  * 
@@ -99,9 +103,10 @@ function getMaxReportNumber(reportNumber) {
 function handleSentenceFocus() {
     if (!this.hasAttribute("data-original-text")) {
         this.setAttribute("data-original-text", this.textContent.trim());
-        console.log("Focus: Original text saved:", this.textContent.trim());
     }
 }
+
+
 
 /**
  * Handles the blur event for a sentence element.
@@ -111,7 +116,7 @@ function handleSentenceBlur() {
     const originalText = this.getAttribute("data-original-text");
     const currentText = this.textContent.trim();
     const linkedSentences = this.linkedSentences || [];
-    const paragraphId = this.dataset.paragraphId;
+    // const paragraphId = this.dataset.paragraphId;
 
     // Блок условий для проверки изменений в предложении
     if (!currentText) {return;}
@@ -121,32 +126,39 @@ function handleSentenceBlur() {
     );
     if (isDuplicate) {return;}
 
+    
+    this.textContent = firstGrammaSentence(currentText);
+    highlightKeyWords(this);
     this.setAttribute("data-modified", "true");
     this.classList.add("was-changed-highlighted-sentence");
-    console.log("Blur: Marked sentence as modified.");
 }
 
 /**
- * Creates an editable sentence element wrapped in a <span>.
- * Adds necessary attributes and attaches focus and blur event listeners.
+ * Создает редактируемый элемент предложения, обернутый в <span>.
+ * Добавляет необходимые атрибуты и привязывает обработчики событий `focus` и `blur`.
  * 
- * @param {string} sentenceText - The text of the sentence to be added to the element.
- * @param {string} paragraphId - The ID of the paragraph to which the sentence belongs.
- * @returns {HTMLElement} - A new <span> element containing the editable sentence.
+ * 🔹 Позволяет пользователю редактировать текст предложения.  
+ * 🔹 Привязывает предложение к конкретному абзацу через `data-paragraph-id`.  
+ * 🔹 Устанавливает индекс предложения (`data-index`) в `0` для новых предложений.  
+ * 🔹 Автоматически отслеживает изменения в тексте через события `focus` и `blur`.  
+ * 
+ * @param {string} sentenceText - Текст предложения, который нужно добавить в элемент.
+ * @param {string} paragraphId - ID абзаца, к которому принадлежит предложение.
+ * @returns {HTMLElement} - Новый элемент <span>, содержащий редактируемое предложение.
  */
 function createEditableSentenceElement(sentenceText, paragraphId) {
     const newSentenceElement = document.createElement("span");
-    newSentenceElement.classList.add("report__sentence");
-    newSentenceElement.dataset.paragraphId = paragraphId; // Set paragraph ID
-    newSentenceElement.dataset.index = "0"; // New sentences always start with index 0
-    newSentenceElement.textContent = sentenceText;
+    newSentenceElement.classList.add("report__sentence"); // Добавляем класс для стилизации и идентификации
+    newSentenceElement.dataset.paragraphId = paragraphId; // Привязываем к конкретному абзацу
+    newSentenceElement.dataset.index = "0"; // Новое предложение всегда получает индекс 0
+    newSentenceElement.textContent = sentenceText; // Устанавливаем текст предложения
 
-    // Make the content editable
+    // Делаем элемент редактируемым
     newSentenceElement.contentEditable = "true";
 
-    // Attach event listeners
-    newSentenceElement.addEventListener("focus", handleSentenceFocus);
-    newSentenceElement.addEventListener("blur", handleSentenceBlur);
+    // Добавляем обработчики событий для отслеживания изменений
+    newSentenceElement.addEventListener("focus", handleSentenceFocus); // Сохраняем исходный текст при фокусе
+    newSentenceElement.addEventListener("blur", handleSentenceBlur);   // Проверяем изменения при потере фокуса
 
     return newSentenceElement;
 }
@@ -166,7 +178,7 @@ function isElementVisible(element) {
 
 
 /**
- * Очищает текст элемента, удаляя кнопки и HTML-теги, оставляя только выбранный текст из <select>.
+ * Очищает текст элемента, удаляя кнопки и HTML-теги.
  * 
  * Функция предназначена для получения чистого текста из HTML-элемента. Удаляет все кнопки и HTML-теги, 
  * заменяет теги <select> выбранным текстом и убирает лишние пробелы.
@@ -176,7 +188,6 @@ function isElementVisible(element) {
  * 
  * Логика работы:
  * - Удаляет все кнопки внутри элемента.
- * - Заменяет <select> элементы их выбранным значением.
  * - Удаляет все оставшиеся HTML-теги, оставляя только текст.
  * - Преобразует HTML-сущности в обычные символы (например, &amp; → &).
  * - Убирает лишние пробелы, оставляя только один пробел между словами.
@@ -190,10 +201,10 @@ function cleanSelectText(element) {
     });
 
     // Replace all <select> elements with their selected text
-    element.querySelectorAll("select").forEach(select => {
-        const selectedOption = select.options[select.selectedIndex].textContent;
-        text = text.replace(select.outerHTML, selectedOption);
-    });
+    // element.querySelectorAll("select").forEach(select => {
+    //     const selectedOption = select.options[select.selectedIndex].textContent;
+    //     text = text.replace(select.outerHTML, selectedOption);
+    // });
 
     // Remove all HTML tags except text
     text = text.replace(/<[^>]*>/gm, '').trim();
@@ -203,7 +214,7 @@ function cleanSelectText(element) {
     tempElement.innerHTML = text;
     text = tempElement.value;
 
-    // Remove extra spaces (leave only one space between words)
+    // Удаляет лишние пробелы
     text = text.replace(/\s\s+/g, ' ');
 
     return text;
@@ -212,6 +223,8 @@ function cleanSelectText(element) {
 
 /**
  * Отображает обработанные абзацы и предложения, которые предлагаются для добавления в базу данных.
+ * 
+ * УСТАРЕВШАЯ ФУНКЦИЯ! НЕ ИСПОЛЬЗОВАТЬ!
  * 
  * Функция очищает контейнер для отображения запросов на добавление предложений и создает элементы для 
  * каждого абзаца и его предложений. Предоставляет возможность добавления предложений по отдельности или всех сразу.
@@ -357,101 +370,86 @@ function displayProcessedParagraphs(paragraphs) {
 
 
 /**
- * Выделяет ключевые слова в тексте, оборачивая их в выпадающие списки.
+ * Выделяет ключевые слова в переданном элементе.
  * 
- * Функция обрабатывает переданный текст, заменяя ключевые слова из заданных групп ключевых слов 
- * на выпадающие списки (`<select>`), содержащие варианты из той же группы. Каждое ключевое слово 
- * обрабатывается с использованием регулярных выражений для обеспечения корректного выделения.
+ * 🔹 Обновляет `innerHTML` элемента, заменяя ключевые слова на <span>.
+ * 🔹 Не изменяет уже выделенные ключевые слова.
+ * 🔹 Поддерживает обработку отдельных элементов и целых блоков.
  * 
- * @param {string} text - Текст для обработки.
- * @param {Array} keyWordsGroups - Массив групп ключевых слов. Каждая группа представляет собой массив объектов, 
- *                                 где каждый объект содержит свойство `word` с ключевым словом.
- * @returns {string} - Обновленный текст с выделенными ключевыми словами.
- * 
- * Логика работы:
- * - Для каждой группы ключевых слов создается регулярное выражение, которое находит ключевые слова в тексте.
- * - Ключевые слова заменяются на элемент `<select>`, содержащий варианты из группы.
- * - Обработанные ключевые слова получают уникальный индекс `data-match-index` для удобства взаимодействия.
- * 
- * @requires keyWordsGroups - Глобальная переменная, содержащая группы ключевых слов для выделения.
- * 
- * Ограничения:
- * - Ключевые слова выделяются только если они находятся вне HTML-тегов.
- * - При совпадении нескольких ключевых слов в одной позиции используется первый подходящий вариант.
+ * @param {HTMLElement} element - HTML-элемент, текст которого нужно обработать.
  */
-function highlightKeyWords(text, keyWordsGroups) {
-    const matchIndexes = {};
+function highlightKeyWords(element) {
+    if (!element || !(element instanceof HTMLElement)) return;
 
-    // Проходим по каждой группе ключевых слов
+    // const currentIndex = element.getAttribute("data-index");
+    // if (!currentIndex) return;
+
+    let text = element.innerText; // Получаем текст элемента
+
     keyWordsGroups.forEach(group => {
-        group.forEach(item => {
-            const word = item.word; // Достаем слово из словаря
-            if (!matchIndexes[word]) {
-                matchIndexes[word] = 0;
-            }
+        group.forEach(keyword => {
+            const word = keyword.word;
 
-            // Регулярное выражение для нахождения ключевого слова вне тегов и без букв перед и после
-            const regex = new RegExp(`(?<!<[^>]*>|[a-zA-Zа-яА-ЯёЁ])(${word})(?![^<]*>|[a-zA-Zа-яА-ЯёЁ])`, "gi");
-
+            // Улучшенный regex: игнорирует <span>, но запрещает все остальные HTML-теги перед и после слова
+            const regex = new RegExp(`(?<!<(?!span)[^>]*>|[a-zA-Zа-яА-ЯёЁ])(${word})(?![^<]*>|[a-zA-Zа-яА-ЯёЁ])`, "gi");
             text = text.replace(regex, (matchedWord) => {
-                matchIndexes[word] += 1;
+                // Проверяем, начинается ли найденное слово с заглавной буквы
+            const isCapitalized = matchedWord.charAt(0) === matchedWord.charAt(0).toUpperCase();
+            // Если заглавная буква, делаем все связанные слова тоже с заглавной
+            const transformedGroup = isCapitalized
+            ? group.map(item => item.word.charAt(0).toUpperCase() + item.word.slice(1))
+            : group.map(item => item.word.toLowerCase());
 
-                // Создаём select с опциями из той же группы слов
-                const options = group
-                    .map(option => {
-                        const optionWord = option.word; // Получаем слово из каждого словаря
-                        const isSelected = optionWord.toLowerCase() === matchedWord.toLowerCase() ? "selected" : "";
-                        return `<option value="${optionWord}" ${isSelected}>${optionWord}</option>`;
-                    })
-                    .join("");
-
-                return `<select class="report__select_dynamic" data-match-index="${word}-${matchIndexes[word]}">${options}</select>`;
+                return `<span class="keyword-highlighted" 
+                        data-keywords="${transformedGroup.join(",")}" 
+                        onclick="handleKeywordClick(event)">${matchedWord}</span>`;
             });
         });
     });
 
-    return text;
+    element.innerHTML = text;
+    // element.setAttribute("data-index", currentIndex);
 }
 
 
 /**
- * Обновляет текст абзацев с классом `paragraph__list--core` и выделяет ключевые слова.
+ * Обрабатывает клик по ключевому слову и открывает popup с вариантами.
  * 
- * Функция проходит по всем элементам с классом `paragraph__list--core`, извлекает текст абзацев 
- * и выделяет ключевые слова, используя функцию `highlightKeyWords`. Выделение применяется только 
- * если абзац еще не содержит выпадающих списков (`<select>`). Также сохраняется атрибут `data-index` 
- * для каждого абзаца.
+ * 🔹 Берет список связанных слов из `data-keywords`.
+ * 🔹 Открывает popup в позиции клика.
+ * 🔹 Позволяет выбрать слово и заменить его в тексте.
  * 
- * @requires highlightKeyWords - Функция для выделения ключевых слов в тексте.
- * @requires keyWordsGroups - Глобальная переменная, содержащая группы ключевых слов для выделения.
- *
- * @global {NodeList} coreParagraphLists - Элементы с классом `paragraph__list--core`.
- * 
- * Логика работы:
- * - Для каждого элемента `paragraph__list--core` находятся вложенные элементы `p` и `span`.
- * - Из каждого элемента извлекается текст.
- * - Если текст еще не содержит `<select>`, применяется выделение ключевых слов.
- * - Восстанавливается атрибут `data-index` для каждого абзаца.
+ * @param {Event} event - Событие клика.
  */
-function updateCoreParagraphText() {
-    const coreParagraphLists = document.querySelectorAll(".paragraph__list--core");
+function handleKeywordClick(event) {
+    const span = event.target;
+    
 
-    coreParagraphLists.forEach(paragraphList => {
+    if (!span.classList.contains("keyword-highlighted")) return;
+
+    const keywordList = span.dataset.keywords.split(","); // Берем из `data-keywords`
+
+    if (keywordList.length === 0) {
+        console.warn("Нет связанных ключевых слов:", span.textContent);
+        return;
+    }
+
+    showPopupSentences(event.pageX, event.pageY, keywordList.map(word => ({ sentence: word })), (selectedWord) => {
+        span.textContent = selectedWord.sentence;
+    });
+}
+
+
+
+/**
+ * Обновляет текст абзацев с классом `paragraph__list--core` и "paragraph__list--impression" и выделяет ключевые слова.
+ * 
+ */
+function updateCoreAndImpessionParagraphText() {
+    const coreAndImpessionParagraphLists = document.querySelectorAll(".paragraph__list--core, .paragraph__list--impression");
+    coreAndImpessionParagraphLists.forEach(paragraphList => {
         paragraphList.querySelectorAll("p, span").forEach(paragraph => {
-            const currentIndex = paragraph.getAttribute("data-index");
-
-            if (!currentIndex) {
-                return;
-            }
-
-            let plainText = paragraph.innerText || paragraph.textContent;
-
-            if (!paragraph.querySelector("select")) {
-                const highlightedText = highlightKeyWords(plainText, keyWordsGroups);
-                paragraph.innerHTML = highlightedText;
-            }
-
-            paragraph.setAttribute("data-index", currentIndex);
+            highlightKeyWords(paragraph);
         });
     });
 }
@@ -580,83 +578,6 @@ function collectTextFromParagraphs(paragraphClass) {
     return collectedText.trim();  // Убираем лишние пробелы и возвращаем текст
 }
 
-
-/**
- * Отображает всплывающее окно с предложениями для замены.
- * 
- * Функция создает и отображает всплывающее окно (popup) с предложениями для выбора. 
- * Пользователь может отфильтровать список предложений и выбрать нужное, после чего вызывается 
- * переданная callback-функция с выбранным элементом.
- * 
- * @param {number} x - Координата X для отображения окна (в пикселях).
- * @param {number} y - Координата Y для отображения окна (в пикселях).
- * @param {Array} sentenceList - Список предложений для выбора, где каждый элемент 
- * является объектом с текстом предложения (например, { sentence: "Текст предложения" }).
- * @param {Function} onSelect - Callback-функция, которая вызывается при выборе предложения. 
- * В функцию передается объект выбранного предложения.
- * 
- * @requires popup - Глобальный элемент, отвечающий за отображение всплывающего окна.
- * @requires popupList - Глобальный элемент списка внутри popup.
- * @requires hidePopup - Глобальная функция для скрытия popup.
- */
-function showPopup(x, y, sentenceList, onSelect) {
-    popupList.innerHTML = ''; // Очищаем старые предложения
-
-    // Создаем поле ввода для фильтрации
-    const filterInput = document.createElement("input");
-    filterInput.type = "text";
-    filterInput.placeholder = "Введите текст для фильтрации...";
-    filterInput.classList.add("input", "popup-filter-input");
-
-    // Добавляем поле ввода в начало popupList
-    popupList.appendChild(filterInput);
-
-    // Функция для отображения отфильтрованного списка
-    function renderFilteredList() {
-        const filterText = filterInput.value.toLowerCase(); // Текст фильтра, приведенный к нижнему регистру
-
-        // Очищаем список перед обновлением
-        popupList.querySelectorAll("li").forEach(li => li.remove());
-
-        // Отображаем только те предложения, которые соответствуют фильтру
-        sentenceList.forEach(sentence => {
-            if (sentence.sentence.toLowerCase().includes(filterText)) {
-                const li = document.createElement("li");
-                li.textContent = sentence.sentence; // Используем текст предложения
-               
-
-                // Устанавливаем обработчик клика на элемент списка
-                li.addEventListener("click", () => {
-                    onSelect(sentence); // Вызываем переданную функцию при выборе предложения
-                    hidePopup();
-                });
-
-                popupList.appendChild(li);
-            }
-        });
-    }
-
-    // Запускаем рендеринг отфильтрованного списка при вводе текста
-    filterInput.addEventListener("input", renderFilteredList);
-
-    // Изначально отображаем полный список
-    renderFilteredList();
-
-    // Устанавливаем позицию и отображаем popup
-    popup.style.left = `${x}px`;
-    popup.style.top = `${y + 10}px`; // Отображаем окно чуть ниже кружка
-    popup.style.display = 'block';
-}
-
-
-/**
- * Скрывает всплывающее окно с предложениями.
- */
-function hidePopup() {
-    popup.style.display = 'none';
-}
-
-
 /**
  * Связывает предложения на странице с данными из объекта `reportData` и добавляет к ним связанные предложения.
  * 
@@ -731,9 +652,9 @@ function linkSentences() {
  * - У каждого элемента предложения должен быть массив `linkedSentences`, содержащий связанные предложения.
  * - Глобальная переменная `popup` должна быть доступна для отображения списка предложений.
  * - Должны существовать функции:
- *   - `showPopup(x, y, sentenceList, onSelect)` для отображения всплывающего окна.
- *   - `hidePopup()` для скрытия всплывающего окна.
- *   - `updateCoreParagraphText()` для обновления текста абзацев после изменений.
+ *   - `showPopupSentences(x, y, sentenceList, onSelect)` для отображения всплывающего окна (находится в utils.js).
+ *   - `hidePopupSentences()` для скрытия всплывающего окна (находится в utils.js).
+ *   - `updateCoreAndImpessionParagraphText()` для обновления текста абзацев после изменений.
  * 
  * Использование:
  * - Вызвать эту функцию после полной загрузки DOM и отрисовки предложений на странице.
@@ -746,9 +667,9 @@ function sentenceDoubleClickHandle (){
             activeSentence = sentenceElement;
             if (sentenceElement.linkedSentences && sentenceElement.linkedSentences.length > 0) {
                 // Передаем функцию, которая заменяет текст предложения
-                showPopup(event.pageX, event.pageY, sentenceElement.linkedSentences, (selectedSentence) => {
+                showPopupSentences(event.pageX, event.pageY, sentenceElement.linkedSentences, (selectedSentence) => {
                     activeSentence.textContent = selectedSentence.sentence; // Заменяем текст предложения
-                    updateCoreParagraphText(); // Обновляем текст
+                    highlightKeyWords(activeSentence) // Обновляем текст
                 });
             } else {
                 console.error("No linked sentences or linked sentences is not an array");
@@ -756,15 +677,8 @@ function sentenceDoubleClickHandle (){
         });
         // Добавляю слушатель начала ввода на предложение
         sentenceElement.addEventListener("input", function(event) {
-            hidePopup();
+            hidePopupSentences();
         });
-    });
-
-    // Скрываем всплывающее окно при клике вне его
-    document.addEventListener("click", function(event) {
-        if (!popup.contains(event.target)) {
-            hidePopup();
-        }
     });
 }
 
@@ -937,7 +851,7 @@ function editButtonLogic(editButton) {
  * Требования:
  * - Элементы кнопок с классом "icon-btn--add-sentence" должны присутствовать на странице.
  * - Серверный маршрут "/working_with_reports/get_sentences_with_index_zero" должен возвращать данные в формате JSON с массивом предложений.
- * - Должны быть доступны функции `createEditableSentenceElement`, `showPopup`, `updateCoreParagraphText`, и `hidePopup`.
+ * - Должны быть доступны функции `createEditableSentenceElement`, `showPopupSentences`(находится в utils.js), `updateCoreAndImpessionParagraphText`, и `hidePopupSentences`(находится в utils.js).
  * - Должен быть определен CSRF-токен для безопасности запросов.
  * 
  * Использование:
@@ -951,7 +865,6 @@ function addSentenceButtonLogic() {
     document.querySelectorAll(".icon-btn--add-sentence").forEach(button => {
         button.addEventListener("click", function(event) {
             const paragraphId = this.getAttribute("data-paragraph-id");
-            console.log("paragraphId", paragraphId);
             // Создаем пустое предложение и добавляем перед кнопкой
             const newSentenceElement = createEditableSentenceElement("",paragraphId);
             button.parentNode.insertBefore(newSentenceElement, button);
@@ -966,11 +879,11 @@ function addSentenceButtonLogic() {
             }).then(data => {
                 if (data.sentences && data.sentences.length > 0) {
                     // Используем popup для показа предложений
-                    showPopup(event.pageX, event.pageY, data.sentences, function(selectedSentence) {
+                    showPopupSentences(event.pageX, event.pageY, data.sentences, function(selectedSentence) {
                         // Логика при выборе предложения из popup
                         const newSentenceElement = createEditableSentenceElement(selectedSentence.sentence, paragraphId);
                         button.parentNode.insertBefore(newSentenceElement, button);
-                        updateCoreParagraphText(); // Обновляем текст абзаца после добавления предложения
+                        highlightKeyWords(newSentenceElement); // Обновляем текст абзаца после добавления предложения
                         newSentenceElement.focus(); // Устанавливаем фокус на новый элемент
                     });
                 } else {
@@ -982,7 +895,7 @@ function addSentenceButtonLogic() {
 
             // Логика скрытия popup или удаления предложения
             newSentenceElement.addEventListener("input", function() {
-                hidePopup(); // Скрываем popup при начале ввода
+                hidePopupSentences(); // Скрываем popup при начале ввода
             });
 
             newSentenceElement.addEventListener("blur", function() {
@@ -1034,8 +947,9 @@ function copyButtonLogic(copyButton) {
         const impressionText = collectTextFromParagraphs("paragraph__list--impression");
 
         // Соединяем все части с пустой строкой между ними
-        const textToCopy = `${initialText}\n\n${coreText}\n\n${impressionText}`.trim();
-
+        const preTextToCopy = `${initialText}\n\n${coreText}\n\n${impressionText}`.trim();
+        const textToCopy = secondGrammaSentence(preTextToCopy);
+        console.log(textToCopy);
         try {
             // Копируем текст в буфер обмена
             await navigator.clipboard.writeText(textToCopy);
@@ -1072,7 +986,6 @@ async function sendParagraphsData(paragraphsData) {
 
         // Если запрос успешен, отображаем обработанные абзацы
         displayProcessedParagraphs(response.processed_paragraphs);
-        console.log("sendParagraphsData: Successfully sent paragraphs data.");
     } catch (error) {
         console.error("sendParagraphsData: Failed to send paragraphs data.", error);
         alert(error.message || "Не удалось обработать абзацы.");
@@ -1291,7 +1204,7 @@ function normalizeSentence(sentence, keyWordsGroups) {
     // Проходим по группам ключевых слов
     keyWordsGroups.forEach((group, groupIndex) => {
         group.forEach(keyword => {
-            const regex = new RegExp(`\\b${keyword.word}\\b`, "gi");
+            const regex = new RegExp(`(^|[^\\p{L}\\d])${keyword.word}([^\\p{L}\\d]|$)`, "gui");
             sentence = sentence.replace(regex, `{${groupIndex}}`);
         });
     });
@@ -1304,67 +1217,6 @@ function normalizeSentence(sentence, keyWordsGroups) {
 
     return sentence;
 }
-
-
-/**
- * Adds focus and blur listeners to sentence elements with logging.
- * 
- * - On `focus`: Saves the original text of the sentence in a `data-original-text` attribute.
- * - On `blur`: Checks if the text has been modified and logs the decision-making process.
- */
-// function addFocusListeners() {
-//     // Находим все предложения на странице
-//     const sentenceElements = document.querySelectorAll(".report__sentence");
-
-//     sentenceElements.forEach(sentenceElement => {
-//         // Сохраняем оригинальный текст при получении фокуса
-//         sentenceElement.addEventListener("focus", function () {
-//             if (!this.hasAttribute("data-original-text")) {
-//                 this.setAttribute("data-original-text", this.textContent.trim());
-//                 console.log("Focus: Original text saved:", this.textContent.trim());
-//             }
-//         });
-
-//         // Обрабатываем изменения при потере фокуса
-//         sentenceElement.addEventListener("blur", function () {
-//             const originalText = this.getAttribute("data-original-text");
-//             const currentText = this.textContent.trim();
-//             const paragraphId = this.getAttribute("data-paragraph-id");
-//             const sentenceId = this.getAttribute("data-id");
-
-            
-//             console.log(`Blur: Processing text for sentence (ID: ${sentenceId}, Paragraph: ${paragraphId})`);
-//             console.log("Blur: normalized current text:", normalizeSentence(currentText, keyWordsGroups));
-//             // Если текст пустой, ничего не делаем
-//             if (!currentText) {
-//                 console.log("Blur: Text is empty. Ignoring.");
-//                 return;
-//             }
-
-//             // Если текст совпадает с оригиналом, ничего не делаем
-//             if (normalizeSentence(originalText, keyWordsGroups) === normalizeSentence(currentText, keyWordsGroups)) {
-//                 console.log("Blur: Text matches the original. No changes detected.");
-//                 return;
-//             }
-
-//             // Сравниваем с linkedSentences
-//             const linkedSentences = this.linkedSentences || [];
-//             const isDuplicate = linkedSentences.some(sentence =>
-//                 normalizeSentence(sentence.sentence, keyWordsGroups) === normalizeSentence(currentText, keyWordsGroups)
-//             );
-
-//             if (isDuplicate) {
-//                 console.log("Blur: Text matches a linked sentence. No changes detected.");
-//                 return;
-//             }
-
-//             // Помечаем предложение как изменённое
-//             this.setAttribute("data-modified", "true");
-//             this.classList.add("was-changed-highlighted-sentence");
-//             console.log("Blur: Text is unique. Marking as modified.");
-//         });
-//     });
-// }
 
 
 /**
@@ -1381,7 +1233,6 @@ function addFocusListeners() {
         sentenceElement.addEventListener("blur", handleSentenceBlur);
     });
 
-    console.log("Focus and blur listeners attached to all sentence elements.");
 }
 
 
@@ -1395,9 +1246,7 @@ async function sendModifiedSentencesToServer() {
     // Находим все предложения, помеченные как изменённые
     const modifiedSentences = document.querySelectorAll("[data-modified='true']");
     const reportId = document.getElementById("csrf_token").dataset.reportId;
-    console.log("Report ID:", reportId);
     if (modifiedSentences.length === 0) {
-        console.log("No modified sentences to send.");
         toastr.info("No changes detected to save.");
         return;
     }
@@ -1411,7 +1260,6 @@ async function sendModifiedSentencesToServer() {
         const currentText = cleanSelectText(sentenceElement).trim();
 
         if(!currentText) {
-            console.log("Empty sentence. Ignoring.");
             return;
         } 
         // Собираем данные для одного предложения
@@ -1421,7 +1269,6 @@ async function sendModifiedSentencesToServer() {
             text: currentText
         });
 
-        console.log(`Collected modified sentence: ${currentText} (Paragraph ID: ${paragraphId}, Index: ${sentenceIndex})`);
     });
 
     // Если нет данных для отправки, выводим сообщение и завершаем выполнение
@@ -1465,4 +1312,102 @@ async function sendModifiedSentencesToServer() {
         // Обработка ошибок
         console.error("Error saving modified sentences:", error);
     }
+}
+
+
+/**
+ * Очищает и исправляет предложение по заданным правилам.
+ * 
+ * 🔹 Исправляет заглавные буквы в начале.
+ * 🔹 Убирает лишние пробелы и исправляет их перед знаками препинания.
+ * 🔹 Корректирует написание текста в скобках.
+ * 🔹 Меняет `C` и `С` после цифры на `°C`.
+ * 🔹 Заменяет `1.` → `1)`, если после точки нет цифры.
+ * 🔹 Убирает двойные точки в конце.
+ * 
+ * @param {string} sentence - Исходное предложение.
+ * @returns {string} - Очищенное и исправленное предложение.
+ */
+function firstGrammaSentence(sentence) {
+    if (!sentence.trim()) return sentence; // Если пустая строка — ничего не делаем
+
+    //  Делаем первую букву заглавной
+    sentence = sentence.charAt(0).toUpperCase() + sentence.slice(1);
+
+    // Убираем лишние пробелы (между словами, перед знаками препинания)
+    sentence = sentence.replace(/\s+/g, " ")  // Заменяем несколько пробелов на один
+                       .replace(/\s([,.!?:;])/g, "$1")  // Убираем пробел перед знаками препинания
+                       .replace(/\.{2,}$/g, ".") // Убираем двойные точки в конце
+                       .replace(/([,.!?:;])([^\s])/g, "$1 $2"); // Добавляем пробел после знаков, если его нет
+
+    // Корректируем текст в скобках
+    sentence = sentence.replace(/\(([^)]+)\)/g, (match, insideText) => {
+        if (!/^(КТ|МРТ|ПЭТ|УЗИ|МР|ЭКГ)$/i.test(insideText)) {
+            insideText = insideText.charAt(0).toLowerCase() + insideText.slice(1); // Первую букву в строчную
+        }
+        return `(${insideText.replace(/\.$/, "")})`; // Убираем точку перед `)`
+    });
+
+    //  Меняем `C` и `С` на `°C`, если они идут сразу после цифры
+    sentence = sentence.replace(/(\d)([СC])/g, "$1°C");
+
+    // Меняем `1.` → `1)`, если после точки нет цифры
+    sentence = sentence.replace(/(\d+)\.(?!\d)/g, "$1)");
+
+    // `C` и `С` после цифры → заменяем на `°C`
+    sentence = sentence.replace(/(\d)([СC])(?=[^\w]|$)/g, "$1°C");
+
+    // ✅ Перед `)` не должно быть точки и пробела
+    // ✅ После `)` должен быть пробел, если следующий символ — не знак препинания
+    sentence = sentence.replace(/(\S+)\s*\.\s*\)(?=\S)/g, "$1)"); // Убираем точку перед `)`
+    sentence = sentence.replace(/\)([^\s.,!?])/g, ") $1"); // Добавляем пробел после `)`, если дальше не знак препинания
+
+
+    // Первое слово в скобках с маленькой буквы (если не аббревиатура)
+    const exceptions = ["КТ", "МРТ", "ПЭТ", "УЗИ", "МР", "ЭКГ"];
+    sentence = sentence.replace(/\(\s*([А-ЯЁA-Z][а-яёa-z]+)\s*\)/g, (match, word) =>
+        exceptions.includes(word.toUpperCase()) ? match : `(${word.toLowerCase()})`
+    );
+
+    return sentence.trim();
+}
+
+
+/**
+ * Применяет грамматические корректировки к тексту.
+ * 
+ * 🔹 Обрабатывает текст целиком, исправляя форматирование и пунктуацию.
+ * 🔹 Используется при копировании текста в буфер обмена.
+ * 
+ * @param {string} text - Исходный текст.
+ * @returns {string} - Откорректированный текст.
+ */
+function secondGrammaSentence(text) {
+    if (!text) return "";
+
+    // После знаков ".!?" первое слово должно быть с большой буквы (если перед ним нет "(")
+    text = text.replace(/([.!?])\s+(\(?)([а-яёa-z])/g, (match, punct, bracket, letter) => 
+        punct + " " + bracket + letter.toUpperCase()
+    );
+
+    // Удаляем лишние пробелы (оставляем один пробел между словами)
+    text = text.replace(/\s+/g, " ");
+
+    // После ":" слово должно быть с маленькой буквы (кроме исключений)
+    const exceptions = ["КТ", "МРТ", "ПЭТ", "УЗИ", "МР", "ЭКГ"];
+    text = text.replace(/:\s*([А-ЯЁA-Z][а-яёa-z]+)/g, (match, word) =>
+        exceptions.includes(word.toUpperCase()) ? match : `: ${word.toLowerCase()}`
+    );
+
+    // Если последнее предложение заканчивается на "," → заменяем на ".."
+    text = text.replace(/,(\s*)$/, ".$1");
+
+
+    // Число с точкой (`1. пункт`) → меняем точку на `)`
+    text = text.replace(/(\d)\.([^\d])/g, "$1) $2");
+
+    // Меняем `1.` → `1)`, если после точки нет цифры
+    text = text.replace(/(\d+)\.(?!\d)/g, "$1)");
+
+    return text.trim();
 }

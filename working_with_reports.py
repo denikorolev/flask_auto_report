@@ -67,7 +67,7 @@ def working_with_reports():
     # Получаем ключевые слова для текущего пользователя
     
     key_words_obj = KeyWord.get_keywords_for_report(g.current_profile.id, current_report_id)
-    key_words_group = group_keywords(key_words_obj)
+    key_words_groups = group_keywords(key_words_obj)
     
     
     return render_template(
@@ -77,7 +77,7 @@ def working_with_reports():
         full_name=full_name,
         birthdate=birthdate,
         report_number=report_number,
-        key_words=key_words_group                 
+        key_words_groups=key_words_groups               
     )
 
 

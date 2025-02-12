@@ -79,9 +79,6 @@
         {% endfor %}
         
         
-
-        
-        
         <!-- PopUp для отображения предложений после двойного клика -->
         <div id="popup" class="popup">
             <ul id="popupList"></ul>
@@ -138,7 +135,7 @@
 
 <script>
     // Передаем ключевые слова как глобальную переменную JavaScript
-    const keyWordsGroups = {{ key_words | tojson | safe }};
+    const keyWordsGroups = {{ key_words_groups | tojson | safe }};
     const reportData = {{ report_data | tojson | safe }};
 </script>
     

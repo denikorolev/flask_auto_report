@@ -896,3 +896,7 @@ body {
     background: #218838;
 }
 
+.keyword-highlighted {
+    color: red;
+    cursor: pointer;
+}
