@@ -947,8 +947,7 @@ function copyButtonLogic(copyButton) {
         const impressionText = collectTextFromParagraphs("paragraph__list--impression");
 
         // Соединяем все части с пустой строкой между ними
-        const preTextToCopy = `${initialText}\n\n${coreText}\n\n${impressionText}`.trim();
-        const textToCopy = secondGrammaSentence(preTextToCopy);
+        const textToCopy = `${initialText}\n\n${coreText}\n\n${impressionText}`.trim();
         console.log(textToCopy);
         try {
             // Копируем текст в буфер обмена
