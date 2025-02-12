@@ -7,6 +7,7 @@ from file_processing import save_to_word
 from sentence_processing import split_sentences, get_new_sentences, group_keywords, split_sentences_if_needed, clean_and_normalize_text, compare_sentences_by_paragraph, preprocess_sentence
 from errors_processing import print_object_structure
 from utils import ensure_list
+from logger import logger
 from flask_security.decorators import auth_required
 
 
@@ -80,19 +81,19 @@ def working_with_reports():
     )
 
 
-@working_with_reports_bp.route("/update_sentence", methods=['POST'])
-@auth_required()
-def update_sentence():
-    data = request.get_json()
-    sentence_id = data.get('sentence_id')
-    new_value = data.get('new_value')
+# @working_with_reports_bp.route("/update_sentence", methods=['POST'])
+# @auth_required()
+# def update_sentence():
+#     data = request.get_json()
+#     sentence_id = data.get('sentence_id')
+#     new_value = data.get('new_value')
 
-    sentence = Sentence.query.get(sentence_id)
-    if sentence:
-        sentence.sentence = new_value
-        db.session.commit()
-        return jsonify({"status": "success", "message": "Sentence updated successfully!"}), 200
-    return jsonify({"status": "error", "message": "Failed to update sentence."}), 400
+#     sentence = Sentence.query.get(sentence_id)
+#     if sentence:
+#         sentence.sentence = new_value
+#         sentence.save(old_index=sentence.index)
+#         return jsonify({"status": "success", "message": "Предложение успешно обновлено!"}), 200
+#     return jsonify({"status": "error", "message": "Ошибка при обновлении данных предложения."}), 400
 
 
 @working_with_reports_bp.route("/get_sentences_with_index_zero", methods=["POST"])
@@ -117,8 +118,6 @@ def new_sentence_adding():
     try:
         data = request.get_json()
         paragraphs = data.get("paragraphs", [])
-
-        
         
         if not paragraphs:
             return jsonify({"status": "error", "message": "No paragraphs provided."}), 400
@@ -131,7 +130,8 @@ def new_sentence_adding():
         return jsonify({"status": "success", "processed_paragraphs": new_sentences}), 200
 
     except Exception as e:
-        return jsonify({"status": "error", "message": f"Unexpected error: {e}"}), 500
+        logger.error(f"Произошла ошибка при добавлении нового предложения: {e}")
+        return jsonify({"status": "error", "message": f"Ошибка при добавлении предложения: {e}"}), 500
     
 
 @working_with_reports_bp.route("/save_modified_sentences", methods=["POST"])
@@ -212,14 +212,14 @@ def save_modified_sentences():
             paragraph_id = sentence["paragraph_id"]
             sentence_index = sentence["sentence_index"]
             new_sentence_text = clean_and_normalize_text(sentence["text"])
-            print(f"new_sentence_text: {new_sentence_text}")
+            logger.info(f"New sentence: {new_sentence_text}")
             try:
                 # Сохраняем предложение в базу данных
                 new_sentence = Sentence.create(
                     paragraph_id=paragraph_id,
                     index=sentence_index,
                     weight=10,  # Вес по умолчанию
-                    is_main=False,
+                    sentence_type="body",
                     tags="",
                     comment="Added automatically",
                     sentence=new_sentence_text
@@ -284,7 +284,7 @@ def add_sentence_to_paragraph():
                     Sentence.create(paragraph_id=paragraph_id, 
                                     index=0, 
                                     weight=10, # Вес по умолчанию
-                                    is_main=False,
+                                    sentence_type="tail",
                                     tags="",
                                     comment="", 
                                     sentence=sentence_text

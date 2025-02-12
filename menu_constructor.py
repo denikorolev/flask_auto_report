@@ -1,12 +1,10 @@
 # menu_constructor.py
 
-from flask import url_for, g
+from flask import url_for
 from flask_login import current_user
-from config import Config
+from logger import logger
 
 
-
-logger = Config.logger
 
 def build_menu():
     """

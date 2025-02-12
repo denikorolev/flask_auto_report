@@ -19,8 +19,7 @@
         {% if is_first %}
             <label class="label" for="sentenceIsMain">isMain:</label>
         {% endif %}
-        <input class="input--checkbox" type="checkbox" name="is_main" value="{{ sentence.is_main }}" data-sentence-id="{{ sentence.id }}" {% if sentence.is_main %}checked{% endif %} disabled>
-        <input type="hidden" name="is_main" value="{{ sentence.is_main }}">
+        <input class="input--checkbox" type="checkbox" name="is_head" data-sentence-id="{{ sentence.id }}" {% if sentence.sentence_type == "head" %}checked{% endif %} disabled>
     </div>
 
     <div class="flex_column">
@@ -35,7 +34,14 @@
         {% endif %}
         <input class="input input--wide" type="text" name="sentence_sentence" value="{{ sentence.sentence }}" data-sentence-id="{{ sentence.id }}">
     </div>
-    <button class="btn report__btn edit-paragraph__btn--main-sentence" type="button" data-sentence-id="{{ sentence.id }}" data-sentence-paragraph-id={{ sentence.sentence_to_paragraph.id }} data-sentence-index={{sentence.index }} onclick="makeSentenceMainButton(this)">Сделать главным</button>
+    <button class="btn report__btn edit-paragraph__btn--main-sentence" 
+        type="button" data-sentence-id="{{ sentence.id }}" 
+        data-sentence-paragraph-id={{ sentence.sentence_to_paragraph.id }} 
+        data-sentence-index={{sentence.index }} 
+        onclick="makeSentenceMainButton(this)" 
+        {% if sentence.sentence_type == "tail" %}style="display:none;"{% endif %}>
+        Сделать главным
+    </button>
     <button class="btn report__btn edit-paragraph__btn--delete-sentence" type="button" data-sentence-id="{{ sentence.id }}" onclick="deleteSentenceButton(this)">Удалить</button>
 </div>
 {% endmacro %}
@@ -64,7 +70,7 @@
                 {% for index, sentence_group in paragraph.sentences.items() %}
                     {% if sentence_group[0].index != 0 %}
                         {% for sentence in sentence_group %}
-                            {% if sentence.is_main %}
+                            {% if sentence.sentence_type == "head" %}
                             <span contenteditable="true"
                             class="report__sentence sentence" 
                             data-paragraph-id="{{ paragraph.id }}" 

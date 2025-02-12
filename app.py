@@ -9,6 +9,7 @@ from models import db, User, UserProfile, Role
 from menu_constructor import build_menu
 from profile_constructor import ProfileSettingsManager
 from db_processing import sync_all_profiles_settings
+from logger import logger
 
 import os
 
@@ -28,7 +29,7 @@ from openai_api import openai_api_bp
 from key_words import key_words_bp
 from admin import admin_bp
 
-version = "0.9.1"
+version = "0.9.2"
 
 app = Flask(__name__)
 app.config.from_object(get_config()) # Load configuration from file config.py
@@ -46,9 +47,6 @@ security = Security(app, user_datastore)
 # Инициализация CSRF-защиты
 csrf = CSRFProtect(app)
 csrf.init_app(app) # Инициализация CSRF-защиты
-
-# Инициализация логирования
-logger = get_config().setup_logging()
 
 
 # Обработчик сигнала user_registered и автоматическое назначение роли 'user'

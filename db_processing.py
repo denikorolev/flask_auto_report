@@ -1,13 +1,10 @@
 # db_processing.py
 
-from flask import g, session, current_app
+from flask import g, current_app
 from flask_login import current_user
 from models import KeyWord, db, AppConfig, UserProfile
-from config import Config
+from logger import logger
 from utils import get_max_index
-import json
-
-logger = Config.logger
 
 def add_keywords_to_db(key_words, report_ids):
     """

@@ -97,7 +97,7 @@
                                         {% endif %}  <!-- check the separator marker -->
                                         <li class="">
                                             <form class="flex edit-paragraph__form--sentence 
-                                            {% if sentence.is_main %} sentence_is_main {% endif %}" 
+                                            {% if sentence.sentence_type == "head" %} sentence_is_head {% endif %}" 
                                             data-sentence-id="{{ sentence.id }}">
                                                 {{ render_sentence(sentence, loop.index == 1) }}
                                             </form>
@@ -131,13 +131,13 @@
 <div class="report-check">
     <div class="report-check__buttons-block">
         <h3 class="report-check_title">Возможные проверки для данного протокола</h3>
-        <button class"btn report__btn report-check__btn" id="btnCheckIsMain" data-report-id={{report.id}} onclick="reportCheckIsMainSentensesUnic(this)">Проверка на лишние is_main</button>
+        <button class"btn report__btn report-check__btn" id="btnCheckIsHead" data-report-id={{report.id}} onclick="reportCheckIsHeadSentensesUnic(this)">Проверка на лишние главные предложения</button>
     </div>
 
     <ul class="report-check__list">
-        <li class="report-check__item" id="reportCheckIsMain" style="display: none;">
+        <li class="report-check__item" id="reportCheckIsHead" style="display: none;">
             <h4 class="report-check__item--title">Проверка на лишние главные предложения</h4>
-            <ul class="report-check__item-list" id="reportCheckIsMainList">
+            <ul class="report-check__item-list" id="reportCheckIsHeadList">
                 <!-- Отчет с сервера, заполню динамически через js -->
             </ul>
     

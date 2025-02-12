@@ -10,7 +10,7 @@ document.addEventListener("DOMContentLoaded", function(){
 
     initializeChangeListeners(); // Слушатели изменения для элементов чтобы отправлять только измененные данные
 
-    isMainChecker(); // Проверка на наличие ошибок, связанных с is_main в протоколах этого профиля
+    isMainChecker(); // Проверка на наличие ошибок, связанных с главными предложениями в протоколах этого профиля
 });
 
 
@@ -140,15 +140,15 @@ function deleteProfile() {
     });
 }   
 
-// Проверка на наличие ошибок, связанных с is_main в протоколах этого профиля
+// Проверка на наличие ошибок, связанных с главными предложениями в протоколах этого профиля
 function isMainChecker(){
-    document.getElementById("btnCheckIsMain").addEventListener("click", () => {
+    document.getElementById("btnCheckIsHead").addEventListener("click", () => {
         
         const blockForMessage = document.getElementById("reportCheckMessageBlock");
         const title = document.getElementById("reportCheckMessageTitle");
         const messageList = document.getElementById("reportCheckMessageList");
         
-        title.textContent = "Проверка на наличие ошибок, связанных с is_main в протоколах этого профиля";
+        title.textContent = "Проверка на наличие ошибок, связанных с главными предложениями в протоколах этого профиля";
         sendRequest({
             url: "/profile_settings/run_checker",
             data: { checker: "main_sentences" },
@@ -158,7 +158,7 @@ function isMainChecker(){
 
                 if (response.errors.length === 0) {
                     // Если ошибок нет — показываем сообщение об успехе
-                    messageList.innerHTML = `<li class="report-check__item-success">✅ Не выявлено ни одной ошибки связанной с is_main в протоколах этого профиля!</li>`;
+                    messageList.innerHTML = `<li class="report-check__item-success">✅ Не выявлено ни одной ошибки связанной с главными предложениями в протоколах этого профиля!</li>`;
                 } else {
                     // Если есть ошибки — добавляем их в список
                     response.errors.forEach(error => {

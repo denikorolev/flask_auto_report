@@ -5,6 +5,7 @@ from models import db, Report, Paragraph, Sentence, ParagraphType
 from errors_processing import print_object_structure
 from utils import get_max_index, check_main_sentences
 from flask_security.decorators import auth_required
+from logger import logger
 
 
 editing_report_bp = Blueprint('editing_report', __name__)
@@ -20,10 +21,10 @@ def edit_report():
     report_id = request.args.get("report_id")
     report = None
 
-    if report_id:
-        report = Report.query.get(report_id)
-        if not report or report.profile_id != g.current_profile.id:
-            return jsonify({"status": "error", "message": "Report not found or you don't have permission to edit it"}), 403
+    report = Report.query.get(report_id)
+    if not report or report.profile_id != g.current_profile.id:
+        logger.error(f"Report not found or you don't have permission to edit it")
+        return jsonify({"status": "error", "message": "Report not found or you don't have permission to edit it"}), 403
 
     report_paragraphs = sorted(report.report_to_paragraphs, key=lambda p: p.paragraph_index) if report else []
     for paragraph in report_paragraphs:
@@ -52,6 +53,7 @@ def update_report():
     report = Report.query.get(report_id)
     
     if not report or report.profile_id != g.current_profile.id:
+        logger.error(f"Report not found or profile data of this paragraph doesn't match with current profile")
         return jsonify({"status": "error", "message": "Report not found or profile data of this paragraph doesn't match with current profile"}), 403
 
     try:
@@ -62,6 +64,7 @@ def update_report():
         report.save()
         return jsonify({"status": "success", "message": "Report updated successfully"}), 200
     except Exception as e:
+        logger.error(f"Error updating report: {str(e)}")
         return jsonify({"status": "error", "message": f"Can't update report. Error code: {e}"}), 400
 
 
@@ -95,9 +98,10 @@ def new_paragraph():
             tags="",
             comment=None
         )
-        return jsonify({"status": "success", "message": "Paragraph added successfully"}), 200
+        return jsonify({"status": "success", "message": "Параграф успешно добавлен"}), 200
     except Exception as e:
-        return jsonify({"status": "error", "message": f"Something went wrong. Error code: {e}"}), 400
+        logger.error(f"Ошибка добавления параграфа: {str(e)}")
+        return jsonify({"status": "error", "message": f"Ошибка добавления параграфа, код ошибки: {e}"}), 400
 
 
 @editing_report_bp.route('/edit_paragraph', methods=['POST'])
@@ -108,6 +112,7 @@ def edit_paragraph():
     paragraph_for_edit = Paragraph.query.get(paragraph_id)
 
     if not paragraph_for_edit or paragraph_for_edit.paragraph_to_report.profile_id != g.current_profile.id:
+        logger.error(f"Paragraph not found or data of this paragraph doesn't match with current profile")
         return jsonify({"status": "error", "message": "Paragraph not found or data of this paragraph doesn't match with current profile"}), 404
 
     try:
@@ -151,6 +156,7 @@ def edit_paragraph():
         return jsonify({"status": "success", "message": "Paragraph updated successfully"}), 200
 
     except Exception as e:
+        logger.error(f"Error updating paragraph: {str(e)}")
         return jsonify({"status": "error", "message": f"Something went wrong. Error code: {e}"}), 400
 
 
@@ -168,7 +174,9 @@ def delete_paragraph():
         Paragraph.delete_by_id(paragraph_id)
         return jsonify({"status": "success", "message": "Paragraph deleted successfully"}), 200
     except Exception as e:
+        logger.error(f"Error deleting paragraph: {str(e)}")
         return jsonify({"status": "error", "message": f"Failed to delete paragraph. Error code: {e}"}), 400
+
 
 # Массовое редактирование предложений
 @editing_report_bp.route('/edit_sentences_bulk', methods=['POST'])
@@ -176,43 +184,72 @@ def delete_paragraph():
 def edit_sentences_bulk():
 
     data = request.get_json()
+    
+    # Список для главных предложений сохраняю их 
+    # чтобы внести изменения в главные предложения в конце, 
+    # чтобы не перезаписывать логику в методе save()
+    main_sentences = []
 
     try:
         for sentence_data in data:
             if sentence_data.get("sentence_id") == "new":
                 # Логика для создания нового предложения
-                print(f"Creating new sentence for paragraph_id={sentence_data.get('add_sentence_paragraph')}")
-                print(f"Данные из редактирования отчета, для проверки, теперь тут только main!!!!!! {sentence_data.get('is_main')}")
                 sentence_index = sentence_data.get("sentence_index")
                 paragraph_id = sentence_data.get("add_sentence_paragraph")
+                
+                # Определяем тип предложения
+                sentence_type = ""
+                if sentence_data.get("is_head") == "true":
+                    sentence_type = "head"
+                elif sentence_index == 0:
+                    sentence_type = "tail"
+                else:
+                    sentence_type = "body"
+                
                 try:
                     Sentence.create(
                         paragraph_id=paragraph_id,
                         index=sentence_index,
                         weight=sentence_data.get("sentence_weight"),
-                        is_main=sentence_data.get("is_main"),
+                        sentence_type= sentence_type,
                         tags="",
                         comment=sentence_data.get("sentence_comment"),
                         sentence=sentence_data.get("sentence_sentence")
                     )
                 except Exception as e:
-                    print(f"can't create new sentence - {e}")
-                    return jsonify({"status": "error", "message": "can't create new sentence"}), 500
+                    logger.error(f"Error creating new sentence: {str(e)}")
+                    return jsonify({"status": "error", "message": f"Не получилось создать новое предложение. Ошибка: {e}"}), 500
                     
             else:
                 # Логика для обновления существующего предложения
                 sentence_for_edit = Sentence.query.get(sentence_data["sentence_id"])
-                print(f"Updating sentence with id={sentence_for_edit.id}")
-                print(f"Данные по статусу предложения, is_main={sentence_data['is_main']}")
-                sentence_for_edit.index = sentence_data["sentence_index"]
-                sentence_for_edit.weight = sentence_data["sentence_weight"]
-                sentence_for_edit.comment = sentence_data["sentence_comment"]
-                sentence_for_edit.sentence = sentence_data["sentence_sentence"]
-                sentence_for_edit.save()
-        return jsonify(success=True, message="All sentences updated successfully")
+                if not sentence_for_edit:
+                    logger.warning(f"Предложени с id {sentence_data['sentence_id']} не найдено")
+                    continue
+                if sentence_for_edit.sentence_type == "head":
+                    main_sentences.append((sentence_for_edit, sentence_data))
+                else:
+                    # Обновляем неглавные предложения
+                    sentence_for_edit.index = sentence_data["sentence_index"]
+                    sentence_for_edit.weight = sentence_data["sentence_weight"]
+                    sentence_for_edit.comment = sentence_data["sentence_comment"]
+                    sentence_for_edit.sentence = sentence_data["sentence_sentence"]
+                    sentence_for_edit.save()
+                    
+        for sentence_for_edit, sentence_data in main_sentences:
+            # Обновляем главные предложения
+            # Сохраняю старый индекс, чтобы потом обновить все предложения с таким индексом
+            old_index = sentence_for_edit.index
+            sentence_for_edit.index = sentence_data["sentence_index"]
+            sentence_for_edit.weight = sentence_data["sentence_weight"]
+            sentence_for_edit.comment = sentence_data["sentence_comment"]
+            sentence_for_edit.sentence = sentence_data["sentence_sentence"]
+            sentence_for_edit.save(old_index=old_index)
+            
+        return jsonify(success=True, message="Все предложения успешно обновлены"), 200
     except Exception as e:
-        print(f"Error: {e}")
-        return jsonify(success=False, message=f"Something went wrong. error code: {e}")
+        logger.error(f"Error updating sentences: {str(e)}")
+        return jsonify(success=False, message=f"Ошибка при обновлении предложений. Код ошибки: {e}"), 500
     
     
 @editing_report_bp.route('/delete_sentence', methods=['DELETE'])
@@ -241,61 +278,65 @@ def delete_sentence():
 @editing_report_bp.route("make_sentence_main", methods=["POST"])
 @auth_required()
 def make_sentence_main():
-    print("make_sentence_main start--------------------------------")
+    logger.info("Логика назначения предложения главным запущена----------------------------")
     if not request.is_json:
         return jsonify({"status": "error", "message": "Invalid request format"}), 400
 
     data = request.get_json()
-    print(data)
+    logger.debug(f"Данные предложения из запроса 'сделать предложение главным': {data}")
     sentence_id = int(data.get("sentence_id"))
     paragraph_id = int(data.get("paragraph_id"))
     sentence_index = int(data.get("sentence_index"))
     
-    if not sentence_id or not paragraph_id or not sentence_index:
-        print("There is no sentence_id or paragraph_id or sentence_index in request")
+    if not sentence_id or not paragraph_id:
+        logger.error("В запросе не хватает данных")
         return jsonify({"status": "error", "message": "В запросе не хватает данных"}), 400
 
-    paragraph = Paragraph.query.get(paragraph_id)
-    if not paragraph or paragraph.paragraph_to_report.profile_id != g.current_profile.id:
-        return jsonify({"status": "error", "message": "Paragraph not found or data of this paragraph doesn't match with current profile"}), 404
 
     try:
-        sentences = Sentence.query.filter_by(paragraph_id = paragraph_id, index = sentence_index).all()
+        sentences = Sentence.query.filter(
+            Sentence.paragraph_id == paragraph_id,
+            Sentence.index == sentence_index,
+            Sentence.sentence_type != "tail"
+        ).all()
+        
         for sentence in sentences:
-            print(f"sentence id={sentence.id} checked sentence_id={sentence_id}")
+            logger.info(f"Обрабатываю предложение с id={sentence.id}")
             if sentence.id == sentence_id:
-                print(f"make sentence main id={sentence.id}!!!!!!!!!!!!!!!!")
-                sentence.is_main = True
+                logger.info(f"Это теперь главное предложение - {sentence.sentence}")
+                sentence.sentence_type = "head"
             else:
-                sentence.is_main = False
+                sentence.sentence_type = "body"
                 
                 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Не учтены связи параграфов!!!!!!!!!!
-                # !!!!!!!!!!!!!!!!!!!!!!!!!!!!И новая логика save для Sentence!!!!!!!!!!!!!!!!!!!!!!!!!!
-            sentence.save()
-        print("make_sentence_main end--------------------------------")
-        return jsonify({"status": "success", "message": "Sentence is now main"}), 200
+                
+            sentence.save(old_index=sentence.index)
+            
+        logger.info("Логика смены главного предложения успешно завершена --------------------------------")
+        return jsonify({"status": "success", "message": "Главное предложение изменено"}), 200
     except Exception as e:
-        return jsonify({"status": "error", "message": f"Failed to make sentence main. Error code: {e}"}), 400
+        logger.error(f"Ошибка при изменении главного предложения: {str(e)}")
+        return jsonify({"status": "error", "message": f"Ошибка при изменении главного предложения. Код ошибки: {e}"}), 400
 
 
 
-@editing_report_bp.route('/check_report_for_excess_ismain', methods=['POST'])
+@editing_report_bp.route('/check_report_for_excess_ishead', methods=['POST'])
 @auth_required()
-def check_report_for_excess_ismain():
+def check_report_for_excess_ishead():
     """
-    Проверяет, есть ли в каждом наборе предложений с одинаковым index ровно одно is_main.
-    Если index = 0, то в этом наборе не должно быть is_main.
+    Проверяет, есть ли в каждом наборе предложений с одинаковым index ровно одно главное предложение.
+    Если index = 0, то в этом наборе не должно быть главных предложений.
     Возвращает отчет с информацией о проблемах в параграфах.
     """
     if not request.is_json:
-        return jsonify({"status": "error", "message": "Invalid request format"}), 400
+        return jsonify({"status": "error", "message": "Неправильный формат данных"}), 400
 
     data = request.get_json()
     report_id = data.get("report_id")
     report = Report.query.get(report_id)
 
     if not report or report.profile_id != g.current_profile.id:
-        return jsonify({"status": "error", "message": "Report not found or data of this report doesn't match with current profile"}), 404
+        return jsonify({"status": "error", "message": "Отчет не найден или не соответствует данному профилю"}), 404
 
     errors = check_main_sentences(report)
     

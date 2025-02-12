@@ -164,7 +164,7 @@ def create_report_from_file():
                                     paragraph_id=new_paragraph.id,
                                     index=sentence_index,
                                     weight=weight,
-                                    is_main=True if weight == 1 else False,
+                                    sentence_type="head" if weight == 1 else "body",
                                     tags="",
                                     comment='',
                                     sentence=split_sentence.strip()
@@ -174,7 +174,7 @@ def create_report_from_file():
                                 paragraph_id=new_paragraph.id,
                                 index=sentence_index,
                                 weight=1,
-                                is_main=True,
+                                sentence_type="head",
                                 tags="",
                                 comment='',
                                 sentence=sentence_data.strip()
@@ -283,7 +283,7 @@ def create_report_from_existing_few():
                         paragraph_id=new_paragraph.id,
                         index=sentence.index,
                         weight=sentence.weight,
-                        is_main=sentence.is_main,
+                        sentence_type=sentence.sentence_type,
                         tags="",
                         comment=sentence.comment,
                         sentence=sentence.sentence
@@ -323,7 +323,7 @@ def create_report_from_existing_few():
                 paragraph_id=new_paragraph_imression.id,
                 index=sentence.index,
                 weight=sentence.weight,
-                is_main=sentence.is_main,
+                sentence_type=sentence.sentence_type,
                 comment='',
                 sentence=sentence.sentence
             )
@@ -346,7 +346,7 @@ def create_report_from_existing_few():
                 paragraph_id=new_paragraph_scanparam.id,
                 index=sentence.index,
                 weight=sentence.weight,
-                is_main=sentence.is_main,
+                sentence_type=sentence.sentence_type,
                 tags="",
                 comment='',
                 sentence=sentence.sentence

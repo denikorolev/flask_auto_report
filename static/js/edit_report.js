@@ -76,6 +76,14 @@ function expandSentencesOfParagraph(button){
         sentencesList.style.display = "block";
         button.setAttribute("data-state", "save");
         button.textContent = "Сохранить и свернуть";
+
+        // Вешаем обработчики на все input внутри предложений
+        sentencesList.querySelectorAll(".edit-paragraph__form--sentence input").forEach(input => {
+            input.addEventListener("change", function () {
+                this.closest("form").setAttribute("data-changed", "true"); // Помечаем форму как изменённую
+            });
+        });
+
     } else if (button.getAttribute("data-state") === "save") {
         button.setAttribute("data-state", "collapsed"); 
         sentencesList.style.display = "none";
@@ -83,24 +91,28 @@ function expandSentencesOfParagraph(button){
 
 
         // Сбор данных для всех предложений в списке
-        const sentenceForms = sentencesList.querySelectorAll(".edit-paragraph__form--sentence");
+        const changedForms = sentencesList.querySelectorAll(".edit-paragraph__form--sentence[data-changed='true']");
         const sentenceData = [];
 
-        sentenceForms.forEach(form => {
+        changedForms.forEach(form => {
             const formData = new FormData(form);
             const jsonData = Object.fromEntries(formData.entries());
             jsonData["sentence_id"] = form.getAttribute("data-sentence-id");
-            jsonData["is_main"] = form.querySelector("input[name='is_main']").checked;
+            jsonData["is_head"] = form.querySelector("input[name='is_head']").checked;
             
 
             sentenceData.push(jsonData);
         });
 
+        if (sentenceData.length === 0) {
+            console.log("Нет изменений, запрос не отправляем.");
+            return; // Выход, если изменений нет
+        }
+
         // Отправляем данные предложений на сервер
         sendRequest({
             url: "/editing_report/edit_sentences_bulk",
             data: sentenceData,
-            // csrfToken: csrfToken
         }).then(response => {
             if (response.success) {
                 window.location.reload();
@@ -134,7 +146,7 @@ function newSentenceCreate(button){
         <input type="hidden" name="add_sentence_paragraph" value="${paragraphId}">
         <input class="input input--short edit-paragraph__input" type="text" name="sentence_index" value="${newSentenceIndex}">
         <input class="input input--short edit-paragraph__input" type="text" name="sentence_weight" value="1">
-        <input class="input--checkbox" type="checkbox" name="is_main">
+        <input class="input--checkbox" type="checkbox" name="is_head">
         <input class="input input--short edit-paragraph__input" type="text" name="sentence_comment" value="">
         <input class="input input--wide edit-paragraph__input" type="text" name="sentence_sentence" value="New sentence">
         <button class="btn report__btn edit-paragraph__btn--delete-sentence" type="button" data-sentence-id="new" onclick="deleteSentenceButton(this)">Delete Sentence</button>
@@ -190,15 +202,15 @@ function makeSentenceMainButton(button) {
     });
 };
 
-// Обработчик для кнопки btnCheckIsMain работает через onclick 
-// отправляет запрос на сервер для проверки на наличие лишних is_main предложений
-function reportCheckIsMainSentensesUnic(button) {
+// Обработчик для кнопки btnCheckIsHead работает через onclick 
+// отправляет запрос на сервер для проверки на наличие лишних главных предложений
+function reportCheckIsHeadSentensesUnic(button) {
     const reportId = button.dataset.reportId;
-    const blockForMessage = document.getElementById("reportCheckIsMain");
-    const messageList = document.getElementById("reportCheckIsMainList");
+    const blockForMessage = document.getElementById("reportCheckIsHead");
+    const messageList = document.getElementById("reportCheckIsHeadList");
 
     sendRequest({
-        url: "/editing_report/check_report_for_excess_ismain",
+        url: "/editing_report/check_report_for_excess_ishead",
         data: { report_id: reportId },
     }).then(response => {
         if (response.status === "success") {

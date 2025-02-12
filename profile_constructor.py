@@ -3,9 +3,8 @@
 from flask import current_app, g, session
 import json
 from models import AppConfig
-from config import Config
+from logger import logger
 
-logger = Config.logger
 
 class ProfileSettingsManager:
     """

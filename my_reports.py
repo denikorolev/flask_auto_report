@@ -1,14 +1,12 @@
 # my_reports.py
 
-from flask import Blueprint, render_template, request, redirect, url_for, current_app, g, jsonify
-from flask_login import login_required
+from flask import Blueprint, render_template, request, g, jsonify
 from collections import defaultdict
 from models import db, Report, ReportType, Paragraph
-from config import Config
+from logger import logger
 from flask_security.decorators import auth_required
 from sentence_processing import calculate_similarity_rapidfuzz
 
-logger = Config.logger
 
 my_reports_bp = Blueprint('my_reports', __name__)
 
@@ -51,7 +49,7 @@ def auto_link_reports():
         if len(report_ids) < 2:
             return jsonify({"status": "error", "message": "Выберите минимум два отчета для связывания"}), 400
         
-        reports = [Report.find_by_id(report_id) for report_id in report_ids if Report.find_by_id(report_id).profile_id == g.current_profile.id]
+        reports = [Report.get_by_id(report_id) for report_id in report_ids if Report.get_by_id(report_id).profile_id == g.current_profile.id]
         
         # Проверяем, что все отчеты одного типа
         report_type = reports[0].report_to_subtype.subtype_to_type.id
@@ -130,7 +128,7 @@ def manual_link_paragraphs():
             for paragraph_id in paragraph_ids:
                 print(paragraph_id)
                 paragraph_id = int(paragraph_id)
-                paragraphs_for_linking.append(Paragraph.find_by_id(paragraph_id))
+                paragraphs_for_linking.append(Paragraph.get_by_id(paragraph_id))
                 
             logger.info(f"Параграфы для связывания: {[p.paragraph for p in paragraphs_for_linking]}")
             if len(paragraphs_for_linking) > 1:

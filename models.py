@@ -2,21 +2,26 @@
 
 from flask_sqlalchemy import SQLAlchemy
 from flask_security import UserMixin, RoleMixin
-from sqlalchemy.orm import foreign, remote, relationship
+from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import ENUM
-from sqlalchemy import Index
+from sqlalchemy import Index, text, and_
 from utils import ensure_list
 from datetime import datetime, timezone  # Добавим для временных меток
 import json
-# from config import Config
+from logger import logger
 
-# logger = Config.logger
 
 db = SQLAlchemy()
 
 link_type_enum = ENUM(
     "equivalent", "expanding", "excluding", "additional",
     name="paragraph_link_type", create_type=False
+)
+
+sentence_type_enum = ENUM(
+    "head", "body", "tail",
+    name="sentence_type_enum",
+    create_type=True  # Создаст тип в PostgreSQL
 )
 
 # Ассоциативная таблица для связи ключевых слов с отчетами
@@ -126,7 +131,6 @@ class BaseModel(db.Model):
     id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
 
     def save(self):
-        db.session.add(self)
         db.session.commit()
 
     def delete(self):
@@ -137,10 +141,13 @@ class BaseModel(db.Model):
     def delete_by_id(cls, object_id):
         obj = cls.query.get(object_id)
         if obj:
-            db.session.delete(obj)
-            db.session.commit()
+            obj.delete()
             return True
         return False
+
+    @classmethod
+    def get_by_id(cls, object_id):
+        return cls.query.get(object_id)
 
 
 class Role(db.Model, RoleMixin):
@@ -260,11 +267,6 @@ class UserProfile(BaseModel):
     def get_user_profiles(cls, user_id):
         """Возвращает все профили, принадлежащие пользователю."""
         return cls.query.filter_by(user_id=user_id).all()
-
-    @classmethod
-    def find_by_id(cls, profile_id):
-        """Ищет профиль по его ID."""
-        return cls.query.get(profile_id)
     
     @classmethod
     def find_by_id_and_user(cls, profile_id, user_id):
@@ -418,11 +420,6 @@ class Report(BaseModel):
         return cls.query.filter_by(profile_id=profile_id).all()
     
     @classmethod
-    def find_by_id(cls, report_id):
-        """Ищет отчет по его ID."""
-        return cls.query.get(report_id)
-    
-    @classmethod
     def find_by_subtypes(cls, report_subtype):
         """Возвращает все отчеты, связанные с данным подтипом"""
         return cls.query.filter_by(report_subtype=report_subtype).all()
@@ -489,7 +486,7 @@ class Report(BaseModel):
                     "weight": sentence.weight,
                     "comment": sentence.comment,
                     "sentence": sentence.sentence,
-                    "is_main": sentence.is_main,
+                    "sentence_type": sentence.sentence_type,
                     "tags": sentence.tags
                 })
             
@@ -586,11 +583,6 @@ class Paragraph(BaseModel):
         db.session.add(new_paragraph)
         db.session.commit()
         return new_paragraph
-    
-    @classmethod
-    def find_by_id(cls, paragraph_id):
-        """Ищет параграф по его ID."""
-        return cls.query.get(paragraph_id)
     
     @classmethod
     def find_by_report_id(cls, report_id):
@@ -769,91 +761,111 @@ class Sentence(BaseModel):
     weight = db.Column(db.SmallInteger, nullable=False)
     comment = db.Column(db.String(100), nullable=False)
     sentence = db.Column(db.String(400), nullable=False)
-    is_main = db.Column(db.Boolean, default=False, nullable=False)
+    sentence_type = db.Column(sentence_type_enum, nullable=False, default="body")
     tags = db.Column(db.String(255), nullable=True)
 
 
 
-    def save(self):
+    def save(self, old_index=None):
         """
         Сохраняет предложение и синхронизирует его в связанных параграфах, если связь equivalent.
         Если изменяется индекс главного предложения, обновляет индекс у всех предложений с таким же индексом.
         """
         # Проверяем, является ли предложение главным
-        # logger.info(f"Начато сохранение предложения")
-        if not self.is_main:
-            super().save()
-            # logger.info(f"Предложение не главное, просто сохранено")
-            return  # Если не главное предложение, просто сохраняем
-
-        # logger.info(f"Предложение главное, начато сохранение в связанных параграфах")
         
-        # Получаем все предложения с текущим индексом ДО изменения
-        same_index_sentences = Sentence.query.filter_by(
-            paragraph_id=self.paragraph_id, index=self.index
-        ).update({"index": self.index}, synchronize_session=False)  # Обновляем индекс сразу в БД
+        if not self.sentence_type == "head":
+            super().save()
+            logger.info(f"Предложение не главное, просто сохранено")
+            return  
 
-        # logger.info(f"Найдено {same_index_sentences} предложений с индексом {self.index} для обновления")
+        if old_index is None:
+            super().save()
+            logger.info(f"Предложение главное, но не передан старый индекс, сохраняю и выхожу")
+            return
+        
+        
+        logger.info(f"Предложение главное, начато сохранение в связанных параграфах")
+        
+        new_index = self.index
+        
+        logger.info(f"Новый индекс: {new_index}")
+        logger.info(f"Старый индекс: {old_index}")
+    
+        # Получаем все предложения с текущим индексом, исключая главные
+        same_index_sentences = Sentence.query.filter(
+            Sentence.paragraph_id == self.paragraph_id,
+            Sentence.index == old_index,
+            Sentence.sentence_type != "head"  # Выбираем все, кроме главных
+        ).update({"index": new_index}, synchronize_session=False)
+        
+        logger.info(f"Найдено {same_index_sentences} предложений с индексом {old_index} для обновления")
         
         # Получаем связанные параграфы с типом связи equivalent
-        linked_paragraphs = Paragraph.get_linked_paragraphs(self.paragraph_id, link_type="equivalent", depth=2)
-
+        linked_paragraphs = Paragraph.get_linked_paragraphs(self.paragraph_id, 
+                                                            link_type="equivalent", 
+                                                            depth=2)
+        
         if linked_paragraphs:
+            logger.info(f"Найдено {len(linked_paragraphs)} связанных параграфов")
             # **Обновляем предложения во всех equivalent-параграфах**
             for linked in linked_paragraphs:
                 linked_paragraph_id = linked["paragraph_id"]
-
                 # Получаем все предложения с таким же индексом в связанном параграфе
-                linked_sentences = Sentence.query.filter_by(
-                    paragraph_id=linked["paragraph_id"], index=self.index, is_main=False
+                linked_notmain_updated = Sentence.query.filter_by(
+                    paragraph_id=linked_paragraph_id, 
+                    index=old_index
                 ).all()
-
-                if linked_sentences:
-                    for linked_sentence in linked_sentences:
-                        linked_sentence.index = self.index  # Обновляем индекс
-                        if linked_sentence.is_main:  # Только для главного предложения
-                            linked_sentence.sentence = self.sentence
-                            linked_sentence.weight = self.weight
-                else:
-                    # Если в связанном параграфе нет такого главного предложения, создаем его
-                    new_sentence = Sentence(
-                        paragraph_id=linked_paragraph_id,
-                        index=self.index,
-                        weight=self.weight,
-                        sentence=self.sentence,
-                        is_main=True
-                    )
-                    db.session.add(new_sentence)
-                    
+                
+                for sentence in linked_notmain_updated:
+                    sentence.index = new_index
+                    if sentence.sentence_type == "head":
+                        sentence.sentence = self.sentence
+                        sentence.weight = self.weight
+                        sentence.tags = self.tags
+                        
+                    db.session.add(sentence)
+                
+                logger.info(f"В параграфе {linked_paragraph_id} обновлено {len(linked_notmain_updated)} предложений")
+            
+        else:
+            logger.info(f"Связанных параграфов не найдено")
+            
+        # Сохраняем новые данные в текущем объекте
+        # for key, value in new_self.__dict__.items():
+        #     if not key.startswith("_"):  # Пропускаем системные атрибуты SQLAlchemy
+        #         setattr(self, key, value)  # Присваиваем значения обратно в self
+        
         db.session.add(self)
-        db.session.commit()  
+        db.session.commit()
+
+        logger.info(f"Сохранение успешно завершено")
     
 
     def delete(self):
         """
-        Удаляет главное предложение (`is_main=True`) в текущем и `equivalent`-параграфах.
+        Удаляет главное предложение (`sentence_type="head"`) в текущем и `equivalent`-параграфах.
         Если предложение **не главное**, просто удаляется.
         Если главное, все предложения с таким же `index` в связанных `equivalent`-параграфах получают `index=0`.
         """
-        # logger.info(f"Начато удаление предложения")
-        if not self.is_main:
+        logger.info(f"Начато удаление предложения")
+        if not self.sentence_type == "head":
             super().delete()
-            # logger.info(f"Предложение не главное, просто удалено")
+            logger.info(f"Предложение не главное, просто удалено")
             return
         
-        # logger.info(f"Предложение главное, начато удаление в связанных параграфах")
+        logger.info(f"Предложение главное, начато удаление в связанных параграфах")
         
         sentences_to_update = Sentence.query.filter_by(
                             paragraph_id=self.paragraph_id, 
                             index=self.index).update({"index": 0}, 
                                                     synchronize_session=False)
                             
-        # logger.info(f"Найдено {sentences_to_update} предложений для обновления индекса")
+        logger.info(f"Найдено {sentences_to_update} предложений для обновления индекса")
         
         linked_paragraphs = Paragraph.get_linked_paragraphs(self.paragraph_id, link_type="equivalent", depth=1)
 
         if linked_paragraphs:
-            # logger.info(f"Найдено {len(linked_paragraphs)} связанных параграфов")
+            logger.info(f"Найдено {len(linked_paragraphs)} связанных параграфов")
            
             linked_sentences_count = 0
             linked_main_deleted = 0
@@ -862,24 +874,22 @@ class Sentence(BaseModel):
                 linked_main_deleted += Sentence.query.filter_by(
                     paragraph_id=linked["paragraph_id"],
                     index=self.index,
-                    is_main=True
+                    sentence_type="head"
                 ).delete(synchronize_session=False) # Сразу удаляем главное предложение прямо в БД
                 
                 linked_sentences_count += Sentence.query.filter_by(
                     paragraph_id=linked["paragraph_id"], 
                     index=self.index
                 ).update({"index": 0},synchronize_session=False)  # Меняем сразу у всех предложений
-            # logger.info(f"Удалено {linked_main_deleted} главных предложений и обновлено индекс у {linked_sentences_count} предложений в связанных параграфах")
+            logger.info(f"Удалено {linked_main_deleted} главных предложений и обновлено индекс у {linked_sentences_count} предложений в связанных параграфах")
             
         db.session.delete(self)
         db.session.commit()
-        # logger.info(f"Удаление успешно завершено")
-
-
+        logger.info(f"Удаление успешно завершено")
 
 
     @classmethod
-    def create(cls, paragraph_id, index, weight, sentence, is_main=False, tags=None, comment=None):
+    def create(cls, paragraph_id, index, weight, sentence, sentence_type="tail", tags=None, comment=None):
         """
         Создает новое предложение.
 
@@ -888,25 +898,25 @@ class Sentence(BaseModel):
             index (int): Индекс предложения в параграфе.
             weight (int): Вес предложения.
             sentence (str): Текст предложения.
-            is_main (bool, optional): Является ли основным предложением. Default=False.
+            sentence_type (str): Может принимать значение "head", "body","tail". Default="tail".
             tags (str, optional): Теги в виде строки. Default=None.
             comment (str, optional): Комментарий. Default=None.
 
         Returns:
             Sentence: Созданный объект предложения.
         """
-        # Проверка наличия существующего is_main=True для данного index в данном paragraph_id
-        if is_main:
-            existing_main_sentence = cls.query.filter_by(paragraph_id=paragraph_id, index=index, is_main=True).first()
+        # Проверка наличия уже существующего главного предложения для данного index в данном paragraph_id
+        if sentence_type == "head":
+            existing_main_sentence = cls.query.filter_by(paragraph_id=paragraph_id, index=index, sentence_type="head").first()
             if existing_main_sentence:
-                print(f"Ошибка: Уже существует основное предложение с index={index} в параграфе {paragraph_id}.")
-                return None  # Возвращаем None, если нарушается ограничение
+                logger.error(f"Предложение с индексом {index} уже является основным в параграфе {paragraph_id}")
+                sentence_type = "body"  # Если уже есть основное предложение, устанавливаем предложение как обычное
             
         new_sentence = cls(
             paragraph_id=paragraph_id,
             index=index,
             weight=weight,
-            is_main=is_main,
+            sentence_type=sentence_type,
             tags=tags,
             comment=comment,
             sentence=sentence
@@ -919,12 +929,6 @@ class Sentence(BaseModel):
     @classmethod
     def find_by_paragraph_id(cls, paragraph_id):
         return cls.query.filter_by(paragraph_id=paragraph_id).all()
-
-
-    @classmethod
-    def find_main_sentences_for_paragraph(cls, paragraph_id):
-        """Возвращает все основные предложения (is_main=True) для указанного параграфа."""
-        return cls.query.filter_by(paragraph_id=paragraph_id, is_main=True).all()
 
 
     @classmethod

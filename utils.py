@@ -33,7 +33,7 @@ def get_max_index(model, filter_field, filter_value, column):
     return max_index + 1
 
 
-# Проверка отсутствия лишних и возможной нехватки is_main для предложений
+# Проверка отсутствия лишних и возможной нехватки sentence_type для предложений
 def check_main_sentences(report):
     from models import Paragraph, Sentence
     errors = []
@@ -51,10 +51,10 @@ def check_main_sentences(report):
 
                 # Проверяем каждую группу предложений
                 for index, group in sentence_groups.items():
-                    main_sentences = [s for s in group if s.is_main]
+                    main_sentences = [s for s in group if s.sentence_type == "head"]
 
                     if index == 0:
-                        # Если index = 0, is_main вообще не должно быть
+                        # Если index = 0, главных предложений вообще не должно быть
                         if main_sentences:
                             errors.append({
                                 "report": report.report_name,
@@ -65,7 +65,7 @@ def check_main_sentences(report):
                                 "extra_main_count": len(main_sentences)
                             })
                     else:
-                        # В остальных случаях должно быть ровно одно is_main
+                        # В остальных случаях должно быть ровно одно главное предложение
                         if len(main_sentences) == 0:
                             errors.append({
                                 "report": report.report_name,

@@ -760,7 +760,7 @@ body {
 }
 
 /* Это стиль для выделения главного предложения при изменении настроек профиля */
-.sentence_is_main {
+.sentence_is_head {
     background-color: var(--main-background-color);
 }
 
