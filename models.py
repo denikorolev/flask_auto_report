@@ -771,8 +771,13 @@ class Sentence(BaseModel):
         Сохраняет предложение и синхронизирует его в связанных параграфах, если связь equivalent.
         Если изменяется индекс главного предложения, обновляет индекс у всех предложений с таким же индексом.
         """
-        # Проверяем, является ли предложение главным
+      
+        # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Не учтены связи параграфов нужно будет 
+        # добавить логику чтобы предложения добавлялись 
+        # в новые параграфы если их там нет!!!!!!!!!!
         
+        
+        # Проверяем, является ли предложение главным
         if not self.sentence_type == "head":
             super().save()
             logger.info(f"Предложение не главное, просто сохранено")
@@ -911,6 +916,9 @@ class Sentence(BaseModel):
             if existing_main_sentence:
                 logger.error(f"Предложение с индексом {index} уже является основным в параграфе {paragraph_id}")
                 sentence_type = "body"  # Если уже есть основное предложение, устанавливаем предложение как обычное
+            else:
+                logger.info(f"Предложение с индексом {index} установлено как основное в параграфе {paragraph_id}")
+                logger.debug("НУЖНО НАСТРОИТЬ ЛОГИКУ СОЗДАНИЯ НОВЫХ ПРЕДЛОЖЕНИЙ В СВЯЗАННЫХ ПАРАГРАФАХ")
             
         new_sentence = cls(
             paragraph_id=paragraph_id,
@@ -930,6 +938,17 @@ class Sentence(BaseModel):
     def find_by_paragraph_id(cls, paragraph_id):
         return cls.query.filter_by(paragraph_id=paragraph_id).all()
 
+    @classmethod
+    def get_sentences_by_type(cls, paragraph_id, sentence_type):
+        """
+        Получает предложения заданного типа для указанного параграфа.
+        Args:
+            paragraph_id (int): ID параграфа.
+            sentence_type (str): Тип предложения ("head", "body" или "tail").
+        Returns:
+            list: Список предложений указанного типа.
+        """
+        return cls.query.filter_by(paragraph_id=paragraph_id, sentence_type=sentence_type).all()
 
     @classmethod
     def get_sentences_by_tag(cls, tag):

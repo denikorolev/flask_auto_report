@@ -1,6 +1,21 @@
 // edit_report.js
 
+document.addEventListener("DOMContentLoaded", function () {
 
+    // Добавляю слушатели на все select для изменения типа предложения
+    document.querySelectorAll("select[name='sentence_type']").forEach(select => {
+        select.addEventListener("change", function(event) {
+            sentenceTypeChanger(event.target);
+        });
+    });
+
+    document.querySelectorAll(".edit-paragraph__btn--delete-sentence").forEach(button => {
+        button.addEventListener("click", function() {
+            deleteSentenceButton(this);
+        });
+    });
+
+});
 
 
 // Обработчик для кнопки update report работает через onclick
@@ -87,7 +102,7 @@ function expandSentencesOfParagraph(button){
     } else if (button.getAttribute("data-state") === "save") {
         button.setAttribute("data-state", "collapsed"); 
         sentencesList.style.display = "none";
-        button.textContent = "Развернуть"
+        button.textContent = `Развернуть (${button.dataset.sentencesCount})`;
 
 
         // Сбор данных для всех предложений в списке
@@ -97,8 +112,9 @@ function expandSentencesOfParagraph(button){
         changedForms.forEach(form => {
             const formData = new FormData(form);
             const jsonData = Object.fromEntries(formData.entries());
-            jsonData["sentence_id"] = form.getAttribute("data-sentence-id");
-            jsonData["is_head"] = form.querySelector("input[name='is_head']").checked;
+            jsonData["sentence_id"] = form.dataset.sentenceId;
+            jsonData["sentence_type"] = form.querySelector("select[name='sentence_type']").value;
+            console.log("jsonData", jsonData);
             
 
             sentenceData.push(jsonData);
@@ -115,7 +131,8 @@ function expandSentencesOfParagraph(button){
             data: sentenceData,
         }).then(response => {
             if (response.success) {
-                window.location.reload();
+                // window.location.reload();
+                console.log("Все ок, данные сохранены");
             };
         });
     };
@@ -140,27 +157,39 @@ function newSentenceCreate(button){
     const newSentenceForm = document.createElement("form");
     newSentenceForm.classList.add("flex","edit-paragraph__form--sentence");
     newSentenceForm.setAttribute("data-sentence-id", "new")
+    newSentenceForm.setAttribute("data-changed", "true")
+    newSentenceForm.setAttribute("data-sentence-paragraph-id", paragraphId)
+    newSentenceForm.setAttribute("data-sentence-index", newSentenceIndex)
 
     newSentenceForm.innerHTML = `
         <input type="hidden" name="sentence_id" value="new">
         <input type="hidden" name="add_sentence_paragraph" value="${paragraphId}">
         <input class="input input--short edit-paragraph__input" type="text" name="sentence_index" value="${newSentenceIndex}">
         <input class="input input--short edit-paragraph__input" type="text" name="sentence_weight" value="1">
-        <input class="input--checkbox" type="checkbox" name="is_head">
         <input class="input input--short edit-paragraph__input" type="text" name="sentence_comment" value="">
+        <select class="select" name="sentence_type">
+            <option value="body">body</option>
+            <option value="tail">tail</option>
+            <option value="head">head</option>
+        </select>
         <input class="input input--wide edit-paragraph__input" type="text" name="sentence_sentence" value="New sentence">
-        <button class="btn report__btn edit-paragraph__btn--delete-sentence" type="button" data-sentence-id="new" onclick="deleteSentenceButton(this)">Delete Sentence</button>
+        <button class="btn report__btn edit-paragraph__btn--delete-sentence" type="button" onclick="deleteSentenceButton(this)">Delete Sentence</button>
     `;
 
     newSentenceLi.appendChild(newSentenceForm);
     sentencesList.appendChild(newSentenceLi);
+
+    newSentenceForm.querySelector("select[name='sentence_type']").addEventListener("change", function(event) {
+        sentenceTypeChanger(event.target);
+    });
+
 };
     
 
 
 // Delete sentence deleteSentenceButton()
 function deleteSentenceButton(button) {
-    const sentenceId = button.getAttribute("data-sentence-id");
+    const sentenceId = button.closest("form").dataset.sentenceId;
 
     if(sentenceId === "new") {
         button.closest("li").remove();
@@ -178,29 +207,6 @@ function deleteSentenceButton(button) {
 };
    
 
-// Обработчик для кнопки edit-paragraph__btn--main-sentence работает через onclick
-function makeSentenceMainButton(button) {
-    const sentenceId = button.dataset.sentenceId;
-    const sentenceParagraphId = button.dataset.sentenceParagraphId;
-    const sentenceIndex = button.dataset.sentenceIndex;
-
-    console.log("sentenceId", sentenceId);
-    console.log("sentenceParagraphId", sentenceParagraphId);
-    console.log("sentenceIndex", sentenceIndex);
-
-    sendRequest({
-        url: `/editing_report/make_sentence_main`,
-        method: "POST",
-        data: {sentence_id: sentenceId,
-                paragraph_id: sentenceParagraphId,
-                sentence_index: sentenceIndex
-        },
-    }).then(response => {
-        if (response.status === "success") {
-            window.location.reload();
-        } 
-    });
-};
 
 // Обработчик для кнопки btnCheckIsHead работает через onclick 
 // отправляет запрос на сервер для проверки на наличие лишних главных предложений
@@ -234,3 +240,36 @@ function reportCheckIsHeadSentensesUnic(button) {
         }
     });
 }
+
+
+function sentenceTypeChanger(sentenceTypeSelect) {
+    console.log("sentenceTypeChanger", sentenceTypeSelect.value);
+    const sentenceForm = sentenceTypeSelect.closest("form");
+    const sentenceId = sentenceForm.dataset.sentenceId;
+    const sentenceType = sentenceTypeSelect.value;
+    const sentenceParagraphId = sentenceForm.dataset.sentenceParagraphId;
+    const sentenceIndex = sentenceForm.dataset.sentenceIndex;
+
+    if (sentenceId === "new") {
+        console.log("this is new sentence and you try to change it's type");
+        return; // Выход, если попытка установить тип главного 
+        // предложения у нового предложения так как оно еще не сохранено
+    } 
+
+    sendRequest({
+        url: `/editing_report/change_sentence_type`,
+        method: "POST",
+        data: {sentence_id: sentenceId,
+                paragraph_id: sentenceParagraphId,
+                sentence_index: sentenceIndex,
+                sentence_type: sentenceType}
+    }).then(response => {
+        if (response.status === "success") {
+            window.location.reload();
+        } 
+    });
+
+}
+
+
+

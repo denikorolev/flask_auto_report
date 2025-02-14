@@ -114,23 +114,38 @@ function handleSentenceFocus() {
  */
 function handleSentenceBlur() {
     const originalText = this.getAttribute("data-original-text");
-    const currentText = this.textContent.trim();
+    const currentText = this.textContent;
     const linkedSentences = this.linkedSentences || [];
-    // const paragraphId = this.dataset.paragraphId;
-
-    // Блок условий для проверки изменений в предложении
-    if (!currentText) {return;}
-    if (normalizeSentence(originalText, keyWordsGroups) === normalizeSentence(currentText, keyWordsGroups)) {return;}
-    const isDuplicate = linkedSentences.some(sentence =>
-        normalizeSentence(sentence.sentence, keyWordsGroups) === normalizeSentence(currentText, keyWordsGroups)
-    );
-    if (isDuplicate) {return;}
-
+    const firstGrammaCheckedText = this.getAttribute("data-first-gramma-checked-text") || "";
     
-    this.textContent = firstGrammaSentence(currentText);
+    if (!currentText) {return;}
+    
+    const normalizedCurrent = normalizeSentence(currentText, keyWordsGroups);
+    const normalizedOriginal = normalizeSentence(originalText, keyWordsGroups);
+    const normalizedFirstGrammaChecked = normalizeSentence(firstGrammaCheckedText, keyWordsGroups);
+
+    // Проверяем, совпадает ли с оригинальным текстом
+    if (normalizedFirstGrammaChecked === normalizedCurrent) {return;}
+    if (normalizedCurrent === normalizedOriginal) {return;}
+    
+    const isDuplicate = linkedSentences.some(sentence =>
+        normalizeSentence(sentence.sentence, keyWordsGroups) === normalizedCurrent
+    );
+    if (isDuplicate) {
+        console.log("double")
+        return;
+    }
+
+    const GrammaCheckedText = firstGrammaSentence(currentText);
+    this.textContent = GrammaCheckedText;
+    this.setAttribute("data-first-gramma-checked-text", GrammaCheckedText);
+    
     highlightKeyWords(this);
-    this.setAttribute("data-modified", "true");
-    this.classList.add("was-changed-highlighted-sentence");
+    
+    if (!this.hasAttribute("data-sentence-modified")) {
+        this.setAttribute("data-sentence-modified", "true");
+        this.classList.add("was-changed-highlighted-sentence");
+    }
 }
 
 /**
@@ -151,6 +166,7 @@ function createEditableSentenceElement(sentenceText, paragraphId) {
     newSentenceElement.classList.add("report__sentence"); // Добавляем класс для стилизации и идентификации
     newSentenceElement.dataset.paragraphId = paragraphId; // Привязываем к конкретному абзацу
     newSentenceElement.dataset.index = "0"; // Новое предложение всегда получает индекс 0
+    newSentenceElement.dataset.sentenceType = "tail" // Новое предложение всегда получает тип "tail"
     newSentenceElement.textContent = sentenceText; // Устанавливаем текст предложения
 
     // Делаем элемент редактируемым
@@ -244,129 +260,129 @@ function cleanSelectText(element) {
  * - `createSentenceElement(paragraphId, sentence)` — создает элемент предложения с текстом и кнопкой "Добавить".
  * 
  */
-function displayProcessedParagraphs(paragraphs) {
-    const container = document.getElementById('sentenceAddingRequestContainer');
-    container.innerHTML = ''; // Clear the container before adding new data
+// function displayProcessedParagraphs(paragraphs) {
+//     const container = document.getElementById('sentenceAddingRequestContainer');
+//     container.innerHTML = ''; // Clear the container before adding new data
 
-    // Проверка, есть ли данные для обработки
-    if (!paragraphs || !Array.isArray(paragraphs)) {
-        console.error("Invalid paragraphs data:", paragraphs);
-        return;
-    }
+//     // Проверка, есть ли данные для обработки
+//     if (!paragraphs || !Array.isArray(paragraphs)) {
+//         console.error("Invalid paragraphs data:", paragraphs);
+//         return;
+//     }
 
-    // Внутренняя функция для отправки данных на сервер
-    function sendSentences(dataToSend) {
-        sendRequest({
-            url: "/working_with_reports/add_sentence_to_paragraph",
-            method: "POST",
-            data: dataToSend,
-            csrfToken: csrfToken
-        })
-        .then(response => {
-            if (response) {
-                toastr.success(response.message || 'Operation completed successfully!', 'Success');
-            }
-        })
-        .catch(error => {
-            console.error("Failed to send sentences:", error);
-            alert("Failed to send sentences.");
-        });
-    }
+//     // Внутренняя функция для отправки данных на сервер
+//     function sendSentences(dataToSend) {
+//         sendRequest({
+//             url: "/working_with_reports/add_sentence_to_paragraph",
+//             method: "POST",
+//             data: dataToSend,
+//             csrfToken: csrfToken
+//         })
+//         .then(response => {
+//             if (response) {
+//                 toastr.success(response.message || 'Operation completed successfully!', 'Success');
+//             }
+//         })
+//         .catch(error => {
+//             console.error("Failed to send sentences:", error);
+//             alert("Failed to send sentences.");
+//         });
+//     }
 
-    // Внутренняя функция для создания предложения и кнопки "Добавить"
-    function createSentenceElement(paragraphId, sentence) {
-        const sentenceDiv = document.createElement('div');
-        sentenceDiv.classList.add('sentence-container');
+//     // Внутренняя функция для создания предложения и кнопки "Добавить"
+//     function createSentenceElement(paragraphId, sentence) {
+//         const sentenceDiv = document.createElement('div');
+//         sentenceDiv.classList.add('sentence-container');
         
-        sentenceDiv.textContent = sentence;
+//         sentenceDiv.textContent = sentence;
 
-        // Добавляем кнопку "Добавить"
-        const addButton = document.createElement('button');
-        addButton.textContent = 'Добавить';
-        addButton.classList.add('add-sentence-btn');
-        addButton.addEventListener('click', function() {
-            const dataToSend = {
-                sentence_for_adding: [
-                    {
-                        paragraph_id: paragraphId,
-                        sentences: [sentence]
-                    }
-                ]
-            };
+//         // Добавляем кнопку "Добавить"
+//         const addButton = document.createElement('button');
+//         addButton.textContent = 'Добавить';
+//         addButton.classList.add('add-sentence-btn');
+//         addButton.addEventListener('click', function() {
+//             const dataToSend = {
+//                 sentence_for_adding: [
+//                     {
+//                         paragraph_id: paragraphId,
+//                         sentences: [sentence]
+//                     }
+//                 ]
+//             };
 
-            // Используем внутреннюю функцию для отправки данных
-            sendSentences(dataToSend);
-        });
+//             // Используем внутреннюю функцию для отправки данных
+//             sendSentences(dataToSend);
+//         });
 
-        sentenceDiv.appendChild(addButton);
-        return sentenceDiv;
-    }
+//         sentenceDiv.appendChild(addButton);
+//         return sentenceDiv;
+//     }
 
-    // Collect total number of sentences to be added
-    let totalSentences = 0;
-    paragraphs.forEach(paragraph => {
-        const sentences = Array.isArray(paragraph.sentences) ? paragraph.sentences : [paragraph.sentence];
-        totalSentences += sentences.length;
-    });
+//     // Collect total number of sentences to be added
+//     let totalSentences = 0;
+//     paragraphs.forEach(paragraph => {
+//         const sentences = Array.isArray(paragraph.sentences) ? paragraph.sentences : [paragraph.sentence];
+//         totalSentences += sentences.length;
+//     });
     
-    // Создаем кнопку "Отправить все"
-    if (totalSentences >= 2) {
-        // Create "Send All" button
-        const sendAllButton = document.createElement('button');
-        sendAllButton.textContent = 'Отправить все';
-        sendAllButton.classList.add('send-all-btn');
-        sendAllButton.addEventListener('click', function() {
-            const allSentences = [];
+//     // Создаем кнопку "Отправить все"
+//     if (totalSentences >= 2) {
+//         // Create "Send All" button
+//         const sendAllButton = document.createElement('button');
+//         sendAllButton.textContent = 'Отправить все';
+//         sendAllButton.classList.add('send-all-btn');
+//         sendAllButton.addEventListener('click', function() {
+//             const allSentences = [];
 
-            // Собираем все предложения для отправки
-            paragraphs.forEach(paragraph => {
-                const sentences = Array.isArray(paragraph.sentences) ? paragraph.sentences : [paragraph.sentence];
-                if (sentences) {
-                    allSentences.push({
-                        paragraph_id: paragraph.paragraph_id,
-                        sentences: sentences
-                    });
-                }
-            });
+//             // Собираем все предложения для отправки
+//             paragraphs.forEach(paragraph => {
+//                 const sentences = Array.isArray(paragraph.sentences) ? paragraph.sentences : [paragraph.sentence];
+//                 if (sentences) {
+//                     allSentences.push({
+//                         paragraph_id: paragraph.paragraph_id,
+//                         sentences: sentences
+//                     });
+//                 }
+//             });
 
-            // Формируем данные для отправки
-            const dataToSend = {
-                sentence_for_adding: allSentences
-            };
+//             // Формируем данные для отправки
+//             const dataToSend = {
+//                 sentence_for_adding: allSentences
+//             };
 
-            // Используем внутреннюю функцию для отправки данных
-            sendSentences(dataToSend);
-        });
+//             // Используем внутреннюю функцию для отправки данных
+//             sendSentences(dataToSend);
+//         });
 
-        // Добавляем кнопку "Отправить все" в контейнер
-        container.appendChild(sendAllButton);
-    }
+//         // Добавляем кнопку "Отправить все" в контейнер
+//         container.appendChild(sendAllButton);
+//     }
 
-    // Создаем и добавляем элементы предложений в контейнер
-    paragraphs.forEach(paragraph => {
-        const paragraphDiv = document.createElement('div');
-        paragraphDiv.classList.add('paragraph-container');
+//     // Создаем и добавляем элементы предложений в контейнер
+//     paragraphs.forEach(paragraph => {
+//         const paragraphDiv = document.createElement('div');
+//         paragraphDiv.classList.add('paragraph-container');
 
-        const paragraphText = paragraph.paragraph_text || `Paragraph: ${paragraph.paragraph_id}`;
-        paragraphDiv.textContent = `Paragraph: ${paragraphText}`;
+//         const paragraphText = paragraph.paragraph_text || `Paragraph: ${paragraph.paragraph_id}`;
+//         paragraphDiv.textContent = `Paragraph: ${paragraphText}`;
 
-        // Проверка на массив предложений
-        if (Array.isArray(paragraph.sentences)) {
-            paragraph.sentences.forEach(sentence => {
-                const sentenceElement = createSentenceElement(paragraph.paragraph_id, sentence);
-                paragraphDiv.appendChild(sentenceElement);
-            });
-        } else if (typeof paragraph.sentence === 'string') {
-            // Если предложение передано как строка (единичное предложение)
-            const sentenceElement = createSentenceElement(paragraph.paragraph_id, paragraph.sentence);
-            paragraphDiv.appendChild(sentenceElement);
-        } else {
-            console.error('No valid sentences found for paragraph:', paragraph);
-        }
+//         // Проверка на массив предложений
+//         if (Array.isArray(paragraph.sentences)) {
+//             paragraph.sentences.forEach(sentence => {
+//                 const sentenceElement = createSentenceElement(paragraph.paragraph_id, sentence);
+//                 paragraphDiv.appendChild(sentenceElement);
+//             });
+//         } else if (typeof paragraph.sentence === 'string') {
+//             // Если предложение передано как строка (единичное предложение)
+//             const sentenceElement = createSentenceElement(paragraph.paragraph_id, paragraph.sentence);
+//             paragraphDiv.appendChild(sentenceElement);
+//         } else {
+//             console.error('No valid sentences found for paragraph:', paragraph);
+//         }
 
-        container.appendChild(paragraphDiv);
-    });
-}
+//         container.appendChild(paragraphDiv);
+//     });
+// }
 
 
 /**
@@ -381,34 +397,40 @@ function displayProcessedParagraphs(paragraphs) {
 function highlightKeyWords(element) {
     if (!element || !(element instanceof HTMLElement)) return;
 
-    // const currentIndex = element.getAttribute("data-index");
-    // if (!currentIndex) return;
+    let originalText = element.innerHTML;
 
-    let text = element.innerText; // Получаем текст элемента
+    let text = originalText; // Работаем с копией, чтобы следить за изменениями
 
     keyWordsGroups.forEach(group => {
         group.forEach(keyword => {
             const word = keyword.word;
 
-            // Улучшенный regex: игнорирует <span>, но запрещает все остальные HTML-теги перед и после слова
-            const regex = new RegExp(`(?<!<(?!span)[^>]*>|[a-zA-Zа-яА-ЯёЁ])(${word})(?![^<]*>|[a-zA-Zа-яА-ЯёЁ])`, "gi");
-            text = text.replace(regex, (matchedWord) => {
-                // Проверяем, начинается ли найденное слово с заглавной буквы
-            const isCapitalized = matchedWord.charAt(0) === matchedWord.charAt(0).toUpperCase();
-            // Если заглавная буква, делаем все связанные слова тоже с заглавной
-            const transformedGroup = isCapitalized
-            ? group.map(item => item.word.charAt(0).toUpperCase() + item.word.slice(1))
-            : group.map(item => item.word.toLowerCase());
+            // Улучшенный regex:
+            // 1. Проверяем, не находится ли слово уже внутри <span> (не трогаем уже выделенные слова).
+            // 2. Ищем только целые слова (чтобы не выделять часть слова).
+            const regex = new RegExp(
+                `(?<!<span[^>]*>)(?<!\\p{L})${word}(?!\\p{L})(?![^<]*<\\/span>)`,
+                "giu"
+            );
 
-                return `<span class="keyword-highlighted" 
-                        data-keywords="${transformedGroup.join(",")}" 
-                        onclick="handleKeywordClick(event)">${matchedWord}</span>`;
+            text = text.replace(regex, (matchedWord) => {
+                // Проверяем, была ли первая буква заглавной
+                const isCapitalized = matchedWord.charAt(0) === matchedWord.charAt(0).toUpperCase();
+                const transformedGroup = isCapitalized
+                    ? group.map(item => item.word.charAt(0).toUpperCase() + item.word.slice(1))
+                    : group.map(item => item.word.toLowerCase());
+
+                    const replacement = `<span class="keyword-highlighted" 
+                    data-keywords="${transformedGroup.join(",")}" 
+                    onclick="handleKeywordClick(event)">${matchedWord}</span>`;
+                    return replacement;
             });
         });
     });
 
-    element.innerHTML = text;
-    // element.setAttribute("data-index", currentIndex);
+    if (text !== originalText) {
+        element.innerHTML = text;
+    } 
 }
 
 
@@ -449,7 +471,9 @@ function updateCoreAndImpessionParagraphText() {
     const coreAndImpessionParagraphLists = document.querySelectorAll(".paragraph__list--core, .paragraph__list--impression");
     coreAndImpessionParagraphLists.forEach(paragraphList => {
         paragraphList.querySelectorAll("p, span").forEach(paragraph => {
-            highlightKeyWords(paragraph);
+            if (isElementVisible(paragraph)) { // Проверяем, виден ли элемент
+                highlightKeyWords(paragraph);
+            }
         });
     });
 }
@@ -850,7 +874,7 @@ function editButtonLogic(editButton) {
  * 
  * Требования:
  * - Элементы кнопок с классом "icon-btn--add-sentence" должны присутствовать на странице.
- * - Серверный маршрут "/working_with_reports/get_sentences_with_index_zero" должен возвращать данные в формате JSON с массивом предложений.
+ * - Серверный маршрут "/working_with_reports/get_sentences_with_type_tail" должен возвращать данные в формате JSON с массивом предложений.
  * - Должны быть доступны функции `createEditableSentenceElement`, `showPopupSentences`(находится в utils.js), `updateCoreAndImpessionParagraphText`, и `hidePopupSentences`(находится в utils.js).
  * - Должен быть определен CSRF-токен для безопасности запросов.
  * 
@@ -872,10 +896,9 @@ function addSentenceButtonLogic() {
 
             // Получаем предложения с индексом 0 для этого параграфа
             sendRequest({
-                url: "/working_with_reports/get_sentences_with_index_zero",
+                url: "/working_with_reports/get_sentences_with_type_tail",
                 method: "POST",
                 data: { paragraph_id: paragraphId },
-                csrfToken: csrfToken
             }).then(data => {
                 if (data.sentences && data.sentences.length > 0) {
                     // Используем popup для показа предложений
@@ -890,7 +913,7 @@ function addSentenceButtonLogic() {
                     console.warn("No sentences available for this paragraph.");
                 }
             }).catch(error => {
-                console.error("Error fetching sentences:", error);
+                console.error("Ошибка при получении добавочных предложений", error);
             });
 
             // Логика скрытия popup или удаления предложения
@@ -919,14 +942,6 @@ function addSentenceButtonLogic() {
  * - Отправляет собранные данные абзацев на сервер для обработки.
  * - При успешной обработке отображает обновленные данные абзацев на странице.
  * 
- * Требования:
- * - Должна быть доступна функция `collectTextFromParagraphs` для извлечения текста из параграфов.
- * - Должна быть доступна функция `collectParagraphsData` для сбора данных абзацев.
- * - Должны быть доступны функции `sendRequest` для выполнения HTTP-запросов и `displayProcessedParagraphs` для отображения обновленных данных.
- * - Должен быть подключен библиотека `toastr` для отображения уведомлений.
- * - Серверный маршрут "/working_with_reports/new_sentence_adding" должен принимать данные абзацев и возвращать обработанные данные.
- * - Должен быть определен CSRF-токен для безопасности запросов.
- * 
  * Использование:
  * - Вызвать эту функцию и передать элемент кнопки "Copy to Clipboard" как аргумент.
  * - Функция автоматически добавит обработчик событий к переданной кнопке.
@@ -948,6 +963,7 @@ function copyButtonLogic(copyButton) {
 
         // Соединяем все части с пустой строкой между ними
         const textToCopy = `${initialText}\n\n${coreText}\n\n${impressionText}`.trim();
+        
         console.log(textToCopy);
         try {
             // Копируем текст в буфер обмена
@@ -974,26 +990,27 @@ function copyButtonLogic(copyButton) {
  * 
  * @param {Array} paragraphsData - The data of paragraphs to send.
  */
-async function sendParagraphsData(paragraphsData) {
-    try {
-        const response = await sendRequest({
-            url: "/working_with_reports/new_sentence_adding",
-            method: "POST",
-            data: { paragraphs: paragraphsData },
-            csrfToken: csrfToken
-        });
+// async function sendParagraphsData(paragraphsData) {
+//     try {
+//         const response = await sendRequest({
+//             url: "/working_with_reports/new_sentence_adding",
+//             method: "POST",
+//             data: { paragraphs: paragraphsData },
+//         });
 
-        // Если запрос успешен, отображаем обработанные абзацы
-        displayProcessedParagraphs(response.processed_paragraphs);
-    } catch (error) {
-        console.error("sendParagraphsData: Failed to send paragraphs data.", error);
-        alert(error.message || "Не удалось обработать абзацы.");
-    }
-}
+//         // Если запрос успешен, отображаем обработанные абзацы
+//         displayProcessedParagraphs(response.processed_paragraphs);
+//     } catch (error) {
+//         console.error("sendParagraphsData: Failed to send paragraphs data.", error);
+//         alert(error.message || "Не удалось обработать абзацы.");
+//     }
+// }
 
 
 /**
  * Обрабатывает логику кнопки "Export to Word".
+ * 
+ * ОСТАЛЬНАЯ ЛОГИКА СИЛЬНО ПОМЕНЯЛАСЬ И ЭТА ФУНКЦИЯ МОЖЕТ НЕ РАБОТАТЬ В СВОЕМ СТАРОМ ВИДЕ
  * 
  * Функциональность:
  * - Собирает текст из абзацев с классами "paragraph__list--initial", "paragraph__list--core", и "paragraph__list--impression".
@@ -1001,16 +1018,6 @@ async function sendParagraphsData(paragraphsData) {
  * - При успешной обработке данных выполняет экспорт текста в формат Word.
  * - Формирует имя файла на основе имени пациента, типа отчета, подтипа отчета и текущей даты.
  * - Позволяет пользователю скачать сгенерированный файл Word.
- * 
- * Требования:
- * - Должна быть доступна функция `collectTextFromParagraphs` для извлечения текста из параграфов.
- * - Должна быть доступна функция `collectParagraphsData` для сбора данных абзацев.
- * - Должны быть доступны функции `sendRequest` для выполнения HTTP-запросов и `displayProcessedParagraphs` для отображения обновленных данных.
- * - Должен быть подключен CSRF-токен для безопасности запросов.
- * - Серверные маршруты:
- *   - "/working_with_reports/new_sentence_adding" для обработки данных абзацев.
- *   - "/working_with_reports/export_to_word" для создания файла Word.
- * - Поля ввода с идентификаторами "patient-name", "patient-birthdate", "report-number" должны содержать соответствующие данные пациента.
  * 
  * Использование:
  * - Вызвать эту функцию и передать элемент кнопки "Export to Word" как аргумент.
@@ -1039,16 +1046,7 @@ function wordButtonLogic(exportButton) {
         const paragraphsData = collectParagraphsData();
 
         try {
-            // Отправляем данные абзацев на сервер
-            const response = await sendRequest({
-                url: "/working_with_reports/new_sentence_adding",
-                method: "POST",
-                data: { paragraphs: paragraphsData },
-                csrfToken: csrfToken
-            });
-
-            // Отображаем обработанные абзацы, если запрос успешен
-            displayProcessedParagraphs(response.processed_paragraphs);
+            await sendModifiedSentencesToServer();
         } catch (error) {
             console.error("Ошибка обработки абзацев:", error);
             alert(error.message || "Не удалось обработать абзацы.");
@@ -1237,14 +1235,14 @@ function addFocusListeners() {
 
 /**
  * Collects data of modified sentences and sends it to the server.
- * - Gathers all sentences with `data-modified="true"`.
+ * - Gathers all sentences with `data-sentence-modified="true"`.
  * - Formats the data as a JSON object for sending to the server.
  * - Uses `sendRequest` to make the API call.
  */
 async function sendModifiedSentencesToServer() {
     // Находим все предложения, помеченные как изменённые
-    const modifiedSentences = document.querySelectorAll("[data-modified='true']");
-    const reportId = document.getElementById("csrf_token").dataset.reportId;
+    const modifiedSentences = document.querySelectorAll("[data-sentence-modified='true']");
+    const reportId = document.getElementById("csrf_token").dataset.reportId; // нужно будет переделать и брать id отчета из другого места
     if (modifiedSentences.length === 0) {
         toastr.info("No changes detected to save.");
         return;
@@ -1255,7 +1253,7 @@ async function sendModifiedSentencesToServer() {
     modifiedSentences.forEach(sentenceElement => {
         const paragraphId = sentenceElement.getAttribute("data-paragraph-id");
         const sentenceIndex = sentenceElement.getAttribute("data-index") || 0;
-
+        const sentenceType = sentenceElement.getAttribute("data-sentence-type") || "tail";
         const currentText = cleanSelectText(sentenceElement).trim();
 
         if(!currentText) {
@@ -1265,7 +1263,8 @@ async function sendModifiedSentencesToServer() {
         dataToSend.push({
             paragraph_id: paragraphId,
             sentence_index: sentenceIndex,
-            text: currentText
+            text: currentText,
+            type: sentenceType
         });
 
     });
@@ -1288,7 +1287,6 @@ async function sendModifiedSentencesToServer() {
             url: "/working_with_reports/save_modified_sentences",
             method: "POST",
             data: requestData,
-            csrfToken: csrfToken // предполагаем, что CSRF-токен доступен глобально
         });
         
         if (response.status === "success") {
@@ -1298,9 +1296,9 @@ async function sendModifiedSentencesToServer() {
             // Вставляем сгенерированный HTML в контейнер
             reportContainer.innerHTML = response.html;
             bottomContainer.style.display = "flex";
-            // Убираем атрибут `data-modified` после успешного сохранения
+            // Убираем атрибут `data-sentence-modified` после успешного сохранения
             modifiedSentences.forEach(sentenceElement => {
-                sentenceElement.removeAttribute("data-modified");
+                sentenceElement.removeAttribute("data-sentence-modified");
                 sentenceElement.classList.remove("was-changed-highlighted-sentence");
             });
         }
@@ -1320,7 +1318,7 @@ async function sendModifiedSentencesToServer() {
  * 🔹 Исправляет заглавные буквы в начале.
  * 🔹 Убирает лишние пробелы и исправляет их перед знаками препинания.
  * 🔹 Корректирует написание текста в скобках.
- * 🔹 Меняет `C` и `С` после цифры на `°C`.
+ * 🔹 Меняет `Гр` и `гр` после цифры на `°`.
  * 🔹 Заменяет `1.` → `1)`, если после точки нет цифры.
  * 🔹 Убирает двойные точки в конце.
  * 
@@ -1328,85 +1326,45 @@ async function sendModifiedSentencesToServer() {
  * @returns {string} - Очищенное и исправленное предложение.
  */
 function firstGrammaSentence(sentence) {
-    if (!sentence.trim()) return sentence; // Если пустая строка — ничего не делаем
+    sentence = sentence.trim();
+    if (!sentence) return sentence; // Если пустая строка — ничего не делаем
 
-    //  Делаем первую букву заглавной
-    sentence = sentence.charAt(0).toUpperCase() + sentence.slice(1);
+    sentence = sentence.replace(/\.{2,}$/g, ".") // Убираем двойные точки в конце предложения
+    sentence = sentence.replace(/(\d+)\.(?!\d)/g, "$1)"); // Меняем `1.` → `1)`, если после точки нет цифры
+    
+    // Ставим точку в конце предложения, если ее нет, это специально 
+    // сделано после скобки после цифры, чтобы не менять автоточку после даты
+    if (!/[.!?]$/.test(sentence)) {
+        sentence += ".";
+    }
 
-    // Убираем лишние пробелы (между словами, перед знаками препинания)
-    sentence = sentence.replace(/\s+/g, " ")  // Заменяем несколько пробелов на один
-                       .replace(/\s([,.!?:;])/g, "$1")  // Убираем пробел перед знаками препинания
-                       .replace(/\.{2,}$/g, ".") // Убираем двойные точки в конце
-                       .replace(/([,.!?:;])([^\s])/g, "$1 $2"); // Добавляем пробел после знаков, если его нет
+    
+    sentence = sentence.charAt(0).toUpperCase() + sentence.slice(1); //  Делаем первую букву заглавной
+    sentence = sentence.replace(/(\d)\s*[гГ][р](?=[^\p{L}]|$)/gu, "$1°"); // `Гр и гр` после цифры → заменяем на `°`
 
-    // Корректируем текст в скобках
-    sentence = sentence.replace(/\(([^)]+)\)/g, (match, insideText) => {
-        if (!/^(КТ|МРТ|ПЭТ|УЗИ|МР|ЭКГ)$/i.test(insideText)) {
-            insideText = insideText.charAt(0).toLowerCase() + insideText.slice(1); // Первую букву в строчную
-        }
-        return `(${insideText.replace(/\.$/, "")})`; // Убираем точку перед `)`
+    sentence = sentence.replace(/(\S+)\s*[.]?\s*\)/g, "$1)"); // Убираем точку и пробел перед `)`
+    sentence = sentence.replace(/\)/g, ") "); // Добавляем пробел после `)`
+    sentence = sentence.replace(/\(\s+/g, "("); // Убираем пробел после `(`
+
+    sentence = sentence.replace(/([,.!?:;])(?=\p{L})/gu, "$1 "); // Добавляем пробел после знаков, если его нет, но только перед буквой, например 1,5 останется неизменным
+    sentence = sentence.replace(/\s([,.!?:;])/g, "$1"); // Убираем пробел перед знаками препинания
+    sentence = sentence.replace(/\s+/g, " "); // Заменяем несколько пробелов на один
+
+    const abbreviations = ["КТ", "МРТ", "ПЭТ-КТ", "УЗИ", "ФГДС"];
+    // Если слово в нижнем регистре и является аббревиатурой, то делаем его заглавным
+    sentence = sentence.replace(/(?<!\p{L})[а-яёa-z-]+(?!\p{L})/giu, (match) => {
+        const upperMatch = match.toUpperCase();
+        return abbreviations.includes(upperMatch) ? upperMatch : match;
     });
-
-    //  Меняем `C` и `С` на `°C`, если они идут сразу после цифры
-    sentence = sentence.replace(/(\d)([СC])/g, "$1°C");
-
-    // Меняем `1.` → `1)`, если после точки нет цифры
-    sentence = sentence.replace(/(\d+)\.(?!\d)/g, "$1)");
-
-    // `C` и `С` после цифры → заменяем на `°C`
-    sentence = sentence.replace(/(\d)([СC])(?=[^\w]|$)/g, "$1°C");
-
-    // ✅ Перед `)` не должно быть точки и пробела
-    // ✅ После `)` должен быть пробел, если следующий символ — не знак препинания
-    sentence = sentence.replace(/(\S+)\s*\.\s*\)(?=\S)/g, "$1)"); // Убираем точку перед `)`
-    sentence = sentence.replace(/\)([^\s.,!?])/g, ") $1"); // Добавляем пробел после `)`, если дальше не знак препинания
-
-
-    // Первое слово в скобках с маленькой буквы (если не аббревиатура)
-    const exceptions = ["КТ", "МРТ", "ПЭТ", "УЗИ", "МР", "ЭКГ"];
-    sentence = sentence.replace(/\(\s*([А-ЯЁA-Z][а-яёa-z]+)\s*\)/g, (match, word) =>
-        exceptions.includes(word.toUpperCase()) ? match : `(${word.toLowerCase()})`
+    
+    // Если слова стоит после `:`, то делаем его с маленькой буквы кроме аббревиатур из списка
+    sentence = sentence.replace(/:\s*([А-ЯЁA-Z][а-яёa-z]+)/g, (match, word) =>
+        abbreviations.includes(word.toUpperCase()) ? match : `: ${word.toLowerCase()}`
     );
 
     return sentence.trim();
 }
 
 
-/**
- * Применяет грамматические корректировки к тексту.
- * 
- * 🔹 Обрабатывает текст целиком, исправляя форматирование и пунктуацию.
- * 🔹 Используется при копировании текста в буфер обмена.
- * 
- * @param {string} text - Исходный текст.
- * @returns {string} - Откорректированный текст.
- */
-function secondGrammaSentence(text) {
-    if (!text) return "";
-
-    // После знаков ".!?" первое слово должно быть с большой буквы (если перед ним нет "(")
-    text = text.replace(/([.!?])\s+(\(?)([а-яёa-z])/g, (match, punct, bracket, letter) => 
-        punct + " " + bracket + letter.toUpperCase()
-    );
-
-    // Удаляем лишние пробелы (оставляем один пробел между словами)
-    text = text.replace(/\s+/g, " ");
-
-    // После ":" слово должно быть с маленькой буквы (кроме исключений)
-    const exceptions = ["КТ", "МРТ", "ПЭТ", "УЗИ", "МР", "ЭКГ"];
-    text = text.replace(/:\s*([А-ЯЁA-Z][а-яёa-z]+)/g, (match, word) =>
-        exceptions.includes(word.toUpperCase()) ? match : `: ${word.toLowerCase()}`
-    );
-
-    // Если последнее предложение заканчивается на "," → заменяем на ".."
-    text = text.replace(/,(\s*)$/, ".$1");
 
 
-    // Число с точкой (`1. пункт`) → меняем точку на `)`
-    text = text.replace(/(\d)\.([^\d])/g, "$1) $2");
-
-    // Меняем `1.` → `1)`, если после точки нет цифры
-    text = text.replace(/(\d+)\.(?!\d)/g, "$1)");
-
-    return text.trim();
-}

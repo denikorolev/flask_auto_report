@@ -59,7 +59,7 @@
                                 <input class="input input--short edit-paragraph__input edit-paragraph__input--index" type="text" id="paragraph_index" name="paragraph_index" value="{{ paragraph.paragraph_index }}">
                                 <input class="input edit-paragraph__input edit-paragraph__input--name" type="text" id="paragraph_name" name="paragraph_name" value="{{ paragraph.paragraph }}">
                                 
-                                <!-- Dropdown for paragraph type -->
+                                <!-- Селект для выбора типа параграфа -->
                                 <div class="edit-paragraph__wrapper--paragraph-type">
                                     <label class="label edit-paragraph__label" for="paragraph_type">Type:</label>
                                     <select class="label edit-paragraph__select edit-paragraph__select--paragraph-type" id="paragraph_type" name="paragraph_type">
@@ -69,7 +69,7 @@
                                     </select>
                                 </div>
                                 
-                                <!-- Чекбоксы -->
+                                <!-- Чекбоксы на уровне параграфа -->
                                 <div class="flex edit-paragraph__wrapper--checkboxes">
                                     <label class="label edit-paragraph__label" for="paragraph_visible">Visible:</label>
                                     <input class="input edit-paragraph__input-checkbox edit-paragraph__input-checkbox--visible" type="checkbox" id="paragraph_visible" name="paragraph_visible" {% if paragraph.paragraph_visible %}checked{% endif %}>
@@ -80,10 +80,25 @@
                                     <label class="label edit-paragraph__label" for="bold_paragraph">Bold:</label>
                                     <input class="input edit-paragraph__input-checkbox edit-paragraph__input-checkbox--bold" type="checkbox" id="bold_paragraph" name="bold_paragraph" {% if paragraph.bold_paragraph %}checked{% endif %}>
                                 </div>
+
+                                <!-- Группа кнопок на уровне параграфа-->
                                 <div class="flex">
-                                    <button class="btn report__btn edit-paragraph__button--delete" type="button" data-paragraph-id="{{ paragraph.id }}" onclick="deleteParagraph(this)">Удалить </button>
-                                    <button class="btn report__btn edit-paragraph__button--edit" type="button" data-paragraph-id="{{ paragraph.id }}" onclick="handleEditParagraphButtonClick(this)">Изменить</button>
-                                    <button class="btn report__btn edit-paragraph__button--expand" type="button"  data-paragraph-id="{{ paragraph.id }}" data-state="collapsed" onclick="expandSentencesOfParagraph(this)">Развернуть ({{ paragraph.paragraph_to_sentences|length }})</button>
+                                    <button class="btn report__btn edit-paragraph__button--delete" 
+                                        type="button" 
+                                        data-paragraph-id="{{ paragraph.id }}" 
+                                        onclick="deleteParagraph(this)">Удалить 
+                                    </button>
+                                    <button class="btn report__btn edit-paragraph__button--edit" 
+                                        type="button" data-paragraph-id="{{ paragraph.id }}" 
+                                        onclick="handleEditParagraphButtonClick(this)"> Изменить
+                                    </button>
+                                    <button class="btn report__btn edit-paragraph__button--expand" 
+                                        type="button"  
+                                        data-paragraph-id="{{ paragraph.id }}" 
+                                        data-state="collapsed" 
+                                        onclick="expandSentencesOfParagraph(this)" 
+                                        data-sentences-count="{{ paragraph.paragraph_to_sentences|length }}"> Развернуть ({{ paragraph.paragraph_to_sentences|length }})
+                                    </button>
                                 </div>
                             </form>
 
@@ -98,7 +113,9 @@
                                         <li class="">
                                             <form class="flex edit-paragraph__form--sentence 
                                             {% if sentence.sentence_type == "head" %} sentence_is_head {% endif %}" 
-                                            data-sentence-id="{{ sentence.id }}">
+                                            data-sentence-id="{{ sentence.id }}"
+                                            data-sentence-paragraph-id="{{ paragraph.id }}"
+                                            data-sentence-index="{{ sentence.index }}">
                                                 {{ render_sentence(sentence, loop.index == 1) }}
                                             </form>
                                         </li>
@@ -124,6 +141,7 @@
     
     {% else %}
     <p>Report not found or you don't have permission to edit it.</p>
+    
     <!-- List of tables and buttons for editing -->
     {% endif %}
 </div>

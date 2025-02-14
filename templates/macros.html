@@ -7,42 +7,41 @@
         {% if is_first %}
             <label class="label" for="sentence_index">Index:</label>
         {% endif %}
-        <input class="input input--short" type="text" name="sentence_index" value="{{ sentence.index }}" data-sentence-id="{{ sentence.id }}">
+        <input class="input input--short" type="text" name="sentence_index" value="{{ sentence.index }}">
     </div>
     <div class="flex_column">
         {% if is_first %}
             <label class="label" for="sentence_weight">Weight:</label>
         {% endif %}
-        <input class="input input--short" type="text" name="sentence_weight" value="{{ sentence.weight }}" data-sentence-id="{{ sentence.id }}">
-    </div>
-    <div class="flex_column">
-        {% if is_first %}
-            <label class="label" for="sentenceIsMain">isMain:</label>
-        {% endif %}
-        <input class="input--checkbox" type="checkbox" name="is_head" data-sentence-id="{{ sentence.id }}" {% if sentence.sentence_type == "head" %}checked{% endif %} disabled>
+        <input class="input input--short" type="text" name="sentence_weight" value="{{ sentence.weight }}">
     </div>
 
     <div class="flex_column">
         {% if is_first %}
             <label class="label" for="sentence_comment">Comment:</label>
         {% endif %}
-        <input class="input input--short" type="text" name="sentence_comment" value="{{ sentence.comment }}" data-sentence-id="{{ sentence.id }}">
+        <input class="input input--short" type="text" name="sentence_comment" value="{{ sentence.comment }}">
     </div>
+
+    <div class="flex_column">
+        {% if is_first %}
+            <label class="label" for="sentence_type">Comment:</label>
+        {% endif %}
+        <select class="select-short" name="sentence_type">
+            <option value="head" {% if sentence.sentence_type == "head" %}selected{% endif %}>head</option>
+            <option value="tail" {% if sentence.sentence_type == "tail" %}selected{% endif %}>tail</option>
+            <option value="body" {% if sentence.sentence_type == "body" %}selected{% endif %}>body</option>
+        </select>
+    </div>
+
     <div class="flex_column edit-sentence__wrapper--sentence-text">
         {% if is_first %}
             <label class="label" for="sentence_sentence">Sentence text:</label>
         {% endif %}
-        <input class="input input--wide" type="text" name="sentence_sentence" value="{{ sentence.sentence }}" data-sentence-id="{{ sentence.id }}">
+        <input class="input input--wide" type="text" name="sentence_sentence" value="{{ sentence.sentence }}">
     </div>
-    <button class="btn report__btn edit-paragraph__btn--main-sentence" 
-        type="button" data-sentence-id="{{ sentence.id }}" 
-        data-sentence-paragraph-id={{ sentence.sentence_to_paragraph.id }} 
-        data-sentence-index={{sentence.index }} 
-        onclick="makeSentenceMainButton(this)" 
-        {% if sentence.sentence_type == "tail" %}style="display:none;"{% endif %}>
-        Сделать главным
-    </button>
-    <button class="btn report__btn edit-paragraph__btn--delete-sentence" type="button" data-sentence-id="{{ sentence.id }}" onclick="deleteSentenceButton(this)">Удалить</button>
+    
+    <button class="btn report__btn edit-paragraph__btn--delete-sentence" type="button">Удалить</button>
 </div>
 {% endmacro %}
 
@@ -75,7 +74,8 @@
                             class="report__sentence sentence" 
                             data-paragraph-id="{{ paragraph.id }}" 
                             data-index="{{ index }}"
-                            data-id="{{ sentence_group[0].id }}"> 
+                            data-id="{{ sentence_group[0].id }}"
+                            data-sentence-type="{{ sentence.sentence_type }}"> 
                             {{ sentence.sentence }} 
                             </span>
                             <!-- Кнопка "+" для добавления предложения -->

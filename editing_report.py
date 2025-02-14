@@ -182,9 +182,9 @@ def delete_paragraph():
 @editing_report_bp.route('/edit_sentences_bulk', methods=['POST'])
 @auth_required()
 def edit_sentences_bulk():
-
+    logger.info("Логика массового редактирования предложений запущена ----------------------------")
     data = request.get_json()
-    
+    logger.info(f"Данные предложений из запроса массового редактирования: {data}")
     # Список для главных предложений сохраняю их 
     # чтобы внести изменения в главные предложения в конце, 
     # чтобы не перезаписывать логику в методе save()
@@ -194,26 +194,22 @@ def edit_sentences_bulk():
         for sentence_data in data:
             if sentence_data.get("sentence_id") == "new":
                 # Логика для создания нового предложения
+                logger.info("Создаю новое предложение")
                 sentence_index = sentence_data.get("sentence_index")
                 paragraph_id = sentence_data.get("add_sentence_paragraph")
-                
+                sentence_type = sentence_data.get("sentence_type")
                 # Определяем тип предложения
-                sentence_type = ""
-                if sentence_data.get("is_head") == "true":
-                    sentence_type = "head"
-                elif sentence_index == 0:
-                    sentence_type = "tail"
-                else:
-                    sentence_type = "body"
+                
+                logger.info(f"Тип нового предложения - {sentence_type}")   
                 
                 try:
                     Sentence.create(
                         paragraph_id=paragraph_id,
-                        index=sentence_index,
-                        weight=sentence_data.get("sentence_weight"),
+                        index= 0 if sentence_type == "tail" else sentence_index,
+                        weight=sentence_data.get("sentence_weight", 1),
                         sentence_type= sentence_type,
                         tags="",
-                        comment=sentence_data.get("sentence_comment"),
+                        comment=sentence_data.get("sentence_comment", ""),
                         sentence=sentence_data.get("sentence_sentence")
                     )
                 except Exception as e:
@@ -230,22 +226,26 @@ def edit_sentences_bulk():
                     main_sentences.append((sentence_for_edit, sentence_data))
                 else:
                     # Обновляем неглавные предложения
-                    sentence_for_edit.index = sentence_data["sentence_index"]
-                    sentence_for_edit.weight = sentence_data["sentence_weight"]
-                    sentence_for_edit.comment = sentence_data["sentence_comment"]
-                    sentence_for_edit.sentence = sentence_data["sentence_sentence"]
+                    sentence_for_edit.index = sentence_data.get("sentence_index")
+                    sentence_for_edit.weight = sentence_data.get("sentence_weight")
+                    sentence_for_edit.comment = sentence_data.get("sentence_comment")
+                    sentence_for_edit.tag = ""
+                    sentence_for_edit.sentence = sentence_data.get("sentence_sentence")
                     sentence_for_edit.save()
                     
         for sentence_for_edit, sentence_data in main_sentences:
             # Обновляем главные предложения
             # Сохраняю старый индекс, чтобы потом обновить все предложения с таким индексом
+            logger.info(f"Обновляю главное предложение с id={sentence_for_edit.id}")
             old_index = sentence_for_edit.index
             sentence_for_edit.index = sentence_data["sentence_index"]
             sentence_for_edit.weight = sentence_data["sentence_weight"]
             sentence_for_edit.comment = sentence_data["sentence_comment"]
+            sentence_for_edit.tag = ""
             sentence_for_edit.sentence = sentence_data["sentence_sentence"]
             sentence_for_edit.save(old_index=old_index)
             
+        logger.info("Логика массового редактирования предложений успешно завершена ----------------------------")
         return jsonify(success=True, message="Все предложения успешно обновлены"), 200
     except Exception as e:
         logger.error(f"Error updating sentences: {str(e)}")
@@ -275,29 +275,56 @@ def delete_sentence():
         return jsonify({"status": "error", "message": f"Failed to delete sentence. Error code: {e}"}), 400
 
 
-@editing_report_bp.route("make_sentence_main", methods=["POST"])
+@editing_report_bp.route("change_sentence_type", methods=["POST"])
 @auth_required()
-def make_sentence_main():
-    logger.info("Логика назначения предложения главным запущена----------------------------")
+def change_sentence_type():
+    logger.info("Логика изменения типа предложения запущена----------------------------")
     if not request.is_json:
-        return jsonify({"status": "error", "message": "Invalid request format"}), 400
+        return jsonify({"status": "error", "message": "Ошибочный формат данных в запросе"}), 400
 
     data = request.get_json()
-    logger.debug(f"Данные предложения из запроса 'сделать предложение главным': {data}")
+    logger.debug(f"Данные предложения из запроса на изменения типа предложения: {data}")
+    
     sentence_id = int(data.get("sentence_id"))
+    sentence_type = data.get("sentence_type")  
+    
+    if not sentence_id or not sentence_type:
+        logger.error("В запросе не хватает данных о id предложения или типе")
+        return jsonify({"status": "error", "message": "В запросе не хватает данных о предложении или типе"}), 400
+    
+    if sentence_type == "body":
+        try:
+            sentence = Sentence.get_by_id(sentence_id)
+            sentence.sentence_type = sentence_type
+            sentence.save()
+            logger.info("Логика изменения типа предложения (body) успешно завершена --------------------------------")
+            return jsonify({"status": "success", "message": "Тип предложения изменен"}), 200
+        except Exception as e:
+            logger.error(f"Ошибка при изменении типа предложения: {str(e)}")
+            return jsonify({"status": "error", "message": f"Ошибка при изменении типа предложения. Код ошибки: {e}"}), 400
+    if sentence_type == "tail":
+        try:
+            sentence = Sentence.get_by_id(sentence_id)
+            sentence.sentence_type = sentence_type
+            sentence.index = 0
+            sentence.save()
+            logger.info("Логика изменения типа предложения (tail) успешно завершена --------------------------------")
+            return jsonify({"status": "success", "message": "Тип предложения изменен"}), 200
+        except Exception as e:
+            logger.error(f"Ошибка при изменении типа предложения: {str(e)}")
+            return jsonify({"status": "error", "message": f"Ошибка при изменении типа предложения. Код ошибки: {e}"}), 400
+        
     paragraph_id = int(data.get("paragraph_id"))
     sentence_index = int(data.get("sentence_index"))
     
-    if not sentence_id or not paragraph_id:
-        logger.error("В запросе не хватает данных")
-        return jsonify({"status": "error", "message": "В запросе не хватает данных"}), 400
-
+    if  not paragraph_id or sentence_index == None:
+        logger.error("В запросе не хватает данных параграфа")
+        return jsonify({"status": "error", "message": "В запросе не хватает данных о параграфе или индексе"}), 400
 
     try:
-        sentences = Sentence.query.filter(
-            Sentence.paragraph_id == paragraph_id,
-            Sentence.index == sentence_index,
-            Sentence.sentence_type != "tail"
+        sentences = Sentence.query.filter_by(
+            paragraph_id = paragraph_id,
+            index = sentence_index
         ).all()
         
         for sentence in sentences:
@@ -308,15 +335,13 @@ def make_sentence_main():
             else:
                 sentence.sentence_type = "body"
                 
-                # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Не учтены связи параграфов!!!!!!!!!!
-                
             sentence.save(old_index=sentence.index)
             
-        logger.info("Логика смены главного предложения успешно завершена --------------------------------")
-        return jsonify({"status": "success", "message": "Главное предложение изменено"}), 200
+        logger.info("Логика изменения типа предложения успешно завершена --------------------------------")
+        return jsonify({"status": "success", "message": "Тип предложения изменен"}), 200
     except Exception as e:
-        logger.error(f"Ошибка при изменении главного предложения: {str(e)}")
-        return jsonify({"status": "error", "message": f"Ошибка при изменении главного предложения. Код ошибки: {e}"}), 400
+        logger.error(f"Ошибка при изменении типа предложения: {str(e)}")
+        return jsonify({"status": "error", "message": f"Ошибка при изменении типа предложения. Код ошибки: {e}"}), 400
 
 
 

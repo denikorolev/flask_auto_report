@@ -29,7 +29,7 @@ from openai_api import openai_api_bp
 from key_words import key_words_bp
 from admin import admin_bp
 
-version = "0.9.2.1"
+version = "0.9.2.2"
 
 app = Flask(__name__)
 app.config.from_object(get_config()) # Load configuration from file config.py
@@ -240,6 +240,7 @@ def close_db(error):
 @auth_required()
 @roles_required("superadmin")
 def playground():
+    
     return render_template("playground.html", title="Playground")
 
 

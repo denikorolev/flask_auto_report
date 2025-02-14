@@ -4,9 +4,8 @@ import logging
 import os
 
 # Получаем уровень логирования из .env (по умолчанию INFO)
-LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
+LOG_LEVEL = os.getenv("LOG_LEVEL", "DEBUG").upper()
 LOG_TO_FILE = os.getenv("LOG_TO_FILE", "false").lower() == "true"
-
 logger = logging.getLogger("app_logger")
 logger.setLevel(getattr(logging, LOG_LEVEL, logging.INFO))
 

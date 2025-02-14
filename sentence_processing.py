@@ -337,31 +337,31 @@ def clean_and_normalize_text(text):
 
     return text
 
-# Это СТАРАЯ функция ее нужно будет заменить на split_sentences_if_needed
-def split_sentences(paragraphs):
-    """ Разделяем полученный текст на отдельные предложения 
-    ориентируясь на знаки препинания .!? """
-    split_paragraphs = []
-    sentence_endings = re.compile(r'(?<=[.!?])\s+')
+# # Это СТАРАЯ функция ее нужно будет заменить на split_sentences_if_needed
+# def split_sentences(paragraphs):
+#     """ Разделяем полученный текст на отдельные предложения 
+#     ориентируясь на знаки препинания .!? """
+#     split_paragraphs = []
+#     sentence_endings = re.compile(r'(?<=[.!?])\s+')
 
-    for paragraph in paragraphs:
-        paragraph_id = paragraph.get("paragraph_id")
-        sentences = paragraph.get("sentences", [])
-        split_sentences = []
+#     for paragraph in paragraphs:
+#         paragraph_id = paragraph.get("paragraph_id")
+#         sentences = paragraph.get("sentences", [])
+#         split_sentences = []
 
-        for sentence in sentences:
-            # Разбиваем предложения по концам предложений (точка, восклицательный знак или вопросительный знак)
-            split_sentences.extend(re.split(sentence_endings, sentence))
+#         for sentence in sentences:
+#             # Разбиваем предложения по концам предложений (точка, восклицательный знак или вопросительный знак)
+#             split_sentences.extend(re.split(sentence_endings, sentence))
 
-        # Удаляем пустые предложения после разбиения
-        split_sentences = [s.strip() for s in split_sentences if s.strip()]
+#         # Удаляем пустые предложения после разбиения
+#         split_sentences = [s.strip() for s in split_sentences if s.strip()]
 
-        split_paragraphs.append({
-            "paragraph_id": paragraph_id,
-            "sentences": split_sentences
-        })
+#         split_paragraphs.append({
+#             "paragraph_id": paragraph_id,
+#             "sentences": split_sentences
+#         })
 
-    return split_paragraphs
+#     return split_paragraphs
 
 # это новая функция используется в working_with_reports.py
 def split_sentences_if_needed(text):
@@ -394,48 +394,48 @@ def split_sentences_if_needed(text):
     return sentences, [] # Unsplitted sentences
 
 
-def get_new_sentences(processed_paragraphs):
-    """ Получаем только новые предложения, игнорируя те, что уже 
-    есть в базе данных, учитываем возможную разницу лишь в 
-    ключевых словах key_words """
-    except_words = current_app.config["PROFILE_SETTINGS"]["EXCEPT_WORDS"]
-    print(f"EXCEPT_WORDS: {except_words}")
-    new_sentences = []
+# def get_new_sentences(processed_paragraphs):
+#     """ Получаем только новые предложения, игнорируя те, что уже 
+#     есть в базе данных, учитываем возможную разницу лишь в 
+#     ключевых словах key_words """
+#     except_words = current_app.config["PROFILE_SETTINGS"]["EXCEPT_WORDS"]
+#     print(f"EXCEPT_WORDS: {except_words}")
+#     new_sentences = []
 
-    # Получаем ключевые слова для текущего пользователя
-    key_words = []
-    profile_key_words = KeyWord.find_by_profile(g.current_profile.id)
-    for kw in profile_key_words:
-        key_words.append(kw.key_word.lower())
+#     # Получаем ключевые слова для текущего пользователя
+#     key_words = []
+#     profile_key_words = KeyWord.find_by_profile(g.current_profile.id)
+#     for kw in profile_key_words:
+#         key_words.append(kw.key_word.lower())
 
-    for paragraph in processed_paragraphs:
-        paragraph_id = paragraph.get("paragraph_id")
-        sentences = paragraph.get("sentences", [])
+#     for paragraph in processed_paragraphs:
+#         paragraph_id = paragraph.get("paragraph_id")
+#         sentences = paragraph.get("sentences", [])
 
-        # Получаем существующие предложения для данного параграфа из базы данных
-        existing_sentences = Sentence.query.filter_by(paragraph_id=paragraph_id).all()
+#         # Получаем существующие предложения для данного параграфа из базы данных
+#         existing_sentences = Sentence.query.filter_by(paragraph_id=paragraph_id).all()
 
-        # Приводим существующие предложения к форме для сравнения (очищаем их)
-        existing_sentences_texts = []
-        for s in existing_sentences:
-            cleaned_sentence = clean_text_with_keywords(s.sentence.strip(), key_words, except_words)
-            existing_sentences_texts.append(cleaned_sentence)
+#         # Приводим существующие предложения к форме для сравнения (очищаем их)
+#         existing_sentences_texts = []
+#         for s in existing_sentences:
+#             cleaned_sentence = clean_text_with_keywords(s.sentence.strip(), key_words, except_words)
+#             existing_sentences_texts.append(cleaned_sentence)
 
-        # Получаем текст параграфа из базы данных
-        paragraph_text = Paragraph.query.filter_by(id=paragraph_id).first().paragraph
+#         # Получаем текст параграфа из базы данных
+#         paragraph_text = Paragraph.query.filter_by(id=paragraph_id).first().paragraph
 
-        # Проверяем каждое предложение из обработанных, есть ли оно уже в базе данных
-        for sentence in sentences:
-            cleaned_sentence = clean_text_with_keywords(sentence.strip(), key_words, except_words)
+#         # Проверяем каждое предложение из обработанных, есть ли оно уже в базе данных
+#         for sentence in sentences:
+#             cleaned_sentence = clean_text_with_keywords(sentence.strip(), key_words, except_words)
             
-            if cleaned_sentence not in existing_sentences_texts:
-                new_sentences.append({
-                    "paragraph_id": paragraph_id,
-                    "paragraph_text": paragraph_text,  # Добавляем текст параграфа
-                    "sentence": sentence.strip()  # Оригинальное предложение для вывода
-                })
+#             if cleaned_sentence not in existing_sentences_texts:
+#                 new_sentences.append({
+#                     "paragraph_id": paragraph_id,
+#                     "paragraph_text": paragraph_text,  # Добавляем текст параграфа
+#                     "sentence": sentence.strip()  # Оригинальное предложение для вывода
+#                 })
 
-    return new_sentences
+#     return new_sentences
 
 
 def sort_key_words_group(unsorted_key_words_group):

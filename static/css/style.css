@@ -900,3 +900,7 @@ body {
     color: red;
     cursor: pointer;
 }
+
+.select-short {
+    width: 50px;
+}

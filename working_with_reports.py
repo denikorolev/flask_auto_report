@@ -1,11 +1,10 @@
 #working_with_reports.py
 
-from flask import Blueprint, render_template, request, current_app, jsonify, send_file, g, flash
+from flask import Blueprint, render_template, request, jsonify, send_file, g
 import os
 from models import db, Report, ReportType, Paragraph, Sentence, KeyWord
 from file_processing import save_to_word
-from sentence_processing import split_sentences, get_new_sentences, group_keywords, split_sentences_if_needed, clean_and_normalize_text, compare_sentences_by_paragraph, preprocess_sentence
-from errors_processing import print_object_structure
+from sentence_processing import group_keywords, split_sentences_if_needed, clean_and_normalize_text, compare_sentences_by_paragraph, preprocess_sentence
 from utils import ensure_list
 from logger import logger
 from flask_security.decorators import auth_required
@@ -96,42 +95,45 @@ def working_with_reports():
 #     return jsonify({"status": "error", "message": "Ошибка при обновлении данных предложения."}), 400
 
 
-@working_with_reports_bp.route("/get_sentences_with_index_zero", methods=["POST"])
+@working_with_reports_bp.route("/get_sentences_with_type_tail", methods=["POST"])
 @auth_required()
-def get_sentences_with_index_zero():
+def get_sentences_with_type_tail():
     data = request.get_json()
     paragraph_id = data.get("paragraph_id")
+    
+    if not paragraph_id:
+        logger.warning("В запресе нет данных по ID параграфа")
+        return jsonify({"status": "error", "message": "В запросе отсутствует информация по ID параграфа для запрашиваемых предложений"}), 400
+    
+    tail_sentences = Sentence.get_sentences_by_type(paragraph_id=paragraph_id, sentence_type="tail")
 
-    # Получаем предложения с индексом 0
-    sentences = Sentence.query.filter_by(paragraph_id=paragraph_id, index=0).all()
-
-    if sentences:
-        sentences_data = [{"id": sentence.id, "sentence": sentence.sentence} for sentence in sentences]
+    if tail_sentences:
+        sentences_data = [{"id": sentence.id, "sentence": sentence.sentence} for sentence in tail_sentences]
+        logger.info(f"Found {len(sentences_data)} sentences with type 'tail' for paragraph {paragraph_id}")
         return jsonify({"sentences": sentences_data}), 200
-    return jsonify({"message": "No sentences found."}), 200
+    return jsonify({"sentences": []}), 200
 
 
-# Добавляем новое предложение с индексом 0
-@working_with_reports_bp.route("/new_sentence_adding", methods=["POST"])
-@auth_required()
-def new_sentence_adding():
-    try:
-        data = request.get_json()
-        paragraphs = data.get("paragraphs", [])
+# @working_with_reports_bp.route("/new_sentence_adding", methods=["POST"])
+# @auth_required()
+# def new_sentence_adding():
+#     try:
+#         data = request.get_json()
+#         paragraphs = data.get("paragraphs", [])
         
-        if not paragraphs:
-            return jsonify({"status": "error", "message": "No paragraphs provided."}), 400
+#         if not paragraphs:
+#             return jsonify({"status": "error", "message": "No paragraphs provided."}), 400
 
-        # Разбиваем предложения на более мелкие и получаем новые предложения
-        processed_paragraphs = split_sentences(paragraphs)
-        new_sentences = get_new_sentences(processed_paragraphs)
+#         # Разбиваем предложения на более мелкие и получаем новые предложения
+#         processed_paragraphs = split_sentences(paragraphs)
+#         new_sentences = get_new_sentences(processed_paragraphs)
         
-        # Возвращаем новые предложения на клиентскую часть
-        return jsonify({"status": "success", "processed_paragraphs": new_sentences}), 200
+#         # Возвращаем новые предложения на клиентскую часть
+#         return jsonify({"status": "success", "processed_paragraphs": new_sentences}), 200
 
-    except Exception as e:
-        logger.error(f"Произошла ошибка при добавлении нового предложения: {e}")
-        return jsonify({"status": "error", "message": f"Ошибка при добавлении предложения: {e}"}), 500
+#     except Exception as e:
+#         logger.error(f"Произошла ошибка при добавлении нового предложения: {e}")
+#         return jsonify({"status": "error", "message": f"Ошибка при добавлении предложения: {e}"}), 500
     
 
 @working_with_reports_bp.route("/save_modified_sentences", methods=["POST"])
@@ -162,6 +164,7 @@ def save_modified_sentences():
             paragraph_id = sentence_data.get("paragraph_id")
             sentence_index = sentence_data.get("sentence_index")
             nativ_text = sentence_data.get("text")
+            sentence_type = sentence_data.get("type")
 
             # Проверяем корректность данных
             if not paragraph_id or not nativ_text.strip() or sentence_index is None:
@@ -183,6 +186,7 @@ def save_modified_sentences():
                     processed_sentences.append({
                         "paragraph_id": paragraph_id,
                         "sentence_index": int(sentence_index) if idx == 0 else 0,
+                        "sentence_type": "tail" if sentence_type == "tail" else "body",
                         "text": splited_sentence.strip()
                     })
             else:
@@ -190,6 +194,7 @@ def save_modified_sentences():
                     processed_sentences.append({
                         "paragraph_id": paragraph_id,
                         "sentence_index": int(sentence_index),
+                        "sentence_type": "tail" if sentence_type == "tail" else "body",
                         "text": unsplited_sentence.strip()
                     })
 
@@ -212,6 +217,7 @@ def save_modified_sentences():
             paragraph_id = sentence["paragraph_id"]
             sentence_index = sentence["sentence_index"]
             new_sentence_text = clean_and_normalize_text(sentence["text"])
+            sentence_type = sentence["sentence_type"]
             logger.info(f"New sentence: {new_sentence_text}")
             try:
                 # Сохраняем предложение в базу данных
@@ -219,7 +225,7 @@ def save_modified_sentences():
                     paragraph_id=paragraph_id,
                     index=sentence_index,
                     weight=10,  # Вес по умолчанию
-                    sentence_type="body",
+                    sentence_type=sentence_type,
                     tags="",
                     comment="Added automatically",
                     sentence=new_sentence_text
@@ -257,44 +263,44 @@ def save_modified_sentences():
 
 
     
-@working_with_reports_bp.route("/add_sentence_to_paragraph", methods=["POST"])
-@auth_required()
-def add_sentence_to_paragraph():
-    try:
-        data = request.get_json()
-        sentence_for_adding = data.get("sentence_for_adding", [])
+# @working_with_reports_bp.route("/add_sentence_to_paragraph", methods=["POST"])
+# @auth_required()
+# def add_sentence_to_paragraph():
+#     try:
+#         data = request.get_json()
+#         sentence_for_adding = data.get("sentence_for_adding", [])
 
-        if not sentence_for_adding:
-            return jsonify({"status": "error", "message": "Отсутствуют данные абзацев."}), 400
+#         if not sentence_for_adding:
+#             return jsonify({"status": "error", "message": "Отсутствуют данные абзацев."}), 400
 
-        # Перебираем каждый элемент списка абзацев
-        for paragraph in sentence_for_adding:
-            paragraph_id = paragraph.get("paragraph_id")
-            sentences = paragraph.get("sentences")
+#         # Перебираем каждый элемент списка абзацев
+#         for paragraph in sentence_for_adding:
+#             paragraph_id = paragraph.get("paragraph_id")
+#             sentences = paragraph.get("sentences")
 
-            if not paragraph_id or not sentences:
-                continue  # Пропускаем, если отсутствуют необходимые данные
+#             if not paragraph_id or not sentences:
+#                 continue  # Пропускаем, если отсутствуют необходимые данные
 
-            # Используем ensure_list, чтобы всегда иметь список предложений
-            sentences_list = ensure_list(sentences)
+#             # Используем ensure_list, чтобы всегда иметь список предложений
+#             sentences_list = ensure_list(sentences)
 
-            # Перебираем список предложений и добавляем их в базу данных
-            for sentence_text in sentences_list:
-                if sentence_text:
-                    Sentence.create(paragraph_id=paragraph_id, 
-                                    index=0, 
-                                    weight=10, # Вес по умолчанию
-                                    sentence_type="tail",
-                                    tags="",
-                                    comment="", 
-                                    sentence=sentence_text
-                                    )
+#             # Перебираем список предложений и добавляем их в базу данных
+#             for sentence_text in sentences_list:
+#                 if sentence_text:
+#                     Sentence.create(paragraph_id=paragraph_id, 
+#                                     index=0, 
+#                                     weight=10, # Вес по умолчанию
+#                                     sentence_type="tail",
+#                                     tags="",
+#                                     comment="", 
+#                                     sentence=sentence_text
+#                                     )
 
-        db.session.commit()  # Сохраняем все изменения в базе данных
+#         db.session.commit()  # Сохраняем все изменения в базе данных
 
-        return jsonify({"status": "success", "message": "Все предложения успешно добавлены!"}), 200
-    except Exception as e:
-        return jsonify({"status": "error", "message": f"Не удалось добавить предложения: {e}"}), 500
+#         return jsonify({"status": "success", "message": "Все предложения успешно добавлены!"}), 200
+#     except Exception as e:
+#         return jsonify({"status": "error", "message": f"Не удалось добавить предложения: {e}"}), 500
 
 
 @working_with_reports_bp.route("/export_to_word", methods=["POST"])
