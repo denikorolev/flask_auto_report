@@ -1,47 +1,47 @@
 <!-- macros.html -->
   
 <!-- использую в report_editing -->
-{% macro render_sentence(sentence, is_first) %}
-<div class="flex edit-sentence__wrapper">
-    <div class="flex_column">
-        {% if is_first %}
-            <label class="label" for="sentence_index">Index:</label>
-        {% endif %}
-        <input class="input input--short" type="text" name="sentence_index" value="{{ sentence.index }}">
-    </div>
-    <div class="flex_column">
-        {% if is_first %}
-            <label class="label" for="sentence_weight">Weight:</label>
-        {% endif %}
-        <input class="input input--short" type="text" name="sentence_weight" value="{{ sentence.weight }}">
+{% macro render_sentence(sentence) %}
+<div class="flex edit-sentence__card 
+{% if sentence.sentence_type == "head" %} 
+edit-sentence__card--head 
+{% endif %}
+{% if sentence.sentence_type == "body" %} 
+edit-sentence__card--body {% endif %}">
+
+    <div class="flex edit-sentence__info-box">
+        <div class="edit-sentence__wrapper edit-sentence__wrapper--short">
+                <label class="label edit-sentence__label" for="sentence_index">Индекс:</label>
+            <input class="input edit-sentence__input" type="text" name="sentence_index" value="{{ sentence.index }}">
+        </div>
+        <div class="edit-sentence__wrapper edit-sentence__wrapper--short">
+                <label class="label edit-sentence__label" for="sentence_weight">Вес:</label>
+            <input class="input edit-sentence__input" type="text" name="sentence_weight" value="{{ sentence.weight }}">
+        </div>
+        <div class="edit-sentence__wrapper edit-sentence__wrapper--short">
+            <label class="label edit-sentence__label" for="sentence_type">Тип:</label>
+            <div class="select-wrapper">
+                <select class="select" name="sentence_type">
+                    <option value="head" {% if sentence.sentence_type == "head" %}selected{% endif %}>head</option>
+                    <option value="tail" {% if sentence.sentence_type == "tail" %}selected{% endif %}>tail</option>
+                    <option value="body" {% if sentence.sentence_type == "body" %}selected{% endif %}>body</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="edit-sentence__wrapper">
+                <label class="label edit-sentence__label" for="sentence_comment">Комментарий:</label>
+            <input class="input edit-sentence__input" type="text" name="sentence_comment" value="{{ sentence.comment }}">
+        </div>
+        
+        <button class="btn report__btn edit-sentence__btn" type="button">Удалить</button>
     </div>
 
-    <div class="flex_column">
-        {% if is_first %}
-            <label class="label" for="sentence_comment">Comment:</label>
-        {% endif %}
-        <input class="input input--short" type="text" name="sentence_comment" value="{{ sentence.comment }}">
-    </div>
-
-    <div class="flex_column">
-        {% if is_first %}
-            <label class="label" for="sentence_type">Comment:</label>
-        {% endif %}
-        <select class="select-short" name="sentence_type">
-            <option value="head" {% if sentence.sentence_type == "head" %}selected{% endif %}>head</option>
-            <option value="tail" {% if sentence.sentence_type == "tail" %}selected{% endif %}>tail</option>
-            <option value="body" {% if sentence.sentence_type == "body" %}selected{% endif %}>body</option>
-        </select>
-    </div>
-
-    <div class="flex_column edit-sentence__wrapper--sentence-text">
-        {% if is_first %}
-            <label class="label" for="sentence_sentence">Sentence text:</label>
-        {% endif %}
-        <input class="input input--wide" type="text" name="sentence_sentence" value="{{ sentence.sentence }}">
+    <div class="edit-sentence__wrapper">
+        <label class="label edit-sentence__label edit-sentence__label--text" for="sentence_sentence">Текст предложения:</label>
+        <input class="input edit-sentence__input edit-sentence__input-text" type="text" name="sentence_sentence" value="{{ sentence.sentence }}">
     </div>
     
-    <button class="btn report__btn edit-paragraph__btn--delete-sentence" type="button">Удалить</button>
 </div>
 {% endmacro %}
 

@@ -196,7 +196,7 @@ def edit_sentences_bulk():
                 # Логика для создания нового предложения
                 logger.info("Создаю новое предложение")
                 sentence_index = sentence_data.get("sentence_index")
-                paragraph_id = sentence_data.get("add_sentence_paragraph")
+                paragraph_id = sentence_data.get("paragraph_id")
                 sentence_type = sentence_data.get("sentence_type")
                 # Определяем тип предложения
                 

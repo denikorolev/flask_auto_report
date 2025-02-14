@@ -9,7 +9,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
 
-    document.querySelectorAll(".edit-paragraph__btn--delete-sentence").forEach(button => {
+    document.querySelectorAll(".edit-sentence__btn").forEach(button => {
         button.addEventListener("click", function() {
             deleteSentenceButton(this);
         });
@@ -114,7 +114,7 @@ function expandSentencesOfParagraph(button){
             const jsonData = Object.fromEntries(formData.entries());
             jsonData["sentence_id"] = form.dataset.sentenceId;
             jsonData["sentence_type"] = form.querySelector("select[name='sentence_type']").value;
-            console.log("jsonData", jsonData);
+            jsonData["paragraph_id"] = form.dataset.sentenceParagraphId;
             
 
             sentenceData.push(jsonData);
@@ -131,8 +131,7 @@ function expandSentencesOfParagraph(button){
             data: sentenceData,
         }).then(response => {
             if (response.success) {
-                // window.location.reload();
-                console.log("Все ок, данные сохранены");
+                window.location.reload();
             };
         });
     };
@@ -159,21 +158,39 @@ function newSentenceCreate(button){
     newSentenceForm.setAttribute("data-sentence-id", "new")
     newSentenceForm.setAttribute("data-changed", "true")
     newSentenceForm.setAttribute("data-sentence-paragraph-id", paragraphId)
-    newSentenceForm.setAttribute("data-sentence-index", newSentenceIndex)
 
     newSentenceForm.innerHTML = `
-        <input type="hidden" name="sentence_id" value="new">
-        <input type="hidden" name="add_sentence_paragraph" value="${paragraphId}">
-        <input class="input input--short edit-paragraph__input" type="text" name="sentence_index" value="${newSentenceIndex}">
-        <input class="input input--short edit-paragraph__input" type="text" name="sentence_weight" value="1">
-        <input class="input input--short edit-paragraph__input" type="text" name="sentence_comment" value="">
-        <select class="select" name="sentence_type">
-            <option value="body">body</option>
-            <option value="tail">tail</option>
-            <option value="head">head</option>
-        </select>
-        <input class="input input--wide edit-paragraph__input" type="text" name="sentence_sentence" value="New sentence">
-        <button class="btn report__btn edit-paragraph__btn--delete-sentence" type="button" onclick="deleteSentenceButton(this)">Delete Sentence</button>
+        <div class="flex edit-sentence__card">
+            <div class="flex edit-sentence__info-box">
+                <div class="edit-sentence__wrapper edit-sentence__wrapper--short">
+                        <label class="label edit-sentence__label" for="sentence_index">Индекс:</label>
+                    <input class="input edit-sentence__input" type="text" name="sentence_index" value="${newSentenceIndex}">
+                </div>
+                <div class="edit-sentence__wrapper edit-sentence__wrapper--short">
+                        <label class="label edit-sentence__label" for="sentence_weight">Вес:</label>
+                    <input class="input edit-sentence__input" type="text" name="sentence_weight" value="1">
+                </div>
+                <div class="edit-sentence__wrapper edit-sentence__wrapper--short">
+                    <label class="label edit-sentence__label" for="sentence_type">Тип:</label>
+                    <div class="select-wrapper">
+                        <select class="select" name="sentence_type">
+                            <option value="head">head</option>
+                            <option value="body" selected>body</option>
+                            <option value="tail">tail</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="edit-sentence__wrapper">
+                        <label class="label edit-sentence__label" for="sentence_comment">Комментарий:</label>
+                    <input class="input edit-sentence__input" type="text" name="sentence_comment" value="">
+                </div>
+                <button class="btn report__btn edit-sentence__btn" type="button" onclick="deleteSentenceButton(this)">Удалить</button>
+            </div>
+            <div class="edit-sentence__wrapper">
+                <label class="label edit-sentence__label edit-sentence__label--text" for="sentence_sentence">Текст предложения:</label>
+                <input class="input edit-sentence__input edit-sentence__input-text" type="text" name="sentence_sentence" value="New sentence">
+            </div>
+        </div>
     `;
 
     newSentenceLi.appendChild(newSentenceForm);

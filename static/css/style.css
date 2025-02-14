@@ -132,21 +132,23 @@ body {
     width: 100%;
 }
 
-
-.input--medium {
-    max-width: 50px;
+.select {
+    height: var(--main-text-block-height);
+    margin-right: 10px;
+    margin-bottom: 10px;
+    border: none;
+    box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.1);
+    padding: 0 10px;
+    background-color: var(--main-background-color-light);
+    outline: 1px solid var(--main-background-color-dark);
+    border-radius: 5px;
+    width: 100%;
+    appearance: none; /* Убирает стандартный стиль браузера */
+    cursor: pointer;
 }
 
-.input--short {
-    width: auto;
-    min-width: 5px;
-    max-width: 40px;
-}
 
-.input--wide {
-    min-width: 200px;
-    max-width: 800px;
-}
+
 
 
 /* Контейнеры */
@@ -382,14 +384,9 @@ body {
 
 
 
-
-
-
-
 .edit-paragraph__input{
     font-size: 14px; /* сдублировал с .input чтобы не оставлять класс пустым */
 }
-
 
 
 
@@ -626,8 +623,8 @@ body {
 
 .sentence-separator {
     border: 0;
-    height: 1px;
-    width: 50%;
+    height: 2px;
+    width: 70%;
     background-color: #0c0606;
     margin: 10px 0;
 }
@@ -711,9 +708,58 @@ body {
     min-width: 100%;
 }
 
-.edit-sentence__wrapper--sentence-text {
-   min-width: 1000px;
+/* стиль для карточки предложения в edit_report */
+.edit-sentence__card {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    background: #f9f9f9;
+    border-radius: 8px;
+    margin-bottom: 4px;
+    padding: 10px 16px;
+    box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.1);
+    border: 1px solid #ddd;
+    gap: 10px;
+    width: 100%;
+    min-height: 60px;
 }
+
+/* Это стиль для выделения главного предложения при изменении настроек профиля */
+.edit-sentence__card--head {
+    background-color: var(--main-background-color);
+}
+.edit-sentence__card--body {
+    background-color: #cbeff4;
+}
+
+.edit-sentence__wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+}
+
+.edit-sentence__wrapper--short {
+    width: 200px;
+}
+
+.edit-sentence__label--text {
+    width: 180px;
+}
+   
+.edit-sentence__input--text {
+    min-height: 40px;
+}
+
+.input--short {
+    width: 40px;
+}
+
+.input--wide {
+    flex-grow: 1;
+    width: 100%;
+}
+
 
 
 /* flash-massages */
@@ -759,10 +805,7 @@ body {
     background-color: #a8acf5;
 }
 
-/* Это стиль для выделения главного предложения при изменении настроек профиля */
-.sentence_is_head {
-    background-color: var(--main-background-color);
-}
+
 
 /* Это стиль для заглушки лоадера */
 #global-loader {

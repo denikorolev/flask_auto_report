@@ -111,12 +111,11 @@
                                             <hr class="sentence-separator">
                                         {% endif %}  <!-- check the separator marker -->
                                         <li class="">
-                                            <form class="flex edit-paragraph__form--sentence 
-                                            {% if sentence.sentence_type == "head" %} sentence_is_head {% endif %}" 
+                                            <form class="flex edit-paragraph__form--sentence" 
                                             data-sentence-id="{{ sentence.id }}"
                                             data-sentence-paragraph-id="{{ paragraph.id }}"
                                             data-sentence-index="{{ sentence.index }}">
-                                                {{ render_sentence(sentence, loop.index == 1) }}
+                                                {{ render_sentence(sentence) }}
                                             </form>
                                         </li>
                                     {% endfor %}

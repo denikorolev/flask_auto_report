@@ -45,45 +45,57 @@ def check_main_sentences(report):
                 # Группируем предложения по index
                 sentence_groups = {}
                 for sentence in sentences:
+                    if sentence.sentence_type == "tail":
+                        if sentence.index != 0:
+                            errors.append({
+                                "report": report.report_name,
+                                "paragraph": paragraph.paragraph,
+                                "paragraph_index": paragraph.paragraph_index,
+                                "index": sentence.index,
+                                "issue": "Предложение с типом 'tail' должно иметь индекс 0",
+                                "extra_main_count": 0
+                            })
+                        else:
+                            continue
                     if sentence.index not in sentence_groups:
                         sentence_groups[sentence.index] = []
                     sentence_groups[sentence.index].append(sentence)
 
                 # Проверяем каждую группу предложений
                 for index, group in sentence_groups.items():
-                    main_sentences = [s for s in group if s.sentence_type == "head"]
-
                     if index == 0:
-                        # Если index = 0, главных предложений вообще не должно быть
-                        if main_sentences:
+                        main_sentences = [s for s in group if s.sentence_type == "head"]
+                        body_sentences = [s for s in group if s.sentence_type == "body"]
+                        if len(main_sentences) + len(body_sentences) > 0:
                             errors.append({
                                 "report": report.report_name,
                                 "paragraph": paragraph.paragraph,
                                 "paragraph_index": paragraph.paragraph_index,
                                 "index": index,
-                                "issue": "Не должно быть главных предложений среди предложений с индексом 0",
-                                "extra_main_count": len(main_sentences)
+                                "issue": "Главное предложение и обычные предложения не должны иметь индекс 0",
+                                "extra_main_count": len(main_sentences) + len(body_sentences)
                             })
-                    else:
-                        # В остальных случаях должно быть ровно одно главное предложение
-                        if len(main_sentences) == 0:
-                            errors.append({
-                                "report": report.report_name,
-                                "paragraph": paragraph.paragraph,
-                                "paragraph_index": paragraph.paragraph_index,
-                                "index": index,
-                                "issue": "Не определено главное предложение для данной группы",
-                                "extra_main_count": 0
-                            })
-                        elif len(main_sentences) > 1:
-                            errors.append({
-                                "report": report.report_name,
-                                "paragraph": paragraph.paragraph,
-                                "paragraph_index": paragraph.paragraph_index,
-                                "index": index,
-                                "issue": "Слишком много главных предложений",
-                                "extra_main_count": len(main_sentences) - 1
-                            })
+                        continue
+                    main_sentences = [s for s in group if s.sentence_type == "head"]
+                    # Должно быть ровно одно главное предложение
+                    if len(main_sentences) == 0:
+                        errors.append({
+                            "report": report.report_name,
+                            "paragraph": paragraph.paragraph,
+                            "paragraph_index": paragraph.paragraph_index,
+                            "index": index,
+                            "issue": "Не определено главное предложение для данной группы",
+                            "extra_main_count": 0
+                        })
+                    elif len(main_sentences) > 1:
+                        errors.append({
+                            "report": report.report_name,
+                            "paragraph": paragraph.paragraph,
+                            "paragraph_index": paragraph.paragraph_index,
+                            "index": index,
+                            "issue": "Слишком много главных предложений",
+                            "extra_main_count": len(main_sentences) - 1
+                        })
 
             return errors
 
