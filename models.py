@@ -760,7 +760,7 @@ class Sentence(BaseModel):
     index = db.Column(db.SmallInteger, nullable=False)
     weight = db.Column(db.SmallInteger, nullable=False)
     comment = db.Column(db.String(100), nullable=False)
-    sentence = db.Column(db.String(400), nullable=False)
+    sentence = db.Column(db.String(600), nullable=False)
     sentence_type = db.Column(sentence_type_enum, nullable=False, default="body")
     tags = db.Column(db.String(255), nullable=True)
 
@@ -778,6 +778,10 @@ class Sentence(BaseModel):
         
         
         # Проверяем, является ли предложение главным
+        if len(self.sentence) > 600:
+            logger.error(f"Предложение слишком длинное ({len(sentence)} символов)")
+            raise ValueError("Предложение слишком длинное (больше 600 символов)")
+        
         if not self.sentence_type == "head":
             super().save()
             logger.info(f"Предложение не главное, просто сохранено")
@@ -920,6 +924,11 @@ class Sentence(BaseModel):
                 logger.info(f"Предложение с индексом {index} установлено как основное в параграфе {paragraph_id}")
                 logger.debug("НУЖНО НАСТРОИТЬ ЛОГИКУ СОЗДАНИЯ НОВЫХ ПРЕДЛОЖЕНИЙ В СВЯЗАННЫХ ПАРАГРАФАХ")
             
+        if len(sentence) > 600:
+            logger.error(f"Предложение слишком длинное ({len(sentence)} символов)")
+            raise ValueError("Предложение слишком длинное (больше 600 символов)")
+           
+        
         new_sentence = cls(
             paragraph_id=paragraph_id,
             index=index,
