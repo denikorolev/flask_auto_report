@@ -29,15 +29,23 @@ class Config:
         "Report": Report,
         "Paragraph": Paragraph,
         "Sentence": Sentence,
+        "HeadSentence": HeadSentence,
+        "BodySentence": BodySentence,
+        "TailSentence": TailSentence,
+        "TailSentenceGroup": TailSentenceGroup,
         "KeyWord": KeyWord,
         "ParagraphType": ParagraphType,
         "FileMetadata": FileMetadata,
+        "BodySentenceGroup": BodySentenceGroup
     }
     
     ASSOCIATIVE_TABLES = [
         "key_word_report_link",
         "roles_users",
-        "paragraph_links"
+        "paragraph_links",
+        "head_sentence_paragraph_link",
+        "tail_sentence_group_link",
+        "body_sentence_group_link"
     ]
     
     # Flask-Security Configuration

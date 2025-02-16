@@ -40,7 +40,7 @@ roles_users = db.Table(
     Index('ix_roles_users_user_id_role_id', 'user_id', 'role_id')
 )
 
-#  Ассоциативная таблица для связи параграфов между собой
+# Ассоциативная таблица для связи параграфов между собой
 paragraph_links = db.Table(
     "paragraph_links",
     db.Column("paragraph_id_1", db.BigInteger, db.ForeignKey("report_paragraphs.id", ondelete="CASCADE"), primary_key=True),
@@ -48,6 +48,31 @@ paragraph_links = db.Table(
     db.Column("link_type", link_type_enum, nullable=False),
     db.Index("ix_paragraph_links_paragraphs", "paragraph_id_1", "paragraph_id_2")
 )
+
+# Ассоциативная таблица для связи head предложений с параграфами
+head_sentence_paragraph_link = db.Table(
+    "head_sentence_paragraph_link",
+    db.Column("head_sentence_id", db.BigInteger, db.ForeignKey("head_sentences.id", ondelete="CASCADE"), primary_key=True),
+    db.Column("paragraph_id", db.BigInteger, db.ForeignKey("report_paragraphs.id", ondelete="CASCADE"), primary_key=True),
+    db.Index("ix_head_sentence_paragraph", "head_sentence_id", "paragraph_id")
+)
+
+# Ассоциативная таблица для связи tail предложений с группой tail предложений
+tail_sentence_group_link = db.Table(
+    "tail_sentence_group_link",
+    db.Column("tail_sentence_id", db.BigInteger, db.ForeignKey("tail_sentences.id", ondelete="CASCADE"), primary_key=True),
+    db.Column("group_id", db.BigInteger, db.ForeignKey("tail_sentence_groups.id", ondelete="CASCADE"), primary_key=True),
+    db.Index("ix_tail_sentence_group", "tail_sentence_id", "group_id")
+)
+
+# Ассоциативная таблица для связи body предложений с группой body предложений
+body_sentence_group_link = db.Table(
+    "body_sentence_group_link",
+    db.Column("body_sentence_id", db.BigInteger, db.ForeignKey("body_sentences.id", ondelete="CASCADE"), primary_key=True),
+    db.Column("group_id", db.BigInteger, db.ForeignKey("body_sentence_groups.id", ondelete="CASCADE"), primary_key=True),
+    db.Index("ix_body_sentence_group", "body_sentence_id", "group_id")
+)
+
 
 class AppConfig(db.Model):
     __tablename__ = 'app_config'
@@ -126,6 +151,7 @@ class AppConfig(db.Model):
             return False
         return True
 
+
 class BaseModel(db.Model):
     __abstract__ = True
     id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
@@ -156,6 +182,7 @@ class Role(db.Model, RoleMixin):
     name = db.Column(db.String(80), unique=True, nullable=False)  
     description = db.Column(db.String(255), nullable=True) 
     rank = db.Column(db.Integer, nullable=False)  
+
 
 class User(BaseModel, db.Model, UserMixin):
     __tablename__ = 'users'
@@ -209,6 +236,7 @@ class User(BaseModel, db.Model, UserMixin):
         if role and role not in self.roles:
             self.roles.append(role)
             db.session.commit()
+
 
 class UserProfile(BaseModel):
     __tablename__ = 'user_profiles'
@@ -535,6 +563,7 @@ class Paragraph(BaseModel):
     comment = db.Column(db.String(255), nullable=True)
     paragraph_weight = db.Column(db.SmallInteger, nullable=False) 
     tags = db.Column(db.String(255), nullable=True)
+    tail_sentence_group_id = db.Column(db.BigInteger, db.ForeignKey("tail_sentence_groups.id", ondelete="SET NULL"))
 
     paragraph_to_sentences = db.relationship("Sentence", lazy=True, backref=db.backref("sentence_to_paragraph"), cascade="all, delete-orphan")
     paragraph_to_types = db.relationship("ParagraphType") # Связь с типом параграфа
@@ -547,6 +576,17 @@ class Paragraph(BaseModel):
         backref="linked_to_paragraphs",
         remote_side=[id]
     )
+    
+    head_sentences = db.relationship(
+        "HeadSentence",
+        secondary=head_sentence_paragraph_link,
+        back_populates="paragraphs"
+    )
+
+    tail_sentence_group = db.relationship(
+        "TailSentenceGroup", 
+        backref="paragraphs")
+    
     
     @classmethod
     def create(cls, report_id, paragraph_index, paragraph, type_paragraph_id, paragraph_visible=True, title_paragraph=False, bold_paragraph=False, paragraph_weight=1, tags=None, comment=None):
@@ -965,6 +1005,75 @@ class Sentence(BaseModel):
         return cls.query.filter(cls.tags.like(f"%{tag}%")).all()
     
     
+
+class SentenceBase(BaseModel):
+    __abstract__ = True  
+    
+    sentence = db.Column(db.String(600), nullable=False)
+    tags = db.Column(db.String(100), nullable=True)
+    comment = db.Column(db.String(255), nullable=True)
+    
+
+
+
+class HeadSentence(SentenceBase):
+    __tablename__ = "head_sentences"
+    sentence_index = db.Column(db.SmallInteger, nullable=False)
+    body_sentence_group_id = db.Column(db.BigInteger, db.ForeignKey("body_sentence_groups.id", ondelete="SET NULL"))
+    
+    body_sentence_group = db.relationship(
+        "BodySentenceGroup", 
+        backref="head_sentences"
+    )
+    
+    paragraphs = db.relationship(
+        "Paragraph",
+        secondary=head_sentence_paragraph_link,
+        back_populates="head_sentences"
+    )
+    
+    
+class BodySentence(SentenceBase):
+    __tablename__ = "body_sentences"
+    sentence_weight = db.Column(db.SmallInteger, nullable=False)
+    
+    groups = db.relationship(
+        "BodySentenceGroup",
+        secondary="body_sentence_group_link",
+        back_populates="body_sentences"
+    )
+
+class BodySentenceGroup(BaseModel):
+    __tablename__ = "body_sentence_groups"
+
+    body_sentences = db.relationship(
+        "BodySentence",
+        secondary="body_sentence_group_link",
+        back_populates="groups"
+    )
+
+
+class TailSentence(SentenceBase):
+    __tablename__ = "tail_sentences"
+    sentence_weight = db.Column(db.SmallInteger, nullable=False)
+
+    groups = db.relationship(
+        "TailSentenceGroup",
+        secondary="tail_sentence_group_link",
+        back_populates="tail_sentences"
+    )
+
+
+class TailSentenceGroup(BaseModel):
+    __tablename__ = "tail_sentence_groups"
+
+    tail_sentences = db.relationship(
+        "TailSentence",
+        secondary="tail_sentence_group_link",
+        back_populates="groups"
+    )
+
+        
 class KeyWord(BaseModel):
     __tablename__ = 'key_words_group'
     profile_id = db.Column(db.BigInteger, db.ForeignKey('user_profiles.id'), nullable=False)
