@@ -9,10 +9,16 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
 
-    document.querySelectorAll(".edit-sentence__btn").forEach(button => {
+    // Слушатель на кнопку "удалить предложение"
+    document.querySelectorAll(".edit-sentence__btn--delete-sentence").forEach(button => {
         button.addEventListener("click", function() {
             deleteSentenceButton(this);
         });
+    });
+
+    // слушатель на кнопку изменения протокола
+    document.getElementById("updateReportButton").addEventListener("click", function() {
+        handleUpdateReportButtonClick();
     });
 
 });
@@ -184,7 +190,7 @@ function newSentenceCreate(button){
                         <label class="label edit-sentence__label" for="sentence_comment">Комментарий:</label>
                     <input class="input edit-sentence__input" type="text" name="sentence_comment" value="">
                 </div>
-                <button class="btn report__btn edit-sentence__btn" type="button" onclick="deleteSentenceButton(this)">Удалить</button>
+                <button class="btn report__btn edit-sentence__btn edit-sentence__btn--delete-sentence" type="button">Удалить</button>
             </div>
             <div class="edit-sentence__wrapper">
                 <label class="label edit-sentence__label edit-sentence__label--text" for="sentence_sentence">Текст предложения:</label>

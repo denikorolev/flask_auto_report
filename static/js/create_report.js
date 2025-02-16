@@ -122,7 +122,7 @@ function handleActionChange() {
 function createManualReport() {
     const reportName = document.getElementById("report_name")?.value?.trim();
     const reportSubtype = document.getElementById("report_subtype")?.value;
-    const comment = document.getElementById("comment")?.value?.trim() || "";
+    const comment = document.getElementById("reportCreationComment")?.value?.trim() || "";
     const reportSide = document.querySelector("input[name='report_side']:checked")?.value === "true";
 
     if (!reportName || !reportSubtype) {
@@ -152,7 +152,7 @@ function createManualReport() {
  * Создание протокола из файла с валидацией
  */
 function createReportFromFile() {
-    const reportForm = document.getElementById("report-creation-form");
+    const reportForm = document.getElementById("report-creation__form");
     const reportName = document.getElementById("report_name")?.value?.trim();
     const reportSubtype = document.getElementById("report_subtype")?.value;
     const reportFile = document.getElementById("report_file")?.files[0];
@@ -190,7 +190,7 @@ function createReportFromFile() {
 function createReportFromExistingFew() {
     const reportName = document.getElementById("report_name")?.value?.trim();
     const reportSubtype = document.getElementById("report_subtype")?.value;
-    const comment = document.getElementById("comment")?.value?.trim() || "";
+    const comment = document.getElementById("reportCreationComment")?.value?.trim() || "";
     const reportSide = document.querySelector("input[name='report_side']:checked")?.value === "true";
 
 
@@ -235,7 +235,7 @@ function createReportFromExistingFew() {
     
 //     let selectedReports = []; // тут мы сохраним последовательность выбора для кружков и отправки на сервер
 
-//     const reportForm = document.getElementById("report-creation-form");
+//     const reportForm = document.getElementById("report-creation__form");
 //     const actionSelect = document.getElementById("action");
 //     const fileUploadContainer = document.getElementById("file-upload-container");
 //     const existingReportContainer = document.getElementById("existing-report-container");

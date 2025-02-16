@@ -1350,7 +1350,7 @@ function firstGrammaSentence(sentence) {
     sentence = sentence.replace(/\s([,.!?:;])/g, "$1"); // Убираем пробел перед знаками препинания
     sentence = sentence.replace(/\s+/g, " "); // Заменяем несколько пробелов на один
 
-    const abbreviations = ["КТ", "МРТ", "ПЭТ-КТ", "УЗИ", "ФГДС"];
+    const abbreviations = ["КТ", "МРТ", "ПЭТ-КТ", "УЗИ", "ФГДС","ОМТ","ОГК","ОБП","ЗП","ЦВК","ЭКС"];
     // Если слово в нижнем регистре и является аббревиатурой, то делаем его заглавным
     sentence = sentence.replace(/(?<!\p{L})[а-яёa-z-]+(?!\p{L})/giu, (match) => {
         const upperMatch = match.toUpperCase();

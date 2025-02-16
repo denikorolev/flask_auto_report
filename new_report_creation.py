@@ -1,21 +1,19 @@
 # new_report_creation.py
-# Includes create_report route
 
-from flask import Blueprint, render_template, request, redirect, url_for, current_app, session, g, jsonify
-from flask_login import current_user, login_required
-from models import db, User, Report, ReportType, ReportSubtype, Paragraph, Sentence, ParagraphType  
+from flask import Blueprint, render_template, request, g, jsonify
+from flask_login import current_user
+from models import db, Report, ReportType, Paragraph, Sentence, ParagraphType  
 from sentence_processing import extract_paragraphs_and_sentences
 from file_processing import allowed_file
+from utils import ensure_list
 from werkzeug.utils import secure_filename
+from logger import logger
 import os
 import shutil 
 from flask_security.decorators import auth_required
 
 new_report_creation_bp = Blueprint('new_report_creation', __name__)
 
-# # Check the file extensions for being in allowed list
-# def allowed_file(filename):
-#     return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'doc', 'docx'}
 
 # Routes
 
@@ -23,15 +21,12 @@ new_report_creation_bp = Blueprint('new_report_creation', __name__)
 @new_report_creation_bp.route('/create_report', methods=['GET', 'POST'])
 @auth_required()
 def create_report():
-    page_title = "New report creation"
-    # menu = current_app.config['MENU']
     report_types_and_subtypes = ReportType.get_types_with_subtypes(g.current_profile.id)
     current_profile_reports = Report.find_by_profile(g.current_profile.id)
             
     
     return render_template("create_report.html",
-                           title=page_title,
-                        #    menu=menu,
+                           title="Создание нового протокола",
                            user_reports=current_profile_reports,
                            report_types_and_subtypes=report_types_and_subtypes
                            )
@@ -43,6 +38,8 @@ def create_manual_report():
     
     try:
         data = request.get_json()
+        if not data:
+            return jsonify({"status": "error", "message": "Не получены данные для создания протокола"}), 400
         
         report_name = data.get('report_name')
         report_subtype = data.get('report_subtype')
@@ -51,7 +48,6 @@ def create_manual_report():
         
         profile_id = g.current_profile.id
         
-
         # Create new report
         new_report = Report.create(
             profile_id=profile_id,
@@ -62,12 +58,14 @@ def create_manual_report():
             public=False,
             report_side=report_side
         )
+        logger.info(f"Report created successfully. Report ID: {new_report.id}")
         return jsonify({"status": "success", 
-                        "message": "report was created succesfully", 
+                        "message": "Протокол создан успешно", 
                         "report_id": new_report.id}), 200
 
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500    
+        logger.error(f"Failed to create report. Error: {str(e)}")
+        return jsonify({"status": "error", "message": f"Не удалось создать протокол. Ошибка: {str(e)}"}), 500    
 
     
 # Создание нового отчета из загруженного файла
@@ -87,12 +85,12 @@ def create_report_from_file():
         user_temp_folder = f"{current_user.id}_temp"
         if 'report_file' not in request.files:
             return jsonify({"status": "error", 
-                            "message": "No file part in the request"}), 400
+                            "message": "В полученных данных нет файла"}), 400
 
         file = request.files['report_file']
         if file.filename == '':
             return jsonify({"status": "error", 
-                            "message": "No selected file"}), 400
+                            "message": "Файл не выбран"}), 400
 
         if file and allowed_file(file.filename, file_type='doc'):
             filename = secure_filename(file.filename)
@@ -216,16 +214,16 @@ def create_report_from_existing_few():
         comment = data.get("comment")
         report_side = data.get("report_side", False)
         additional_paragraphs = int(data.get("additional_paragraphs", 0))
-        selected_reports = data.get("selected_reports")
+        selected_reports = ensure_list(data.get("selected_reports", []))
         
         
         profile_id = g.current_profile.id
         scanparam = 5
         impression = 3
 
-        if not selected_reports or not isinstance(selected_reports, list):
+        if not selected_reports:
             return jsonify({"status": "error", 
-                            "message": "No reports selected or invalid format"}), 400
+                            "message": "Не выбран протокол для создания с него копии"}), 400
 
         # Создаем новый отчет
         new_report = Report.create(
@@ -247,7 +245,7 @@ def create_report_from_existing_few():
             existing_report = Report.query.get(report_id)
             if not existing_report:
                 return jsonify({"status": "error", 
-                                "message": f"Report with ID {report_id} not found"}), 404
+                                "message": f"Протокол с ID {report_id} не найден"}), 404
 
             # Получаем и сортируем параграфы по их индексу
             sorted_paragraphs = sorted(existing_report.report_to_paragraphs, key=lambda p: p.paragraph_index)
@@ -310,7 +308,7 @@ def create_report_from_existing_few():
         new_paragraph_imression = Paragraph.create(
             report_id=new_report.id,
             paragraph_index=paragraph_index,
-            paragraph="Заключение",
+            paragraph="Заключение:",
             type_paragraph_id=impression,
             paragraph_visible=True,
             title_paragraph=True,
@@ -354,11 +352,11 @@ def create_report_from_existing_few():
         
         # Возвращаем успешный ответ
         return jsonify({"status": "success", 
-                        "message": "Report created successfully", 
+                        "message": "Протокол создан успешно", 
                         "report_id": new_report.id}), 200
 
     except Exception as e:
         return jsonify({"status": "error", 
-                        "message": str(e)}), 500
+                        "message": f"Не удалось создать отчет. Ошибка: {str(e)}"}), 500
 
 

@@ -9,32 +9,33 @@
 <!-- New report master -->
 <div class="container">
     <h2>Создание нового протокола</h2>
-    <form id="report-creation-form" class="flex" enctype="multipart/form-data">
+    <form id="report-creation__form" class="flex" enctype="multipart/form-data">
         
         <!-- Fields for creating report -->
         <div class="flex_column">
-            <label class="report_label__item" for="report_name">Название протокола:</label>
-            <input class="report_input__item form-control" type="text" id="report_name" name="report_name" required>
+            <label class="report-creation__label" for="report_name">Название протокола:</label>
+            <input class="input report-creation__input form-control" type="text" id="report_name" name="report_name" required>
         </div>
         <div class="flex_column">
-            <label class="report_label__item" for="report_type">Тип протокола:</label>
-            <select class="report__select" id="report_type" name="report_type" required>
+            <label class="report-creation__label" for="report_type">Тип протокола:</label>
+            <select class="select report-creation__select" id="report_type" name="report_type" required>
                 {% for rt in report_types_and_subtypes %}
                     <option value="{{ rt.type_id }}">{{ rt.type_text }}</option>
                 {% endfor %}
             </select>
         </div>
         <div class="flex_column">
-            <label class="report_label__item" for="report_subtype">Подтип протокола:</label>
-            <select class="report__select" id="report_subtype" name="report_subtype" required>
+            <label class="report-creation__label" for="report_subtype">Подтип протокола:</label>
+            <select class="select report-creation__select" id="report_subtype" name="report_subtype" required>
                <!-- Empty, will be filled dynamically -->
             </select>
         </div>
         <div class="flex_column">
-            <label class="report_label__item" for="comment">Комментарий:</label>
-            <input class="report_input__item form-control" type="text" id="comment" name="comment" required>
+            <label class="report-creation__label" for="comment">Комментарий:</label>
+            <input class="input report-creation__input form-control" type="text" id="reportCreationComment" name="comment">
         </div>
-        <!-- side boolean changer -->
+
+        <!-- переключатель выбора стороны -->
         <div class="flex_column">
             <label class="report_label__item">Учтывать сторону:</label> 
             <div class="flex_row">
@@ -44,9 +45,11 @@
                 <label for="report_side_no" class="form-check-label">Нет</label> 
             </div>
         </div>
+
+        <!-- Селект для способа сохранения -->
         <div class="flex_column">
             <label class="report_label__item" for="action" >Выберите способ создания протокола:</label>
-            <select class="report__select form-control" id="action" name="action" required>
+            <select class="select report__select form-control" id="action" name="action" required>
                 <option value="manual">Вручную</option>
                 <option value="file">Из файла</option>
                 <option value="existing_few">Из существующих протоколов</option>
