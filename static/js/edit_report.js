@@ -166,7 +166,7 @@ function newSentenceCreate(button){
     newSentenceForm.setAttribute("data-sentence-paragraph-id", paragraphId)
 
     newSentenceForm.innerHTML = `
-        <div class="flex edit-sentence__card">
+        <div class="wrapper__card">
             <div class="flex edit-sentence__info-box">
                 <div class="edit-sentence__wrapper edit-sentence__wrapper--short">
                         <label class="label edit-sentence__label" for="sentence_index">Индекс:</label>

@@ -2,12 +2,12 @@
   
 <!-- использую в report_editing -->
 {% macro render_sentence(sentence) %}
-<div class="flex edit-sentence__card 
+<div class="wrapper__card 
 {% if sentence.sentence_type == "head" %} 
-edit-sentence__card--head 
+wrapper__card--sentence-head 
 {% endif %}
 {% if sentence.sentence_type == "body" %} 
-edit-sentence__card--body {% endif %}">
+wrapper__card--sentence-body {% endif %}">
 
     <div class="flex edit-sentence__info-box">
         <div class="edit-sentence__wrapper edit-sentence__wrapper--short">

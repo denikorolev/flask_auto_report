@@ -73,36 +73,6 @@ function initializeSubtypeLogic(reportTypeSelectId, reportSubtypeSelectId, subty
 
 
 
-/**
- * Filters the list of reports based on the selected report type.
- * 
- * @param {HTMLElement} reportTypeSelect - The select element containing report types.
- * @param {HTMLElement} existingReportList - The list element containing the reports to be filtered.
- */
-function filterReportsByType(reportTypeSelect, existingReportList) {
-    const selectedType = reportTypeSelect.value;  // Получаем выбранный тип
-    const reports = existingReportList.querySelectorAll("li, .report_form__item");  // Получаем все отчеты
-
-    reports.forEach(report => {
-        const reportType = report.getAttribute("data-report-type");  // Получаем тип отчета
-        // Определяем стиль отображения родительского элемента
-        const parentDisplayStyle = getComputedStyle(existingReportList).display;
-        // Если выбран тип "" (All) или тип совпадает с атрибутом отчета, показываем его
-        if (selectedType === "" || reportType === selectedType) {
-            if (parentDisplayStyle === "grid") {
-                report.style.display = "grid";  // Используем grid, если у родителя grid
-            } else {
-                report.style.display = "flex";  // Используем flex в остальных случаях
-            }
-        } else {
-            report.style.display = "none";  // Скрываем отчет, если тип не совпадает
-        }
-    });
-    
-}
-
-
-
 
 /**
  * Finds the maximum numeric value among a collection of input elements, used in edit_report.

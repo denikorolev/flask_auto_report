@@ -474,18 +474,9 @@ body {
 
 /* Блок Grid */
 /* Создаем сетку для заголовков и строк */
-.report_grid {
-    display: grid;
-    grid-template-columns: 0.3fr 0.8fr 0.8fr 1.5fr 0.1fr 0.3fr 0.3fr; /* Настраиваем ширину каждого столбца */
-    gap: 10px;
-    align-items: center;
-}
 
-.report_header {
-    font-weight: bold;
-    border-bottom: 2px solid #000; /* Линия для отделения заголовков */
-    margin-bottom: 10px;
-}
+
+
 
 .report_form__item {
     margin-top: 10px;
@@ -503,11 +494,7 @@ body {
     cursor: pointer;
 }
 
-/* Выравниваем заголовки и контент */
-.report_header li,
-.report_form__item li {
-    padding: 5px;
-}
+
 
 
 /* Блок PopUp */
@@ -709,7 +696,8 @@ body {
 }
 
 /* стиль для карточки предложения в edit_report */
-.edit-sentence__card {
+
+.wrapper__card {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -724,11 +712,12 @@ body {
     min-height: 60px;
 }
 
+
 /* Это стиль для выделения главного предложения при изменении настроек профиля */
-.edit-sentence__card--head {
+.wrapper__card--sentence-head {
     background-color: var(--main-background-color);
 }
-.edit-sentence__card--body {
+.wrapper__card--sentence-body {
     background-color: #cbeff4;
 }
 

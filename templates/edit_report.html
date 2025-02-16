@@ -6,13 +6,13 @@
 
 {% block container %}
 {{ super() }}
-
 <input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
+
+
 <div class="container edit-report" data-report-id="{{ report.id }}">
     {% if report %}
     <h3>Editing Report</h3>
     <form class="edit-report__form--report" id="edit-report-form">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="flex">
             <div class="flex_column">
                 <label class="report_label__item" for="report_type">Report Type:</label>

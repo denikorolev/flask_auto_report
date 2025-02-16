@@ -4,15 +4,13 @@ let paragraphLinks = null; // Глобальная переменная
 
 
 document.addEventListener('DOMContentLoaded', function() {
-    const filterTypeSelect = document.getElementById('filter_type');
-    const reportList = document.getElementById('reports_list');
     const linkReportsButton = document.getElementById("linkReports");
 
     // Инициализируем фильтрацию отчетов по типу при изменении фильтра. 
-    // Функция filterReportsByType находится в utils.js
-    filterTypeSelect.addEventListener('change', function() {
-        filterReportsByType(filterTypeSelect, reportList);
+    document.getElementById('filter_type').addEventListener('change', function() {
+        filterReportsByType();
     });
+    
 
     // Инициализирую слушатель кнопки удалить отчет
     document.querySelectorAll('.my-report-list__button--delete').forEach(button => {
@@ -32,6 +30,28 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
 //Функции
+
+
+// Фильтрует список протоколов по их типу.
+function filterReportsByType() {
+    reportTypeSelect = document.getElementById('filter_type');
+    existingReportList = document.getElementById('myReportList');
+    const selectedType = reportTypeSelect.value;  // Получаем выбранный тип
+    const reports = existingReportList.querySelectorAll("li, .my-report-list__item");  // Получаем все протоколы
+
+    reports.forEach(report => {
+        const reportType = report.getAttribute("data-report-type");  // Получаем тип отчета
+       
+        // Если выбран тип "" (All) или тип совпадает с атрибутом отчета, показываем его
+        if (selectedType === "" || reportType === selectedType) {
+            report.style.display = "flex";  
+        } else {
+            report.style.display = "none";  // Скрываем отчет, если тип не совпадает
+        }
+    });
+    
+}
+
 
 // Функция удаления отчета
 function deleteReport(event){
@@ -70,7 +90,7 @@ function linkSelectedReports() {
     // Проверяем, совпадают ли типы отчетов
     const reportTypes = new Set();
     checkboxes.forEach(checkbox => {
-        const reportItem = checkbox.closest(".report_form_item"); // Получаем родительский <li>
+        const reportItem = checkbox.closest(".report-card__item"); // Получаем родительский <li>
         if (reportItem) {
             reportTypes.add(reportItem.dataset.reportType); // Добавляем тип отчета в Set
         }

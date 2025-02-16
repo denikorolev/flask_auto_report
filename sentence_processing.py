@@ -118,47 +118,32 @@ def check_existing_keywords(key_words):
 
 def extract_paragraphs_and_sentences(file_path):
     """
-    Extracts paragraphs and sentences from a Word document, including additional paragraph attributes.
+    Извлекает заголовки и предложения из документа Word.
 
-    This function processes a Word document (docx) and identifies paragraphs
-    that start with bold text as section titles. Each title can include additional attributes
-    specified within double parentheses `(( ))`, such as paragraph type (`text`, `scanparam`, etc.)
-    and flags (`**` for invisible, `==` for bold, `++` for title). Sentences within the paragraphs
-    can be split by the '!!' character to create additional sentences with the same index but incremented weight.
+    Функция обрабатывает документ .docx, определяя абзацы, начинающиеся с жирного текста, как заголовки разделов. 
+    Остальные строки считаются содержимым этих разделов. Предложения внутри абзацев могут разделяться символом '!!', 
+    формируя альтернативные варианты одного и того же предложения.
 
     Args:
-        file_path (str): The file path of the Word document to be processed.
+        file_path (str): Путь к файлу Word.
 
     Returns:
-        list: A list of dictionaries, each representing a paragraph in the document.
-              Each dictionary contains:
-              - 'title' (str): The title of the paragraph (bold text).
-              - 'sentences' (list): A list of sentences (str or list) belonging to that paragraph.
-                                    If a sentence contains '!!', it will be represented as a list
-                                    of sentences for further processing.
-              - 'visible' (bool): Visibility of the paragraph (default is True).
-              - 'bold' (bool): Whether the paragraph title is bold (default is False).
-              - 'is_title' (bool): Whether the paragraph is marked as a title (default is False).
-              - 'paragraph_types' (str): Type of the paragraph, extracted from double parentheses `(( ))`.
-    
-    Example:
-        [
-            {
-                'title': 'Section 1',
-                'sentences': ['Sentence 1.', ['Sentence 2.', 'Sentence 2 alternative.']],
-                'visible': True,
-                'bold': False,
-                'is_title': True,
-                'paragraph_types': 'text'
-            }
-        ]
+        list: Список словарей, представляющих абзацы документа. 
+              Каждый словарь содержит:
+              - 'title' (str): Заголовок абзаца (если есть).
+              - 'sentences' (list): Список предложений (или списков альтернативных предложений).
+              - 'visible' (bool): Видимость абзаца (по умолчанию True).
+              - 'bold' (bool): Является ли заголовок жирным (по умолчанию False).
+              - 'is_title' (bool): Помечен ли абзац как заголовок (по умолчанию False).
+              - 'type_paragraph' (str): Тип абзаца (по умолчанию "text").
     """
     document = Document(file_path)
+    # Проверяю не пустой ли документ
+    if not document.paragraphs:
+        return []
+    
     paragraphs_from_file = []
     current_paragraph = None
-
-    # Valid types for paragraphs
-    valid_types = {"text", "impression", "clincontext", "scanparam", "custom", "dinamics", "scanlimits", "title"}
 
     for para in document.paragraphs:
         # Check if paragraph has bold text indicating it's a new section
@@ -167,45 +152,10 @@ def extract_paragraphs_and_sentences(file_path):
             if current_paragraph:
                 paragraphs_from_file.append(current_paragraph)
             
-            # Extract flags, paragraph type, and title text
-            title_text = para.text.strip()
-            visible = True
-            bold = False
-            is_title = False
-            type_paragraph = "text"  # Default type
-
-            # Check for the presence of flags and paragraph type in the format: ((type, flags))
-            if title_text.startswith("((") and "))" in title_text:
-                # Extract the content inside double parentheses
-                content = title_text[2:title_text.find("))")].split(',')
-                # Identify the paragraph type if the first item matches a valid type
-                potential_type = content[0].strip().lower()
-                if potential_type in valid_types:
-                    type_paragraph = potential_type
-                    # Remove the type from content list to process the rest as flags
-                    content = content[1:]
-                
-                # Process remaining flags in content
-                for flag in content:
-                    flag = flag.strip()
-                    if flag == "**":
-                        visible = False
-                    elif flag == "==":
-                        bold = True
-                    elif flag == "++":
-                        is_title = True
-                
-                # Remove the entire ((...)) block from the title text
-                title_text = title_text[title_text.find("))") + 2:].strip()
-
-            # Create a new paragraph entry with the extracted attributes
+            # Create a new paragraph entry
             current_paragraph = {
-                'title': title_text,
-                'sentences': [],
-                'visible': visible,
-                'bold': bold,
-                'is_title': is_title,
-                'type_paragraph': type_paragraph
+                'title': para.text.strip(),
+                'sentences': []
             }
         else:
             # Append sentences to the current paragraph
@@ -222,6 +172,8 @@ def extract_paragraphs_and_sentences(file_path):
         paragraphs_from_file.append(current_paragraph)
 
     return paragraphs_from_file
+
+
 
 # Предварительная очистка. Проверяю на наличие предложения. 
 # Убираю только повторяющиеся знаки и лишние пробелы. 

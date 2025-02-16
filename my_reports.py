@@ -10,16 +10,15 @@ from sentence_processing import calculate_similarity_rapidfuzz
 
 my_reports_bp = Blueprint('my_reports', __name__)
 
-@my_reports_bp.route('/reports_list', methods=['POST', 'GET'])
+@my_reports_bp.route('/reports_list', methods=['GET'])
 @auth_required()
 def reports_list(): 
-    page_title = "List of the reports"
     # Initialize config variables
     reports_type_with_subtypes = ReportType.get_types_with_subtypes(g.current_profile.id)
     profile_reports = Report.find_by_profile(g.current_profile.id)
                 
     return render_template("my_reports.html", 
-                           title=page_title, 
+                           title="Список протоколов текущего профиля", 
                            reports_type_with_subtypes = reports_type_with_subtypes, 
                            profile_reports=profile_reports,
                            )

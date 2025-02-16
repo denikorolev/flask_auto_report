@@ -11,6 +11,10 @@ import logging
 
 load_dotenv()
 
+valid_paragraph_types = ["text", "impression", "clincontext", "scanparam", "custom", "dinamics", "scanlimits", "title"]
+
+
+
 class Config:
     """Базовая конфигурация, общая для всех сред"""
     

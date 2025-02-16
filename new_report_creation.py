@@ -24,7 +24,7 @@ def create_report():
     report_types_and_subtypes = ReportType.get_types_with_subtypes(g.current_profile.id)
     current_profile_reports = Report.find_by_profile(g.current_profile.id)
             
-    
+    print(report_types_and_subtypes)
     return render_template("create_report.html",
                            title="Создание нового протокола",
                            user_reports=current_profile_reports,
@@ -76,7 +76,7 @@ def create_report_from_file():
     try:
         report_name = request.form.get('report_name')
         report_subtype = request.form.get('report_subtype')
-        comment = request.form.get('comment')
+        comment = request.form.get('comment', "")
         report_side = request.form.get('report_side') == 'true'
         
         profile_id = g.current_profile.id
@@ -116,39 +116,22 @@ def create_report_from_file():
                     )
 
                 # Флаг для отслеживания первого вхождения impression
-                impression_exists = False
                 replacement_notifications = []
 
                 # ID типов параграфов
-                impression_type_id = ParagraphType.find_by_name("impression")
-                text_type_id = ParagraphType.find_by_name("text")
 
                 # Добавляем абзацы и предложения в отчет
                 for idx, paragraph in enumerate(paragraphs_from_file, start=1):
-                    paragraph_type = paragraph.get('paragraph_types', 'text')
-                    paragraph_type_id = ParagraphType.find_by_name(paragraph_type)
-
-                    # Если это тип "impression" и такой параграф уже был создан, меняем на "text"
-                    if paragraph_type == "impression":
-                        if impression_exists:
-                            # Заменяем на тип "text"
-                            paragraph_type_id = text_type_id
-                            replacement_notifications.append(
-                                f"Paragraph {idx} with type 'impression' was replaced by 'text' because an 'impression' paragraph already exists."
-                            )
-                        else:
-                            # Первый параграф с типом "impression"
-                            impression_exists = True
 
                     # Создаем новый параграф
                     new_paragraph = Paragraph.create(
                         report_id=new_report.id,
                         paragraph_index=idx,
                         paragraph=paragraph['title'],
-                        type_paragraph_id=paragraph_type_id,
-                        paragraph_visible=paragraph.get('visible', True),
-                        title_paragraph=paragraph.get('is_title', False),
-                        bold_paragraph=paragraph.get('bold', False),
+                        type_paragraph_id=1, # Тип "text" по умолчанию
+                        paragraph_visible=True,
+                        title_paragraph=False,
+                        bold_paragraph=False,
                         paragraph_weight=1,
                         tags="",
                         comment=None
@@ -185,20 +168,20 @@ def create_report_from_file():
                 # Формируем ответ с уведомлениями о замене
                 return jsonify({"status": "success", 
                                 "report_id": new_report.id, 
-                                "message": "report was created successfully", 
+                                "message": "Протокол создан успешно", 
                                 "notifications": replacement_notifications}), 200
 
             except Exception as e:
                 if os.path.exists(user_temp_folder):
                     shutil.rmtree(user_temp_folder)
-                return jsonify({"status": "error", "message": str(e)}), 500
+                return jsonify({"status": "error", "message": f"Ошибка: {str(e)}"}), 500
 
         else:
             return jsonify({"status": "error", 
-                            "message": "Invalid file type"}), 400
+                            "message": "Неверный тип файла"}), 400
 
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({"status": "error", "message": f"Ошибка: {str(e)}"}), 500
 
     
 # Создание нового отчета на основе одного или нескольких существующих
