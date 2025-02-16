@@ -1,5 +1,6 @@
 // loader.js
 
+let loaderTimeout;
 
 /**
  * Adds a loading indicator to the page.
@@ -15,9 +16,13 @@ function showLoader() {
             <div class="loader-spinner"></div>
         </div>
     `;
+
     document.body.appendChild(loader);
    
-    loader.style.display = "flex"; // Показываем индикатор
+    // Если страница грузится быстрее 300 мс, лоадер не появится
+    loaderTimeout = setTimeout(() => {
+        loader.classList.remove("hidden-loader"); // Плавное появление через ccs-класс
+    }, 300); // 300 мс —  задержка
 }
 
 
@@ -25,8 +30,14 @@ function showLoader() {
  * Removes the loading indicator from the page.
  */
 function hideLoader() {
+    clearTimeout(loaderTimeout); // Очищаем таймаут, чтобы лоадер не появился
+
     const loader = document.getElementById("global-loader");
+
     if (loader) {
-        loader.style.display = "none"; // Скрываем индикатор
+        loader.classList.add("hidden-loader"); // Плавное исчезновение через ccs-класс
+        setTimeout(() => {
+            loader.remove(); // Удаляем через 300 мс после исчезновения
+        }, 300);
     }
 }
