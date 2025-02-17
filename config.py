@@ -33,17 +33,18 @@ class Config:
         "BodySentence": BodySentence,
         "TailSentence": TailSentence,
         "TailSentenceGroup": TailSentenceGroup,
+        "BodySentenceGroup": BodySentenceGroup,
+        "HeadSentenceGroup": HeadSentenceGroup,
         "KeyWord": KeyWord,
         "ParagraphType": ParagraphType,
-        "FileMetadata": FileMetadata,
-        "BodySentenceGroup": BodySentenceGroup
+        "FileMetadata": FileMetadata
     }
     
     ASSOCIATIVE_TABLES = [
         "key_word_report_link",
         "roles_users",
         "paragraph_links",
-        "head_sentence_paragraph_link",
+        "head_sentence_group_link",
         "tail_sentence_group_link",
         "body_sentence_group_link"
     ]

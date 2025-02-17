@@ -1,43 +1,60 @@
 <!-- playground.html-->
 
 {% extends "base.html" %}
+
 {% block container %}
+<input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
+
     <h1>Welcome to playground</h1>
     <p>Here you can play with different elements of the page</p>
-    <p></p><br>
-    <p></p><br>
-    <div class="playground"
+    <br>
+
+    <div class="playground">
+        <span>Всего найдено предложений в Sentence: </span>
+        <span>{{ sentences|length }}</span>
+        <p>шт</p>
+
         <ul class="playground__element">
             <li class="flex wrapper-text-block">
-                <p>Code1</p>
-                <p>Weight1</p>
-                <p>Text1</p>
-                <button>Click me1</button>
+                <form action="/playground" method="POST">
+                    <input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="head_sentences" value="True">
+                    <span>Из них head: </span>
+                    <span>{{ head_sentences|length }}</span>
+                    <p>шт</p>
+                    <button type="submit">Перенести</button>
+                </form>
             </li>
             <li class="flex wrapper-text-block">
-                <p>Code1</p>
-                <p>Weight1</p>
-                <p>Text1</p>
-                <button>Click me1</button>
+                <form action="/playground" method="POST">
+                    <input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="body_sentences" value="True">
+                    <span>Из них body:</span>
+                    <span>{{ body_sentences|length }}</span>
+                    <p>шт</p>
+                    <button type="submit">Перенести</button>
+                </form>
             </li>
             <li class="flex wrapper-text-block">
-                <p>Code1</p>
-                <p>Weight1</p>
-                <p>Text1</p>
-                <button>Click me1</button>
-            </li>
-            <li class="flex wrapper-text-block">
-                <p>Code1</p>
-                <p>Weight1</p>
-                <p>Text1</p>
-                <button>Click me1</button>
-            </li>
-            <li class="flex wrapper-text-block">
-                <p>Code1</p>
-                <p>Weight1</p>
-                <p>Text1</p>
-                <button>Click me1</button>
+                <form action="/playground" method="POST">
+                    <input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="tail_sentences" value="True">
+                    <span>Из них tail:</span>
+                    <span>{{ tail_sentences|length }}</span>
+                    <p>шт</p>
+                    <button type="submit">Перенести</button>
+                </form>
             </li>
         </ul>
-        <div class="playground"></div>
-{%- endblock %}
+
+        <br><br>
+
+        <div class="flex wrapper-text-block">
+            <span>Перенесено </span>
+            <span>{{ changed_sentence }}</span>
+            <span> предложений</span>
+        </div>
+
+        <br><br>
+    </div>
+{% endblock %}
