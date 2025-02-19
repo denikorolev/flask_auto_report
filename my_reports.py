@@ -4,8 +4,8 @@ from flask import Blueprint, render_template, request, g, jsonify
 from collections import defaultdict
 from models import db, Report, ReportType, Paragraph
 from logger import logger
+from rapidfuzz import fuzz
 from flask_security.decorators import auth_required
-from sentence_processing import calculate_similarity_rapidfuzz
 
 
 my_reports_bp = Blueprint('my_reports', __name__)
@@ -74,7 +74,7 @@ def auto_link_reports():
                 # Проверяем схожесть текстов параграфов
                 base_text = text
                 for paragraph in paragraphs[1:]:
-                    similarity = calculate_similarity_rapidfuzz(base_text, paragraph.paragraph)
+                    similarity = fuzz.ratio(base_text, paragraph.paragraph)
                     if similarity >= 98:  # Порог схожести
                         Paragraph.link_paragraphs(paragraphs[0].id, paragraph.id)
                         linked_paragraphs.append({

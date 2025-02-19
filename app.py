@@ -1,18 +1,18 @@
 # app.py
 
-from flask import Flask, redirect, url_for, render_template, request, session, g
+from flask import Flask, redirect, url_for, render_template, request, session, g, jsonify
 from flask_login import current_user
 import logging
 from config import get_config
 from flask_migrate import Migrate
 from models import db, User, UserProfile, Role, Sentence, HeadSentence, BodySentence, TailSentence, TailSentenceGroup, BodySentenceGroup, HeadSentenceGroup, Paragraph
 from menu_constructor import build_menu
+from sentence_processing import sentence_transition_from_sentence_class
 from profile_constructor import ProfileSettingsManager
 from db_processing import sync_all_profiles_settings
 from logger import logger
 from collections import defaultdict
-from itertools import groupby
-
+from rapidfuzz import fuzz
 import os
 
 from flask_wtf.csrf import CSRFProtect
@@ -245,103 +245,38 @@ def playground():
     """
     Переносит предложения из таблицы Sentence в новые таблицы HeadSentence, BodySentence и TailSentence.
     """
-    changed_sentences = 0  # Счетчик перенесенных предложений
+    
     logger.info("Playground route is called")
     # Запрос всех предложений
     sentences = Sentence.query.all()
+    head_sentences = HeadSentence.query.all()
+    body_sentences = BodySentence.query.all()
+    tail_sentences = TailSentence.query.all()    
 
-    head_sentences_by_paragraph = defaultdict(list)
-    body_sentences_by_paragraph = defaultdict(list)
-    tail_sentences_by_paragraph = defaultdict(list)
-    
-    # Группируем предложения по paragraph_id
-    for s in sentences:
-        if s.sentence_type == "head":
-            head_sentences_by_paragraph[s.paragraph_id].append(s)
-        elif s.sentence_type == "body":
-            body_sentences_by_paragraph[s.paragraph_id].append(s)
-        elif s.sentence_type == "tail":
-            tail_sentences_by_paragraph[s.paragraph_id].append(s)
-
-    # Проверяем, какая форма была отправлена
     if request.method == "POST":
-        if "head_sentences" in request.form:
-            for paragraph_id, head_sentences in head_sentences_by_paragraph.items():
-                paragraph = Paragraph.get_by_id(paragraph_id)
-                for sentence in head_sentences:
-                    try:
-                        HeadSentence.create(
-                            sentence=sentence.sentence,
-                            paragraph_id=paragraph.id,
-                            tags=sentence.tags,
-                            comment=sentence.comment,
-                            sentence_index=sentence.index
-                        )
-                        changed_sentences += 1
-                        sentence.delete()   
-                    except Exception as e:
-                        logger.error(f"Error creating head sentence: {str(e)}")
-                        continue
-            
-        elif "body_sentences" in request.form:
-            # Переносим body-предложения
-            for paragraph_id, body_sentences in body_sentences_by_paragraph.items():
-                grouped_by_index = defaultdict(list)
-                for sentence in body_sentences:
-                    grouped_by_index[sentence.index].append(sentence)
-                    
-                for index, sentences in grouped_by_index.items():
-                    head_sentence = next(
-                        (s for s in head_sentences_by_paragraph.get(paragraph_id, []) if s.index == index),
-                        None
-                    ) 
-                    if not head_sentence:
-                        logger.warning(f"Не найдено head-предложение для paragraph_id={paragraph_id}, index={index}")
-                        continue
-                    
-                    for sentence in sentences:
-                        try:
-                            BodySentence.create(
-                                sentence=sentence.sentence,
-                                head_sentence_id=head_sentence.id,
-                                tags=sentence.tags,
-                                comment=sentence.comment,
-                                sentence_weight=1
-                            )
-                            changed_sentences += 1
-                            sentence.delete()
-                        except Exception as e:
-                            logger.error(f"Ошибка при создании body-предложения: {str(e)}")
-                            continue
-
-        elif "tail_sentences" in request.form:
-            for para_id, tail_sentences in tail_sentences_by_paragraph.items():
-                paragraph = Paragraph.get_by_id(para_id)
-                for tail_sentence in tail_sentences:
-                    try:
-                        TailSentence.create(
-                            sentence=tail_sentence.sentence,
-                            paragraph_id=paragraph.id,
-                            tags=tail_sentence.tags,
-                            comment=tail_sentence.comment,
-                            sentence_weight=1
-                        )
-                        tail_sentence.delete()
-                        changed_sentences += 1
-                    except Exception as e:
-                        logger.error(f"Error creating head sentence: {str(e)}")
-                        continue
-                
-
+        sentence_transition_from_sentence_class()
+        
     return render_template(
         "playground.html",
         title="Playground",
-        sentences=sentences,
-        head_sentences=head_sentences_by_paragraph,
-        body_sentences=body_sentences_by_paragraph,
-        tail_sentences=tail_sentences_by_paragraph,
-        changed_sentence=changed_sentences
+        head_sentences=head_sentences,
+        body_sentences=body_sentences,
+        tail_sentences=tail_sentences,
+        sentences=sentences
     )
+    
+    
+@app.route("/playground_search_dublicates", methods=["GET", "POST"])
+@auth_required()
+@roles_required("superadmin")
+def playground_search_dublicates():
+    """
+    Ищет дубликаты предложений в Sentence.
+    """
+    sentences = Sentence.query.all()
+   
+    
+    return jsonify({"status": "success", "message": "Дубликаты найдены"}), 200
 
 
 

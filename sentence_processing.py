@@ -1,14 +1,12 @@
 # sentence_processing.py
 
 from flask import g, current_app
-from flask_login import current_user
-from rapidfuzz import fuzz, process
+from rapidfuzz import fuzz
 import re
 from docx import Document
 from spacy_manager import SpacyModel
-from models import Sentence, Paragraph, KeyWord, Report, User
+from models import Paragraph, KeyWord, Report, Sentence, HeadSentence, BodySentence, TailSentence, HeadSentenceGroup, BodySentenceGroup, TailSentenceGroup
 from collections import defaultdict
-from errors_processing import print_object_structure
 
 
 
@@ -115,7 +113,8 @@ def check_existing_keywords(key_words):
 
     return None
 
-
+# Функция для извлечения абзацев и предложений из документа Word.
+# Используется в new_report_creation.py
 def extract_paragraphs_and_sentences(file_path):
     """
     Извлекает заголовки и предложения из документа Word.
@@ -174,7 +173,6 @@ def extract_paragraphs_and_sentences(file_path):
     return paragraphs_from_file
 
 
-
 # Предварительная очистка. Проверяю на наличие предложения. 
 # Убираю только повторяющиеся знаки и лишние пробелы. 
 # Исключение - многоточие, обрабатывается отдельно. 
@@ -210,9 +208,9 @@ def preprocess_sentence(text):
 # это функция очистки текста перед сравнением 
 # используется в working_with_reports.py дважды
 def clean_text_with_keywords(sentence, key_words, except_words=None):
-    """ Функция очистки текста от пробелов, знаков припенания, цифр и 
-    ключевых слов с приведением всех слов предложения к нижнему 
-    регистру """
+    """ Функция очистки текста от лишних пробелов, знаков припенания, 
+    цифр, слов исключений и ключевых слов с приведением всех слов 
+    предложения к нижнему регистру """
     # Приводим текст к строчным буквам
     sentence = str(sentence)
     
@@ -220,7 +218,7 @@ def clean_text_with_keywords(sentence, key_words, except_words=None):
     # Удаляем ключевые слова
     if key_words:
         for word in key_words:
-            sentence = re.sub(rf'\b{re.escape(word)}\b', '', sentence, flags=re.IGNORECASE)
+            sentence = re.sub(rf'(?<!\w){re.escape(word)}(?!\w)', '', sentence, flags=re.IGNORECASE)
     
     # Удаляем все кроме букв цифр и робелов
     sentence = re.sub(r"[^\w\s]", "", sentence)
@@ -231,12 +229,12 @@ def clean_text_with_keywords(sentence, key_words, except_words=None):
     # Убираем дополнительные слова
     if except_words:
         for word in except_words:
-            sentence = re.sub(rf"\b{re.escape(word)}\b", "", sentence)
+            sentence = re.sub(rf"(?<!\w){re.escape(word)}(?!\w)", "", sentence, flags=re.IGNORECASE)
     
     return sentence
 
 
-# это функция для окончательной очистки предложения 
+# это функция для окончательной очистки предложения перед сохранением в базу данных
 # в working_with_reports.py.
 # Она не очищает двойные знаки, лишние пробелы и не проверяется текст на наличие
 # Должна применяться после функции preprocess_sentence
@@ -289,33 +287,8 @@ def clean_and_normalize_text(text):
 
     return text
 
-# # Это СТАРАЯ функция ее нужно будет заменить на split_sentences_if_needed
-# def split_sentences(paragraphs):
-#     """ Разделяем полученный текст на отдельные предложения 
-#     ориентируясь на знаки препинания .!? """
-#     split_paragraphs = []
-#     sentence_endings = re.compile(r'(?<=[.!?])\s+')
 
-#     for paragraph in paragraphs:
-#         paragraph_id = paragraph.get("paragraph_id")
-#         sentences = paragraph.get("sentences", [])
-#         split_sentences = []
-
-#         for sentence in sentences:
-#             # Разбиваем предложения по концам предложений (точка, восклицательный знак или вопросительный знак)
-#             split_sentences.extend(re.split(sentence_endings, sentence))
-
-#         # Удаляем пустые предложения после разбиения
-#         split_sentences = [s.strip() for s in split_sentences if s.strip()]
-
-#         split_paragraphs.append({
-#             "paragraph_id": paragraph_id,
-#             "sentences": split_sentences
-#         })
-
-#     return split_paragraphs
-
-# это новая функция используется в working_with_reports.py
+# разделяет текс по предложениям, функция используется в working_with_reports.py
 def split_sentences_if_needed(text):
     """
     Splits a sentence into multiple sentences using SpaCy tokenizer.
@@ -483,21 +456,6 @@ def group_keywords(keywords, with_index=False, with_report=False):
     # Если with_index=False, возвращаем просто сгруппированные ключевые слова с их id
     return list(grouped_keywords.values())
 
-# Алгоритм для сравнения предложений и вычисления их схожести в %. Используется в compare_sentences_by_paragraph()
-def calculate_similarity_rapidfuzz(sentence1, sentence2):
-    """
-    Calculates the similarity between two sentences using the RapidFuzz library.
-
-    Args:
-        sentence1 (str): The first sentence.
-        sentence2 (str): The second sentence.
-
-    Returns:
-        float: The similarity as a percentage.
-    """
-    from rapidfuzz import fuzz
-
-    return fuzz.ratio(sentence1, sentence2)
 
 # Сравниваю 2 предложения. Используется в working_with_report/save_modified_sentences %
 def compare_sentences_by_paragraph(new_sentences, report_id):    
@@ -557,7 +515,7 @@ def compare_sentences_by_paragraph(new_sentences, report_id):
         # Проверяем на схожесть с существующими предложениями
         is_duplicate = False
         for existing in cleaned_existing:
-            similarity_rapidfuzz = calculate_similarity_rapidfuzz(cleaned_new_text, existing["cleaned_text"])
+            similarity_rapidfuzz = fuzz.ratio(cleaned_new_text, existing["cleaned_text"])
             if similarity_rapidfuzz >= similarity_threshold_fuzz:
                 duplicates.append({
                     "new_sentence": new_sentence,
@@ -576,3 +534,91 @@ def compare_sentences_by_paragraph(new_sentences, report_id):
             unique_sentences.append(new_sentence)
 
     return {"duplicates": duplicates, "unique": unique_sentences, "errors_count": errors_count}
+
+
+# Функция для поиска существующих аналогичных предложений того же типа в базе данных
+def find_similar_exist_sentence(sentence_text, sentence_type, tags, comment, sentence_index = None):
+    """
+    Finds similar sentences of the same type in the database.
+
+    Args:
+        sentence_text (str): The text of the sentence to compare.
+        sentence_type (str): The type of the sentence.
+        key_words (list): List of key words to remove during cleaning.
+
+    Returns:
+        list: List of similar sentences.
+    """
+    except_words = current_app.config["PROFILE_SETTINGS"]["EXCEPT_WORDS"]
+    key_words = [kw.key_word for kw in key_words]
+    
+    # Получаем все предложения того же типа и с такими же базовыми параметрами из базы данных
+    if sentence_type == "head":
+        similar_type_sentences = HeadSentence.query.filter_by(tags=tags, comment=comment, sentence_index=sentence_index).all()
+    elif sentence_type == "body":
+        similar_type_sentences = BodySentence.query.filter_by(tags=tags, comment=comment).all()
+    elif sentence_type == "tail":
+        similar_type_sentences = TailSentence.query.filter_by(tags=tags, comment=comment).all()
+    else:
+        raise ValueError(f"Invalid sentence type: {sentence_type}")
+    
+    
+    # Очищаем входное предложение
+    cleaned_input_sentence = clean_text_with_keywords(sentence_text)
+    
+    
+    
+    # Сравниваем входное предложение с каждым из существующих
+    for exist_sentence in similar_type_sentences:
+        cleaned_exist_sentence = clean_text_with_keywords(exist_sentence.sentence, key_words, except_words)
+        similarity_rapidfuzz = fuzz.ratio(cleaned_input_sentence, cleaned_exist_sentence)
+        if similarity_rapidfuzz > 99:
+            return exist_sentence
+    return None
+    
+    
+    
+def sentence_transition_from_sentence_class():
+    all_paragraphs = Paragraph.query.all()
+    
+    for paragraph in all_paragraphs:
+        
+        sentences = paragraph.get_paragraph_sentences_grouped_by_type()
+        
+        head_sentences = sentences.get("head", [])
+        
+        for head_sentence in head_sentences:
+            new_head_sentence, _ = HeadSentence.create(
+                sentence = head_sentence.sentence,
+                paragraph_id = paragraph.id,
+                tags = head_sentence.tags,
+                comment = head_sentence.comment,
+                sentence_index = head_sentence.index
+                )
+            body_sentences = sentences.get("body", [])
+            for body_sentence in body_sentences:
+                if body_sentence.index == head_sentence.index:
+                    new_body_sentence, _ = BodySentence.create(
+                        sentence = body_sentence.sentence,
+                        head_sentence_id = new_head_sentence.id,
+                        tags = body_sentence.tags,
+                        comment = body_sentence.comment
+                        )
+                    if new_body_sentence:
+                        body_sentence.delete()
+            if new_head_sentence:
+                head_sentence.delete()
+        
+        tail_sentences = sentences.get("tail", [])
+        for tail_sentence in tail_sentences:
+            new_tail_sentence, _ = TailSentence.create(
+                sentence = tail_sentence.sentence,
+                paragraph_id = paragraph.id,
+                tags = tail_sentence.tags,
+                comment = tail_sentence.comment
+                )
+            if new_tail_sentence:
+                tail_sentence.delete()
+        
+        
+            

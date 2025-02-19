@@ -190,6 +190,7 @@ class BaseModel(db.Model):
     id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
 
     def save(self):
+        db.session.add(self)
         db.session.commit()
 
     def delete(self):
@@ -636,6 +637,33 @@ class Paragraph(BaseModel):
 
         db.session.delete(self)
         db.session.commit()
+    
+    
+    def get_paragraph_sentences_grouped_by_type(self):
+        """
+        Возвращает предложения данного параграфа, сгруппированные по их типам.
+        
+        Returns:
+            dict: {
+                "head": [Sentence, ...],
+                "body": [Sentence, ...],
+                "tail": [Sentence, ...]
+            }
+        """
+        sentences = Sentence.query.filter_by(paragraph_id=self.id).all()
+        
+        grouped_sentences = {
+            "head": [],
+            "body": [],
+            "tail": []
+        }
+        
+        for sentence in sentences:
+            sentence_type = sentence.sentence_type
+            if sentence_type in grouped_sentences:
+                grouped_sentences[sentence_type].append(sentence)
+        
+        return grouped_sentences
     
     
     @classmethod
@@ -1262,7 +1290,7 @@ class HeadSentence(SentenceBase):
             tuple: (созданное предложение, использованная группа)
         """
         if not sentence.strip():
-            raise ValueError("Должен быть передан непустой текст предложения")
+            sentence = "Пустое предложение"
 
         logger.info(f"Создание head-предложения '{sentence}' для параграфа {paragraph_id}")
 
@@ -1271,12 +1299,31 @@ class HeadSentence(SentenceBase):
         if not paragraph:
             raise ValueError(f"Параграф с ID {paragraph_id} не найден")
 
+        # Импортирую функцию для поиска похожих предложений, делаю это 
+        # здесь чтобы избежать циклического импорта
+        from sentence_processing import find_similar_exist_sentences
+        
         # Проверяем, есть ли уже head-группа у параграфа, если нет — создаём
         group = paragraph.head_sentence_group
         if not group:
             group = HeadSentenceGroup.create()
             paragraph.head_sentence_group_id = group.id
 
+        # Прежде чем создать новое главное предложение проверяю наличие 
+        # такого же предложения в базе
+        similar_sentence = find_similar_exist_sentences(
+            sentence_text = sentence, 
+            sentence_type = "head", 
+            tags = tags, 
+            comment = comment, 
+            sentence_index = sentence_index
+        )
+        if similar_sentence:
+            db.session.add(similar_sentence)
+            db.session.flush()
+            logger.info(f"Похожее предложение уже существует: {similar_sentence} и оно привязано к группе {group.id}, создание нового head предложения пропущено")
+            return cls.link_to_group(similar_sentence, group)
+        
         # Создаём предложение
         new_sentence = cls(
             sentence=sentence.strip(),
@@ -1287,8 +1334,7 @@ class HeadSentence(SentenceBase):
 
         db.session.add(new_sentence)
         db.session.flush()  # Чтобы получить ID предложения
-
-        logger.info(f"Создано head-предложение {new_sentence.id}, привязка к группе {group.id}")
+        logger.info(f"Создано head-предложение, привязка к группе {group.id}")
 
         # Привязываем предложение к группе
         return cls.link_to_group(new_sentence, group)
@@ -1320,19 +1366,38 @@ class BodySentence(SentenceBase):
             tuple: (созданное предложение, использованная группа)
         """
         if not sentence.strip():
-            raise ValueError("Должен быть передан непустой текст предложения")
+            sentence = "Пустое предложение"
 
         logger.info(f"Создание body-предложения '{sentence}'")
 
         head_sentence = HeadSentence.get_by_id(head_sentence_id)
         if not head_sentence:
             raise ValueError(f"Head-предложение с ID {head_sentence_id} не найдено")
+        
+        # Импортирую функцию для поиска похожих предложений, делаю это 
+        # здесь чтобы избежать циклического импорта
+        from sentence_processing import find_similar_exist_sentences
+        
         # Проверяем, есть ли уже группа body-предложений у head-предложения, если нет — создаём
         group = head_sentence.body_sentence_group
         if not group:
             group = BodySentenceGroup.create()
             head_sentence.body_sentence_group_id = group.id  # Привязываем новую группу к head-предложению
 
+        # Прежде чем создать новое главное предложение проверяю наличие 
+        # такого же предложения в базе
+        similar_sentence = find_similar_exist_sentences(
+            sentence_text = sentence, 
+            sentence_type = "body", 
+            tags = tags, 
+            comment = comment
+        )
+        if similar_sentence:
+            db.session.add(similar_sentence)
+            db.session.flush()
+            logger.info(f"Похожее предложение уже существует: {similar_sentence} и оно привязано к группе {group.id}, создание нового body предложения пропущено")
+            return cls.link_to_group(similar_sentence, group)
+        
         # Создаём предложение
         new_sentence = cls(
             sentence=sentence.strip(),
@@ -1378,7 +1443,7 @@ class TailSentence(SentenceBase):
             tuple: (созданное предложение, использованная группа)
         """
         if not sentence.strip():
-            raise ValueError("Должен быть передан непустой текст предложения")
+            sentence = "Пустое предложение"
 
         logger.info(f"Создание tail-предложения '{sentence}' для параграфа {paragraph_id}")
 
@@ -1387,11 +1452,31 @@ class TailSentence(SentenceBase):
         if not paragraph:
             raise ValueError(f"Параграф с ID {paragraph_id} не найден")
 
+        # Импортирую функцию для поиска похожих предложений, делаю это 
+        # здесь чтобы избежать циклического импорта
+        from sentence_processing import find_similar_exist_sentences
+        
         # Проверяем, есть ли уже tail-группа у параграфа, если нет — создаём
         group = paragraph.tail_sentence_group
         if not group:
             group = TailSentenceGroup.create()
             paragraph.tail_sentence_group_id = group.id
+
+        # Прежде чем создать новое главное предложение проверяю наличие 
+        # такого же предложения в базе
+        similar_sentence = find_similar_exist_sentences(
+            sentence_text = sentence, 
+            sentence_type = "tail", 
+            tags = tags, 
+            comment = comment
+        )
+        if similar_sentence:
+            db.session.add(similar_sentence)
+            db.session.flush()
+            logger.info(f"Похожее предложение уже существует: {similar_sentence} и оно привязано к группе {group.id}, создание нового tail предложения пропущено")
+            return cls.link_to_group(similar_sentence, group)
+
+
 
         # Создаём предложение
         new_sentence = cls(

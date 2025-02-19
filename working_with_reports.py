@@ -54,6 +54,7 @@ def working_with_reports():
     birthdate = request.args.get("birthdate")
     report_number = request.args.get("reportNumber")
     
+    
     try:
         report_data = Report.get_report_data(
             current_report_id, 
@@ -76,23 +77,8 @@ def working_with_reports():
         full_name=full_name,
         birthdate=birthdate,
         report_number=report_number,
-        key_words_groups=key_words_groups               
+        key_words_groups=key_words_groups
     )
-
-
-# @working_with_reports_bp.route("/update_sentence", methods=['POST'])
-# @auth_required()
-# def update_sentence():
-#     data = request.get_json()
-#     sentence_id = data.get('sentence_id')
-#     new_value = data.get('new_value')
-
-#     sentence = Sentence.query.get(sentence_id)
-#     if sentence:
-#         sentence.sentence = new_value
-#         sentence.save(old_index=sentence.index)
-#         return jsonify({"status": "success", "message": "Предложение успешно обновлено!"}), 200
-#     return jsonify({"status": "error", "message": "Ошибка при обновлении данных предложения."}), 400
 
 
 @working_with_reports_bp.route("/get_sentences_with_type_tail", methods=["POST"])
@@ -114,27 +100,6 @@ def get_sentences_with_type_tail():
     return jsonify({"sentences": []}), 200
 
 
-# @working_with_reports_bp.route("/new_sentence_adding", methods=["POST"])
-# @auth_required()
-# def new_sentence_adding():
-#     try:
-#         data = request.get_json()
-#         paragraphs = data.get("paragraphs", [])
-        
-#         if not paragraphs:
-#             return jsonify({"status": "error", "message": "No paragraphs provided."}), 400
-
-#         # Разбиваем предложения на более мелкие и получаем новые предложения
-#         processed_paragraphs = split_sentences(paragraphs)
-#         new_sentences = get_new_sentences(processed_paragraphs)
-        
-#         # Возвращаем новые предложения на клиентскую часть
-#         return jsonify({"status": "success", "processed_paragraphs": new_sentences}), 200
-
-#     except Exception as e:
-#         logger.error(f"Произошла ошибка при добавлении нового предложения: {e}")
-#         return jsonify({"status": "error", "message": f"Ошибка при добавлении предложения: {e}"}), 500
-    
 
 @working_with_reports_bp.route("/save_modified_sentences", methods=["POST"])
 @auth_required()
@@ -261,46 +226,6 @@ def save_modified_sentences():
         print(e)
         return jsonify({"status": "error", "message": f"An error occurred: {str(e)}"}), 500
 
-
-    
-# @working_with_reports_bp.route("/add_sentence_to_paragraph", methods=["POST"])
-# @auth_required()
-# def add_sentence_to_paragraph():
-#     try:
-#         data = request.get_json()
-#         sentence_for_adding = data.get("sentence_for_adding", [])
-
-#         if not sentence_for_adding:
-#             return jsonify({"status": "error", "message": "Отсутствуют данные абзацев."}), 400
-
-#         # Перебираем каждый элемент списка абзацев
-#         for paragraph in sentence_for_adding:
-#             paragraph_id = paragraph.get("paragraph_id")
-#             sentences = paragraph.get("sentences")
-
-#             if not paragraph_id or not sentences:
-#                 continue  # Пропускаем, если отсутствуют необходимые данные
-
-#             # Используем ensure_list, чтобы всегда иметь список предложений
-#             sentences_list = ensure_list(sentences)
-
-#             # Перебираем список предложений и добавляем их в базу данных
-#             for sentence_text in sentences_list:
-#                 if sentence_text:
-#                     Sentence.create(paragraph_id=paragraph_id, 
-#                                     index=0, 
-#                                     weight=10, # Вес по умолчанию
-#                                     sentence_type="tail",
-#                                     tags="",
-#                                     comment="", 
-#                                     sentence=sentence_text
-#                                     )
-
-#         db.session.commit()  # Сохраняем все изменения в базе данных
-
-#         return jsonify({"status": "success", "message": "Все предложения успешно добавлены!"}), 200
-#     except Exception as e:
-#         return jsonify({"status": "error", "message": f"Не удалось добавить предложения: {e}"}), 500
 
 
 @working_with_reports_bp.route("/export_to_word", methods=["POST"])

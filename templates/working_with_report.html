@@ -59,6 +59,8 @@
 <div class="flex">
     <!-- Основной блок с отчетом -->
     <div class=" report-container">
+
+        
         {% for paragraph in report_data.paragraphs  %}
             {% if paragraph.paragraph_type == "scanparam" or paragraph.paragraph_type == "custom" %}
                 <ul class="paragraph__list--initial" id="paragraphListInitial-{{ paragraph.id }}">

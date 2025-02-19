@@ -53,6 +53,7 @@ def set_profile_as_default(profile_id):
 @auth_required()
 def profile_settings():
     profile = g.current_profile
+    
     if profile:
         return render_template('profile_settings.html', 
                                title="Настройки профиля", 
@@ -125,7 +126,7 @@ def create_profile():
                 description,
                 default_profile=is_default
                 )
-            
+            print(f"new profile created: {new_profile} for user {current_user.id}")
             print("logic of creating profile settings")
             default_settings = dict(current_app.config.get("DEFAULT_PROFILE_SETTINGS", {}))
             print(f"new settings for new profile: {profile_settings}")
@@ -255,3 +256,4 @@ def run_checker():
        
     else:
         return jsonify({"status": "error", "message": "Unknown checker"}), 400
+

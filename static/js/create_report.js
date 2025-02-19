@@ -69,8 +69,6 @@ function handleReportTypeChange() {
 
 }
 
-
-
 // Функции обработчики
 
 /**
