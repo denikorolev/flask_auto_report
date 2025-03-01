@@ -2,7 +2,7 @@
 
 from flask import Blueprint, render_template, request, current_app, jsonify, g
 from flask_login import login_required
-from models import db, ReportType, ReportSubtype, ParagraphType 
+from models import db, ReportType, ReportSubtype, paragraph_type_enum
 from file_processing import file_uploader
 from flask_security.decorators import auth_required
 
@@ -23,7 +23,7 @@ def report_settings():
     print(profile_subtypes)
         
         
-    paragraph_types = ParagraphType.query.all() 
+    paragraph_types = paragraph_type_enum
         
     return render_template('report_settings.html', 
                            title = "Настройки протоколов",
@@ -64,25 +64,6 @@ def upload_template():
     
     return jsonify({"status": "success", "message": upload_result}), 200
 
-
-
-@report_settings_bp.route('/add_paragraph_type', methods=['POST'])
-@auth_required()
-def add_paragraph_type():
-    data = request.get_json()
-    new_type_name = data.get('new_paragraph_type', '').strip()
-    
-    if not new_type_name:
-        return jsonify({"status": "error", "message": "Paragraph type name cannot be empty."}), 400
-
-    # Проверяем, что тип с таким именем еще не существует
-    existing_type = ParagraphType.query.filter_by(type_name=new_type_name).first()
-    if existing_type:
-        return jsonify({"status": "error", "message": "A paragraph type with this name already exists."}), 400
-
-    # Создаем новый тип параграфа
-    ParagraphType.create(type_name=new_type_name)
-    return jsonify({"status": "success", "message": "New paragraph type created successfully."}), 200
 
 
 @report_settings_bp.route('/add_type', methods=['POST'])

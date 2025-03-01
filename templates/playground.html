@@ -25,6 +25,15 @@
             </li>
         </ul>
     
+        <h3>Head sentences details</h3>
+        {% if sentences %}
+            {% for sentence in sentences  %}
+            <span> Предложение {{ sentence.sentence}} параграфа {{ sentence.sentence_to_paragraph.paragraph }} </span>
+            <span> Протокол {{ sentence.sentence_to_paragraph.paragraph_to_report.report_name }} </span>
+            <br>
+            <br>
+            {% endfor %}
+        {% endif %}
     
         <br><br>
     </div>

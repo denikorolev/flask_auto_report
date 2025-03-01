@@ -1,8 +1,9 @@
 #working_with_reports.py
 
 from flask import Blueprint, render_template, request, jsonify, send_file, g
+from flask_security import current_user
 import os
-from models import db, Report, ReportType, Paragraph, Sentence, KeyWord
+from models import db, Report, ReportType, KeyWord, TailSentence, BodySentence
 from file_processing import save_to_word
 from sentence_processing import group_keywords, split_sentences_if_needed, clean_and_normalize_text, compare_sentences_by_paragraph, preprocess_sentence
 from utils import ensure_list
@@ -19,19 +20,22 @@ working_with_reports_bp = Blueprint('working_with_reports', __name__)
 @working_with_reports_bp.route("/choosing_report", methods=['POST', 'GET'])
 @auth_required()
 def choosing_report(): 
+    logger.info("Выбор шаблона протокола")
     current_profile = g.current_profile
     report_types_and_subtypes = ReportType.get_types_with_subtypes(current_profile.id) 
     current_profile_reports = Report.find_by_profile(current_profile.id)
 
     if request.method == "POST":
+        logger.info("Получен POST-запрос на выбор шаблона протокола текущего профиля")
         if request.is_json:
             data = request.get_json()
-            rep_type = data.get("report_type")
             rep_subtype = data.get("report_subtype")
             reports = Report.find_by_subtypes(rep_subtype)
-
+            if not reports:
+                return jsonify({"status": "error", "message": "Не найдено шаблонов протоколов для выбранного типа"}), 404
             # Возвращаем данные в формате JSON
             return jsonify({
+                "status": "success",
                 "reports": [
                     {"id": report.id, "report_name": report.report_name}
                     for report in reports
@@ -56,12 +60,16 @@ def working_with_reports():
     
     
     try:
-        report_data = Report.get_report_data(
+        report_data, paragraphs_data = Report.get_report_data(
             current_report_id, 
             g.current_profile.id
             )
+        if report_data is None or paragraphs_data is None:
+            logger.error("Метод get_report_data вернул None")
+            return render_template("error.html", message="Метод get_report_data вернул None")
     except Exception as e:
-        return render_template("error.html", message=f"An error occurred: {e}")
+        logger.error(f"Не получилось сгруппировать данные протокола или данные его параграфов: {e}")
+        return render_template("error.html", message=f"Не получилось сгруппировать данные протокола или данные его параграфов: {e}")
     
         
     # Получаем ключевые слова для текущего пользователя
@@ -72,33 +80,14 @@ def working_with_reports():
     
     return render_template(
         "working_with_report.html", 
-        title=report_data["report"]["report_name"],
+        title=report_data["report_name"],
         report_data=report_data,
+        paragraphs_data=paragraphs_data,
         full_name=full_name,
         birthdate=birthdate,
         report_number=report_number,
         key_words_groups=key_words_groups
     )
-
-
-@working_with_reports_bp.route("/get_sentences_with_type_tail", methods=["POST"])
-@auth_required()
-def get_sentences_with_type_tail():
-    data = request.get_json()
-    paragraph_id = data.get("paragraph_id")
-    
-    if not paragraph_id:
-        logger.warning("В запресе нет данных по ID параграфа")
-        return jsonify({"status": "error", "message": "В запросе отсутствует информация по ID параграфа для запрашиваемых предложений"}), 400
-    
-    tail_sentences = Sentence.get_sentences_by_type(paragraph_id=paragraph_id, sentence_type="tail")
-
-    if tail_sentences:
-        sentences_data = [{"id": sentence.id, "sentence": sentence.sentence} for sentence in tail_sentences]
-        logger.info(f"Found {len(sentences_data)} sentences with type 'tail' for paragraph {paragraph_id}")
-        return jsonify({"sentences": sentences_data}), 200
-    return jsonify({"sentences": []}), 200
-
 
 
 @working_with_reports_bp.route("/save_modified_sentences", methods=["POST"])
@@ -109,30 +98,37 @@ def save_modified_sentences():
     Handles splitting of multi-sentence inputs and normalizes valid sentences.
     Keeps track of saved, skipped, and missed sentences.
     """
+    logger.info("Начало попытки сохранения измененных предложений")
     try:
         # Получаем данные из запроса
         data = request.get_json()
+        logger.debug(f"Полученные данные: {data}")
 
         if not data or "sentences" not in data:
-            return jsonify({"status": "error", "message": "Invalid data format"}), 400
+            return jsonify({"status": "error", "message": "Неправильный формат данных"}), 400
 
         sentences = ensure_list(data.get("sentences"))
-        report_id = data.get("report_id")
+        report_id = int(data.get("report_id"))
+        user_id = current_user.id
+        report_type_id = Report.get_report_type(report_id)
+        print(report_type_id)
         
         if not sentences or not report_id:
-            return jsonify({"status": "error", "message": "Some required data is missing."}), 400
+            return jsonify({"status": "error", "message": "Пропущена часть необходимых данных. Не хватает текстов предложений или id протокола"}), 400
         
-        processed_sentences = []  # Для хранения обработанных предложений
+        processed_sentences = []  # Для хранения обработанных предложений, 
+        #отправлю их потом на сравнение в функцию compare_sentences_by_paragraph
         missed_count = 0  # Счётчик пропущенных предложений
+        
 
         for sentence_data in sentences:
+            head_sentence_id = sentence_data.get("head_sentence_id", None)
             paragraph_id = sentence_data.get("paragraph_id")
-            sentence_index = sentence_data.get("sentence_index")
             nativ_text = sentence_data.get("text")
             sentence_type = sentence_data.get("type")
 
             # Проверяем корректность данных
-            if not paragraph_id or not nativ_text.strip() or sentence_index is None:
+            if not paragraph_id or not nativ_text.strip():
                 missed_count += 1
                 continue  # Пропускаем некорректные предложения
             
@@ -150,15 +146,15 @@ def save_modified_sentences():
                 for idx, splited_sentence in enumerate(splited_sentences):
                     processed_sentences.append({
                         "paragraph_id": paragraph_id,
-                        "sentence_index": int(sentence_index) if idx == 0 else 0,
-                        "sentence_type": "tail" if sentence_type == "tail" else "body",
+                        "head_sentence_id": head_sentence_id,
+                        "sentence_type": "body" if idx == 0 else "tail",
                         "text": splited_sentence.strip()
                     })
             else:
                 for unsplited_sentence in unsplited_sentences:
                     processed_sentences.append({
                         "paragraph_id": paragraph_id,
-                        "sentence_index": int(sentence_index),
+                        "head_sentence_id": head_sentence_id,
                         "sentence_type": "tail" if sentence_type == "tail" else "body",
                         "text": unsplited_sentence.strip()
                     })
@@ -180,25 +176,36 @@ def save_modified_sentences():
 
         for sentence in new_sentences:
             paragraph_id = sentence["paragraph_id"]
-            sentence_index = sentence["sentence_index"]
             new_sentence_text = clean_and_normalize_text(sentence["text"])
             sentence_type = sentence["sentence_type"]
-            logger.info(f"New sentence: {new_sentence_text}")
             try:
-                # Сохраняем предложение в базу данных
-                new_sentence = Sentence.create(
-                    paragraph_id=paragraph_id,
-                    index=sentence_index,
-                    weight=10,  # Вес по умолчанию
-                    sentence_type=sentence_type,
-                    tags="",
-                    comment="Added automatically",
-                    sentence=new_sentence_text
-                )
+                if sentence_type == "tail":
+                   new_sentence, _ = TailSentence.create(
+                        sentence=new_sentence_text,
+                        related_id=paragraph_id,
+                        user_id=user_id,
+                        report_type_id=report_type_id,
+                        comment="Added automatically"
+                    )
+                # Сохраняем предложение в базу данных в качестве body_sentence 
+                # для текущего главного предложения
+                else:
+                    if sentence["head_sentence_id"]:
+                        new_sentence, _ = BodySentence.create(
+                        sentence=new_sentence_text,
+                        related_id=head_sentence_id,
+                        user_id=user_id,
+                        report_type_id=report_type_id,
+                        comment="Added automatically",
+                        )
+                    else:
+                        logger.warning(f"Не удалось получить данные по id главного предложения для предложения: {new_sentence_text}. Пропускаем.")
+                        missed_count += 1   
+                        continue
                 saved_count += 1
                 saved_sentences.append({"id": new_sentence.id, "text": new_sentence_text})
             except Exception as e:
-                print(f"Failed to save sentence: {new_sentence_text}. Error: {e}")
+                logger.error(f"Ошибка при сохранении предложения: {str(e)}")
                 missed_count += 1
 
         sentences_adding_report = {
@@ -218,13 +225,13 @@ def save_modified_sentences():
         
         return jsonify({
             "status": "success",
-            "message": f"Processed {len(processed_sentences)} sentences.",
+            "message": f"Проанализировано {len(processed_sentences)} предложений.",
             "html": rendered_html
         }), 200
 
     except Exception as e:
         print(e)
-        return jsonify({"status": "error", "message": f"An error occurred: {str(e)}"}), 500
+        return jsonify({"status": "error", "message": f"При попытке автоматического сохранения предложений произошла ошибка: {str(e)}"}), 500
 
 
 

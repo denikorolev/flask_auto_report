@@ -1,11 +1,13 @@
 # sentence_processing.py
 
 from flask import g, current_app
+from flask_login import current_user
 from rapidfuzz import fuzz
 import re
 from docx import Document
 from spacy_manager import SpacyModel
-from models import Paragraph, KeyWord, Report, Sentence, HeadSentence, BodySentence, TailSentence, HeadSentenceGroup, BodySentenceGroup, TailSentenceGroup
+from models import db, Paragraph, KeyWord, Report, Sentence, HeadSentence, BodySentence, TailSentence, HeadSentenceGroup
+from logger import logger
 from collections import defaultdict
 
 
@@ -319,49 +321,6 @@ def split_sentences_if_needed(text):
     return sentences, [] # Unsplitted sentences
 
 
-# def get_new_sentences(processed_paragraphs):
-#     """ Получаем только новые предложения, игнорируя те, что уже 
-#     есть в базе данных, учитываем возможную разницу лишь в 
-#     ключевых словах key_words """
-#     except_words = current_app.config["PROFILE_SETTINGS"]["EXCEPT_WORDS"]
-#     print(f"EXCEPT_WORDS: {except_words}")
-#     new_sentences = []
-
-#     # Получаем ключевые слова для текущего пользователя
-#     key_words = []
-#     profile_key_words = KeyWord.find_by_profile(g.current_profile.id)
-#     for kw in profile_key_words:
-#         key_words.append(kw.key_word.lower())
-
-#     for paragraph in processed_paragraphs:
-#         paragraph_id = paragraph.get("paragraph_id")
-#         sentences = paragraph.get("sentences", [])
-
-#         # Получаем существующие предложения для данного параграфа из базы данных
-#         existing_sentences = Sentence.query.filter_by(paragraph_id=paragraph_id).all()
-
-#         # Приводим существующие предложения к форме для сравнения (очищаем их)
-#         existing_sentences_texts = []
-#         for s in existing_sentences:
-#             cleaned_sentence = clean_text_with_keywords(s.sentence.strip(), key_words, except_words)
-#             existing_sentences_texts.append(cleaned_sentence)
-
-#         # Получаем текст параграфа из базы данных
-#         paragraph_text = Paragraph.query.filter_by(id=paragraph_id).first().paragraph
-
-#         # Проверяем каждое предложение из обработанных, есть ли оно уже в базе данных
-#         for sentence in sentences:
-#             cleaned_sentence = clean_text_with_keywords(sentence.strip(), key_words, except_words)
-            
-#             if cleaned_sentence not in existing_sentences_texts:
-#                 new_sentences.append({
-#                     "paragraph_id": paragraph_id,
-#                     "paragraph_text": paragraph_text,  # Добавляем текст параграфа
-#                     "sentence": sentence.strip()  # Оригинальное предложение для вывода
-#                 })
-
-#     return new_sentences
-
 
 def sort_key_words_group(unsorted_key_words_group):
     """
@@ -537,7 +496,7 @@ def compare_sentences_by_paragraph(new_sentences, report_id):
 
 
 # Функция для поиска существующих аналогичных предложений того же типа в базе данных
-def find_similar_exist_sentence(sentence_text, sentence_type, tags, comment, sentence_index = None):
+def find_similar_exist_sentence(sentence_text, sentence_type, tags, comment, report_type_id, user_id, sentence_index = None):
     """
     Finds similar sentences of the same type in the database.
 
@@ -550,21 +509,22 @@ def find_similar_exist_sentence(sentence_text, sentence_type, tags, comment, sen
         list: List of similar sentences.
     """
     except_words = current_app.config["PROFILE_SETTINGS"]["EXCEPT_WORDS"]
-    key_words = [kw.key_word for kw in key_words]
+    key_words_list = KeyWord.find_by_profile(g.current_profile.id)
+    key_words = [kw.key_word for kw in key_words_list]
     
     # Получаем все предложения того же типа и с такими же базовыми параметрами из базы данных
     if sentence_type == "head":
-        similar_type_sentences = HeadSentence.query.filter_by(tags=tags, comment=comment, sentence_index=sentence_index).all()
+        similar_type_sentences = HeadSentence.query.filter_by(tags=tags, comment=comment, report_type_id=report_type_id, user_id = user_id, sentence_index=sentence_index).all()
     elif sentence_type == "body":
-        similar_type_sentences = BodySentence.query.filter_by(tags=tags, comment=comment).all()
+        similar_type_sentences = BodySentence.query.filter_by(tags=tags, comment=comment, report_type_id=report_type_id, user_id = user_id,).all()
     elif sentence_type == "tail":
-        similar_type_sentences = TailSentence.query.filter_by(tags=tags, comment=comment).all()
+        similar_type_sentences = TailSentence.query.filter_by(tags=tags, comment=comment, report_type_id=report_type_id, user_id = user_id,).all()
     else:
         raise ValueError(f"Invalid sentence type: {sentence_type}")
     
     
     # Очищаем входное предложение
-    cleaned_input_sentence = clean_text_with_keywords(sentence_text)
+    cleaned_input_sentence = clean_text_with_keywords(sentence_text, key_words, except_words)
     
     
     
@@ -577,10 +537,20 @@ def find_similar_exist_sentence(sentence_text, sentence_type, tags, comment, sen
     return None
     
     
-    
+# Временная функция для переноса предложений из Sentence 
+# в HeadSentence, BodySentence, TailSentence
 def sentence_transition_from_sentence_class():
     all_paragraphs = Paragraph.query.all()
-    
+    all_sentences = Sentence.query.all()
+    logger.info(f"start sentence transition")
+    # Устраняю несоответствие в данных
+    for x_sentence in all_sentences:
+        x_sentence.comment = ""
+        if x_sentence.index == 0 and x_sentence.sentence_type != "tail":
+            x_sentence.sentence_type = "tail"
+        x_sentence.save()
+    logger.info(f"end data correction")
+        
     for paragraph in all_paragraphs:
         
         sentences = paragraph.get_paragraph_sentences_grouped_by_type()
@@ -589,8 +559,10 @@ def sentence_transition_from_sentence_class():
         
         for head_sentence in head_sentences:
             new_head_sentence, _ = HeadSentence.create(
+                user_id = current_user.id,  
+                report_type_id = head_sentence.report_type_id,
                 sentence = head_sentence.sentence,
-                paragraph_id = paragraph.id,
+                related_id = paragraph.id,
                 tags = head_sentence.tags,
                 comment = head_sentence.comment,
                 sentence_index = head_sentence.index
@@ -599,8 +571,10 @@ def sentence_transition_from_sentence_class():
             for body_sentence in body_sentences:
                 if body_sentence.index == head_sentence.index:
                     new_body_sentence, _ = BodySentence.create(
+                        user_id = current_user.id,
+                        report_type_id = body_sentence.report_type_id,
                         sentence = body_sentence.sentence,
-                        head_sentence_id = new_head_sentence.id,
+                        related_id = new_head_sentence.id,
                         tags = body_sentence.tags,
                         comment = body_sentence.comment
                         )
@@ -612,13 +586,29 @@ def sentence_transition_from_sentence_class():
         tail_sentences = sentences.get("tail", [])
         for tail_sentence in tail_sentences:
             new_tail_sentence, _ = TailSentence.create(
+                user_id = current_user.id,
+                report_type_id = tail_sentence.report_type_id,
                 sentence = tail_sentence.sentence,
-                paragraph_id = paragraph.id,
+                related_id = paragraph.id,
                 tags = tail_sentence.tags,
                 comment = tail_sentence.comment
                 )
             if new_tail_sentence:
                 tail_sentence.delete()
+    
+      
+# Функция для оценки уникальности индексов в главных предложениях параграфа. Номера индексов не должны повторяться
+def check_head_sentence_indexes(paragraph_id):
+    """
+    Проверяет уникальность индексов главных предложений в параграфе.
+    """
+    head_sentences_groupe, _ = Paragraph.get_paragraph_groups(paragraph_id)
+    
+    head_sentences = HeadSentenceGroup.get_sentences(head_sentences_groupe)
+    indexes = [sent.index for sent in head_sentences]
+    duplicates = [index for index in indexes if indexes.count(index) > 1]
+    return duplicates
+
         
+      
         
-            

@@ -1,0 +1,71 @@
+<!--edit_head_sentence.html-->
+
+{% extends "base.html" %}
+
+{% block container %}
+{{ super() }}
+<input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
+
+<div class="flex">
+    <button class="btn report__btn" id="backToParagraphButton" type="button">Вернуться к редактированию параграфа</button>
+    <button class="btn report__btn" id="backToReportButton" type="button">Вернуться к редактированию протокола</button>
+</div>
+
+<div class="container edit-sentence" data-sentence-id="{{ head_sentence.id }}">
+    <div class="flex_column edit-sentence__sentence-data-block">
+        <div class="flex edit-sentence__sentence-data">
+            <div>
+                <label for="sentence_id">ID:</label>
+                <span name="sentence_id">{{ head_sentence.id }}</span>
+            </div>
+            <div>
+                <label>Комментарий:</label>
+                <input type="text" id="sentence_comment" value="{{ head_sentence.comment }}" class="input">
+            </div>
+            <div>
+                <label>Теги:</label>
+                <input type="text" id="sentence_tags" value="{{ head_sentence.tags }}" class="input">
+            </div>
+            <button class="btn report__btn edit-sentence__btn--save-sentence-data" id="saveSentenceDataButton">Сохранить изменения</button>
+        </div>
+        <textarea class="edit-sentence__textarea" id="sentenceText">{{ head_sentence.sentence }}</textarea>
+    </div>
+    <br>
+    <hr>
+
+    <h3 class="edit-sentence__title" id="editSentenceTitle">Дополнительные предложение для главного предложения</h3>
+    <div class="edit-sentence__sentence">
+        <ul class="edit-sentence__list" id="bodySentenceList" style="display: none;">
+            {% for sentence in head_sentence.body_sentences %}
+                <li class="wrapper__card edit-sentence__item" 
+                data-sentence-id="{{ sentence.id }}" 
+                data-head-sentence-id="{{ head_sentence.id }}"
+                data-sentence-type="body" 
+                data-sentence-weight="{{ sentence.weight }}"
+                data-sentence-tags="{{ sentence.tags }}" 
+                data-sentence-comment="{{ sentence.comment }}">
+
+                    <div class="">
+                            {{ sentence.weight }}
+                    </div>
+                    <div>
+                        <p class="edit-sentence__text">{{ sentence.sentence }}</p>
+                    </div>
+                    <button class="btn report__btn edit-sentence__btn--delete" type="button">Удалить</button>
+                </li>
+            {% endfor %}
+            <br>
+            <hr>
+            <button class="btn report__btn edit-sentence__btn--add-sentence" type="button" id="addBodySentenceButton">Добавить дополнительное предложение</button>
+        </ul>
+    </div>
+
+{% endblock container %}
+
+{% block scripts %}
+<script>
+    const sentenceData = {{ head_sentence | tojson | safe }};
+</script>
+
+<script src="{{ url_for('static', filename='js/edit_head_sentence.js') }}"></script>
+{% endblock scripts %}

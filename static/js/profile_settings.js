@@ -142,13 +142,13 @@ function deleteProfile() {
 
 // Проверка на наличие ошибок, связанных с главными предложениями в протоколах этого профиля
 function isMainChecker(){
-    document.getElementById("btnCheckIsHead").addEventListener("click", () => {
+    document.getElementById("startCheckersButton").addEventListener("click", () => {
         
         const blockForMessage = document.getElementById("reportCheckMessageBlock");
         const title = document.getElementById("reportCheckMessageTitle");
         const messageList = document.getElementById("reportCheckMessageList");
         
-        title.textContent = "Проверка на наличие ошибок, связанных с главными предложениями в протоколах этого профиля";
+        title.textContent = "Проверка на уникальность индексов параграфов и главных предложений";
         sendRequest({
             url: "/profile_settings/run_checker",
             data: { checker: "main_sentences" },
@@ -158,13 +158,13 @@ function isMainChecker(){
 
                 if (response.errors.length === 0) {
                     // Если ошибок нет — показываем сообщение об успехе
-                    messageList.innerHTML = `<li class="report-check__item-success">✅ Не выявлено ни одной ошибки связанной с главными предложениями в протоколах этого профиля!</li>`;
+                    messageList.innerHTML = `<li class="report-check__item-success">✅ Не выявлено ни одной ошибки связанной с неуникальными индексами параграфов и главных предложений</li>`;
                 } else {
                     // Если есть ошибки — добавляем их в список
                     response.errors.forEach(error => {
                         const errorItem = document.createElement("li");
                         errorItem.classList.add("report-check__item-error");
-                        errorItem.textContent = `🔴 В протоколе ${error.report} -  Параграф ${error.paragraph_index}  ${error.paragraph}, содержит группу предложений с индексом=${error.index} со следующими ошибками:  ${error.issue} (Лишних главных предложений: ${error.extra_main_count})`;
+                        errorItem.textContent = `🔴 В протоколе ${error.report} - ошибка =${error.error}`;
                         messageList.appendChild(errorItem);
                     });
                 }
@@ -172,6 +172,21 @@ function isMainChecker(){
                 // Показываем блок с сообщением
                 blockForMessage.style.display = "block";
             }
+        });
+    });
+}
+
+
+function fixIndices () {
+    document.getElementById("fixIndices").addEventListener("click", () => {
+        sendRequest({
+            url: "/profile_settings/fix_indices",
+        }).then(response => {
+            if (response.status === "success") {
+                console.log(response.message || "Indices fixed successfully.");
+            }
+        }).catch(error => {
+            console.error("Failed to fix indices:", error);
         });
     });
 }

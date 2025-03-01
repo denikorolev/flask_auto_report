@@ -97,36 +97,6 @@
  {% endif %}
 
 
-<!-- Создание и редактирование типов параграфов -->
- {% if g.current_profile.profile_to_reports %}
-    <section class="section paragraph-types">
-        <h3>Типы параграфов</h3>
-        <div class="report_borderline"></div>
-        <!-- Список существующих типов параграфов -->
-        <ul class="" id="paragraph-types-list">
-            {% for paragraph_type in paragraph_types %}
-            <div class="flex">    
-                <li class="paragraph-types-item">{{ paragraph_type.type_name }}</li>
-                <button class="btn report__btn paragraph-types-btn--edit" type="button">Править</button>
-                <button class="btn report__btn paragraph-types-btn--delete" type="button">Удалить</button>
-            </div>
-            {% endfor %}
-        </ul>
-        
-        <div class="report_borderline"></div>
-
-        <!-- Форма для добавления нового типа параграфа -->
-        <form id="paragraph-type-form" class="flex">
-            
-            <label for="new_paragraph_type" class="report_label__item paragraph-types-label">New Paragraph Type:</label>
-            <input class="report_input__item paragraph-types-input" type="text" id="new_paragraph_type" name="new_paragraph_type" required>
-            <button class="btn report__btn paragraph-types-btn--submit" type="submit">Add Paragraph Type</button>
-        </form>
-        <div class="report_borderline"></div>
-    </section>
- {% endif %}
-
-
 {% endblock container %}
 
 {% block scripts %}

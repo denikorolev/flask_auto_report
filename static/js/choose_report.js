@@ -28,7 +28,7 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 
-// Логика нажатия на кнопку получить отчеты, обработки имени фамилии и тд
+// Логика нажатия на кнопку "Протоколы", обработки имени фамилии и тд
 document.addEventListener("DOMContentLoaded", function () {
     const reportForm = document.getElementById("reportForm");
     const reportTypeSelect = document.getElementById("report_type");
@@ -110,7 +110,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
 
-    // Обработка нажатия на кнопку "Show reports"
+    // Обработка нажатия на кнопку "Протоколы"
     document.getElementById("select_report_type_subtype").addEventListener("click", function (event) {
         event.preventDefault();
 

@@ -118,15 +118,17 @@
     <div class="report-check">
         <div class="report-check__buttons-block">
             <h3 class="report-check_title">Различные глобальные проверки профиля</h3>
-            <button class"btn report__btn report-check__btn" id="btnCheckIsHead">Проверка на лишние главные предложения</button>
+            <button class"btn report__btn report-check__btn" id="startCheckersButton">Запуск проверок </button>
         </div>
            
         <div class="report-check__message-block" id="reportCheckMessageBlock" style="display: none;">
-            <h4 class="report-check__item--title" id="reportCheckMessageTitle">Проверка на лишние главные предложения</h4>
+            <h4 class="report-check__item--title" id="reportCheckMessageTitle">Проверка </h4>
             <ul class="report-check__item-list" id="reportCheckMessageList">
                 <!-- Отчет с сервера, заполню динамически через js -->
             </ul>
         </div>
+        <div>
+            <button class="btn report__btn report-check__btn" id="fixIndices" onclick="fixIndices()">Нормализовать индексы</button>
         
     </div>
     

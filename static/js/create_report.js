@@ -111,7 +111,6 @@ function handleReportSelection(event) {
         }
 
         updateOrderCircles();
-        console.log("Выбранные отчеты:", selectedReports);
     }
 }
 

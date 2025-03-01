@@ -5,11 +5,12 @@
 
 {% block container %}
 {% import 'macros.html' as macros %}
+<!-- Передаем csrf_token как скрытое поле формы -->
+<input type="hidden" data-report-id=" {{report_data.id}} " id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
 
-<input type="hidden" data-report-id=" {{report_data.report.id}} " id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
 <!-- Предзаполненная форма с ФИО и тд на странице протокола -->
 {% if user_settings.USE_WORD_REPORTS %}
-    <form class="flex" id="exportForm" data-report-type="{{ report_data.report.report_type }}" data-subtype="{{ report_data.report.report_subtype }}" data-comment="{{ report_data.report.comment }}">
+    <form class="flex" id="exportForm" data-report-type="{{ report_data.report_type }}" data-subtype="{{ report_data.report_subtype }}" data-comment="{{ report_data.comment }}">
         <div>
             <label for="patient-name">ФИО:</label>
             <input style="margin-right: 10px;" type="text" id="patient-name" name="patient_name" value="{{ full_name }}"readonly>
@@ -24,7 +25,7 @@
         </div>
 
         <!-- Контейнер для поля выбора стороны, скрыт по умолчанию -->
-        {% if report_data.report.report_side == True %}
+        {% if report_data.report_side == True %}
         <div>
             <label for="report-side">Сторона:</label>
             <select id="report-side" name="report_side">
@@ -59,25 +60,20 @@
 <div class="flex">
     <!-- Основной блок с отчетом -->
     <div class=" report-container">
-
         
-        {% for paragraph in report_data.paragraphs  %}
-            {% if paragraph.paragraph_type == "scanparam" or paragraph.paragraph_type == "custom" %}
-                <ul class="paragraph__list--initial" id="paragraphListInitial-{{ paragraph.id }}">
-                    {{ macros.render_paragraph_and_sentence(paragraph) }}
-                </ul>
-            {% endif %}
-            
-            {% if paragraph.paragraph_type == "text" or paragraph.paragraph_type == "title" %}
-                <ul class="paragraph__list--core" id="paragraphListCore-{{ paragraph.id }}">
-                    {{ macros.render_paragraph_and_sentence(paragraph) }}
-                </ul>
-            {% endif %}
-            {% if paragraph.paragraph_type == "impression" %}
-                <ul class="paragraph__list--impression" id="paragraphListImpression-{{ paragraph.id }}">
-                    {{ macros.render_paragraph_and_sentence(paragraph) }}
-                </ul>
-            {% endif %}
+        {% for paragraph in paragraphs_data  %}
+            <!-- Устанавливаю классы параграфов в зависимости от типа -->
+            <ul class="
+                {% if paragraph.paragraph_type in ["scanparam","clincontext", "scanlimits", "dinamics"] %}
+                    paragraph__list--initial
+                {% elif paragraph.paragraph_type in ["text", "title", "custom"]  %}
+                    paragraph__list--core
+                {% else %}
+                    paragraph__list--impression
+                {% endif %}
+            ">
+                {{ macros.render_paragraph_and_sentence(paragraph) }}
+            </ul>
         {% endfor %}
         
         
@@ -92,8 +88,8 @@
     <div class="flex_column right-side-container">
 
         <!-- Кнопка для перехода к настройке текущего параграфа -->
-        <a href="/editing_report/edit_report?report_id={{ report_data.report.id }}" target="_blank" class="btn report__btn push-down"
-            title="Open this report for editing in new window">
+        <a href="/editing_report/edit_report?report_id={{ report_data.id }}" target="_blank" class="btn report__btn push-down"
+            title="Открывает этот протокол в новом окне">
             Редактировать протокол
         </a>
 
@@ -134,6 +130,7 @@
     // Передаем ключевые слова как глобальную переменную JavaScript
     const keyWordsGroups = {{ key_words_groups | tojson | safe }};
     const reportData = {{ report_data | tojson | safe }};
+    const currentReportParagraphsData = {{ paragraphs_data | tojson | safe }};
 </script>
     
 <script src="{{ url_for('static', filename='js/working_with_report.js') }}"></script>

@@ -4,6 +4,7 @@ from sqlalchemy import func
 
 
 
+
 def ensure_list(value):
     """Преобразует значение в список, если оно не является списком."""
     if not isinstance(value, list):
@@ -33,84 +34,42 @@ def get_max_index(model, filter_field, filter_value, column):
     return max_index + 1
 
 
-# Проверка отсутствия лишних и возможной нехватки sentence_type для предложений
-def check_main_sentences(report):
-    from models import Paragraph, Sentence
-    errors = []
-    try:
-            paragraphs = Paragraph.query.filter_by(report_id=report.id).all()
-            for paragraph in paragraphs:
-                sentences = Sentence.query.filter_by(paragraph_id=paragraph.id).all()
-                
-                # Группируем предложения по index
-                sentence_groups = {}
-                for sentence in sentences:
-                    if sentence.sentence_type == "tail":
-                        if sentence.index != 0:
-                            errors.append({
-                                "report": report.report_name,
-                                "paragraph": paragraph.paragraph,
-                                "paragraph_index": paragraph.paragraph_index,
-                                "index": sentence.index,
-                                "issue": "Предложение с типом 'tail' должно иметь индекс 0",
-                                "extra_main_count": 0
-                            })
-                        else:
-                            continue
-                    if sentence.index not in sentence_groups:
-                        sentence_groups[sentence.index] = []
-                    sentence_groups[sentence.index].append(sentence)
 
-                # Проверяем каждую группу предложений
-                for index, group in sentence_groups.items():
-                    if index == 0:
-                        main_sentences = [s for s in group if s.sentence_type == "head"]
-                        body_sentences = [s for s in group if s.sentence_type == "body"]
-                        if len(main_sentences) + len(body_sentences) > 0:
-                            errors.append({
-                                "report": report.report_name,
-                                "paragraph": paragraph.paragraph,
-                                "paragraph_index": paragraph.paragraph_index,
-                                "index": index,
-                                "issue": "Главное предложение и обычные предложения не должны иметь индекс 0",
-                                "extra_main_count": len(main_sentences) + len(body_sentences)
-                            })
-                        continue
-                    main_sentences = [s for s in group if s.sentence_type == "head"]
-                    # Должно быть ровно одно главное предложение
-                    if len(main_sentences) == 0:
-                        errors.append({
-                            "report": report.report_name,
-                            "paragraph": paragraph.paragraph,
-                            "paragraph_index": paragraph.paragraph_index,
-                            "index": index,
-                            "issue": "Не определено главное предложение для данной группы",
-                            "extra_main_count": 0
-                        })
-                    elif len(main_sentences) > 1:
-                        errors.append({
-                            "report": report.report_name,
-                            "paragraph": paragraph.paragraph,
-                            "paragraph_index": paragraph.paragraph_index,
-                            "index": index,
-                            "issue": "Слишком много главных предложений",
-                            "extra_main_count": len(main_sentences) - 1
-                        })
 
-            return errors
+# Проверка уникальности индексов у параграфов и главных предложений
+def check_unique_indices(paragraphs):
+    """
+    Проверяет, уникальны ли индексы параграфов и главных предложений.
+    Args:
+        paragraphs (list): Список параграфов.
+    Raises:
+        ValueError: Если обнаружены дублирующиеся индексы параграфов или главных предложений.
+    """
+    paragraph_indices = set()
 
-    except Exception as e:
-        errors = [
-            {
-                "report": report.report_name,
-                "paragraph": "Ошибка",
-                "paragraph_index": "Ошибка",
-                "index": "Ошибка",
-                "issue": e,
-                "extra_main_count": "Ошибка"
-            }
-        ]
-        return str(e)
-    
+    for paragraph in paragraphs:
+        paragraph_index = paragraph["paragraph_index"]
 
+        # Проверяем дубликаты параграфов
+        if paragraph_index in paragraph_indices:
+            raise ValueError(f"Дубликат индекса параграфа: {paragraph_index}")
+        paragraph_indices.add(paragraph_index)
+
+        # Проверяем дубликаты в head_sentences
+        head_sentence_indices = set()
+        for sentence in paragraph["head_sentences"]:
+            sentence_index = sentence["index"]
+
+            if sentence_index in head_sentence_indices:
+                raise ValueError(
+                    f"Дубликат индекса главного предложения: {sentence_index} в параграфе {paragraph_index}"
+                )
+            head_sentence_indices.add(sentence_index)
+
+    return True
+
+
+
+        
+  
 

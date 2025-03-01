@@ -17,8 +17,6 @@ document.addEventListener("DOMContentLoaded", function(){
     // Вызываем логику редактирования подтипов отчетов
     initEditSubtypeListener();
 
-    // Вызываем логику добавления типов параграфов
-    initAddParagraphTypeListener();
      // Вызываем логику загрузки файлов шаблона Word и росписи
     initFileUploadListener();
 });
@@ -230,49 +228,6 @@ function initEditSubtypeListener() {
     });
 }
 
-
-
-// Логика для добавления нового типа параграфа
-function initAddParagraphTypeListener() {
-    const paragraphForm = document.getElementById('paragraph-type-form');
-    if (!paragraphForm) return; // Проверяем, есть ли форма на странице
-
-    paragraphForm.addEventListener('submit', async function(event) {
-        event.preventDefault(); // Предотвращаем отправку формы и перезагрузку страницы
-
-        const input = document.getElementById('new_paragraph_type');
-        const newTypeName = input.value.trim();
-
-        if (!newTypeName) {
-            toastr.error('Paragraph type name cannot be empty.');
-            return;
-        }
-
-        try {
-            const response = await sendRequest({
-                url: '/report_settings/add_paragraph_type',
-                method: 'POST',
-                data: { new_paragraph_type: newTypeName },
-                csrfToken: csrfToken
-            });
-
-            // Если запрос успешен, обновляем список типов параграфов на странице
-            if (response.status === 'success') {
-                const paragraphTypesList = document.getElementById('paragraph-types-list');
-                const newListItem = document.createElement('li');
-                newListItem.textContent = newTypeName;
-                paragraphTypesList.appendChild(newListItem);
-
-                input.value = ''; // Очищаем поле ввода
-                toastr.success(response.message);
-            } else {
-                alert(response.message);
-            }
-        } catch (error) {
-            alert(error.message || 'An error occurred while adding the paragraph type.');
-        }
-    });
-}
 
 
 // Логика для загрузки файла шаблона на сервер

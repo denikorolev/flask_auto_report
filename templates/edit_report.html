@@ -2,6 +2,7 @@
 
 {% extends "base.html" %}
 {% from "macros.html" import render_sentence %}
+{% from "macros.html" import render_paragraph %}
 
 
 {% block container %}
@@ -9,34 +10,33 @@
 <input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
 
 
-<div class="container edit-report" data-report-id="{{ report.id }}">
-    {% if report %}
-    <h3>Editing Report</h3>
+<div class="container edit-report" data-report-id="{{ report_data.id }}">
+    {% if report_data %}
     <form class="edit-report__form--report" id="edit-report-form">
         <div class="flex">
             <div class="flex_column">
                 <label class="report_label__item" for="report_type">Report Type:</label>
-                <input class="input report_input__item report_input__item--type" id="report_type" name="report_type" value="{{ report.report_to_subtype.subtype_to_type.type_text }}" readonly>
+                <input class="input report_input__item report_input__item--type" id="report_type" name="report_type" value="{{ report_data.report_type }}" readonly>
             </div>
             <div class="flex_column">
                 <label class="report_label__item" for="report_subtype">Report Subtype:</label>
-                <input class="input report_input__item" id="report_subtype" name="report_subtype" value="{{ report.report_to_subtype.subtype_text }}" readonly>
+                <input class="input report_input__item" id="report_subtype" name="report_subtype" value="{{ report_data.report_subtype }}" readonly>
             </div>
             <div class="flex_column">
                 <label class="report_label__item" for="report_name">Report Name:</label>
-                <input class="input report_input__item" type="text" id="report_name" name="report_name" value="{{ report.report_name }}" required>
+                <input class="input report_input__item" type="text" id="report_name" name="report_name" value="{{ report_data.report_name }}" required>
             </div>
             <div class="flex_column">
                 <label class="report_label__item" for="comment">Comment:</label>
-                <input class="input report_input__item" type="text" id="comment" name="comment" value="{{ report.comment }}" required>
+                <input class="input report_input__item" type="text" id="comment" name="comment" value="{{ report_data.comment }}" required>
             </div>
             <!-- side boolean changer -->
             <div class="flex_column">
                 <label class="report_label__item">Учитывать сторону:</label> <!-- Подпись для радиокнопок -->
                 <div class="flex_row">
-                    <input type="radio" id="report_side_yes" name="report_side" value="true" class="form-check-input" {% if report.report_side == True %}checked{% endif %}> 
+                    <input type="radio" id="report_side_yes" name="report_side" value="true" class="form-check-input" {% if report_data.report_side == True %}checked{% endif %}> 
                     <label for="report_side_yes" class="form-check-label">Да</label>
-                    <input type="radio" id="report_side_no" name="report_side" value="false" class="form-check-input" {% if report.report_side == False %}checked{% endif %}> 
+                    <input type="radio" id="report_side_no" name="report_side" value="false" class="form-check-input" {% if report_data.report_side == False %}checked{% endif %}> 
                     <label for="report_side_no" class="form-check-label">Нет</label>
                 </div>
             </div>
@@ -44,98 +44,85 @@
             <button class="btn report__btn" type="button" id="updateReportButton">Сохранить изменения</button>
         </div>
     </form>
+    <br>
+    <hr class="sentence-separator">
+    <br>
 
     <div class="report_borderline"></div>
     <div class="edit-paragraph">
-        <ul class="edit-paragraph__list">
-            <li class="flex_column edit-paragraph__item">
-
-                <!-- Уровень параграфа -->
-                {% if report_paragraphs %}
+       
+            <!-- Уровень параграфа -->
+            {% if report_paragraphs %}
                     {% for paragraph in report_paragraphs %}
-                        <div class="flex_column" data-paragraph-id="{{ paragraph.id }}">
-                            <form class="flex edit-paragraph__form--paragraph">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <input class="input input--short edit-paragraph__input edit-paragraph__input--index" type="text" id="paragraph_index" name="paragraph_index" value="{{ paragraph.paragraph_index }}">
-                                <input class="input edit-paragraph__input edit-paragraph__input--name" type="text" id="paragraph_name" name="paragraph_name" value="{{ paragraph.paragraph }}">
-                                
-                                <!-- Селект для выбора типа параграфа -->
-                                <div class="edit-paragraph__wrapper--paragraph-type">
-                                    <label class="label edit-paragraph__label" for="paragraph_type">Type:</label>
-                                    <select class="label edit-paragraph__select edit-paragraph__select--paragraph-type" id="paragraph_type" name="paragraph_type">
-                                        {% for type in paragraph_types %}
-                                            <option value="{{ type.id }}" {% if paragraph.type_paragraph_id == type.id %}selected{% endif %}>{{ type.type_name }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
-                                
-                                <!-- Чекбоксы на уровне параграфа -->
-                                <div class="flex edit-paragraph__wrapper--checkboxes">
-                                    <label class="label edit-paragraph__label" for="paragraph_visible">Visible:</label>
-                                    <input class="input edit-paragraph__input-checkbox edit-paragraph__input-checkbox--visible" type="checkbox" id="paragraph_visible" name="paragraph_visible" {% if paragraph.paragraph_visible %}checked{% endif %}>
-                                
-                                    <label class="label edit-paragraph__label" for="title_paragraph">Title:</label>
-                                    <input class="input edit-paragraph__input-checkbox edit-paragraph__input-checkbox--title" type="checkbox" id="title_paragraph" name="title_paragraph" {% if paragraph.title_paragraph %}checked{% endif %}>
-                                
-                                    <label class="label edit-paragraph__label" for="bold_paragraph">Bold:</label>
-                                    <input class="input edit-paragraph__input-checkbox edit-paragraph__input-checkbox--bold" type="checkbox" id="bold_paragraph" name="bold_paragraph" {% if paragraph.bold_paragraph %}checked{% endif %}>
-                                </div>
+                        
+                        <div class="wrapper__card edit-paragraph__item
+                            {% if paragraph.paragraph_type in ["scanparam"] %}
+                            wrapper__card--scanparam
+                            {% elif paragraph.paragraph_type in ["text","custom"] %}
+                            wrapper__card--text
+                            {% elif paragraph.paragraph_type in ["title"] %}
+                            wrapper__card--title
+                            {% elif paragraph.paragraph_type == "impression" %}
+                            wrapper__card--impression
+                            {% else %}
+                            wrapper__card--scanparam
+                            {% endif %}
+                            "
+                            data-paragraph-id="{{ paragraph.id }}">
 
-                                <!-- Группа кнопок на уровне параграфа-->
-                                <div class="flex">
-                                    <button class="btn report__btn edit-paragraph__button--delete" 
-                                        type="button" 
-                                        data-paragraph-id="{{ paragraph.id }}" 
-                                        onclick="deleteParagraph(this)">Удалить 
-                                    </button>
-                                    <button class="btn report__btn edit-paragraph__button--edit" 
-                                        type="button" data-paragraph-id="{{ paragraph.id }}" 
-                                        onclick="handleEditParagraphButtonClick(this)"> Изменить
-                                    </button>
-                                    <button class="btn report__btn edit-paragraph__button--expand" 
-                                        type="button"  
-                                        data-paragraph-id="{{ paragraph.id }}" 
-                                        data-state="collapsed" 
-                                        onclick="expandSentencesOfParagraph(this)" 
-                                        data-sentences-count="{{ paragraph.paragraph_to_sentences|length }}"> Развернуть ({{ paragraph.paragraph_to_sentences|length }})
-                                    </button>
-                                </div>
-                            </form>
+                            
+                            <div class="drag-handle">☰</div> <!-- Хваталка -->
 
-                            <!-- Уровень предложения -->
-                            <div class="report_borderline"></div>
-                            <ul id="sentences-{{ paragraph.id }}" class="edit-paragraph__list" style="display: none;">
-                                {% if paragraph.paragraph_to_sentences %}
-                                    {% for sentence in paragraph.paragraph_to_sentences %}
-                                        {% if sentence.show_separator %}
-                                            <hr class="sentence-separator">
-                                        {% endif %}  <!-- check the separator marker -->
-                                        <li class="">
-                                            <form class="flex edit-paragraph__form--sentence" 
-                                            data-sentence-id="{{ sentence.id }}"
-                                            data-sentence-paragraph-id="{{ paragraph.id }}"
-                                            data-sentence-index="{{ sentence.index }}">
-                                                {{ render_sentence(sentence) }}
-                                            </form>
-                                        </li>
-                                    {% endfor %}
+                            <div class="edit-paragraph__info-box
+                                {% if paragraph.title_paragraph %}
+                                    flex_column
                                 {% endif %}
-                                <li>
-                                    <button class="btn report__btn" type="button" id="add_sentence" name="add_sentence" data-paragraph-id="{{paragraph.id}}" onclick="newSentenceCreate(this)">Add Sentence</button>
-                                </li>
-                            </ul>
+                                ">
+                                <p class="edit-paragraph__title
+                                    {% if paragraph.bold_paragraph %}
+                                    report__paragraph--bold
+                                    {% endif %}
+                                    {% if not paragraph.paragraph_visible %}
+                                    edit-paragraph__title--invisible
+                                    {% endif %}
+                                    "
+                                    data-paragraph-id="{{ paragraph.id }}"
+                                    data-paragraph-index="{{ paragraph.paragraph_index }}"
+                                    data-paragraph-type="{{ paragraph.paragraph_type }}"
+                                    data-paragraph-weight="{{ paragraph.paragraph_weight }}"
+                                    data-paragraph-tags="{{ paragraph.tags }}"
+                                    data-paragraph-comment="{{ paragraph.comment }}"
+                                    data-paragraph-visible="{{ paragraph.paragraph_visible }}"
+                                    data-bold-paragraph="{{ paragraph.bold_paragraph }}"
+                                    data-title-paragraph="{{ paragraph.title_paragraph }}"
+                                    >
+                                    <b> {{ paragraph.paragraph }} </b>
+                                </p>
+                                <div class="edit-sentences__list">
+                                    {% for sentence in paragraph.head_sentences %}
+                                        <span class="edit-sentence__item" data-sentence-id="{{ sentence.id }}">
+                                            {{ sentence.sentence }}
+                                        </span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                                <button class="btn report__btn edit-paragraph__btn--edit"  data-paragraph-id="{{ paragraph.id }}">Редактировать параграф</button>
+                                <button class="btn report__btn edit-paragraph__btn--delete"  data-paragraph-id="{{ paragraph.id }}">Удалить параграф</button>
+                            <div>
+
+                            
+                            </div>
                         </div>
                     {% endfor %}
-                {% endif %}
-            </li>
-            <div>
-                <form method="POST" action="{{ url_for('editing_report.edit_report', report_id=report.id) }}" class="new-paragraph-form">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <label class="label edit-paragraph__label" for="new_paragraph">Добавить новый параграф</label> <!--Нужно еще сделать логику js-->
-                    <button class="btn report__btn edit-paragraph__button" type="button" id="new_paragraph" name="new_paragraph" onclick="newParagraphCreate()">Добавить</button>
-                </form>
-            </div>
-        </ul>
+                
+            {% endif %}
+            <br>
+            <hr class="sentence-separator">
+            <br>
+            <form method="POST" action="{{ url_for('editing_report.edit_report', report_id=report_data.id) }}" class="new-paragraph-form">
+                <label class="label edit-paragraph__label" for="new_paragraph">Добавить новый параграф</label> <!--Нужно еще сделать логику js-->
+                <button class="btn report__btn edit-paragraph__button" type="button" id="new_paragraph" name="new_paragraph" onclick="newParagraphCreate()">Добавить</button>
+            </form>
     </div>
     
     {% else %}
@@ -145,27 +132,29 @@
     {% endif %}
 </div>
 
-<div class="report-check">
-    <div class="report-check__buttons-block">
-        <h3 class="report-check_title">Возможные проверки для данного протокола</h3>
-        <button class"btn report__btn report-check__btn" id="btnCheckIsHead" data-report-id={{report.id}} onclick="reportCheckIsHeadSentensesUnic(this)">Проверка на лишние главные предложения</button>
+<div class="report-checks">
+    <div class="report-checks__buttons-block">
+        <h3 class="report-checks_title">Возможные проверки для данного протокола</h3>
+        <button class"btn report__btn report-checks__btn" 
+            id="startCheckersButton" 
+            data-report-id={{report_data.id}}
+            > Запуск проверки 
+        </button>
     </div>
 
-    <ul class="report-check__list">
-        <li class="report-check__item" id="reportCheckIsHead" style="display: none;">
-            <h4 class="report-check__item--title">Проверка на лишние главные предложения</h4>
-            <ul class="report-check__item-list" id="reportCheckIsHeadList">
-                <!-- Отчет с сервера, заполню динамически через js -->
-            </ul>
-    
-    
-        </li>
-    
+    <ul class="report-checks__list" id="reportCheckList" style="display: none;">
+        <!-- Отчет с сервера, заполню динамически через js -->
     </ul>
 </div>
     
 {% endblock container %}
 
 {% block scripts %}
+<script>
+    const reportData = {{ report_data | tojson | safe }};
+    const reportParagraphs = {{ report_paragraphs | tojson | safe }};
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
 <script src="{{ url_for('static', filename='js/edit_report.js') }}"></script>
 {% endblock scripts %}

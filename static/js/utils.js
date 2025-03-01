@@ -201,7 +201,8 @@ function showPopupSentences(x, y, sentenceList, onSelect) {
     document.addEventListener("click", function handleOutsideClick(event) {
         if (!popup.contains(event.target) && 
             !event.target.classList.contains("keyword-highlighted") && 
-            !event.target.classList.contains("report__sentence")) {
+            !event.target.classList.contains("report__sentence") && 
+            !event.target.classList.contains("icon-btn--add-sentence")) {
             hidePopupSentences();
             document.removeEventListener("click", handleOutsideClick);
         }

@@ -36,14 +36,12 @@ class Config:
         "BodySentenceGroup": BodySentenceGroup,
         "HeadSentenceGroup": HeadSentenceGroup,
         "KeyWord": KeyWord,
-        "ParagraphType": ParagraphType,
         "FileMetadata": FileMetadata
     }
     
     ASSOCIATIVE_TABLES = [
         "key_word_report_link",
         "roles_users",
-        "paragraph_links",
         "head_sentence_group_link",
         "tail_sentence_group_link",
         "body_sentence_group_link"
@@ -97,7 +95,10 @@ class Config:
                                 "EXCEPT_WORDS": ["мм", "см"],
                                 "EXCEPTIONS_AFTER_PUNCTUATION": ["МРТ", "КТ", "УЗИ", "РКТ", "ПЭТ", "ПЭТ-КТ", "МСКТ", "РГ", "ЭКГ", "ФГДС"]
                                 }
-        
+    PARAGRAPH_TYPE_LIST = [
+    "text", "custom", "impression", "clincontext",
+    "scanparam", "dinamics", "scanlimits", "title"
+]
     
     @staticmethod
     def get_user_upload_folder():

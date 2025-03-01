@@ -31,7 +31,7 @@ from openai_api import openai_api_bp
 from key_words import key_words_bp
 from admin import admin_bp
 
-version = "0.9.2.6"
+version = "0.9.3.0"
 
 app = Flask(__name__)
 app.config.from_object(get_config()) # Load configuration from file config.py
@@ -265,20 +265,7 @@ def playground():
         sentences=sentences
     )
     
-    
-@app.route("/playground_search_dublicates", methods=["GET", "POST"])
-@auth_required()
-@roles_required("superadmin")
-def playground_search_dublicates():
-    """
-    Ищет дубликаты предложений в Sentence.
-    """
-    sentences = Sentence.query.all()
-   
-    
-    return jsonify({"status": "success", "message": "Дубликаты найдены"}), 200
-
-
+  
 
 # Фильтруем логи 
 

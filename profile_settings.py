@@ -2,12 +2,13 @@
 
 from flask import Blueprint, render_template, request, redirect, url_for, current_app, session, g, jsonify
 from flask_login import current_user
-from models import UserProfile, db, AppConfig
+from models import UserProfile, db, AppConfig, Paragraph
+from utils import check_unique_indices
 from profile_constructor import ProfileSettingsManager
 from flask_security.decorators import auth_required
 from file_processing import sync_profile_files
 from models import Report
-
+from logger import logger
 import json
 
 profile_settings_bp = Blueprint('profile_settings', __name__)
@@ -61,6 +62,7 @@ def profile_settings():
     else:
         print('Profile not found.', 'danger')
         return redirect(url_for('index'))
+
 
 # Маршрут для выбора существующего профиля
 @profile_settings_bp.route("/choosing_profile", methods=["GET"])
@@ -236,7 +238,7 @@ def run_checker():
     """
     Запускает различные чекеры для проверки настроек профиля.
     """
-    from utils import check_main_sentences
+    
     
     profile_id = session.get("profile_id")
     if not profile_id:
@@ -249,11 +251,51 @@ def run_checker():
     if checker == "main_sentences":
         global_errors = []
         for report in reports:
-            errors = check_main_sentences(report)
-            global_errors.extend(errors)
+            _,paragraphs_by_type = Report.get_report_data(report.id, profile_id)
+            try:
+                check_unique_indices(paragraphs_by_type)
+            except ValueError as e:
+                error = {"report": report.report_name, "error": str(e)}
+                global_errors.append(error)
+            
         
         return jsonify({"status": "success", "message": "Проверка выявила следующие ошибки", "errors": global_errors}), 200
        
     else:
-        return jsonify({"status": "error", "message": "Unknown checker"}), 400
+        return jsonify({"status": "error", "message": "Неизвестный чекер"}), 400
+
+
+# Маршрут для запуска разных чекеров
+@profile_settings_bp.route("/fix_indices", methods=["POST"])
+@auth_required()
+def fix_indices():
+    """
+    Запускает функцию исправления индексов.
+    """
+    reports = Report.find_by_profile(g.current_profile.id)  # Получаем все отчеты пользователя
+        
+    try:
+        for report in reports:
+            print(f"Исправление индексов для отчета {report.report_name}")
+            paragraphs = Paragraph.query.filter_by(report_id=report.id).order_by(Paragraph.paragraph_index).all()
+            
+            # Обновляем индексы параграфов
+            for new_index, paragraph in enumerate(paragraphs):
+                paragraph.paragraph_index = new_index
+
+                # Обновляем индексы главных предложений в этом параграфе
+                if paragraph.head_sentence_group:
+                    head_sentences = sorted(paragraph.head_sentence_group.head_sentences, key=lambda s: s.sentence_index)
+                    for new_sentence_index, sentence in enumerate(head_sentences):
+                        sentence.sentence_index = new_sentence_index
+            
+            db.session.commit()  # Сохраняем изменения для всех параграфов и предложений
+        logger.info(f"Индексы успешно исправлены")
+        return jsonify({"status": "success", "message": "Индексы успешно исправлены"}), 200
+    
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Ошибка при исправлении индексов {e}")
+        return jsonify({"status": "error", "message": "Ошибка при исправлении индексов"}), 400
+   
 

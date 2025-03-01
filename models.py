@@ -19,6 +19,7 @@ def prevent_group_deletion(mapper, connection, target):
     Проверяет перед удалением группы предложений, можно ли её удалить.
     Если группа всё ещё используется, прерывает удаление.
     """
+    logger.info("Стартовала надстройка для контроля возможности удаления группы предложений")
     if isinstance(target, HeadSentenceGroup):
         # Проверяем, есть ли параграфы, использующие эту группу
         used_in_paragraphs = Paragraph.query.filter_by(head_sentence_group_id=target.id).count()
@@ -41,16 +42,16 @@ def prevent_group_deletion(mapper, connection, target):
 
 
 
-
-
-link_type_enum = ENUM(
-    "equivalent", "expanding", "excluding", "additional",
-    name="paragraph_link_type", create_type=False
-)
-
 sentence_type_enum = ENUM(
     "head", "body", "tail",
     name="sentence_type_enum",
+    create_type=True  # Создаст тип в PostgreSQL
+)
+
+paragraph_type_enum = ENUM(
+    "text", "custom", "impression", "clincontext", 
+    "scanparam", "dinamics", "scanlimits", "title",
+    name="paragraph_type_enum",
     create_type=True  # Создаст тип в PostgreSQL
 )
 
@@ -72,14 +73,6 @@ roles_users = db.Table(
     Index('ix_roles_users_user_id_role_id', 'user_id', 'role_id')
 )
 
-# Ассоциативная таблица для связи параграфов между собой
-paragraph_links = db.Table(
-    "paragraph_links",
-    db.Column("paragraph_id_1", db.BigInteger, db.ForeignKey("report_paragraphs.id", ondelete="CASCADE"), primary_key=True),
-    db.Column("paragraph_id_2", db.BigInteger, db.ForeignKey("report_paragraphs.id", ondelete="CASCADE"), primary_key=True),
-    db.Column("link_type", link_type_enum, nullable=False),
-    db.Index("ix_paragraph_links_paragraphs", "paragraph_id_1", "paragraph_id_2")
-)
 
 # Ассоциативная таблица для связи head предложений с группой head предложений   
 head_sentence_group_link = db.Table(
@@ -476,120 +469,244 @@ class Report(BaseModel):
         db.session.commit()
         return new_report
     
+    
     @classmethod
     def find_by_profile(cls, profile_id):
         """Возвращает все отчеты, связанные с данным профилем."""
         return cls.query.filter_by(profile_id=profile_id).all()
+    
+    
+    @classmethod
+    def get_report_type (cls, report_id):
+        """Возвращает тип отчета"""
+        report = cls.query.filter_by(id=report_id).first()
+        return report.report_to_subtype.subtype_to_type.id
+    
     
     @classmethod
     def find_by_subtypes(cls, report_subtype):
         """Возвращает все отчеты, связанные с данным подтипом"""
         return cls.query.filter_by(report_subtype=report_subtype).all()
     
-    def get_impression(self):
-        """
-        Возвращает заключение (impression) по отчету.
-        Ищет параграф с типом 'impression' в связанных параграфах отчета.
-        
-        Returns:
-            str: Текст параграфа с типом 'impression' или None, если такого параграфа нет.
-        """
-        # Ищем тип параграфа 'impression'
-        impression_type = ParagraphType.query.filter_by(type_name="impression").first()
-
-        if not impression_type:
-            # Если тип 'impression' не найден, возвращаем None
-            return []
-
-        # Ищем параграф с этим типом для данного отчета
-        impression_paragraph = Paragraph.query.filter_by(
-            report_id=self.id, 
-            type_paragraph_id=impression_type.id
-        ).first()
-
-        # Возвращаем текст параграфа, если найден
-        return impression_paragraph.paragraph_to_sentences if impression_paragraph else []
-
+    
     @classmethod
     def get_report_data(cls, report_id, profile_id):
         """
-        Возвращает отчет с указанными связанными данными в виде словаря.
-        
+        Возвращает кортеж данных отчета:
+        1) Словарь с основной информацией об отчете.
+        2) Словарь параграфов, сгруппированных по типу и индексу, с head_sentence (группировка по index) и tail_sentence.
         Args:
             report_id (int): ID отчета.
-            user_id (int): ID пользователя (для проверки безопасности).
-        
+            profile_id (int): ID профиля пользователя.
         Returns:
-            dict: Данные отчета, включая параграфы и предложения.
+            tuple: (dict, dict) - (report_data, paragraphs_by_type)
         """
-        # Ищем отчет по ID и пользователю
+        # Ищем отчет по ID и профилю
+        logger.info(f"Получил данные report_id: {report_id}, profile_id: {profile_id} начинаю выборку данных протокола")
         report = cls.query.filter_by(id=report_id, profile_id=profile_id).first()
-        
         if not report:
-            return None  # Если отчет не найден или принадлежит другому пользователю
-        
-        # Получаем параграфы и предложения
-        paragraphs = Paragraph.query.filter_by(report_id=report_id).order_by(Paragraph.paragraph_index).all()
+            return None, None  # Если отчет не найден или принадлежит другому пользователю
 
-        # Преобразуем параграфы и предложения в словари
-        paragraph_data = []
-        for paragraph in paragraphs:
-            # Тут предложения находятся в базе и сразу сортируются по индексу и весу
-            sentences = Sentence.query.filter_by(paragraph_id=paragraph.id).order_by(Sentence.index, Sentence.weight).all()
-            
-            grouped_sentences = {}
-            for sentence in sentences:
-                index = sentence.index
-                if index not in grouped_sentences:
-                    grouped_sentences[index] = []
-                grouped_sentences[index].append({
-                    "id": sentence.id,
-                    "index": sentence.index,
-                    "weight": sentence.weight,
-                    "comment": sentence.comment,
-                    "sentence": sentence.sentence,
-                    "sentence_type": sentence.sentence_type,
-                    "tags": sentence.tags
-                })
-            
-            paragraph_data.append({
+        # Формируем словарь с основной информацией об отчете
+        report_data = {
+            "id": report.id,
+            "report_name": report.report_name,
+            "report_type": report.report_to_subtype.subtype_to_type.type_text,
+            "report_subtype": report.report_to_subtype.subtype_text,
+            "comment": report.comment,
+            "report_side": report.report_side,
+            "user_id": report.user_id,
+            "report_public": report.public
+        }
+
+        # Получаем все параграфы отчета и группируем их по типу и индексу
+        paragraphs = Paragraph.query.filter_by(report_id=report_id).all()
+
+        paragraphs_by_type = {}
+        for paragraph in sorted(paragraphs, key=lambda p: p.paragraph_index):
+            paragraph_type = paragraph.paragraph_type
+
+            # Получаем head-предложения через HeadSentenceGroup
+            head_sentence = {}
+            if paragraph.head_sentence_group_id:
+                head_sentence_group = HeadSentenceGroup.query.get(paragraph.head_sentence_group_id)
+                if head_sentence_group:
+                    sorted_head_sentences = sorted(head_sentence_group.head_sentences, key=lambda s: s.sentence_index)
+                    for sentence in sorted_head_sentences:
+                        index = sentence.sentence_index
+
+                        # Получаем body-предложения через body_sentence_group у каждого head
+                        body_sentences = []
+                        if sentence.body_sentence_group:
+                            body_sentences = [{
+                                "id": body_sentence.id,
+                                "weight": body_sentence.sentence_weight,
+                                "comment": body_sentence.comment,
+                                "sentence": body_sentence.sentence,
+                                "tags": body_sentence.tags
+                            } for body_sentence in sentence.body_sentence_group.body_sentences]
+
+                        
+                        head_sentence[index] = {
+                            "id": sentence.id,
+                            "index": index,
+                            "comment": sentence.comment,
+                            "sentence": sentence.sentence,
+                            "tags": sentence.tags,
+                            "body_sentences": body_sentences  
+                        }
+
+            # Получаем tail-предложения через TailSentenceGroup
+            tail_sentence = []
+            if paragraph.tail_sentence_group_id:
+                tail_sentence_group = TailSentenceGroup.query.get(paragraph.tail_sentence_group_id)
+                if tail_sentence_group:
+                    tail_sentence = [{
+                        "id": sentence.id,
+                        "weight": sentence.sentence_weight,
+                        "comment": sentence.comment,
+                        "sentence": sentence.sentence,
+                        "tags": sentence.tags
+                    } for sentence in tail_sentence_group.tail_sentences]
+
+            # Формируем данные по параграфу
+            paragraph_data = {
                 "id": paragraph.id,
                 "paragraph_index": paragraph.paragraph_index,
                 "paragraph": paragraph.paragraph,
                 "paragraph_visible": paragraph.paragraph_visible,
                 "title_paragraph": paragraph.title_paragraph,
                 "bold_paragraph": paragraph.bold_paragraph,
-                "paragraph_type": paragraph.paragraph_to_types.type_name,
+                "paragraph_type": paragraph_type,
                 "paragraph_comment": paragraph.comment,
                 "paragraph_weight": paragraph.paragraph_weight,
                 "tags": paragraph.tags,
-                "sentences": grouped_sentences
+                "head_sentences": head_sentence,  
+                "tail_sentences": tail_sentence  
+            }
+
+            # Группируем параграфы по типу
+            if paragraph_type not in paragraphs_by_type:
+                paragraphs_by_type[paragraph_type] = {}
+
+            # Группируем параграфы внутри типа по index
+            paragraphs_by_type[paragraph_type][paragraph.paragraph_index] = paragraph_data
+
+           
+        logger.info(f"Получил данные report_id: {report_id}, profile_id: {profile_id} возвращаю данные протокола")
+        return report_data, paragraphs_by_type
+    
+    
+    @classmethod
+    def get_report_info(cls, report_id, profile_id):
+        """
+        Получает основные данные отчета.
+        Args:
+            report_id (int): ID отчета.
+            profile_id (int): ID профиля пользователя.
+        Returns:
+            dict: Словарь с информацией об отчете или None, если отчет не найден.
+        """
+        logger.info(f"Запрос данных отчета: report_id={report_id}, profile_id={profile_id}")
+        
+        report = cls.query.filter_by(id=report_id, profile_id=profile_id).first()
+        if not report:
+            return None  # Если отчет не найден или принадлежит другому пользователю
+
+        report_data = {
+            "id": report.id,
+            "report_name": report.report_name,
+            "report_type": report.report_to_subtype.subtype_to_type.type_text,
+            "report_subtype": report.report_to_subtype.subtype_text,
+            "comment": report.comment,
+            "report_side": report.report_side,
+            "user_id": report.user_id,
+            "report_public": report.public
+        }
+        logger.info(f"Получил данные отчета: report_id={report_id}, profile_id={profile_id}. Возвращаю данные")
+        return report_data
+    
+    
+    @classmethod
+    def get_report_data(cls, report_id, profile_id):
+        """
+        Возвращает основные данные отчета и список параграфов.
+        Args:
+            report_id (int): ID отчета.
+            profile_id (int): ID профиля пользователя.
+        Returns:
+            tuple: (dict, list) - (report_data, sorted_paragraphs)
+        """
+        try:
+            report_data = cls.get_report_info(report_id, profile_id)
+        except Exception as e:
+            logger.error(f"Ошибка при получении данных отчета: {e}")
+            raise e
+        
+        if report_data is None:
+            logger.error(f"Отчет не найден: report_id={report_id}, profile_id={profile_id}")
+            return None, None
+        try:
+            sorted_paragraphs = Paragraph.get_report_paragraphs(report_id)
+        except Exception as e:
+            logger.error(f"Ошибка при получении параграфов отчета: {e}")
+            raise e
+        logger.info(f"Получил обобщенные данные отчета: report_id={report_id}. Возвращаю.")
+        return report_data, sorted_paragraphs
+    
+    
+    # Упрощенная версия метода get_report_data для получения легковесной структуры отчета для использования в edit_report
+    @classmethod
+    def get_report_structure(cls, report_id, profile_id):
+        """
+        Возвращает структуру отчета: список параграфов с их head-предложениями.
+        Args:
+            report_id (int): ID отчета.
+            profile_id (int): ID профиля пользователя.
+        Returns:
+            list: Отсортированный список параграфов, где head_sentences содержат только id, index и sentence.
+        """
+        logger.info(f"Получение структуры отчета: report_id={report_id}, profile_id={profile_id}")
+
+        report = cls.query.filter_by(id=report_id, profile_id=profile_id).first()
+        if not report:
+            return None  # Если отчет не найден или принадлежит другому пользователю
+
+        paragraphs = Paragraph.query.filter_by(report_id=report_id).order_by(Paragraph.paragraph_index).all()
+        report_structure = []
+
+        for paragraph in paragraphs:
+            head_sentences = []
+            if paragraph.head_sentence_group_id:
+                head_sentence_group = HeadSentenceGroup.query.get(paragraph.head_sentence_group_id)
+                if head_sentence_group:
+                    head_sentences = sorted(
+                        [{"id": s.id, "index": s.sentence_index, "sentence": s.sentence} for s in head_sentence_group.head_sentences],
+                        key=lambda s: s["index"]
+                    )
+
+            report_structure.append({
+                "id": paragraph.id,
+                "paragraph_index": paragraph.paragraph_index,
+                "paragraph": paragraph.paragraph,
+                "paragraph_visible": paragraph.paragraph_visible,
+                "title_paragraph": paragraph.title_paragraph,
+                "bold_paragraph": paragraph.bold_paragraph,
+                "paragraph_type": paragraph.paragraph_type,
+                "paragraph_comment": paragraph.comment,
+                "paragraph_weight": paragraph.paragraph_weight,
+                "tags": paragraph.tags,
+                "head_sentences": head_sentences  # Только id, index, sentence
             })
 
-        # Формируем структуру данных для отчета
-        report_data = {
-            "report": {
-                "id": report.id,
-                "report_name": report.report_name,
-                "report_type": report.report_to_subtype.subtype_to_type.type_text,
-                "report_subtype": report.report_to_subtype.subtype_text,
-                "comment": report.comment,
-                "report_side": report.report_side,
-                "user_id": report.user_id,
-                "report_public": report.public
-            },
-            "paragraphs": paragraph_data
-        }
-
-        return report_data
-
-
-
+        return report_structure
+    
+    
 class Paragraph(BaseModel):
     __tablename__ = "report_paragraphs"
     id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
     report_id = db.Column(db.BigInteger, db.ForeignKey("reports.id"), nullable=False)
-    type_paragraph_id = db.Column(db.Integer, db.ForeignKey('paragraph_types.id'), nullable=False)
+    paragraph_type = db.Column(paragraph_type_enum, nullable=True, default="text")
     paragraph_index = db.Column(db.Integer, nullable=False)
     paragraph = db.Column(db.String(255), nullable=False)
     paragraph_visible = db.Column(db.Boolean, default=False, nullable=False)
@@ -598,29 +715,12 @@ class Paragraph(BaseModel):
     comment = db.Column(db.String(255), nullable=True)
     paragraph_weight = db.Column(db.SmallInteger, nullable=False) 
     tags = db.Column(db.String(255), nullable=True)
-    head_sentence_group_id = db.Column(db.BigInteger, db.ForeignKey("head_sentence_groups.id", ondelete="CASCADE"))
-    tail_sentence_group_id = db.Column(db.BigInteger, db.ForeignKey("tail_sentence_groups.id", ondelete="CASCADE"))
+    head_sentence_group_id = db.Column(db.BigInteger, db.ForeignKey("head_sentence_groups.id", ondelete="SET NULL"))
+    tail_sentence_group_id = db.Column(db.BigInteger, db.ForeignKey("tail_sentence_groups.id", ondelete="SET NULL"))
 
     paragraph_to_sentences = db.relationship("Sentence", lazy=True, backref=db.backref("sentence_to_paragraph"), cascade="all, delete-orphan")
-    paragraph_to_types = db.relationship("ParagraphType") # Связь с типом параграфа
-    # Связь многие-ко-многим с другими параграфами
-    linked_paragraphs = relationship(
-        "Paragraph",
-        secondary=paragraph_links,
-        primaryjoin=id == paragraph_links.c.paragraph_id_1,
-        secondaryjoin=id == paragraph_links.c.paragraph_id_2,
-        backref="linked_to_paragraphs",
-        remote_side=[id]
-    )
-    
-    head_sentence_group = db.relationship(
-        "HeadSentenceGroup",
-        backref="paragraphs"
-    )
-
-    tail_sentence_group = db.relationship(
-        "TailSentenceGroup", 
-        backref="paragraphs")
+    head_sentence_group = db.relationship("HeadSentenceGroup", backref="paragraphs")
+    tail_sentence_group = db.relationship("TailSentenceGroup", backref="paragraphs")
     
     
     def delete(self):
@@ -638,7 +738,7 @@ class Paragraph(BaseModel):
         db.session.delete(self)
         db.session.commit()
     
-    
+    # Метод нужен для переноса протоколов из старой логики в новую
     def get_paragraph_sentences_grouped_by_type(self):
         """
         Возвращает предложения данного параграфа, сгруппированные по их типам.
@@ -667,212 +767,132 @@ class Paragraph(BaseModel):
     
     
     @classmethod
-    def create(cls, report_id, paragraph_index, paragraph, type_paragraph_id, paragraph_visible=True, title_paragraph=False, bold_paragraph=False, paragraph_weight=1, tags=None, comment=None):
+    def create(cls, 
+               report_id, 
+               paragraph_index, 
+               paragraph, 
+               paragraph_type = "text", 
+               paragraph_visible=True, 
+               title_paragraph=False, 
+               bold_paragraph=False, 
+               paragraph_weight=1, 
+               tags=None, 
+               comment=None, 
+               head_sentence_group_id = None, 
+               tail_sentence_group_id = None
+        ):
         """
         Создает новый параграф.
-
-        Args:
-            report_id (int): ID отчета.
-            paragraph_index (int): Индекс параграфа.
-            paragraph (str): Текст параграфа.
-            type_paragraph_id (int): ID типа параграфа.
-            paragraph_visible (bool, optional): Видимость параграфа. Default=True.
-            title_paragraph (bool, optional): Является ли заголовком. Default=False.
-            bold_paragraph (bool, optional): Должен ли быть жирным. Default=False.
-            paragraph_weight (int, optional): Вес параграфа. Default=1.
-            tags (str, optional): Теги в виде строки. Default=None.
-            comment (str, optional): Комментарий. Default=None.
-
-        Returns:
-            Paragraph: Созданный объект параграфа.
         """
         new_paragraph = cls(
             report_id=report_id,
             paragraph_index=paragraph_index,
             paragraph=paragraph,
-            type_paragraph_id=type_paragraph_id,
+            paragraph_type=paragraph_type,
             paragraph_visible=paragraph_visible,
             title_paragraph=title_paragraph,
             bold_paragraph=bold_paragraph,
             paragraph_weight=paragraph_weight,
             tags=tags,
-            comment=comment
+            comment=comment,
+            head_sentence_group_id=head_sentence_group_id,
+            tail_sentence_group_id=tail_sentence_group_id
         )
         db.session.add(new_paragraph)
         db.session.commit()
         return new_paragraph
     
+    # Метод для получения параграфов отчета, отсортированных 
+    # по index (использю его в методе get_report_data)
     @classmethod
-    def find_by_report_id(cls, report_id):
-        """Ищет параграфы по ID отчета."""
-        return cls.query.filter_by(report_id=report_id).all()
-    
-    @classmethod
-    def get_paragraphs_by_tag(cls, tag):
-        """Возвращает все параграфы с указанным тегом."""
-        return cls.query.filter(cls.tags.like(f"%{tag}%")).all()
-    
-    
-    def is_linked(self):
-        """ Проверяет, есть ли у параграфа хотя бы одна связь. """
-        exists = db.session.execute(
-            db.select(paragraph_links.c.paragraph_id_1)
-            .where(
-                (paragraph_links.c.paragraph_id_1 == self.id) | 
-                (paragraph_links.c.paragraph_id_2 == self.id)
-            )
-        ).fetchone()  # Получаем одну строку, если связь найдена
-
-        return exists is not None  # Если что-то найдено — значит, есть связь
-    
-    @classmethod
-    def link_paragraphs(cls, paragraph1_id, paragraph2_id, link_type="expanding"):
-        """Создает связь между двумя параграфами, гарантируя, что X-Y и Y-X не дублируются."""
-        
-        # Гарантируем порядок: всегда записываем (меньший ID, больший ID)
-        if paragraph1_id > paragraph2_id:
-            paragraph1_id, paragraph2_id = paragraph2_id, paragraph1_id
-        
-        # Проверяем, существует ли уже такая связь (в любом направлении)
-        existing_link = db.session.execute(
-            db.select(paragraph_links).where(
-                ((paragraph_links.c.paragraph_id_1 == paragraph1_id) & 
-                (paragraph_links.c.paragraph_id_2 == paragraph2_id)) |
-                ((paragraph_links.c.paragraph_id_1 == paragraph2_id) & 
-                (paragraph_links.c.paragraph_id_2 == paragraph1_id))
-            )
-        ).fetchone()
-        
-        if existing_link:
-            return False  # Связь уже существует
-
-        # Добавляем связь
-        stmt = paragraph_links.insert().values(
-            paragraph_id_1=paragraph1_id,
-            paragraph_id_2=paragraph2_id,
-            link_type=link_type
-        )
-        db.session.execute(stmt)
-        db.session.commit()
-        return True
-        
-    @classmethod
-    def unlink_paragraphs(cls, paragraph1_id, paragraph2_id):
+    def get_report_paragraphs(cls, report_id):
         """
-        Удаляет связь между двумя параграфами.
-
+        Получает список параграфов отчета, отсортированных по index.
         Args:
-            paragraph1_id (int): ID первого параграфа.
-            paragraph2_id (int): ID второго параграфа.
-
+            report_id (int): ID отчета.
         Returns:
-            bool: True, если связь удалена, False если её не было.
+            list: Список параграфов, отсортированных по index.
         """
-        stmt = paragraph_links.delete().where(
-        ((paragraph_links.c.paragraph_id_1 == paragraph1_id) & 
-        (paragraph_links.c.paragraph_id_2 == paragraph2_id)) |
-        ((paragraph_links.c.paragraph_id_1 == paragraph2_id) & 
-        (paragraph_links.c.paragraph_id_2 == paragraph1_id))
-)
-        result = db.session.execute(stmt)
-        db.session.commit()
+        logger.info(f"Запрос параграфов для отчета: report_id={report_id}")
 
-        return result.rowcount > 0  # True, если удалена хотя бы одна запись
+        paragraphs = Paragraph.query.filter_by(report_id=report_id).all()
+        sorted_paragraphs = []
+
+        for paragraph in sorted(paragraphs, key=lambda p: p.paragraph_index):
+            # Получаем head-предложения, сортируем по index
+            head_sentences = []
+            if paragraph.head_sentence_group_id:
+                head_sentence_group = HeadSentenceGroup.query.get(paragraph.head_sentence_group_id)
+                if head_sentence_group:
+                    for sentence in sorted(head_sentence_group.head_sentences, key=lambda s: s.sentence_index):
+                        # Получаем body-предложения, сортируем по weight
+                        body_sentences = sorted(
+                            [{
+                                "id": body_sentence.id,
+                                "weight": body_sentence.sentence_weight,
+                                "comment": body_sentence.comment,
+                                "sentence": body_sentence.sentence,
+                                "tags": body_sentence.tags
+                            } for body_sentence in sentence.body_sentence_group.body_sentences],
+                            key=lambda s: s["weight"]
+                        ) if sentence.body_sentence_group else []
+
+                        head_sentences.append({
+                            "id": sentence.id,
+                            "index": sentence.sentence_index,
+                            "comment": sentence.comment,
+                            "sentence": sentence.sentence,
+                            "tags": sentence.tags,
+                            "body_sentences": body_sentences
+                        })
+
+            # Получаем tail-предложения, сортируем по weight
+            tail_sentences = sorted(
+                [{
+                    "id": sentence.id,
+                    "weight": sentence.sentence_weight,
+                    "comment": sentence.comment,
+                    "sentence": sentence.sentence,
+                    "tags": sentence.tags
+                } for sentence in TailSentenceGroup.query.get(paragraph.tail_sentence_group_id).tail_sentences],
+                key=lambda s: s["weight"]
+            ) if paragraph.tail_sentence_group_id else []
+
+            # Формируем данные по параграфу
+            paragraph_data = {
+                "id": paragraph.id,
+                "paragraph_index": paragraph.paragraph_index,
+                "paragraph": paragraph.paragraph,
+                "paragraph_visible": paragraph.paragraph_visible,
+                "title_paragraph": paragraph.title_paragraph,
+                "bold_paragraph": paragraph.bold_paragraph,
+                "paragraph_type": paragraph.paragraph_type,
+                "paragraph_comment": paragraph.comment,
+                "paragraph_weight": paragraph.paragraph_weight,
+                "tags": paragraph.tags,
+                "head_sentences": head_sentences,
+                "tail_sentences": tail_sentences
+            }
+
+            sorted_paragraphs.append(paragraph_data)
+        logger.info(f"Получил параграфы для отчета: report_id={report_id}. Возвращаю данные")
+        return sorted_paragraphs
     
-    @classmethod
-    def get_linked_paragraphs(cls, paragraph_id, link_type=None, depth=1, visited=None):
-        """
-        Возвращает список всех связанных параграфов с учетом глубины и типа связи.
-
-        Args:
-            paragraph_id (int): ID параграфа, для которого ищем связи.
-            link_type (str, optional): Тип связи, если нужно фильтровать (equivalent, expanding и т.д.).
-            depth (int or None, optional): Глубина поиска (1 - только прямые связи, 2 - +связи 2-го уровня и т.д., None - все).
-            visited (set, optional): Внутренний параметр для отслеживания уже посещенных параграфов (предотвращает циклы).
-
-        Returns:
-            list[dict]: Список словарей с `paragraph_id` и `link_type`.
-        """
-        if depth == 0:
-            return []
-
-        if visited is None:
-            visited = set()
-
-        if paragraph_id in visited:
-            return []  # Предотвращаем зацикливание
-
-        visited.add(paragraph_id)
-
-        # Формируем условия для запроса
-        where_conditions = (
-            (paragraph_links.c.paragraph_id_1 == paragraph_id) | 
-            (paragraph_links.c.paragraph_id_2 == paragraph_id)
-        )
-
-        # Добавляем фильтр по link_type, если он указан
-        if link_type:
-            where_conditions &= (paragraph_links.c.link_type == link_type)
-
-        results = db.session.execute(
-            db.select(
-                paragraph_links.c.paragraph_id_1,
-                paragraph_links.c.paragraph_id_2,
-                paragraph_links.c.link_type
-            ).where(where_conditions)
-        ).fetchall()
-
-        # Если связей нет, дальше ничего не делаем
-        if not results:
-            return []
-
-        # Формируем список найденных связей
-        linked_paragraphs = []
-        for row in results:
-            p1, p2, l_type = row
-            linked_id = p2 if p1 == paragraph_id else p1  # Получаем ID связанного параграфа
-            linked_paragraphs.append({"paragraph_id": linked_id, "link_type": l_type})
-
-        # Если depth = 1, возвращаем только прямые связи
-        if depth == 1:
-            return linked_paragraphs
-
-        # Если требуется идти глубже, ищем связи рекурсивно
-        for item in linked_paragraphs.copy():  # .copy() чтобы избежать изменения списка во время итерации
-            deeper_links = cls.get_linked_paragraphs(
-                paragraph_id=item["paragraph_id"],
-                link_type=link_type,
-                depth=None if depth is None else depth - 1,
-                visited=visited
-            )
-            linked_paragraphs.extend(deeper_links)
-
-        return linked_paragraphs
-    
-    @classmethod
-    def get_link_type(cls, paragraph1_id, paragraph2_id):
-        """
-        Возвращает тип связи между двумя параграфами, если она существует.
-
-        Args:
-            paragraph1_id (int): ID первого параграфа.
-            paragraph2_id (int): ID второго параграфа.
-
-        Returns:
-            str or None: Тип связи ('equivalent', 'expanding', и т. д.) или None, если связи нет.
-        """
-        result = db.session.execute(
-            db.select(paragraph_links.c.link_type)
-            .where(
-                ((paragraph_links.c.paragraph_id_1 == paragraph1_id) & (paragraph_links.c.paragraph_id_2 == paragraph2_id))
-                | ((paragraph_links.c.paragraph_id_1 == paragraph2_id) & (paragraph_links.c.paragraph_id_2 == paragraph1_id))
-            )
-        ).fetchone()
         
-        return result[0] if result else None  # Возвращаем тип связи или None
 
 
-
+    # Метод для получения групп предложений параграфа. Возвращает кортеж (head_group, tail_group)
+    @classmethod
+    def get_paragraph_groups(cls, paragraph_id):
+        """
+        Возвращает группы предложений параграфа.
+        Args:
+            paragraph_id (int): ID параграфа.
+        Returns:
+            tuple: (HeadSentenceGroup, TailSentenceGroup) - Группы предложений параграфа.
+        """
+        paragraph = cls.query.get(paragraph_id)
+        return paragraph.head_sentence_group, paragraph.tail_sentence_group
 
 
 class Sentence(BaseModel):
@@ -884,6 +904,7 @@ class Sentence(BaseModel):
     sentence = db.Column(db.String(600), nullable=False)
     sentence_type = db.Column(sentence_type_enum, nullable=False, default="body")
     tags = db.Column(db.String(255), nullable=True)
+    report_type_id = db.Column(db.SmallInteger, nullable=False)
 
 
 
@@ -892,130 +913,8 @@ class Sentence(BaseModel):
         Сохраняет предложение и синхронизирует его в связанных параграфах, если связь equivalent.
         Если изменяется индекс главного предложения, обновляет индекс у всех предложений с таким же индексом.
         """
-      
-        # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Не учтены связи параграфов нужно будет 
-        # добавить логику чтобы предложения добавлялись 
-        # в новые параграфы если их там нет!!!!!!!!!!
-        
-        
-        # Проверяем, является ли предложение главным
-        if len(self.sentence) > 600:
-            logger.error(f"Предложение слишком длинное ({len(sentence)} символов)")
-            raise ValueError("Предложение слишком длинное (больше 600 символов)")
-        
-        if not self.sentence_type == "head":
-            super().save()
-            logger.info(f"Предложение не главное, просто сохранено")
-            return  
-
-        if old_index is None:
-            super().save()
-            logger.info(f"Предложение главное, но не передан старый индекс, сохраняю и выхожу")
-            return
-        
-        
-        logger.info(f"Предложение главное, начато сохранение в связанных параграфах")
-        
-        new_index = self.index
-        
-        logger.info(f"Новый индекс: {new_index}")
-        logger.info(f"Старый индекс: {old_index}")
-    
-        # Получаем все предложения с текущим индексом, исключая главные
-        same_index_sentences = Sentence.query.filter(
-            Sentence.paragraph_id == self.paragraph_id,
-            Sentence.index == old_index,
-            Sentence.sentence_type != "head"  # Выбираем все, кроме главных
-        ).update({"index": new_index}, synchronize_session=False)
-        
-        logger.info(f"Найдено {same_index_sentences} предложений с индексом {old_index} для обновления")
-        
-        # Получаем связанные параграфы с типом связи equivalent
-        linked_paragraphs = Paragraph.get_linked_paragraphs(self.paragraph_id, 
-                                                            link_type="equivalent", 
-                                                            depth=2)
-        
-        if linked_paragraphs:
-            logger.info(f"Найдено {len(linked_paragraphs)} связанных параграфов")
-            # **Обновляем предложения во всех equivalent-параграфах**
-            for linked in linked_paragraphs:
-                linked_paragraph_id = linked["paragraph_id"]
-                # Получаем все предложения с таким же индексом в связанном параграфе
-                linked_notmain_updated = Sentence.query.filter_by(
-                    paragraph_id=linked_paragraph_id, 
-                    index=old_index
-                ).all()
-                
-                for sentence in linked_notmain_updated:
-                    sentence.index = new_index
-                    if sentence.sentence_type == "head":
-                        sentence.sentence = self.sentence
-                        sentence.weight = self.weight
-                        sentence.tags = self.tags
-                        
-                    db.session.add(sentence)
-                
-                logger.info(f"В параграфе {linked_paragraph_id} обновлено {len(linked_notmain_updated)} предложений")
-            
-        else:
-            logger.info(f"Связанных параграфов не найдено")
-            
-        # Сохраняем новые данные в текущем объекте
-        # for key, value in new_self.__dict__.items():
-        #     if not key.startswith("_"):  # Пропускаем системные атрибуты SQLAlchemy
-        #         setattr(self, key, value)  # Присваиваем значения обратно в self
-        
-        db.session.add(self)
-        db.session.commit()
-
-        logger.info(f"Сохранение успешно завершено")
-    
-
-    def delete(self):
-        """
-        Удаляет главное предложение (`sentence_type="head"`) в текущем и `equivalent`-параграфах.
-        Если предложение **не главное**, просто удаляется.
-        Если главное, все предложения с таким же `index` в связанных `equivalent`-параграфах получают `index=0`.
-        """
-        logger.info(f"Начато удаление предложения")
-        if not self.sentence_type == "head":
-            super().delete()
-            logger.info(f"Предложение не главное, просто удалено")
-            return
-        
-        logger.info(f"Предложение главное, начато удаление в связанных параграфах")
-        
-        sentences_to_update = Sentence.query.filter_by(
-                            paragraph_id=self.paragraph_id, 
-                            index=self.index).update({"index": 0}, 
-                                                    synchronize_session=False)
-                            
-        logger.info(f"Найдено {sentences_to_update} предложений для обновления индекса")
-        
-        linked_paragraphs = Paragraph.get_linked_paragraphs(self.paragraph_id, link_type="equivalent", depth=1)
-
-        if linked_paragraphs:
-            logger.info(f"Найдено {len(linked_paragraphs)} связанных параграфов")
-           
-            linked_sentences_count = 0
-            linked_main_deleted = 0
-            
-            for linked in linked_paragraphs:
-                linked_main_deleted += Sentence.query.filter_by(
-                    paragraph_id=linked["paragraph_id"],
-                    index=self.index,
-                    sentence_type="head"
-                ).delete(synchronize_session=False) # Сразу удаляем главное предложение прямо в БД
-                
-                linked_sentences_count += Sentence.query.filter_by(
-                    paragraph_id=linked["paragraph_id"], 
-                    index=self.index
-                ).update({"index": 0},synchronize_session=False)  # Меняем сразу у всех предложений
-            logger.info(f"Удалено {linked_main_deleted} главных предложений и обновлено индекс у {linked_sentences_count} предложений в связанных параграфах")
-            
-        db.session.delete(self)
-        db.session.commit()
-        logger.info(f"Удаление успешно завершено")
+        super().save()
+        return
 
 
     @classmethod
@@ -1068,22 +967,7 @@ class Sentence(BaseModel):
     def find_by_paragraph_id(cls, paragraph_id):
         return cls.query.filter_by(paragraph_id=paragraph_id).all()
 
-    @classmethod
-    def get_sentences_by_type(cls, paragraph_id, sentence_type):
-        """
-        Получает предложения заданного типа для указанного параграфа.
-        Args:
-            paragraph_id (int): ID параграфа.
-            sentence_type (str): Тип предложения ("head", "body" или "tail").
-        Returns:
-            list: Список предложений указанного типа.
-        """
-        return cls.query.filter_by(paragraph_id=paragraph_id, sentence_type=sentence_type).all()
-
-    @classmethod
-    def get_sentences_by_tag(cls, tag):
-        """Возвращает все предложения с указанным тегом."""
-        return cls.query.filter(cls.tags.like(f"%{tag}%")).all()
+    
     
   
   
@@ -1092,6 +976,8 @@ class Sentence(BaseModel):
 class SentenceBase(BaseModel):
     __abstract__ = True  
     
+    report_type_id = db.Column(db.SmallInteger, nullable=True)  
+    user_id = db.Column(db.BigInteger, db.ForeignKey("users.id"), nullable=True)
     sentence = db.Column(db.String(600), nullable=False)
     tags = db.Column(db.String(100), nullable=True)
     comment = db.Column(db.String(255), nullable=True)
@@ -1120,6 +1006,104 @@ class SentenceBase(BaseModel):
 
     
     @classmethod
+    def create(cls, user_id, report_type_id, sentence, related_id, sentence_index=None, tags=None, comment=None, sentence_weight=1):
+        """
+        Универсальный метод создания предложений (head, body, tail).
+
+        Args:
+            user_id (int): ID пользователя.
+            report_type_id (int): ID типа отчета.
+            sentence (str): Текст предложения.
+            related_id (int): ID родительской сущности (параграфа для head/tail, head-предложения для body).
+            sentence_index (int, optional): Индекс предложения (только для head).
+            tags (str, optional): Теги предложения.
+            comment (str, optional): Комментарий.
+            sentence_weight (int, optional): Вес предложения (только для body/tail).
+
+        Returns:
+            tuple: (созданное предложение, использованная группа)
+        """
+        if not sentence.strip():
+            sentence = "Пустое предложение"
+
+        logger.info(f"Создание {cls.__name__} - '{sentence}' (related_id: {related_id})")
+
+        # Определяем к какой группе относится предложение
+        if cls == HeadSentence:
+            paragraph = Paragraph.get_by_id(related_id)
+            if not paragraph:
+                raise ValueError(f"Параграф с ID {related_id} не найден")
+
+            group = paragraph.head_sentence_group or HeadSentenceGroup.create()
+            paragraph.head_sentence_group_id = group.id
+            sentence_type = "head"
+
+        elif cls == BodySentence:
+            head_sentence = HeadSentence.get_by_id(related_id)
+            if not head_sentence:
+                raise ValueError(f"Head-предложение с ID {related_id} не найдено")
+
+            group = head_sentence.body_sentence_group or BodySentenceGroup.create()
+            head_sentence.body_sentence_group_id = group.id
+            sentence_type = "body"
+
+        elif cls == TailSentence:
+            paragraph = Paragraph.get_by_id(related_id)
+            if not paragraph:
+                raise ValueError(f"Параграф с ID {related_id} не найден")
+
+            group = paragraph.tail_sentence_group or TailSentenceGroup.create()
+            paragraph.tail_sentence_group_id = group.id
+            sentence_type = "tail"
+
+        else:
+            raise ValueError("Этот метод не поддерживает создание других типов предложений")
+
+        # Импортируем функцию для поиска похожих предложений
+        from sentence_processing import find_similar_exist_sentence
+        
+        similar_sentence = find_similar_exist_sentence(
+            sentence_text=sentence, 
+            sentence_type=sentence_type, 
+            tags=tags, 
+            user_id=user_id,
+            report_type_id=report_type_id,
+            comment=comment,
+            sentence_index=sentence_index
+        )
+
+        if similar_sentence:
+            db.session.add(similar_sentence)
+            db.session.flush()
+            logger.info(f"Похожее предложение уже существует и привязано к группе {group.id}")
+            return cls.link_to_group(similar_sentence, group)
+
+        # Формируем аргументы с общими для всех предложений полями
+        sentence_data = {
+            "sentence": sentence.strip(),
+            "tags": tags,
+            "comment": comment,
+            "report_type_id": report_type_id,
+            "user_id": user_id
+        }
+        # Добавляем специфичные поля для каждого типа предложения
+        if cls == HeadSentence:
+            sentence_data["sentence_index"] = sentence_index  # Только для HeadSentence
+        elif cls in [BodySentence, TailSentence]:
+            sentence_data["sentence_weight"] = sentence_weight  # Только для BodySentence и TailSentence
+
+        # Создаем предложение, передавая только релевантные аргументы
+        new_sentence = cls(**sentence_data)
+
+        db.session.add(new_sentence)
+        db.session.flush()  # Чтобы получить ID
+
+        logger.info(f"Создано {cls.__name__} (ID={new_sentence.id}), привязываем к группе {group.id}")
+
+        return cls.link_to_group(new_sentence, group)
+    
+    
+    @classmethod
     def link_to_group(cls, sentence, group):
         """
         Добавляет предложение в указанную группу.
@@ -1136,7 +1120,18 @@ class SentenceBase(BaseModel):
 
         logger.info(f"Привязываем предложение {sentence.id} к группе {group.id}")
 
-        # Определяем тип предложения и добавляем в соответствующую группу
+        # Проверяем, привязано ли уже предложение к группе
+        if isinstance(sentence, HeadSentence) and sentence in group.head_sentences:
+            logger.info(f"Предложение {sentence.id} уже в группе {group.id}, пропускаем")
+            return sentence, group
+        elif isinstance(sentence, BodySentence) and sentence in group.body_sentences:
+            logger.info(f"Предложение {sentence.id} уже в группе {group.id}, пропускаем")
+            return sentence, group
+        elif isinstance(sentence, TailSentence) and sentence in group.tail_sentences:
+            logger.info(f"Предложение {sentence.id} уже в группе {group.id}, пропускаем")
+            return sentence, group
+        
+        # Привязываем предложение, если оно еще не в группе
         if isinstance(sentence, HeadSentence):
             group.head_sentences.append(sentence)
         elif isinstance(sentence, BodySentence):
@@ -1260,7 +1255,7 @@ class SentenceBase(BaseModel):
 class HeadSentence(SentenceBase):
     __tablename__ = "head_sentences"
     sentence_index = db.Column(db.SmallInteger, nullable=False)
-    body_sentence_group_id = db.Column(db.BigInteger, db.ForeignKey("body_sentence_groups.id", ondelete="CASCADE"))
+    body_sentence_group_id = db.Column(db.BigInteger, db.ForeignKey("body_sentence_groups.id", ondelete="SET NULL"))
     
     body_sentence_group = db.relationship(
         "BodySentenceGroup", 
@@ -1273,72 +1268,6 @@ class HeadSentence(SentenceBase):
         back_populates="head_sentences"
     )
     
-    @classmethod
-    def create(cls, sentence, paragraph_id, tags=None, comment=None, sentence_index=None):
-        """
-        Создает head-предложение и привязывает его к группе, связанной с указанным параграфом.
-
-        Args:
-            sentence (str): Текст предложения.
-            paragraph_id (int): ID параграфа, к которому привязывается предложение.
-            tags (str, optional): Теги предложения.
-            comment (str, optional): Комментарий к предложению.
-            sentence_index (int, optional): Индекс предложения в параграфе.
-            **kwargs: Дополнительные параметры.
-
-        Returns:
-            tuple: (созданное предложение, использованная группа)
-        """
-        if not sentence.strip():
-            sentence = "Пустое предложение"
-
-        logger.info(f"Создание head-предложения '{sentence}' для параграфа {paragraph_id}")
-
-        # Получаем параграф
-        paragraph = Paragraph.get_by_id(paragraph_id)
-        if not paragraph:
-            raise ValueError(f"Параграф с ID {paragraph_id} не найден")
-
-        # Импортирую функцию для поиска похожих предложений, делаю это 
-        # здесь чтобы избежать циклического импорта
-        from sentence_processing import find_similar_exist_sentences
-        
-        # Проверяем, есть ли уже head-группа у параграфа, если нет — создаём
-        group = paragraph.head_sentence_group
-        if not group:
-            group = HeadSentenceGroup.create()
-            paragraph.head_sentence_group_id = group.id
-
-        # Прежде чем создать новое главное предложение проверяю наличие 
-        # такого же предложения в базе
-        similar_sentence = find_similar_exist_sentences(
-            sentence_text = sentence, 
-            sentence_type = "head", 
-            tags = tags, 
-            comment = comment, 
-            sentence_index = sentence_index
-        )
-        if similar_sentence:
-            db.session.add(similar_sentence)
-            db.session.flush()
-            logger.info(f"Похожее предложение уже существует: {similar_sentence} и оно привязано к группе {group.id}, создание нового head предложения пропущено")
-            return cls.link_to_group(similar_sentence, group)
-        
-        # Создаём предложение
-        new_sentence = cls(
-            sentence=sentence.strip(),
-            tags=tags,
-            comment=comment,
-            sentence_index=sentence_index
-        )
-
-        db.session.add(new_sentence)
-        db.session.flush()  # Чтобы получить ID предложения
-        logger.info(f"Создано head-предложение, привязка к группе {group.id}")
-
-        # Привязываем предложение к группе
-        return cls.link_to_group(new_sentence, group)
-  
     
 class BodySentence(SentenceBase):
     __tablename__ = "body_sentences"
@@ -1350,69 +1279,6 @@ class BodySentence(SentenceBase):
         back_populates="body_sentences"
     )
     
-    @classmethod
-    def create(cls, sentence, head_sentence_id, tags=None, comment=None, sentence_weight=1):
-        """
-        Создает body-предложение и привязывает его к новой body-группе.
-
-        Args:
-            sentence (str): Текст предложения.
-            tags (str, optional): Теги предложения.
-            comment (str, optional): Комментарий к предложению.
-            sentence_weight (int, optional): Вес предложения (по умолчанию 1).
-            **kwargs: Дополнительные параметры.
-
-        Returns:
-            tuple: (созданное предложение, использованная группа)
-        """
-        if not sentence.strip():
-            sentence = "Пустое предложение"
-
-        logger.info(f"Создание body-предложения '{sentence}'")
-
-        head_sentence = HeadSentence.get_by_id(head_sentence_id)
-        if not head_sentence:
-            raise ValueError(f"Head-предложение с ID {head_sentence_id} не найдено")
-        
-        # Импортирую функцию для поиска похожих предложений, делаю это 
-        # здесь чтобы избежать циклического импорта
-        from sentence_processing import find_similar_exist_sentences
-        
-        # Проверяем, есть ли уже группа body-предложений у head-предложения, если нет — создаём
-        group = head_sentence.body_sentence_group
-        if not group:
-            group = BodySentenceGroup.create()
-            head_sentence.body_sentence_group_id = group.id  # Привязываем новую группу к head-предложению
-
-        # Прежде чем создать новое главное предложение проверяю наличие 
-        # такого же предложения в базе
-        similar_sentence = find_similar_exist_sentences(
-            sentence_text = sentence, 
-            sentence_type = "body", 
-            tags = tags, 
-            comment = comment
-        )
-        if similar_sentence:
-            db.session.add(similar_sentence)
-            db.session.flush()
-            logger.info(f"Похожее предложение уже существует: {similar_sentence} и оно привязано к группе {group.id}, создание нового body предложения пропущено")
-            return cls.link_to_group(similar_sentence, group)
-        
-        # Создаём предложение
-        new_sentence = cls(
-            sentence=sentence.strip(),
-            tags=tags,
-            comment=comment,
-            sentence_weight=sentence_weight
-        )
-
-        db.session.add(new_sentence)
-        db.session.flush()  # Чтобы получить ID предложения
-
-        logger.info(f"Создано body-предложение {new_sentence.id}, привязка к группе {group.id}")
-
-        # Привязываем предложение к группе
-        return cls.link_to_group(new_sentence, group)
     
 
 class TailSentence(SentenceBase):
@@ -1426,74 +1292,6 @@ class TailSentence(SentenceBase):
     )
     
     
-    @classmethod
-    def create(cls, sentence, paragraph_id, tags=None, comment=None, sentence_weight=1):
-        """
-        Создает tail-предложение и привязывает его к группе, связанной с указанным параграфом.
-
-        Args:
-            sentence (str): Текст предложения.
-            paragraph_id (int): ID параграфа, к которому привязывается предложение.
-            tags (str, optional): Теги предложения.
-            comment (str, optional): Комментарий к предложению.
-            sentence_weight (int, optional): Вес предложения (по умолчанию 1).
-            **kwargs: Дополнительные параметры.
-
-        Returns:
-            tuple: (созданное предложение, использованная группа)
-        """
-        if not sentence.strip():
-            sentence = "Пустое предложение"
-
-        logger.info(f"Создание tail-предложения '{sentence}' для параграфа {paragraph_id}")
-
-        # Получаем параграф
-        paragraph = Paragraph.get_by_id(paragraph_id)
-        if not paragraph:
-            raise ValueError(f"Параграф с ID {paragraph_id} не найден")
-
-        # Импортирую функцию для поиска похожих предложений, делаю это 
-        # здесь чтобы избежать циклического импорта
-        from sentence_processing import find_similar_exist_sentences
-        
-        # Проверяем, есть ли уже tail-группа у параграфа, если нет — создаём
-        group = paragraph.tail_sentence_group
-        if not group:
-            group = TailSentenceGroup.create()
-            paragraph.tail_sentence_group_id = group.id
-
-        # Прежде чем создать новое главное предложение проверяю наличие 
-        # такого же предложения в базе
-        similar_sentence = find_similar_exist_sentences(
-            sentence_text = sentence, 
-            sentence_type = "tail", 
-            tags = tags, 
-            comment = comment
-        )
-        if similar_sentence:
-            db.session.add(similar_sentence)
-            db.session.flush()
-            logger.info(f"Похожее предложение уже существует: {similar_sentence} и оно привязано к группе {group.id}, создание нового tail предложения пропущено")
-            return cls.link_to_group(similar_sentence, group)
-
-
-
-        # Создаём предложение
-        new_sentence = cls(
-            sentence=sentence.strip(),
-            tags=tags,
-            comment=comment,
-            sentence_weight=sentence_weight
-        )
-
-        db.session.add(new_sentence)
-        db.session.flush()  # Чтобы получить ID предложения
-
-        logger.info(f"Создано tail-предложение {new_sentence.id}, привязка к группе {group.id}")
-
-        # Привязываем предложение к группе
-        return cls.link_to_group(new_sentence, group)
-
   
   
         
@@ -1761,33 +1559,6 @@ class KeyWord(BaseModel):
             keyword.key_word_reports = []  
 
         db.session.commit()
-
-
-class ParagraphType(db.Model):
-    __tablename__ = "paragraph_types"
-    id = db.Column(db.Integer, primary_key=True)
-    type_name = db.Column(db.String(50), nullable=False, unique=True)
-
-    @classmethod
-    def create(cls, type_name):
-        """Creates a new paragraph type."""
-        new_type = cls(type_name=type_name)
-        db.session.add(new_type)
-        db.session.commit()
-        return new_type
-    
-    
-    @classmethod
-    def find_by_name(cls, name):
-        """
-        Возвращает ID типа параграфа по его имени.
-        Args:
-            name (str): Имя типа параграфа.
-        Returns:
-            int: ID типа параграфа или None, если не найден.
-        """
-        paragraph_type = cls.query.filter_by(type_name=name).first()
-        return paragraph_type.id if paragraph_type else None
 
 
 class FileMetadata(BaseModel):

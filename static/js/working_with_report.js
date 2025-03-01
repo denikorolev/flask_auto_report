@@ -1,6 +1,7 @@
 // working_with_report.js
 
 
+
 // Объявляем глобальные переменные и запускаем стартовые функции, постепенно нужно перенести сюда и логику связанную с ключевыми словами и развешивание части слушателей
 document.addEventListener("DOMContentLoaded", function() {
 
@@ -238,154 +239,6 @@ function cleanSelectText(element) {
 
 
 /**
- * Отображает обработанные абзацы и предложения, которые предлагаются для добавления в базу данных.
- * 
- * УСТАРЕВШАЯ ФУНКЦИЯ! НЕ ИСПОЛЬЗОВАТЬ!
- * 
- * Функция очищает контейнер для отображения запросов на добавление предложений и создает элементы для 
- * каждого абзаца и его предложений. Предоставляет возможность добавления предложений по отдельности или всех сразу.
- * 
- * @param {Array} paragraphs - Массив объектов абзацев, где каждый объект содержит `paragraph_id`, `paragraph_text`, 
- *                             и массив `sentences` или строку `sentence`.
- * 
- * Логика работы:
- * - Проверяет валидность переданных данных.
- * - Очищает контейнер перед добавлением новых данных.
- * - Для каждого предложения создает элемент с текстом предложения и кнопкой "Добавить".
- * - Если общее количество предложений больше одного, добавляется кнопка "Отправить все", 
- *   которая позволяет отправить все предложения одним запросом.
- * 
- * Вспомогательные функции:
- * - `sendSentences(dataToSend)` — отправляет данные выбранных предложений на сервер.
- * - `createSentenceElement(paragraphId, sentence)` — создает элемент предложения с текстом и кнопкой "Добавить".
- * 
- */
-// function displayProcessedParagraphs(paragraphs) {
-//     const container = document.getElementById('sentenceAddingRequestContainer');
-//     container.innerHTML = ''; // Clear the container before adding new data
-
-//     // Проверка, есть ли данные для обработки
-//     if (!paragraphs || !Array.isArray(paragraphs)) {
-//         console.error("Invalid paragraphs data:", paragraphs);
-//         return;
-//     }
-
-//     // Внутренняя функция для отправки данных на сервер
-//     function sendSentences(dataToSend) {
-//         sendRequest({
-//             url: "/working_with_reports/add_sentence_to_paragraph",
-//             method: "POST",
-//             data: dataToSend,
-//             csrfToken: csrfToken
-//         })
-//         .then(response => {
-//             if (response) {
-//                 toastr.success(response.message || 'Operation completed successfully!', 'Success');
-//             }
-//         })
-//         .catch(error => {
-//             console.error("Failed to send sentences:", error);
-//             alert("Failed to send sentences.");
-//         });
-//     }
-
-//     // Внутренняя функция для создания предложения и кнопки "Добавить"
-//     function createSentenceElement(paragraphId, sentence) {
-//         const sentenceDiv = document.createElement('div');
-//         sentenceDiv.classList.add('sentence-container');
-        
-//         sentenceDiv.textContent = sentence;
-
-//         // Добавляем кнопку "Добавить"
-//         const addButton = document.createElement('button');
-//         addButton.textContent = 'Добавить';
-//         addButton.classList.add('add-sentence-btn');
-//         addButton.addEventListener('click', function() {
-//             const dataToSend = {
-//                 sentence_for_adding: [
-//                     {
-//                         paragraph_id: paragraphId,
-//                         sentences: [sentence]
-//                     }
-//                 ]
-//             };
-
-//             // Используем внутреннюю функцию для отправки данных
-//             sendSentences(dataToSend);
-//         });
-
-//         sentenceDiv.appendChild(addButton);
-//         return sentenceDiv;
-//     }
-
-//     // Collect total number of sentences to be added
-//     let totalSentences = 0;
-//     paragraphs.forEach(paragraph => {
-//         const sentences = Array.isArray(paragraph.sentences) ? paragraph.sentences : [paragraph.sentence];
-//         totalSentences += sentences.length;
-//     });
-    
-//     // Создаем кнопку "Отправить все"
-//     if (totalSentences >= 2) {
-//         // Create "Send All" button
-//         const sendAllButton = document.createElement('button');
-//         sendAllButton.textContent = 'Отправить все';
-//         sendAllButton.classList.add('send-all-btn');
-//         sendAllButton.addEventListener('click', function() {
-//             const allSentences = [];
-
-//             // Собираем все предложения для отправки
-//             paragraphs.forEach(paragraph => {
-//                 const sentences = Array.isArray(paragraph.sentences) ? paragraph.sentences : [paragraph.sentence];
-//                 if (sentences) {
-//                     allSentences.push({
-//                         paragraph_id: paragraph.paragraph_id,
-//                         sentences: sentences
-//                     });
-//                 }
-//             });
-
-//             // Формируем данные для отправки
-//             const dataToSend = {
-//                 sentence_for_adding: allSentences
-//             };
-
-//             // Используем внутреннюю функцию для отправки данных
-//             sendSentences(dataToSend);
-//         });
-
-//         // Добавляем кнопку "Отправить все" в контейнер
-//         container.appendChild(sendAllButton);
-//     }
-
-//     // Создаем и добавляем элементы предложений в контейнер
-//     paragraphs.forEach(paragraph => {
-//         const paragraphDiv = document.createElement('div');
-//         paragraphDiv.classList.add('paragraph-container');
-
-//         const paragraphText = paragraph.paragraph_text || `Paragraph: ${paragraph.paragraph_id}`;
-//         paragraphDiv.textContent = `Paragraph: ${paragraphText}`;
-
-//         // Проверка на массив предложений
-//         if (Array.isArray(paragraph.sentences)) {
-//             paragraph.sentences.forEach(sentence => {
-//                 const sentenceElement = createSentenceElement(paragraph.paragraph_id, sentence);
-//                 paragraphDiv.appendChild(sentenceElement);
-//             });
-//         } else if (typeof paragraph.sentence === 'string') {
-//             // Если предложение передано как строка (единичное предложение)
-//             const sentenceElement = createSentenceElement(paragraph.paragraph_id, paragraph.sentence);
-//             paragraphDiv.appendChild(sentenceElement);
-//         } else {
-//             console.error('No valid sentences found for paragraph:', paragraph);
-//         }
-
-//         container.appendChild(paragraphDiv);
-//     });
-// }
-
-
-/**
  * Выделяет ключевые слова в переданном элементе.
  * 
  * 🔹 Обновляет `innerHTML` элемента, заменяя ключевые слова на <span>.
@@ -602,6 +455,21 @@ function collectTextFromParagraphs(paragraphClass) {
     return collectedText.trim();  // Убираем лишние пробелы и возвращаем текст
 }
 
+
+// Функция для получения предложения по его ID из данных с сервера 
+// при условии что я уже получил данные параграфа. Если больше нигде 
+// не будет использоваться то можно просто поместит в фунцию linkSentences
+function findHeadSentenceById(paragraphData, sentenceId) {
+    for (const headIndex in paragraphData.head_sentences) {
+        const headSentence = paragraphData.head_sentences[headIndex];
+        if (headSentence.id === sentenceId) {
+            return headSentence;
+        }
+    }
+    return null; // Если не найдено
+}
+
+
 /**
  * Связывает предложения на странице с данными из объекта `reportData` и добавляет к ним связанные предложения.
  * 
@@ -634,30 +502,22 @@ function collectTextFromParagraphs(paragraphClass) {
 function linkSentences() {
     // Находим все предложения на странице
     const sentencesOnPage = document.querySelectorAll(".report__sentence");
-
     // Проходим по каждому предложению на странице
     sentencesOnPage.forEach(sentenceElement => {
-        const paragraphId = sentenceElement.getAttribute("data-paragraph-id");
-        const index = sentenceElement.getAttribute("data-index");
-        const sentenceId = sentenceElement.getAttribute("data-id");
+        const paragraphId = parseInt(sentenceElement.getAttribute("data-paragraph-id"));
+        const sentenceId = parseInt(sentenceElement.getAttribute("data-id"));
 
-        // Ищем параграф с соответствующим ID и совпадающим index в reportData
-        const paragraphData = reportData.paragraphs.find(p => p.id === parseInt(paragraphId));
-
-        if (paragraphData && paragraphData.sentences[index]) {
-            // Фильтруем предложения, исключая текущее видимое предложение по его ID
-            const filteredSentences = paragraphData.sentences[index].filter(sentence => {
-                return sentence.id.toString() !== sentenceId; // Сравнение по ID
-            });
+        const paragraphData = currentReportParagraphsData.find(paragraph => paragraph.id === paragraphId) || null;
+        const currentHeadSentence = paragraphData.head_sentences.find(sentence => sentence.id === sentenceId) || null;
+        const bodySentences = currentHeadSentence.body_sentences;
 
             // Связываем видимое предложение с отфильтрованными предложениями из reportData
-            sentenceElement.linkedSentences = filteredSentences;
+            sentenceElement.linkedSentences = bodySentences;
 
             // Если есть связанные предложения, выделяем цветом текущее предложение
             if (sentenceElement.linkedSentences.length > 0) {
                 sentenceElement.classList.add("has-linked-sentences-highlighted-sentence");
             }
-        }
     });
 }
 
@@ -696,7 +556,7 @@ function sentenceDoubleClickHandle (){
                     highlightKeyWords(activeSentence) // Обновляем текст
                 });
             } else {
-                console.error("No linked sentences or linked sentences is not an array");
+                console.warn("No linked sentences or linked sentences is not an array");
             }
         });
         // Добавляю слушатель начала ввода на предложение
@@ -874,7 +734,6 @@ function editButtonLogic(editButton) {
  * 
  * Требования:
  * - Элементы кнопок с классом "icon-btn--add-sentence" должны присутствовать на странице.
- * - Серверный маршрут "/working_with_reports/get_sentences_with_type_tail" должен возвращать данные в формате JSON с массивом предложений.
  * - Должны быть доступны функции `createEditableSentenceElement`, `showPopupSentences`(находится в utils.js), `updateCoreAndImpessionParagraphText`, и `hidePopupSentences`(находится в utils.js).
  * - Должен быть определен CSRF-токен для безопасности запросов.
  * 
@@ -888,33 +747,30 @@ function editButtonLogic(editButton) {
 function addSentenceButtonLogic() {
     document.querySelectorAll(".icon-btn--add-sentence").forEach(button => {
         button.addEventListener("click", function(event) {
-            const paragraphId = this.getAttribute("data-paragraph-id");
+            const paragraphId = parseInt(this.closest(".report__paragraph").querySelector("p").getAttribute("data-paragraph-id"));
             // Создаем пустое предложение и добавляем перед кнопкой
-            const newSentenceElement = createEditableSentenceElement("",paragraphId);
+            const newSentenceElement = createEditableSentenceElement("", paragraphId);
             button.parentNode.insertBefore(newSentenceElement, button);
             newSentenceElement.focus(); // Устанавливаем фокус на новый элемент
-
-            // Получаем предложения с индексом 0 для этого параграфа
-            sendRequest({
-                url: "/working_with_reports/get_sentences_with_type_tail",
-                method: "POST",
-                data: { paragraph_id: paragraphId },
-            }).then(data => {
-                if (data.sentences && data.sentences.length > 0) {
-                    // Используем popup для показа предложений
-                    showPopupSentences(event.pageX, event.pageY, data.sentences, function(selectedSentence) {
-                        // Логика при выборе предложения из popup
-                        const newSentenceElement = createEditableSentenceElement(selectedSentence.sentence, paragraphId);
-                        button.parentNode.insertBefore(newSentenceElement, button);
-                        highlightKeyWords(newSentenceElement); // Обновляем текст абзаца после добавления предложения
-                        newSentenceElement.focus(); // Устанавливаем фокус на новый элемент
-                    });
-                } else {
-                    console.warn("No sentences available for this paragraph.");
-                }
-            }).catch(error => {
-                console.error("Ошибка при получении добавочных предложений", error);
-            });
+            // Получаем данные параграфа по его ID из данных с сервера
+            const paragraph = currentReportParagraphsData.find(paragraph => paragraph.id === paragraphId) || null;
+            console.log(paragraph);
+            const tailSentences = paragraph.tail_sentences;
+            console.log(tailSentences);
+           
+            if (tailSentences && tailSentences.length > 0) {
+                // Используем popup для показа предложений
+                showPopupSentences(event.pageX, event.pageY, tailSentences, function(selectedSentence) {
+                    // Логика при выборе предложения из popup
+                    const newSentenceElement = createEditableSentenceElement(selectedSentence.sentence, paragraphId);
+                    button.parentNode.insertBefore(newSentenceElement, button);
+                    highlightKeyWords(newSentenceElement); // Обновляем текст абзаца после добавления предложения
+                    newSentenceElement.focus(); // Устанавливаем фокус на новый элемент
+                });
+            } else {
+                console.warn("No sentences available for this paragraph.");
+            }
+            
 
             // Логика скрытия popup или удаления предложения
             newSentenceElement.addEventListener("input", function() {
@@ -964,7 +820,6 @@ function copyButtonLogic(copyButton) {
         // Соединяем все части с пустой строкой между ними
         const textToCopy = `${initialText}\n\n${coreText}\n\n${impressionText}`.trim();
         
-        console.log(textToCopy);
         try {
             // Копируем текст в буфер обмена
             await navigator.clipboard.writeText(textToCopy);
@@ -972,6 +827,7 @@ function copyButtonLogic(copyButton) {
 
             // После успешного копирования выполняем отправку данных
             const paragraphsData = collectParagraphsData();
+            console.log(paragraphsData);
 
             // Отправляем данные параграфов
             // await sendParagraphsData(paragraphsData);
@@ -1252,9 +1108,9 @@ async function sendModifiedSentencesToServer() {
 
     modifiedSentences.forEach(sentenceElement => {
         const paragraphId = sentenceElement.getAttribute("data-paragraph-id");
-        const sentenceIndex = sentenceElement.getAttribute("data-index") || 0;
-        const sentenceType = sentenceElement.getAttribute("data-sentence-type") || "tail";
+        const sentenceType = sentenceElement.getAttribute("data-sentence-type") === "head" ? "body" : "tail";
         const currentText = cleanSelectText(sentenceElement).trim();
+        const headSentenceId = sentenceElement.getAttribute("data-id" || null);
 
         if(!currentText) {
             return;
@@ -1262,9 +1118,9 @@ async function sendModifiedSentencesToServer() {
         // Собираем данные для одного предложения
         dataToSend.push({
             paragraph_id: paragraphId,
-            sentence_index: sentenceIndex,
             text: currentText,
-            type: sentenceType
+            type: sentenceType,
+            head_sentence_id: headSentenceId
         });
 
     });
@@ -1365,6 +1221,34 @@ function firstGrammaSentence(sentence) {
     return sentence.trim();
 }
 
+
+/**
+ * Sends a request to the server to generate an impression based on the input text and assistant list.
+ *
+ * @param {string} text - The input text to be sent to the server.
+ * @param {Array<string>} assistantList - A list of assistant names to be included in the request.
+ * @returns {Promise<string>} - Returns a promise that resolves with the server's response message or error.
+ */
+function generateImpressionRequest(text, assistantList) {
+    // Формируем данные для отправки
+    const jsonData = {
+        text: text,
+        assistants: assistantList // передаем список ассистентов
+    };
+
+    // Отправляем запрос на сервер с помощью sendRequest
+    return sendRequest({   
+        url: "/openai_api/generate_impression",
+        data: jsonData,
+        csrfToken: csrfToken
+    }).then(data => {
+        if (data.status === "success") {
+            return data.data; // Возвращаем успешный ответ от сервера
+        } else {
+            return data.message; // Возвращаем сообщение об ошибке, если запрос не успешен
+        }
+    });
+}
 
 
 

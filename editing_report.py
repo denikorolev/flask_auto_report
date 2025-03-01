@@ -1,9 +1,8 @@
 # editing_report.py
 
 from flask import Blueprint, render_template, request, current_app, jsonify, g
-from models import db, Report, Paragraph, Sentence, ParagraphType
-from errors_processing import print_object_structure
-from utils import get_max_index, check_main_sentences
+from models import db, Report, Paragraph, Sentence, HeadSentence
+from utils import get_max_index, check_unique_indices
 from flask_security.decorators import auth_required
 from logger import logger
 
@@ -17,32 +16,175 @@ editing_report_bp = Blueprint('editing_report', __name__)
 @editing_report_bp.route('/edit_report', methods=["GET"])
 @auth_required()
 def edit_report():
-    page_title = "Editing report"
     report_id = request.args.get("report_id")
-    report = None
+    profile_id = g.current_profile.id
 
     report = Report.query.get(report_id)
-    if not report or report.profile_id != g.current_profile.id:
-        logger.error(f"Report not found or you don't have permission to edit it")
-        return jsonify({"status": "error", "message": "Report not found or you don't have permission to edit it"}), 403
-
-    report_paragraphs = sorted(report.report_to_paragraphs, key=lambda p: p.paragraph_index) if report else []
-    for paragraph in report_paragraphs:
-        paragraph.paragraph_to_sentences = sorted(paragraph.paragraph_to_sentences, key=lambda s: (s.index, s.weight))
-        # Добавляем маркер для разделения предложений
-        previous_index = None
-        for sentence in paragraph.paragraph_to_sentences:
-            sentence.show_separator = previous_index is not None and previous_index != sentence.index
-            previous_index = sentence.index
-    paragraph_types = ParagraphType.query.all()
+    if not report or report.profile_id != profile_id:
+        logger.error(f"Протокол не найден или у вас нет прав на его редактирование")
+        return jsonify({"status": "error", "message": "Протокол не найден или у вас нет прав на его редактирование"}), 403
+    report_data = Report.get_report_info(report_id, profile_id)
+    report_paragraphs = Report.get_report_structure(report_id, profile_id)
+    
+    # делаю выборку типов параграфов
+    paragraph_types = current_app.config["PARAGRAPH_TYPE_LIST"]
 
 
     return render_template('edit_report.html', 
-                           title=page_title, 
-                           report=report,
+                           title=f"Редактирование протокола {report.report_name}", 
+                           report_data=report_data,
                            report_paragraphs=report_paragraphs,
                            paragraph_types=paragraph_types
                            )
+
+
+
+@editing_report_bp.route('/edit_paragraph', methods=["GET"])
+@auth_required()
+def edit_paragraph():
+    paragraph_id = request.args.get("paragraph_id")
+   
+    paragraph = Paragraph.query.get(paragraph_id)
+    if not paragraph:
+        return None  # Если параграфа нет, вернем None
+
+    # Собираем head-предложения
+    head_sentences = []
+    if paragraph.head_sentence_group:
+        for sentence in sorted(paragraph.head_sentence_group.head_sentences, key=lambda s: s.sentence_index):
+            body_sentences = False
+            print(sentence.body_sentence_group_id)
+            if sentence.body_sentence_group_id:
+                body_sentences = True
+            head_sentences.append({
+                "id": sentence.id,
+                "index": sentence.sentence_index,
+                "sentence": sentence.sentence,
+                "tags": sentence.tags,
+                "comment": sentence.comment,
+                "body_sentences": body_sentences
+            })
+
+    # Собираем tail-предложения
+    tail_sentences = []
+    if paragraph.tail_sentence_group:
+        tail_sentences = [
+            {
+                "id": sentence.id,
+                "weight": sentence.sentence_weight,
+                "sentence": sentence.sentence,
+                "tags": sentence.tags,
+                "comment": sentence.comment
+            }
+            for sentence in sorted(paragraph.tail_sentence_group.tail_sentences, key=lambda s: s.sentence_weight)
+        ]
+
+    # Формируем итоговые данные параграфа
+    paragraph_data = {
+        "id": paragraph.id,
+        "paragraph_index": paragraph.paragraph_index,
+        "paragraph": paragraph.paragraph,
+        "paragraph_visible": paragraph.paragraph_visible,
+        "title_paragraph": paragraph.title_paragraph,
+        "bold_paragraph": paragraph.bold_paragraph,
+        "paragraph_type": paragraph.paragraph_type,
+        "paragraph_comment": paragraph.comment,
+        "paragraph_weight": paragraph.paragraph_weight,
+        "tags": paragraph.tags,
+        "head_sentences": head_sentences,
+        "tail_sentences": tail_sentences
+    }
+    
+    if not paragraph:
+        logger.error(f"Параграф не найден.")
+        return jsonify({"status": "error", "message": "Параграф не найден."}), 403
+    
+    return render_template('edit_paragraph.html',
+                            title=f"Редактирование параграфа {paragraph_data['paragraph']}",
+                            paragraph=paragraph_data
+                            )
+
+
+@editing_report_bp.route('/edit_head_sentence', methods=["GET"])
+@auth_required()
+def edit_head_sentence():
+    print("Запрос на редактирование главного предложения")
+    sentence_id = request.args.get("sentence_id")
+    sentence = HeadSentence.query.get(sentence_id)
+    print(f"sentence = {sentence}")
+    if not sentence:
+        return jsonify({"status": "error", "message": "Предложение не найдено"}), 404
+    body_sentences = []
+    if sentence.body_sentence_group_id:
+        print("sentence.body_sentence_group_id = ", sentence.body_sentence_group_id)
+        body_sentences = [
+            {
+                "id": body_sentence.id,
+                "weight": body_sentence.sentence_weight,
+                "sentence": body_sentence.sentence,
+                "tags": body_sentence.tags,
+                "comment": body_sentence.comment
+            }
+            for body_sentence in sorted(sentence.body_sentence_group.body_sentences, key=lambda s: s.sentence_weight)
+        ]
+    print(f"не сработал if, body_sentence")
+    sentence_data = {
+        "id": sentence.id,
+        "index": sentence.sentence_index,
+        "sentence": sentence.sentence,
+        "tags": sentence.tags,
+        "comment": sentence.comment,
+        "body_sentences": body_sentences
+    }
+    return render_template('edit_head_sentence.html',
+                           title=f"Редактирование главного предложения: {sentence_data['sentence']}",
+                           head_sentence=sentence_data
+                           )
+
+@editing_report_bp.route('/update_paragraph_order', methods=["POST"])
+@auth_required()
+def update_paragraph_order():
+    data = request.json.get("paragraphs", [])
+    
+    try:
+        for item in data:
+            paragraph = Paragraph.get_by_id(item["id"])
+            if paragraph:
+                paragraph.paragraph_index = item["index"]
+        
+        db.session.commit()
+        return jsonify({"status": "success", "message": "Порядок параграфов успешно обновлен"}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": f"Ошибка обновления порядка параграфов: {e}"}), 500
+
+
+@editing_report_bp.route("/update_head_sentence_order", methods=["POST"])
+@auth_required()
+def update_head_sentence_order():
+    """
+    Обновляет индексы главных предложений в параграфе после их перетаскивания.
+    """
+    data = request.json
+    updated_order = data.get("updated_order")
+
+    if not updated_order:
+        return jsonify({"status": "error", "message": "Нет данных для обновления"}), 400
+
+    try:
+        for item in updated_order:
+            sentence = HeadSentence.query.get(item["sentence_id"])
+            if sentence:
+                sentence.sentence_index = item["new_index"]
+
+        db.session.commit()
+        return jsonify({"status": "success", "message": "Порядок обновлен"}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": f"Ошибка сохранения: {e}"}), 500
+
 
 
 @editing_report_bp.route('/update_report', methods=['PUT'])
@@ -52,20 +194,26 @@ def update_report():
     report_id = request.form.get("report_id")
     report = Report.query.get(report_id)
     
+    report_name = request.form.get("report_name")
+    if not report_name:
+        logger.error(f"Не указано название протокола")
+        return jsonify({"status": "error", "message": "Не указано название протокола"}), 400
+    
     if not report or report.profile_id != g.current_profile.id:
-        logger.error(f"Report not found or profile data of this paragraph doesn't match with current profile")
-        return jsonify({"status": "error", "message": "Report not found or profile data of this paragraph doesn't match with current profile"}), 403
+        logger.error(f"Такой протокол в данном профиле не найден")
+        return jsonify({"status": "error", "message": "Такой протокол в данном профиле не найден"}), 403
 
     try:
-        report.report_name = request.form.get("report_name")
+        report.report_name = report_name
         report.comment = request.form.get("comment")
-        report_side_value = request.form.get("report_side")
-        report.report_side = True if report_side_value == "true" else False
+        report.report_side = True if request.form.get("report_side") == "true" else False
         report.save()
-        return jsonify({"status": "success", "message": "Report updated successfully"}), 200
+        return jsonify({"status": "success", "message": "Данные протокола успешно обновлены"}), 200
     except Exception as e:
         logger.error(f"Error updating report: {str(e)}")
-        return jsonify({"status": "error", "message": f"Can't update report. Error code: {e}"}), 400
+        return jsonify({"status": "error", "message": f"Не удалось обновить данные протокола. Ошибка: {e}"}), 400
+
+
 
 
 
@@ -82,21 +230,10 @@ def new_paragraph():
     try:
         paragraph_index = get_max_index(Paragraph, "report_id", report_id, Paragraph.paragraph_index)
         
-        default_paragraph_type = ParagraphType.query.filter_by(type_name="text").first()
-        if not default_paragraph_type:
-            return jsonify({"status": "error", "message": "Default paragraph type 'text' not found."}), 400
-        
         Paragraph.create(
             report_id=report.id,
             paragraph_index=paragraph_index,
-            paragraph="insert your text",
-            type_paragraph_id=default_paragraph_type.id,
-            paragraph_visible=True,
-            title_paragraph=False,
-            bold_paragraph=False,
-            paragraph_weight=1,
-            tags="",
-            comment=None
+            paragraph="Введите текст параграфа"
         )
         return jsonify({"status": "success", "message": "Параграф успешно добавлен"}), 200
     except Exception as e:
@@ -104,78 +241,24 @@ def new_paragraph():
         return jsonify({"status": "error", "message": f"Ошибка добавления параграфа, код ошибки: {e}"}), 400
 
 
-@editing_report_bp.route('/edit_paragraph', methods=['POST'])
-@auth_required()
-def edit_paragraph():
-
-    paragraph_id = request.form.get("paragraph_id")
-    paragraph_for_edit = Paragraph.query.get(paragraph_id)
-
-    if not paragraph_for_edit or paragraph_for_edit.paragraph_to_report.profile_id != g.current_profile.id:
-        logger.error(f"Paragraph not found or data of this paragraph doesn't match with current profile")
-        return jsonify({"status": "error", "message": "Paragraph not found or data of this paragraph doesn't match with current profile"}), 404
-
-    try:
-        # Получаем предлагаемый тип параграфа
-        new_type_paragraph_id = int(request.form.get("paragraph_type"))
-        current_report_id = paragraph_for_edit.report_id
-        # Список типов параграфов, которые могут быть не уникальными
-        allowed_paragraph_types = [ParagraphType.find_by_name("text"), ParagraphType.find_by_name("custom"), ParagraphType.find_by_name("title")]
-        # Сначала проверим, если предлагаемый тип не 'text' и не 'custom' и не "title"
-        if new_type_paragraph_id not in allowed_paragraph_types:
-            # Проверим, существует ли уже параграф с таким типом для данного отчета
-            existing_paragraph = Paragraph.query.filter_by(
-                report_id=current_report_id,
-                type_paragraph_id=new_type_paragraph_id
-            ).first()
-
-            if existing_paragraph and existing_paragraph.id != paragraph_for_edit.id:
-                # Если существует другой параграф с этим типом, не обновляем тип
-                # Сохраняем остальные изменения
-                paragraph_for_edit.paragraph_index = request.form.get("paragraph_index")
-                paragraph_for_edit.paragraph = request.form.get("paragraph_name")
-                paragraph_for_edit.paragraph_visible = request.form.get("paragraph_visible") == "on"
-                paragraph_for_edit.title_paragraph = request.form.get("title_paragraph") == "on"
-                paragraph_for_edit.bold_paragraph = request.form.get("bold_paragraph") == "on"
-
-                paragraph_for_edit.save()
-                return jsonify({
-                    "status": "success",
-                    "message": "Paragraph updated successfully, but the type was not changed because a paragraph with this type already exists."
-                }), 200
-
-        # Если тип 'text', 'custom' или такого типа еще нет, сохраняем все изменения, включая тип
-        paragraph_for_edit.paragraph_index = request.form.get("paragraph_index")
-        paragraph_for_edit.paragraph = request.form.get("paragraph_name")
-        paragraph_for_edit.paragraph_visible = request.form.get("paragraph_visible") == "on"
-        paragraph_for_edit.title_paragraph = request.form.get("title_paragraph") == "on"
-        paragraph_for_edit.bold_paragraph = request.form.get("bold_paragraph") == "on"
-        paragraph_for_edit.type_paragraph_id = new_type_paragraph_id
-
-        paragraph_for_edit.save()
-        return jsonify({"status": "success", "message": "Paragraph updated successfully"}), 200
-
-    except Exception as e:
-        logger.error(f"Error updating paragraph: {str(e)}")
-        return jsonify({"status": "error", "message": f"Something went wrong. Error code: {e}"}), 400
-
 
 @editing_report_bp.route('/delete_paragraph', methods=["DELETE"])
 @auth_required()
 def delete_paragraph():
-    
+    logger.info("Логика удаления параграфа запущена ----------------------------")
     paragraph_id = request.json.get("paragraph_id")
     paragraph = Paragraph.query.get(paragraph_id)
 
     if not paragraph or paragraph.paragraph_to_report.profile_id != g.current_profile.id:
-        return jsonify({"status": "error", "message": "Paragraph not found or data of this paragraph doesn't match with current profile"}), 404
-
+        return jsonify({"status": "error", "message": "Параграф не найден или не соответствует профилю"}), 404
     try:
         Paragraph.delete_by_id(paragraph_id)
-        return jsonify({"status": "success", "message": "Paragraph deleted successfully"}), 200
+        logger.info("Логика удаления параграфа успешно завершена ----------------------------")
+        return jsonify({"status": "success", "message": "Параграф успешно удален"}), 200
     except Exception as e:
         logger.error(f"Error deleting paragraph: {str(e)}")
-        return jsonify({"status": "error", "message": f"Failed to delete paragraph. Error code: {e}"}), 400
+        return jsonify({"status": "error", "message": f"Не удалось удалить параграф. Ошибка: {e}"}), 400
+
 
 
 # Массовое редактирование предложений
@@ -273,96 +356,24 @@ def delete_sentence():
         return jsonify({"status": "success", "message": "Sentence deleted successfully"}), 200
     except Exception as e:
         return jsonify({"status": "error", "message": f"Failed to delete sentence. Error code: {e}"}), 400
-
-
-@editing_report_bp.route("change_sentence_type", methods=["POST"])
+    
+    
+    
+# проверяет уникальность индексов параграфов и главных предложений
+@editing_report_bp.route('/report_checkers', methods=['POST'])
 @auth_required()
-def change_sentence_type():
-    logger.info("Логика изменения типа предложения запущена----------------------------")
-    if not request.is_json:
-        return jsonify({"status": "error", "message": "Ошибочный формат данных в запросе"}), 400
-
+def report_checkers():
     data = request.get_json()
-    logger.debug(f"Данные предложения из запроса на изменения типа предложения: {data}")
-    
-    sentence_id = int(data.get("sentence_id"))
-    sentence_type = data.get("sentence_type")  
-    
-    if not sentence_id or not sentence_type:
-        logger.error("В запросе не хватает данных о id предложения или типе")
-        return jsonify({"status": "error", "message": "В запросе не хватает данных о предложении или типе"}), 400
-    
-    if sentence_type == "body":
-        try:
-            sentence = Sentence.get_by_id(sentence_id)
-            sentence.sentence_type = sentence_type
-            sentence.save()
-            logger.info("Логика изменения типа предложения (body) успешно завершена --------------------------------")
-            return jsonify({"status": "success", "message": "Тип предложения изменен"}), 200
-        except Exception as e:
-            logger.error(f"Ошибка при изменении типа предложения: {str(e)}")
-            return jsonify({"status": "error", "message": f"Ошибка при изменении типа предложения. Код ошибки: {e}"}), 400
-    if sentence_type == "tail":
-        try:
-            sentence = Sentence.get_by_id(sentence_id)
-            sentence.sentence_type = sentence_type
-            sentence.index = 0
-            sentence.save()
-            logger.info("Логика изменения типа предложения (tail) успешно завершена --------------------------------")
-            return jsonify({"status": "success", "message": "Тип предложения изменен"}), 200
-        except Exception as e:
-            logger.error(f"Ошибка при изменении типа предложения: {str(e)}")
-            return jsonify({"status": "error", "message": f"Ошибка при изменении типа предложения. Код ошибки: {e}"}), 400
-        
-    paragraph_id = int(data.get("paragraph_id"))
-    sentence_index = int(data.get("sentence_index"))
-    
-    if  not paragraph_id or sentence_index == None:
-        logger.error("В запросе не хватает данных параграфа")
-        return jsonify({"status": "error", "message": "В запросе не хватает данных о параграфе или индексе"}), 400
-
-    try:
-        sentences = Sentence.query.filter_by(
-            paragraph_id = paragraph_id,
-            index = sentence_index
-        ).all()
-        
-        for sentence in sentences:
-            logger.info(f"Обрабатываю предложение с id={sentence.id}")
-            if sentence.id == sentence_id:
-                logger.info(f"Это теперь главное предложение - {sentence.sentence}")
-                sentence.sentence_type = "head"
-            else:
-                sentence.sentence_type = "body"
-                
-            sentence.save(old_index=sentence.index)
-            
-        logger.info("Логика изменения типа предложения успешно завершена --------------------------------")
-        return jsonify({"status": "success", "message": "Тип предложения изменен"}), 200
-    except Exception as e:
-        logger.error(f"Ошибка при изменении типа предложения: {str(e)}")
-        return jsonify({"status": "error", "message": f"Ошибка при изменении типа предложения. Код ошибки: {e}"}), 400
-
-
-
-@editing_report_bp.route('/check_report_for_excess_ishead', methods=['POST'])
-@auth_required()
-def check_report_for_excess_ishead():
-    """
-    Проверяет, есть ли в каждом наборе предложений с одинаковым index ровно одно главное предложение.
-    Если index = 0, то в этом наборе не должно быть главных предложений.
-    Возвращает отчет с информацией о проблемах в параграфах.
-    """
-    if not request.is_json:
-        return jsonify({"status": "error", "message": "Неправильный формат данных"}), 400
-
-    data = request.get_json()
+    logger.debug(f"Получены данные для запуска проверок: {data}")
     report_id = data.get("report_id")
-    report = Report.query.get(report_id)
+    if not report_id:
+        logger.error(f"Не указан id отчета")
+        return jsonify({"status": "error", "message": "Отчет не найден"}), 404
+    paragraphs_by_type = Paragraph.get_report_paragraphs(report_id)
+    try:
+        check_unique_indices(paragraphs_by_type)
+        return jsonify({"status": "success", "message": "Индексы параграфов и главных предложений уникальны"}), 200
+    except ValueError as e:
+        return jsonify({"status": "error", "message": f"В протоколе присутствует ошибка: {str(e)}"}), 400
 
-    if not report or report.profile_id != g.current_profile.id:
-        return jsonify({"status": "error", "message": "Отчет не найден или не соответствует данному профилю"}), 404
 
-    errors = check_main_sentences(report)
-    
-    return jsonify({"status": "success", "errors": errors}), 200

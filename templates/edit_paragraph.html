@@ -1,0 +1,114 @@
+<!--edit_paragraph.html-->
+
+{% extends "base.html" %}
+
+{% block container %}
+{{ super() }}
+<input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
+
+<div class="flex">
+    <button class="btn report__btn" id="backToReportButton" type="button">Вернуться к редактированию протокола</button>
+</div>
+
+<div class="container edit-paragraph" data-paragraph-id="{{ paragraph.id }}">
+
+    <!-- Данные параграфа -->
+    <div class="flex edit-paragraph__paragraph-data-block">
+        <div class="flex edit-paragraph__paragraph-data">
+            <div>
+                <label for="paragraph_id">ID:</label>
+                <span name="paragraph_id">{{ paragraph.id }}</span>
+            </div>
+            <div>
+                <label>Комментарий:</label>
+                <input type="text" id="paragraph_comment" value="{{ paragraph.paragraph_comment }}" class="input">
+            </div>
+            <div>
+                <label>Тип параграфа:</label>
+                <input type="text" id="paragraph_type" value="{{ paragraph.paragraph_type }}" class="input" readonly>
+            </div>
+            <div>
+                <label>Вес:</label>
+                <input type="number" id="paragraph_weight" value="{{ paragraph.paragraph_weight }}" class="input">
+            </div>
+        </div>
+        <!-- Кнопка сохранения -->
+        <button class="btn report__btn edit-paragraph__btn--save-paragraph-data" id="saveParagraphDataButton">Сохранить изменения</button>
+    </div>
+
+    <hr>
+
+    <!-- Главные предложения -->
+    <h3>Главные предложения</h3>
+    <ul class="edit-sentence__list">
+        {% for sentence in paragraph.head_sentences %}
+            <li class="wrapper__card edit-sentence__item
+                {% if sentence.body_sentences %}
+                    wrapper__card--text
+                {% endif %}
+                " 
+            data-sentence-id="{{ sentence.id }}"
+            data-paragraph-id="{{ paragraph.id }}"
+            data-sentence-index="{{ sentence.index }}"
+            data-sentence-type="head"
+            data-sentence-tags="{{ sentence.tags }}"
+            data-sentence-comment="{{ sentence.comment }}">
+
+            <div class="drag-handle">☰</div> <!-- Хваталка -->
+                
+            <div>
+                <p class="edit-sentence__text">{{ sentence.sentence }}</p>
+                {% if not sentence.body_sentences %}
+                    <p class="edit-paragraph__title--invisible">У данного главного предложения нет дополнительных предложений</p>
+                {% endif %}
+            </div>
+
+            <div>
+                <button class="btn report__btn edit-sentence__btn-head--edit" data-sentence-id="{{ sentence.id }}">Редактировать предложение</button>
+                <button class="btn report__btn edit-sentence__btn-head--delete" data-sentence-id="{{ sentence.id }}">Удалить предложение</button>
+            </div>
+               
+            </li>
+        {% endfor %}
+    </ul>
+    <hr>
+
+    <button class="btn report__btn" id="addHeadSentenceButton">Добавить главное предложение</button>
+
+    <hr>
+    <!-- Дополнительные предложения -->
+    <h3 class="edit-sentence__title" id="editSentenceTitle">Дополнительные предложения параграфа</h3>
+    <ul class="edit-sentence__list" style="display: none;" id="editTailSentenceList">
+        {% for sentence in paragraph.tail_sentences %}
+            <li class="wrapper__card wrapper__card--tail edit-sentence__item" 
+            data-sentence-id="{{ sentence.id }}"
+            data-paragraph-id="{{ paragraph.id }}"
+            data-sentence-index="{{ sentence.weight }}"
+            data-sentence-type="tail"
+            data-sentence-tags="{{ sentence.tags }}"
+            data-sentence-comment="{{ sentence.comment }}">
+
+            <div class=""> {{sentence.weight}}</div> <!-- Отображаю вес -->
+                
+            <p class="edit-sentence__text">{{ sentence.sentence }}</p>
+               
+            <div>
+                <button class="btn report__btn edit-sentence__btn-tail--delete" data-sentence-id="{{ sentence.id }}">Удалить предложение</button>
+            </div>
+            </li>
+        {% endfor %}
+        <hr>
+        <button class="btn report__btn" id="addTailSentenceButton">Добавить дополнительное предложение</button>
+    </ul>
+</div>
+
+{% endblock container %}
+
+{% block scripts %}
+<script>
+    const paragraphData = {{ paragraph | tojson | safe }};
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+<script src="{{ url_for('static', filename='js/edit_paragraph.js') }}"></script>
+{% endblock scripts %}

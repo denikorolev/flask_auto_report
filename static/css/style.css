@@ -472,8 +472,34 @@ body {
 
 }
 
-/* Блок Grid */
-/* Создаем сетку для заголовков и строк */
+.edit-paragraph__title {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 10px;
+    cursor: pointer;
+}
+
+/* Блок для edit-paragraph */
+.edit-paragraph__title--invisible {
+    color: #8381814f;
+}
+
+
+.drag-handle {
+    cursor: grab;
+    padding: 8px;
+    font-size: 18px;
+    margin-right: 10px;
+    user-select: none;
+    align-self: center;
+}
+
+.sortable-ghost {
+    opacity: 0.5;
+    background: #f0f0f0;
+}
+
+
 
 
 
@@ -695,12 +721,48 @@ body {
     min-width: 100%;
 }
 
+
+/* Стили для попапа в edit_report */
+.paragraph-popup {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border: 1px solid #ccc;
+    padding: 10px;
+    border-radius: 5px;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    font-size: 14px;
+    min-width: 200px;
+    white-space: nowrap;
+}
+
+
+
+.paragraph-popup-btn--save {
+    background-color: #007bff;
+    color: white;
+    padding: 5px;
+    border: none;
+    cursor: pointer;
+}
+
+
+/* Стиль для предложения в edit_sentence */
+.edit-sentence__text {
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+
 /* стиль для карточки предложения в edit_report */
 
 .wrapper__card {
     display: flex;
-    flex-wrap: wrap;
-    align-items: center;
+    align-items: right;
     background: #f9f9f9;
     border-radius: 8px;
     margin-bottom: 4px;
@@ -717,8 +779,24 @@ body {
 .wrapper__card--sentence-head {
     background-color: var(--main-background-color);
 }
-.wrapper__card--sentence-body {
+.wrapper__card--tail {
     background-color: #cbeff4;
+}
+
+.wrapper__card--scanparam {
+    background-color: #d6f5c0;
+}
+
+.wrapper__card--text {
+    background-color: #c3d7b5;
+}
+
+.wrapper__card--title {
+    background-color: #92a883;
+}
+
+.wrapper__card--impression {
+    background-color: #7c8a72;
 }
 
 .edit-sentence__wrapper {
@@ -729,7 +807,7 @@ body {
 }
 
 .edit-sentence__wrapper--short {
-    width: 200px;
+    width: 120px;
 }
 
 .edit-sentence__label--text {
@@ -749,7 +827,14 @@ body {
     width: 100%;
 }
 
+/* редактирование параграфа */
 
+.edit-sentence__title {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 10px;
+    cursor: pointer;
+}
 
 /* flash-massages */
 

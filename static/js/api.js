@@ -55,17 +55,27 @@ function sendRequest({ url, method = "POST", data = {}, responseType = "json", l
             return responseType === "blob" ? response.blob() : response.json();
         })
         .then(data => {
-            if (responseType === "json" && data.status) {
-                if (data.status !== "success") {
-                    alert(data.message || "Request failed");
-                    throw new Error(data.message || "Request failed");
+            if (responseType === "json") {
+                if (!data) {
+                    console.error("Ошибка: получены пустые данные от сервера.");
+                    alert("Ошибка: пустой ответ от сервера.");
+                    throw new Error("Empty response from server");
                 }
-
+        
                 let alertMessage = data.message || "Request completed successfully.";
+        
                 if (data.notifications?.length) {
                     alertMessage += `\n\nNotifications:\n${data.notifications.join('\n')}`;
                 }
-                toastr.success(alertMessage);
+        
+                if (data.status === "success") {
+                    toastr.success(alertMessage);
+                } else if (data.status === "warning") {
+                    toastr.warning(alertMessage);
+                } else {
+                    alert(data.message || "Request failed");
+                    throw new Error(data.message || "Request failed");
+                }
             }
             return data;
         })
@@ -80,31 +90,3 @@ function sendRequest({ url, method = "POST", data = {}, responseType = "json", l
 }
 
 
-
-/**
- * Sends a request to the server to generate an impression based on the input text and assistant list.
- *
- * @param {string} text - The input text to be sent to the server.
- * @param {Array<string>} assistantList - A list of assistant names to be included in the request.
- * @returns {Promise<string>} - Returns a promise that resolves with the server's response message or error.
- */
-function generateImpressionRequest(text, assistantList) {
-    // Формируем данные для отправки
-    const jsonData = {
-        text: text,
-        assistants: assistantList // передаем список ассистентов
-    };
-
-    // Отправляем запрос на сервер с помощью sendRequest
-    return sendRequest({   
-        url: "/openai_api/generate_impression",
-        data: jsonData,
-        csrfToken: csrfToken
-    }).then(data => {
-        if (data.status === "success") {
-            return data.data; // Возвращаем успешный ответ от сервера
-        } else {
-            return data.message; // Возвращаем сообщение об ошибке, если запрос не успешен
-        }
-    });
-}
