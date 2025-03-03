@@ -1,7 +1,8 @@
 # editing_report.py
 
 from flask import Blueprint, render_template, request, current_app, jsonify, g
-from models import db, Report, Paragraph, Sentence, HeadSentence
+from flask_security import current_user
+from models import db, Report, Paragraph, Sentence, HeadSentence, BodySentence, TailSentence, HeadSentenceGroup, TailSentenceGroup, BodySentenceGroup
 from utils import get_max_index, check_unique_indices
 from flask_security.decorators import auth_required
 from logger import logger
@@ -42,9 +43,12 @@ def edit_report():
 @editing_report_bp.route('/edit_paragraph', methods=["GET"])
 @auth_required()
 def edit_paragraph():
-    paragraph_id = request.args.get("paragraph_id")
+    paragraph_id = int(request.args.get("paragraph_id"))
+    report_id = int(request.args.get("report_id"))
    
     paragraph = Paragraph.query.get(paragraph_id)
+    head_group_links = HeadSentenceGroup.is_linked(paragraph.head_sentence_group_id)
+    tail_group_links = TailSentenceGroup.is_linked(paragraph.tail_sentence_group_id)
     if not paragraph:
         return None  # Если параграфа нет, вернем None
 
@@ -91,6 +95,8 @@ def edit_paragraph():
         "paragraph_comment": paragraph.comment,
         "paragraph_weight": paragraph.paragraph_weight,
         "tags": paragraph.tags,
+        "head_group_links": head_group_links,
+        "tail_group_links": tail_group_links,
         "head_sentences": head_sentences,
         "tail_sentences": tail_sentences
     }
@@ -101,22 +107,28 @@ def edit_paragraph():
     
     return render_template('edit_paragraph.html',
                             title=f"Редактирование параграфа {paragraph_data['paragraph']}",
-                            paragraph=paragraph_data
+                            paragraph=paragraph_data,
+                            report_id=report_id
                             )
 
 
 @editing_report_bp.route('/edit_head_sentence', methods=["GET"])
 @auth_required()
 def edit_head_sentence():
-    print("Запрос на редактирование главного предложения")
+    logger.info("Запускается логика формирования страницы для редактирования главного предложения")
     sentence_id = request.args.get("sentence_id")
+    paragraph_id = request.args.get("paragraph_id")
+    report_id = request.args.get("report_id")
     sentence = HeadSentence.query.get(sentence_id)
-    print(f"sentence = {sentence}")
+    body_group_links = BodySentenceGroup.is_linked(sentence.body_sentence_group_id)
+    logger.debug(f"Получены данные для редактирования главного предложения: {sentence_id}, {paragraph_id}, {report_id}")
+    logger.debug(f"Данные главного предложения: {sentence.sentence}")
     if not sentence:
+        logger.error(f"Предложение не найдено")
         return jsonify({"status": "error", "message": "Предложение не найдено"}), 404
     body_sentences = []
     if sentence.body_sentence_group_id:
-        print("sentence.body_sentence_group_id = ", sentence.body_sentence_group_id)
+        logger.info("Собираю дополнительные предложения")
         body_sentences = [
             {
                 "id": body_sentence.id,
@@ -127,19 +139,24 @@ def edit_head_sentence():
             }
             for body_sentence in sorted(sentence.body_sentence_group.body_sentences, key=lambda s: s.sentence_weight)
         ]
-    print(f"не сработал if, body_sentence")
+    logger.info("Формирую данные для главного предложения")
     sentence_data = {
         "id": sentence.id,
         "index": sentence.sentence_index,
         "sentence": sentence.sentence,
         "tags": sentence.tags,
         "comment": sentence.comment,
-        "body_sentences": body_sentences
+        "body_sentence_group_id": sentence.body_sentence_group_id,
+        "body_group_links": body_group_links or False,
+        "body_sentences": body_sentences or []
     }
     return render_template('edit_head_sentence.html',
                            title=f"Редактирование главного предложения: {sentence_data['sentence']}",
-                           head_sentence=sentence_data
+                           head_sentence=sentence_data,
+                           paragraph_id=paragraph_id,
+                           report_id=report_id
                            )
+
 
 @editing_report_bp.route('/update_paragraph_order', methods=["POST"])
 @auth_required()
@@ -239,6 +256,42 @@ def new_paragraph():
     except Exception as e:
         logger.error(f"Ошибка добавления параграфа: {str(e)}")
         return jsonify({"status": "error", "message": f"Ошибка добавления параграфа, код ошибки: {e}"}), 400
+
+
+@editing_report_bp.route("/add_new_body_sentence", methods=["POST"])
+@auth_required()
+def add_new_body_sentence():
+    """Создаёт новое дополнительное предложение (BodySentence) для главного предложения."""
+    data = request.get_json()
+    head_sentence_id = data.get("head_sentence_id")
+    report_id = data.get("report_id") 
+    logger.info(f"Получены данные для создания нового дополнительного предложения: {data}")
+
+    if not head_sentence_id or not report_id:
+        return jsonify({"status": "error", "message": "Отсутствует head_sentence_id или report_id"}), 400
+
+    report_type_id = Report.get_report_type(report_id)
+
+    try:
+        new_body_sentence, _ = BodySentence.create(
+            user_id=current_user.id,
+            report_type_id=report_type_id,  
+            sentence="Введите текст предложения", 
+            related_id=head_sentence_id
+        )
+        if new_body_sentence:
+            logger.info(f"Успешно создано новое дополнительное предложение с id={new_body_sentence.id}")
+        return jsonify({
+            "status": "success",
+            "id": new_body_sentence.id,
+            "weight": new_body_sentence.sentence_weight,
+            "sentence": new_body_sentence.sentence,
+            "tags": new_body_sentence.tags,
+            "comment": new_body_sentence.comment
+        }), 201
+
+    except Exception as e:
+        return jsonify({"status": "error", "message": f"Ошибка при создании предложения: {e}"}), 500
 
 
 

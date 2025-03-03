@@ -6,12 +6,14 @@
 {{ super() }}
 <input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
 
+
+<p>Редактирование главного предложения {{ head_sentence.id}}, параграфа {{ paragraph_id}} из протокола {{ report_id }} </p>
 <div class="flex">
     <button class="btn report__btn" id="backToParagraphButton" type="button">Вернуться к редактированию параграфа</button>
     <button class="btn report__btn" id="backToReportButton" type="button">Вернуться к редактированию протокола</button>
 </div>
 
-<div class="container edit-sentence" data-sentence-id="{{ head_sentence.id }}">
+<div class="container edit-sentence" id="editSentenceContainer" data-sentence-id="{{ head_sentence.id }}" data-paragraph-id="{{ paragraph_id }}" data-report-id="{{ report_id }}">
     <div class="flex_column edit-sentence__sentence-data-block">
         <div class="flex edit-sentence__sentence-data">
             <div>
@@ -26,6 +28,17 @@
                 <label>Теги:</label>
                 <input type="text" id="sentence_tags" value="{{ head_sentence.tags }}" class="input">
             </div>
+            <div>
+                <label>Количество связей у группы дополнительных предложений:</label>
+                <p> {{ head_sentence.body_group_links }} </p>
+            </div>
+            {% if head_sentence.body_sentence_group_id %}
+                <div>
+                    <label>Привязанная группа body предложений:</label>
+                    <p> {{ head_sentence.body_sentence_group_id }} </p>
+                </div>
+            {% endif %}
+
             <button class="btn report__btn edit-sentence__btn--save-sentence-data" id="saveSentenceDataButton">Сохранить изменения</button>
         </div>
         <textarea class="edit-sentence__textarea" id="sentenceText">{{ head_sentence.sentence }}</textarea>
@@ -35,7 +48,7 @@
 
     <h3 class="edit-sentence__title" id="editSentenceTitle">Дополнительные предложение для главного предложения</h3>
     <div class="edit-sentence__sentence">
-        <ul class="edit-sentence__list" id="bodySentenceList" style="display: none;">
+        <ul class="edit-sentence__list" id="bodySentenceList" style="display: block;">
             {% for sentence in head_sentence.body_sentences %}
                 <li class="wrapper__card edit-sentence__item" 
                 data-sentence-id="{{ sentence.id }}" 
@@ -43,7 +56,9 @@
                 data-sentence-type="body" 
                 data-sentence-weight="{{ sentence.weight }}"
                 data-sentence-tags="{{ sentence.tags }}" 
-                data-sentence-comment="{{ sentence.comment }}">
+                data-sentence-comment="{{ sentence.comment }}"
+                data-body-sentence-group-id="{{ sentence.body_sentence_group_id }}"
+                data-body-group-links = "{{ sentence.body_group_links }}">
 
                     <div class="">
                             {{ sentence.weight }}

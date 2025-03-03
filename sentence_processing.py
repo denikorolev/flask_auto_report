@@ -545,6 +545,7 @@ def sentence_transition_from_sentence_class():
     logger.info(f"start sentence transition")
     # Устраняю несоответствие в данных
     for x_sentence in all_sentences:
+        print(f"Проверяю предложение: {x_sentence.sentence}")
         x_sentence.comment = ""
         if x_sentence.index == 0 and x_sentence.sentence_type != "tail":
             x_sentence.sentence_type = "tail"

@@ -2,7 +2,7 @@
 
 from flask import Blueprint, render_template, request, redirect, url_for, current_app, session, g, jsonify
 from flask_login import current_user
-from models import UserProfile, db, AppConfig, Paragraph
+from models import UserProfile, db, AppConfig, Paragraph, HeadSentence, Sentence
 from utils import check_unique_indices
 from profile_constructor import ProfileSettingsManager
 from flask_security.decorators import auth_required
@@ -239,7 +239,6 @@ def run_checker():
     Запускает различные чекеры для проверки настроек профиля.
     """
     
-    
     profile_id = session.get("profile_id")
     if not profile_id:
         return jsonify({"status": "error", "message": "Profile not selected"}), 400
@@ -247,17 +246,21 @@ def run_checker():
     checker = request.json.get("checker")
     
     reports = Report.find_by_profile(profile_id)
-    
     if checker == "main_sentences":
         global_errors = []
         for report in reports:
-            _,paragraphs_by_type = Report.get_report_data(report.id, profile_id)
+            paragraphs = Report.get_report_structure(report.id, profile_id)
             try:
-                check_unique_indices(paragraphs_by_type)
+                check_unique_indices(paragraphs)
             except ValueError as e:
                 error = {"report": report.report_name, "error": str(e)}
                 global_errors.append(error)
-            
+    
+            try:
+                check_unique_indices(paragraphs)
+            except ValueError as e:
+                error = {"report": report.report_name, "error": str(e)}
+                global_errors.append(error)
         
         return jsonify({"status": "success", "message": "Проверка выявила следующие ошибки", "errors": global_errors}), 200
        

@@ -4,7 +4,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     initSortable(); // Вызываем функцию для включения перетаскивания параграфов
 
-    initParagraphPopup(); // Вызываем функцию для включения и выключения попапа параграфа
+    initParagraphPopup(); // Вызываем функцию для включения и выключения попапа параграфа при нажатии на его текст
 
     // слушатель на кнопку изменения протокола
     document.getElementById("updateReportButton").addEventListener("click", function() {
@@ -79,7 +79,7 @@ function updateParagraphOrder() {
 // Функция инициализации попапа
 function initParagraphPopup() {
     document.querySelectorAll(".edit-paragraph__title").forEach(paragraph => {
-        paragraph.addEventListener("click", function (event) {
+        paragraph.addEventListener("dblclick", function (event) {
             event.stopPropagation();  // Останавливаем всплытие события. Чтобы не сработало событие на родителе
             showParagraphPopup(event, this);
         });
@@ -103,6 +103,7 @@ function showParagraphPopup(event, paragraphElement) {
     const paragraphIndex = parseInt(paragraphElement.getAttribute("data-paragraph-index"));
     const paragraphWeight = parseInt(paragraphElement.getAttribute("data-paragraph-weight")) || 0;
     const paragraphTags = paragraphElement.getAttribute("data-paragraph-tags");
+    
 
     // Удаляем старый попап, если он есть
     let existingPopup = document.getElementById("paragraph-popup");
@@ -150,13 +151,14 @@ function showParagraphPopup(event, paragraphElement) {
 // Функция для редактирования параграфа (переход на страницу редактирования параграфа)
 function editParagraph(button) {
     const paragraphId = button.getAttribute("data-paragraph-id");
+    const reportId = document.getElementById("editReportContainer").getAttribute("data-report-id");
 
     if (!paragraphId) {
         console.error("Не найден атрибут data-paragraph-id");
         return;
     }
 
-    window.location.href = `/editing_report/edit_paragraph?paragraph_id=${paragraphId}`;
+    window.location.href = `/editing_report/edit_paragraph?paragraph_id=${paragraphId}&report_id=${reportId}`;
 }
 
 

@@ -31,7 +31,7 @@ from openai_api import openai_api_bp
 from key_words import key_words_bp
 from admin import admin_bp
 
-version = "0.9.3.0"
+version = "0.9.3.1"
 
 app = Flask(__name__)
 app.config.from_object(get_config()) # Load configuration from file config.py
@@ -248,10 +248,10 @@ def playground():
     
     logger.info("Playground route is called")
     # Запрос всех предложений
-    sentences = Sentence.query.all()
-    head_sentences = HeadSentence.query.all()
-    body_sentences = BodySentence.query.all()
-    tail_sentences = TailSentence.query.all()    
+    sentences = Sentence.query.all() or []
+    head_sentences = HeadSentence.query.all() or []
+    body_sentences = BodySentence.query.all() or []
+    tail_sentences = TailSentence.query.all() or []
 
     if request.method == "POST":
         sentence_transition_from_sentence_class()

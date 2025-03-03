@@ -12,9 +12,11 @@
 
 <div class="flex container">
     <div class="playground-left container">
-        <span>Всего найдено предложений в Sentence: </span>
-        <span>{{ sentences|length }}</span>
-        <p>шт</p>
+        {% if sentences %}
+            <span>Всего найдено предложений в Sentence: </span>
+            <span>{{ sentences|length }}</span>
+            <p>шт</p>
+        {% endif %}
     
         <ul class="playground__element">
             <li class="flex wrapper-text-block">

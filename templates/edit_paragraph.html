@@ -6,11 +6,12 @@
 {{ super() }}
 <input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
 
+<p>Редактирование параграфа {{ paragraph.id}} из протокола {{ report_id }} </p>
 <div class="flex">
     <button class="btn report__btn" id="backToReportButton" type="button">Вернуться к редактированию протокола</button>
 </div>
 
-<div class="container edit-paragraph" data-paragraph-id="{{ paragraph.id }}">
+<div class="container edit-paragraph" id="editParagraphContainer" data-report-id="{{ report_id }}" data-paragraph-id="{{ paragraph.id }}">
 
     <!-- Данные параграфа -->
     <div class="flex edit-paragraph__paragraph-data-block">
@@ -30,6 +31,14 @@
             <div>
                 <label>Вес:</label>
                 <input type="number" id="paragraph_weight" value="{{ paragraph.paragraph_weight }}" class="input">
+            </div>
+            <div>
+                <label>Количество связей у группы главных предложений:</label>
+                <p> {{ paragraph.head_group_links}} </p>
+            </div>
+            <div>
+                <label>Количество связей у группы дополнительных предложений:</label>
+                <p> {{ paragraph.tail_group_links}} </p>
             </div>
         </div>
         <!-- Кнопка сохранения -->
@@ -78,7 +87,7 @@
     <hr>
     <!-- Дополнительные предложения -->
     <h3 class="edit-sentence__title" id="editSentenceTitle">Дополнительные предложения параграфа</h3>
-    <ul class="edit-sentence__list" style="display: none;" id="editTailSentenceList">
+    <ul class="edit-sentence__list" style="display: block;" id="editTailSentenceList">
         {% for sentence in paragraph.tail_sentences %}
             <li class="wrapper__card wrapper__card--tail edit-sentence__item" 
             data-sentence-id="{{ sentence.id }}"

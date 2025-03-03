@@ -490,114 +490,6 @@ class Report(BaseModel):
     
     
     @classmethod
-    def get_report_data(cls, report_id, profile_id):
-        """
-        Возвращает кортеж данных отчета:
-        1) Словарь с основной информацией об отчете.
-        2) Словарь параграфов, сгруппированных по типу и индексу, с head_sentence (группировка по index) и tail_sentence.
-        Args:
-            report_id (int): ID отчета.
-            profile_id (int): ID профиля пользователя.
-        Returns:
-            tuple: (dict, dict) - (report_data, paragraphs_by_type)
-        """
-        # Ищем отчет по ID и профилю
-        logger.info(f"Получил данные report_id: {report_id}, profile_id: {profile_id} начинаю выборку данных протокола")
-        report = cls.query.filter_by(id=report_id, profile_id=profile_id).first()
-        if not report:
-            return None, None  # Если отчет не найден или принадлежит другому пользователю
-
-        # Формируем словарь с основной информацией об отчете
-        report_data = {
-            "id": report.id,
-            "report_name": report.report_name,
-            "report_type": report.report_to_subtype.subtype_to_type.type_text,
-            "report_subtype": report.report_to_subtype.subtype_text,
-            "comment": report.comment,
-            "report_side": report.report_side,
-            "user_id": report.user_id,
-            "report_public": report.public
-        }
-
-        # Получаем все параграфы отчета и группируем их по типу и индексу
-        paragraphs = Paragraph.query.filter_by(report_id=report_id).all()
-
-        paragraphs_by_type = {}
-        for paragraph in sorted(paragraphs, key=lambda p: p.paragraph_index):
-            paragraph_type = paragraph.paragraph_type
-
-            # Получаем head-предложения через HeadSentenceGroup
-            head_sentence = {}
-            if paragraph.head_sentence_group_id:
-                head_sentence_group = HeadSentenceGroup.query.get(paragraph.head_sentence_group_id)
-                if head_sentence_group:
-                    sorted_head_sentences = sorted(head_sentence_group.head_sentences, key=lambda s: s.sentence_index)
-                    for sentence in sorted_head_sentences:
-                        index = sentence.sentence_index
-
-                        # Получаем body-предложения через body_sentence_group у каждого head
-                        body_sentences = []
-                        if sentence.body_sentence_group:
-                            body_sentences = [{
-                                "id": body_sentence.id,
-                                "weight": body_sentence.sentence_weight,
-                                "comment": body_sentence.comment,
-                                "sentence": body_sentence.sentence,
-                                "tags": body_sentence.tags
-                            } for body_sentence in sentence.body_sentence_group.body_sentences]
-
-                        
-                        head_sentence[index] = {
-                            "id": sentence.id,
-                            "index": index,
-                            "comment": sentence.comment,
-                            "sentence": sentence.sentence,
-                            "tags": sentence.tags,
-                            "body_sentences": body_sentences  
-                        }
-
-            # Получаем tail-предложения через TailSentenceGroup
-            tail_sentence = []
-            if paragraph.tail_sentence_group_id:
-                tail_sentence_group = TailSentenceGroup.query.get(paragraph.tail_sentence_group_id)
-                if tail_sentence_group:
-                    tail_sentence = [{
-                        "id": sentence.id,
-                        "weight": sentence.sentence_weight,
-                        "comment": sentence.comment,
-                        "sentence": sentence.sentence,
-                        "tags": sentence.tags
-                    } for sentence in tail_sentence_group.tail_sentences]
-
-            # Формируем данные по параграфу
-            paragraph_data = {
-                "id": paragraph.id,
-                "paragraph_index": paragraph.paragraph_index,
-                "paragraph": paragraph.paragraph,
-                "paragraph_visible": paragraph.paragraph_visible,
-                "title_paragraph": paragraph.title_paragraph,
-                "bold_paragraph": paragraph.bold_paragraph,
-                "paragraph_type": paragraph_type,
-                "paragraph_comment": paragraph.comment,
-                "paragraph_weight": paragraph.paragraph_weight,
-                "tags": paragraph.tags,
-                "head_sentences": head_sentence,  
-                "tail_sentences": tail_sentence  
-            }
-
-            # Группируем параграфы по типу
-            if paragraph_type not in paragraphs_by_type:
-                paragraphs_by_type[paragraph_type] = {}
-
-            # Группируем параграфы внутри типа по index
-            paragraphs_by_type[paragraph_type][paragraph.paragraph_index] = paragraph_data
-
-           
-        logger.info(f"Получил данные report_id: {report_id}, profile_id: {profile_id} возвращаю данные протокола")
-        return report_data, paragraphs_by_type
-    
-    
-    @classmethod
     def get_report_info(cls, report_id, profile_id):
         """
         Получает основные данные отчета.
@@ -984,13 +876,58 @@ class SentenceBase(BaseModel):
 
 
     # Перед удалением предложения, удаляем связь с группами
-    def delete(self):
-        # Удаляем связь с группами
-        self.groups = []
-        db.session.commit()
-        # Удаляем сам объект
-        db.session.delete(self)
-        db.session.commit()
+    @classmethod
+    def delete_sentence(cls, sentence_id, group_id=None):
+        """
+        Удаляет предложение или отвязывает его от группы, если оно связано с несколькими группами.
+        Args:
+            sentence_id (int): ID предложения, которое нужно удалить.
+            group_id (int, optional): ID группы, от имени которой поступил запрос. Если None, удаляется само предложение.
+        """
+        sentence = cls.query.get(sentence_id)
+        if not sentence:
+            logger.info(f"Предложение ID={sentence_id} не найдено.")
+            raise ValueError(f"Предложение ID={sentence_id} не найдено.")
+        
+        # Если предложению НЕ передали ID группы → удаляем его полностью
+        if group_id is None:
+            logger.info(f"Удаляем предложение ID={sentence_id}, так как не передана информация о группе.")
+            sentence.delete()
+            return 
+
+        linked_count = cls.is_linked(sentence_id)
+        logger.info(f"Предложение ID={sentence_id} связано с {linked_count} группами.")
+
+        # Если у предложения только 1 или 0 связей → удаляем его полностью
+        if linked_count <= 1:
+            logger.info(f"Удаляем предложение ID={sentence_id}, так как у него {linked_count} связей.")
+            sentence.delete()
+            return 
+
+        # Если предложению передали ID группы и у него больше 1 связи → просто отвязываем
+        logger.info(f"🔗 Отвязываем предложение ID={sentence_id} от группы ID={group_id}, так как у него еще есть {linked_count} связей.")
+        # Определяем соответствующую модель группы
+        group_map = {
+            HeadSentence: (HeadSentenceGroup, "head_sentences"),
+            BodySentence: (BodySentenceGroup, "body_sentences"),
+            TailSentence: (TailSentenceGroup, "tail_sentences"),
+        }
+
+        group_cls, group_attr = group_map.get(type(sentence), (None, None))
+        if not group_cls:
+            logger.info(f"⚠️ Тип предложения {type(sentence).__name__} не поддерживается.")
+            raise ValueError(f"Тип предложения {type(sentence).__name__} не поддерживается.")
+
+        group = group_cls.query.get(group_id)
+
+        # Проверяем, есть ли предложение в группе
+        if group and sentence in getattr(group, group_attr, []):
+            cls.unlink_from_group(sentence, group)
+            logger.info(f"Успешно отвязали предложение ID={sentence_id} от группы ID={group_id}.")
+            return
+
+        logger.info(f"Группа ID={group_id} не найдена или не содержит предложение ID={sentence_id}.")
+        raise ValueError(f"Группа ID={group_id} не найдена или не содержит предложение ID={sentence_id}.")
 
 
     def update(self, **kwargs):
@@ -1185,6 +1122,31 @@ class SentenceBase(BaseModel):
     
     
     @classmethod
+    def is_linked(cls, sentence_id):
+        """
+        Проверяет, с каким количеством групп связано предложение.
+        Args:
+            sentence_id (int): ID предложения.
+        Returns:
+            int: Количество групп, с которыми связано предложение.
+        """
+        sentence = cls.query.get(sentence_id)
+        if not sentence:
+            return 0
+
+        if isinstance(sentence, HeadSentence):
+            return sentence.groups.count()  # SQL COUNT(*), не загружает объекты
+
+        elif isinstance(sentence, BodySentence):
+            return sentence.groups.count()
+
+        elif isinstance(sentence, TailSentence):
+            return sentence.groups.count()
+
+        return 0
+    
+    
+    @classmethod
     def get_groups(cls, sentence):
         """
         Возвращает список групп, с которыми связано предложение.
@@ -1302,51 +1264,105 @@ class SentenceGroupBase(BaseModel):
     __abstract__ = True  
 
 
-    def delete(self):
+    @classmethod
+    def delete_group(cls, group_id, entity_id = None):
         """
         Удаляет группу, если она больше нигде не используется.
-        Если в группе остались предложения – удаление отменяется.
+        Если у группы несколько связей, просто удаляет связь с переданной сущностью.
+        Args:
+            group_id (int): ID группы, которую нужно удалить.
+            entity_id (int): ID сущности (параграфа или предложения), откуда поступил запрос.
+        Raises:
+            ValueError: Если группа не найдена или её нельзя удалить.
+        """
+        group = cls.query.get(group_id)
+        if not group:
+            logger.info(f"Группа ID={group_id} не найдена.")
+            raise ValueError(f"Группа ID={group_id} не найдена.")
+
+        logger.info(f"Попытка удаления группы ID={group_id} для параграфа/предложения ID={entity_id}")
+
+        # Если не передана информация о сущности → удаляем группу полностью
+        if entity_id is None:
+            logger.info(f"Удаляем группу ID={group_id}, так как не передана информация о сущности.")
+            group.delete()
+            return
+        
+        # Проверяем, с каким количеством сущностей связана группа
+        linked_count = cls.is_linked(group_id)
+        logger.info(f"Группа ID={group_id} связана с {linked_count} сущностями.")
+
+        # Если группа связана больше чем с одной сущностью → просто отвязываем entity_id
+        if linked_count > 1:
+            logger.info(f"Отвязываем группу ID={group_id} от сущности ID={entity_id}, так как у неё ещё есть {linked_count} связей.")
+            
+            # Определяем, что за сущность (параграф или предложение)
+            if isinstance(group, HeadSentenceGroup):
+                Paragraph.query.filter_by(id=entity_id).update({"head_sentence_group_id": None})
+            elif isinstance(group, TailSentenceGroup):
+                Paragraph.query.filter_by(id=entity_id).update({"tail_sentence_group_id": None})
+            elif isinstance(group, BodySentenceGroup):
+                HeadSentence.query.filter_by(id=entity_id).update({"body_sentence_group_id": None})
+
+            db.session.commit()
+            logger.info(f"Успешно отвязали группу ID={group_id} от сущности ID={entity_id}.")
+            return  
+
+        # Если у группы только 1 связь → удаляем все предложения внутри неё
+        logger.info(f"Удаляем предложения из группы ID={group_id}, так как она больше нигде не используется.")
+        
+        # Определяем, какие предложения связаны с группой
+        sentence_map = {
+            HeadSentenceGroup: ("head_sentences", HeadSentence),
+            BodySentenceGroup: ("body_sentences", BodySentence),
+            TailSentenceGroup: ("tail_sentences", TailSentence),
+        }
+
+        sentence_attr, sentence_cls = sentence_map.get(type(group), (None, None))
+        
+        if not sentence_attr or not sentence_cls:
+            logger.error(f"Неизвестный тип группы: {type(group).__name__}")
+            raise ValueError(f"Неизвестный тип группы: {type(group).__name__}")
+
+        sentences = getattr(group, sentence_attr, [])
+        logger.debug(f"Найдено {len(sentences)} предложений для удаления.")
+        
+        for sentence in sentences:
+            logger.info(f"Удаляем предложение ID={sentence.id} из группы ID={group_id}.")
+            sentence_cls.delete_sentence(sentence.id, group_id)
+
+        # Удаляем саму группу
+        db.session.delete(group)
+        db.session.commit()
+        logger.info(f"Группа ID={group_id} успешно удалена.")
+
+
+    @classmethod
+    def is_linked(cls, group_id):
+        """
+        Проверяет, связана ли данная группа более чем с одним объектом.
+        
+        Args:
+            group_id (int): ID группы.
 
         Returns:
-            bool: True, если группа удалена, иначе False.
+            int: Количество объектов, с которыми связана группа.
         """
-        logger.info(f"Попытка удаления группы {self.id}")
+        if not group_id:
+            return 0
+        
+        if cls == HeadSentenceGroup:
+            return Paragraph.query.filter_by(head_sentence_group_id=group_id).count()
 
-        # Проверяем, есть ли связанные предложения
-        if hasattr(self, "head_sentences") and self.head_sentences:
-            logger.info(f"Группа {self.id} содержит head-предложения, не удаляем")
-            return False
-        elif hasattr(self, "body_sentences") and self.body_sentences:
-            logger.info(f"Группа {self.id} содержит body-предложения, не удаляем")
-            return False
-        elif hasattr(self, "tail_sentences") and self.tail_sentences:
-            logger.info(f"Группа {self.id} содержит tail-предложения, не удаляем")
-            return False
+        elif cls == TailSentenceGroup:
+            return Paragraph.query.filter_by(tail_sentence_group_id=group_id).count()
 
-        # Проверяем использование группы в других таблицах
-        if isinstance(self, HeadSentenceGroup):
-            used_in_paragraphs = Paragraph.query.filter_by(head_sentence_group_id=self.id).count()
-            if used_in_paragraphs > 0:
-                logger.info(f"Группа {self.id} используется в параграфах, не удаляем")
-                return False
+        elif cls == BodySentenceGroup:
+            return HeadSentence.query.filter_by(body_sentence_group_id=group_id).count()
 
-        elif isinstance(self, TailSentenceGroup):
-            used_in_paragraphs = Paragraph.query.filter_by(tail_sentence_group_id=self.id).count()
-            if used_in_paragraphs > 0:
-                logger.info(f"Группа {self.id} используется в параграфах, не удаляем")
-                return False
+        return 0  
+   
 
-        elif isinstance(self, BodySentenceGroup):
-            used_in_head_sentences = HeadSentence.query.filter_by(body_sentence_group_id=self.id).count()
-            if used_in_head_sentences > 0:
-                logger.info(f"Группа {self.id} используется в head-предложениях, не удаляем")
-                return False
-
-        # Удаляем группу
-        db.session.delete(self)
-        db.session.commit()
-        logger.info(f"Группа {self.id} успешно удалена")
-        return True
 
     @classmethod
     def create(cls):
@@ -1361,38 +1377,7 @@ class SentenceGroupBase(BaseModel):
         db.session.commit()
         return new_group
 
-
-    @classmethod
-    def get_sentences(cls, group):
-        """
-        Возвращает список предложений, связанных с данной группой.
-        Args:
-            group (SentenceGroupBase): Группа, для которой ищем предложения.
-        Returns:
-            list[SentenceBase]: Список предложений.
-        """
-        logger.info(f"Поиск предложений для группы {group.id}")
-        if isinstance(group, HeadSentenceGroup):
-            logger.info(f"Поиск head-предложений. Найдены предложения: {group.head_sentences}")
-            return group.head_sentences
-        elif isinstance(group, BodySentenceGroup):
-            logger.info(f"Поиск body-предложений. Найдены предложения: {group.body_sentences}")
-            return group.body_sentences
-        elif isinstance(group, TailSentenceGroup):
-            logger.info(f"Поиск tail-предложений. Найдены предложения: {group.tail_sentences}")
-            return group.tail_sentences
-        else:
-            raise ValueError("Не удалось определить тип группы")
-
-
-    @classmethod
-    def get_all_groups(cls):
-        """
-        Возвращает все группы данного типа.
-        Returns:
-            list[SentenceGroupBase]: Список всех групп.
-        """
-        return cls.query.all()
+    
         
         
 class HeadSentenceGroup(SentenceGroupBase):

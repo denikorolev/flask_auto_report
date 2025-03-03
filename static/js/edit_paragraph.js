@@ -51,7 +51,7 @@ function initSortableHeadSentences() {
 // Функция инициализации попапа предложений
 function initSentencePopup() {
     document.querySelectorAll(".edit-sentence__text").forEach(sentence => {
-        sentence.addEventListener("click", function (event) {
+        sentence.addEventListener("dblclick", function (event) {
             event.stopPropagation();
             parentElement = sentence.closest(".edit-sentence__item");
             if (parentElement.getAttribute("data-sentence-type") === "head") {
@@ -79,8 +79,10 @@ function initSentencePopup() {
 // Функция редактирования предложения
 function editSentence(button) {
     const sentenceId = button.getAttribute("data-sentence-id");
+    const paragraphId = document.getElementById("editParagraphContainer").getAttribute("data-paragraph-id");
+    const reportId = document.getElementById("editParagraphContainer").getAttribute("data-report-id");
 
-    window.location.href = `/editing_report/edit_head_sentence?sentence_id=${sentenceId}`;
+    window.location.href = `/editing_report/edit_head_sentence?sentence_id=${sentenceId}&paragraph_id=${paragraphId}&report_id=${reportId}`;
     
 }
 

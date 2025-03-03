@@ -10,7 +10,7 @@
 <input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
 
 
-<div class="container edit-report" data-report-id="{{ report_data.id }}">
+<div class="container edit-report" id="editReportContainer" data-report-id="{{ report_data.id }}">
     {% if report_data %}
     <form class="edit-report__form--report" id="edit-report-form">
         <div class="flex">
@@ -95,6 +95,7 @@
                                     data-paragraph-visible="{{ paragraph.paragraph_visible }}"
                                     data-bold-paragraph="{{ paragraph.bold_paragraph }}"
                                     data-title-paragraph="{{ paragraph.title_paragraph }}"
+                                    
                                     >
                                     <b> {{ paragraph.paragraph }} </b>
                                 </p>
