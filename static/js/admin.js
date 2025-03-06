@@ -141,9 +141,8 @@ function sendSelectedData() {
     sendRequest({
         url: "/admin/fetch_data",
         data: data,
-        csrfToken: csrfToken
     }).then(response => {
-        displayData(response);
+        displayData(response.data);
     }).catch(error => {
         console.error("Ошибка при отправке данных:", error);
     });

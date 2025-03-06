@@ -9,7 +9,7 @@ from models import db, User, UserProfile, Role, Sentence, HeadSentence, BodySent
 from menu_constructor import build_menu
 from sentence_processing import sentence_transition_from_sentence_class
 from profile_constructor import ProfileSettingsManager
-from db_processing import sync_all_profiles_settings
+from db_processing import sync_all_profiles_settings, migrate_sentence_data
 from logger import logger
 from collections import defaultdict
 from rapidfuzz import fuzz
@@ -31,7 +31,7 @@ from openai_api import openai_api_bp
 from key_words import key_words_bp
 from admin import admin_bp
 
-version = "0.9.3.1"
+version = "0.9.3.3"
 
 app = Flask(__name__)
 app.config.from_object(get_config()) # Load configuration from file config.py
@@ -252,9 +252,6 @@ def playground():
     head_sentences = HeadSentence.query.all() or []
     body_sentences = BodySentence.query.all() or []
     tail_sentences = TailSentence.query.all() or []
-
-    if request.method == "POST":
-        sentence_transition_from_sentence_class()
         
     return render_template(
         "playground.html",
@@ -266,6 +263,28 @@ def playground():
     )
     
   
+@app.route("/playground_button_click", methods=["POST"])
+@auth_required()
+@roles_required("superadmin")
+def playground_button_click():
+    """
+    Переносит предложения из таблицы Sentence в новые таблицы HeadSentence, BodySentence и TailSentence.
+    """
+    data = request.json
+    print(data)
+    try:
+        if data.get("flag") == "migrate":
+            print("Migrating data")
+            sentence_transition_from_sentence_class()
+        elif data.get("flag") == "sentence_structure":
+            print("Migrating sentence structure")
+            migrate_sentence_data()
+        return jsonify({"status": "success", "message": "Data migrated successfully"})
+    except Exception as e:
+        logger.error(f"Error in playground: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)})
+    
+    
 
 # Фильтруем логи 
 

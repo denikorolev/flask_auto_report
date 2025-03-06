@@ -24,29 +24,30 @@ document.addEventListener("DOMContentLoaded", function () {
     // Cлушатель для кнопки "Добавить дополнительное предложение"
     document.getElementById("addBodySentenceButton").addEventListener("click", addBodySentence);
 
-
+    // Слушатель на кнопку "Удалить предложение"
+    document.querySelectorAll(".edit-sentence__btn--delete").forEach(button => {
+        button.addEventListener("click", function () {
+            deleteBodySentence(this);
+        });
+    });
 
 });
 
 
 // Функция для добавления нового дополнительного предложения
 async function addBodySentence() {
-    const sentenceItem = document.querySelector(".edit-sentence__item");
-    if (!sentenceItem) {
-        console.error("Не найден элемент с главным предложением.");
-        return;
-    }
-
-    const headSentenceId = sentenceItem.getAttribute("data-head-sentence-id");
     const bodySentenceList = document.getElementById("bodySentenceList");
+    const headSentenceId = bodySentenceList.getAttribute("data-head-sentence-id");
     const reportId = document.getElementById("editSentenceContainer").getAttribute("data-report-id");
+    
 
     try {
         const response = await sendRequest({
-            url: "/editing_report/add_new_body_sentence",
+            url: "/editing_report/add_new_sentence",
             method: "POST",
-            data: { head_sentence_id: headSentenceId,
-                    report_id: reportId
+            data: { related_id: headSentenceId,
+                    report_id: reportId,
+                    sentence_type: "body"
              }
         });
 
@@ -61,9 +62,7 @@ async function addBodySentence() {
                 data-sentence-comment="${response.comment || ""}">
 
                 <div>${response.weight}</div>
-                <div>
-                    <p class="edit-sentence__text">${response.sentence}</p>
-                </div>
+                <p class="edit-sentence__text">${response.sentence}</p>
                 <button class="btn report__btn edit-sentence__btn--delete" type="button">Удалить</button>
             </li>
         `;
@@ -83,6 +82,7 @@ async function addBodySentence() {
         console.error("Ошибка запроса:", error);
     }
 }
+
 
 
 // Функция инициализации попапа предложений
@@ -153,4 +153,29 @@ function showBodySentencePopup(sentenceElement, event) {
 
     // Останавливаем всплытие клика, чтобы не закрыть попап сразу
     popup.addEventListener("click", event => event.stopPropagation());
+}
+
+
+// Функция удаления дополнительного предложения
+async function deleteBodySentence(button) {
+    const sentenceItem = button.closest(".edit-sentence__item");
+    const sentenceId = sentenceItem.getAttribute("data-sentence-id");
+    const headSentenceId = sentenceItem.getAttribute("data-head-sentence-id");
+
+    try {
+        const response = await sendRequest({
+            url: "/editing_report/delete_sentence",
+            method: "DELETE",
+            data: { sentence_id: sentenceId,
+                    related_id: headSentenceId,
+                    sentence_type: "body"
+                }
+        });
+
+        if (response.status === "success") {
+            sentenceItem.remove();
+        } 
+    } catch (error) {
+        console.error("Ошибка запроса:", error);
+    }
 }

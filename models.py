@@ -4,7 +4,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_security import UserMixin, RoleMixin
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import ENUM
-from sqlalchemy import Index, event
+from sqlalchemy import Index, event, func
 from utils import ensure_list
 from datetime import datetime, timezone  # Добавим для временных меток
 import json
@@ -39,7 +39,7 @@ def prevent_group_deletion(mapper, connection, target):
             raise Exception(f"Группа BodySentenceGroup (ID={target.id}) всё ещё используется в head-предложениях, удаление отменено.")
 
 
-
+# ✅ быстрее 👉 🔥 📌 ❌ 🚀 😎 🔄 1️⃣ 2️⃣ 3️⃣
 
 
 sentence_type_enum = ENUM(
@@ -79,6 +79,7 @@ head_sentence_group_link = db.Table(
     "head_sentence_group_link",
     db.Column("head_sentence_id", db.BigInteger, db.ForeignKey("head_sentences.id", ondelete="CASCADE"), primary_key=True),
     db.Column("group_id", db.BigInteger, db.ForeignKey("head_sentence_groups.id", ondelete="CASCADE"), primary_key=True),
+    db.Column("sentence_index", db.Integer, nullable=True),  # Храним индекс предложения в связи! Нужно для определяется положения предожения в протоколе
     db.Index("ix_head_sentence_group", "head_sentence_id", "group_id")
 )
 
@@ -87,7 +88,8 @@ body_sentence_group_link = db.Table(
     "body_sentence_group_link",
     db.Column("body_sentence_id", db.BigInteger, db.ForeignKey("body_sentences.id", ondelete="CASCADE"), primary_key=True),
     db.Column("group_id", db.BigInteger, db.ForeignKey("body_sentence_groups.id", ondelete="CASCADE"), primary_key=True),
-    db.Index("ix_body_sentence_group", "body_sentence_id", "group_id")
+    db.Column("sentence_weight", db.Integer, nullable=True, server_default="1"),  # Храним вес в связи!
+    db.Index("ix_body_sentence_group", "body_sentence_id", "group_id")  
 )
 
 # Ассоциативная таблица для связи tail предложений с группой tail предложений
@@ -95,7 +97,8 @@ tail_sentence_group_link = db.Table(
     "tail_sentence_group_link",
     db.Column("tail_sentence_id", db.BigInteger, db.ForeignKey("tail_sentences.id", ondelete="CASCADE"), primary_key=True),
     db.Column("group_id", db.BigInteger, db.ForeignKey("tail_sentence_groups.id", ondelete="CASCADE"), primary_key=True),
-    db.Index("ix_tail_sentence_group", "tail_sentence_id", "group_id")
+    db.Column("sentence_weight", db.Integer, nullable=True, server_default="1"),  # Храним вес в связи!
+    db.Index("ix_tail_sentence_group", "tail_sentence_id", "group_id")  
 )
 
 
@@ -714,29 +717,27 @@ class Paragraph(BaseModel):
             # Получаем head-предложения, сортируем по index
             head_sentences = []
             if paragraph.head_sentence_group_id:
-                head_sentence_group = HeadSentenceGroup.query.get(paragraph.head_sentence_group_id)
-                if head_sentence_group:
-                    for sentence in sorted(head_sentence_group.head_sentences, key=lambda s: s.sentence_index):
-                        # Получаем body-предложения, сортируем по weight
-                        body_sentences = sorted(
-                            [{
-                                "id": body_sentence.id,
-                                "weight": body_sentence.sentence_weight,
-                                "comment": body_sentence.comment,
-                                "sentence": body_sentence.sentence,
-                                "tags": body_sentence.tags
-                            } for body_sentence in sentence.body_sentence_group.body_sentences],
-                            key=lambda s: s["weight"]
-                        ) if sentence.body_sentence_group else []
+                for sentence in HeadSentenceGroup.get_group_sentences(paragraph.head_sentence_group_id):
+                    # Получаем body-предложения, сортируем по weight
+                    body_sentences = sorted(
+                        [{
+                            "id": body_sentence.id,
+                            "weight": body_sentence.sentence_weight,
+                            "comment": body_sentence.comment,
+                            "sentence": body_sentence.sentence,
+                            "tags": body_sentence.tags
+                        } for body_sentence in sentence.body_sentence_group.body_sentences],
+                        key=lambda s: s["weight"]
+                    ) if sentence.body_sentence_group else []
 
-                        head_sentences.append({
-                            "id": sentence.id,
-                            "index": sentence.sentence_index,
-                            "comment": sentence.comment,
-                            "sentence": sentence.sentence,
-                            "tags": sentence.tags,
-                            "body_sentences": body_sentences
-                        })
+                    head_sentences.append({
+                        "id": sentence.id,
+                        "index": sentence.sentence_index,
+                        "comment": sentence.comment,
+                        "sentence": sentence.sentence,
+                        "tags": sentence.tags,
+                        "body_sentences": body_sentences
+                    })
 
             # Получаем tail-предложения, сортируем по weight
             tail_sentences = sorted(
@@ -872,7 +873,7 @@ class SentenceBase(BaseModel):
     user_id = db.Column(db.BigInteger, db.ForeignKey("users.id"), nullable=True)
     sentence = db.Column(db.String(600), nullable=False)
     tags = db.Column(db.String(100), nullable=True)
-    comment = db.Column(db.String(255), nullable=True)
+    comment = db.Column(db.String(255), nullable=True) 
 
 
     # Перед удалением предложения, удаляем связь с группами
@@ -884,6 +885,7 @@ class SentenceBase(BaseModel):
             sentence_id (int): ID предложения, которое нужно удалить.
             group_id (int, optional): ID группы, от имени которой поступил запрос. Если None, удаляется само предложение.
         """
+        logger.info(f"Удаление предложения ID={sentence_id} из группы ID={group_id}")
         sentence = cls.query.get(sentence_id)
         if not sentence:
             logger.info(f"Предложение ID={sentence_id} не найдено.")
@@ -899,10 +901,32 @@ class SentenceBase(BaseModel):
         logger.info(f"Предложение ID={sentence_id} связано с {linked_count} группами.")
 
         # Если у предложения только 1 или 0 связей → удаляем его полностью
-        if linked_count <= 1:
-            logger.info(f"Удаляем предложение ID={sentence_id}, так как у него {linked_count} связей.")
-            sentence.delete()
-            return 
+        if linked_count <= 1: 
+            if cls != HeadSentence:
+                logger.info(f"Удаляем предложение ID={sentence_id}, так как у него {linked_count} связей.")
+                sentence.delete()
+                return 
+            else:
+                logger.info(f"Предложение ID={sentence_id} принадлежит только одной группе head. Запрашиваем наличие прикрепленния связанной группы body предложений.")
+                related_body_group_id = sentence.body_sentence_group_id
+                head_group_links_count = HeadSentenceGroup.is_linked(related_body_group_id)
+                if head_group_links_count > 1:
+                    logger.info(f"Связанная группа ID={group_id} принадлежит нескольким главным предложениям. Просто отвязываем группу.")
+                    HeadSentenceGroup.unlink_group(related_body_group_id, sentence_id)
+                    sentence.delete()
+                    logger.info(f"head-предложение ID={sentence_id} удалено.")
+                    return
+                elif head_group_links_count == 0:
+                    logger.info(f"У данного главного предложения нет привязанных body групп. Просто удаляю предложение ID={sentence_id}.")
+                    sentence.delete()
+                    logger.info(f"head-предложение ID={sentence_id} удалено.")
+                    return
+                else:
+                    logger.info(f"Связанная группа ID={group_id} принадлежит только одному главному предложению. Удаляем группу.")
+                    BodySentenceGroup.delete_group(related_body_group_id, sentence_id)
+                    sentence.delete()
+                    logger.info(f"head-предложение ID={sentence_id} удалено.")
+                    return
 
         # Если предложению передали ID группы и у него больше 1 связи → просто отвязываем
         logger.info(f"🔗 Отвязываем предложение ID={sentence_id} от группы ID={group_id}, так как у него еще есть {linked_count} связей.")
@@ -915,10 +939,10 @@ class SentenceBase(BaseModel):
 
         group_cls, group_attr = group_map.get(type(sentence), (None, None))
         if not group_cls:
-            logger.info(f"⚠️ Тип предложения {type(sentence).__name__} не поддерживается.")
+            logger.info(f"Тип предложения {type(sentence).__name__} не поддерживается.")
             raise ValueError(f"Тип предложения {type(sentence).__name__} не поддерживается.")
 
-        group = group_cls.query.get(group_id)
+        group = group_cls.query.get(group_id)  
 
         # Проверяем, есть ли предложение в группе
         if group and sentence in getattr(group, group_attr, []):
@@ -941,9 +965,78 @@ class SentenceBase(BaseModel):
         logger.info(f"Обновление завершено")
         return self
 
+   
+    @classmethod
+    def edit_sentence(cls, 
+                      sentence_id, 
+                      group_id, 
+                      related_id, 
+                      new_text=None, 
+                      new_index=None, 
+                      new_weight=None, 
+                      new_tags=None, 
+                      new_comment=None, 
+                      hard_edit=False):
+        """
+        Универсальный метод редактирования предложений (Head, Body, Tail).
+        Возвращает:
+            SentenceBase: Обновлённое или новое предложение.
+        """
+        sentence = cls.query.get(sentence_id)
+        if not sentence:
+            raise ValueError(f"{cls.__name__}: предложение ID={sentence_id} не найдено.")
+
+        logger.info(f"Редактирование предложения {cls.__name__} ID={sentence_id}, hard_edit={hard_edit} начато 🚀")
+        if new_text is None and new_index is not None:
+            logger.info(f"📌 Предложение доставлено без изменений текста для изменения индекса")
+        # Определяем тип предложения
+        is_head = isinstance(sentence, HeadSentence)
+        is_body_or_tail = isinstance(sentence, (BodySentence, TailSentence))
+
+        # Если мягкое редактирование (обновляем существующую запись)
+        if not hard_edit:
+            if new_text is not None:
+                sentence.sentence = new_text
+            if is_head and new_index is not None:
+                sentence.sentence_index = new_index  # Только у HeadSentence
+            if is_body_or_tail and new_weight is not None:
+                sentence.sentence_weight = new_weight  # Только у BodySentence и TailSentence
+            if new_tags is not None:
+                sentence.tags = new_tags
+            if new_comment is not None:
+                sentence.comment = new_comment
+
+            db.session.commit()
+            return sentence
+
+        # Жёсткое редактирование (создаём новое предложение через `create()`)
+        new_sentence, used_group = cls.create(
+            user_id=sentence.user_id,
+            report_type_id=sentence.report_type_id,
+            sentence=new_text,
+            related_id=related_id,
+            sentence_index=new_index if is_head else None,
+            sentence_weight=new_weight if is_body_or_tail else None,
+            tags=new_tags if new_tags is not None else sentence.tags,
+            comment=new_comment if new_comment is not None else sentence.comment
+        )
+
+        # Удаляем старое предложение через delete_sentence, передавая правильный group_id
+        cls.delete_sentence(sentence.id, group_id)
+
+        return new_sentence
+    
     
     @classmethod
-    def create(cls, user_id, report_type_id, sentence, related_id, sentence_index=None, tags=None, comment=None, sentence_weight=1):
+    def create(cls, 
+               user_id, 
+               report_type_id, 
+               sentence, 
+               related_id, 
+               sentence_index=None, 
+               tags=None, 
+               comment=None, 
+               sentence_weight=1):
         """
         Универсальный метод создания предложений (head, body, tail).
 
@@ -1040,6 +1133,7 @@ class SentenceBase(BaseModel):
         return cls.link_to_group(new_sentence, group)
     
     
+    
     @classmethod
     def link_to_group(cls, sentence, group):
         """
@@ -1130,20 +1224,74 @@ class SentenceBase(BaseModel):
         Returns:
             int: Количество групп, с которыми связано предложение.
         """
+        logger.info(f"Проверка количества связей для предложения ID={sentence_id}")
         sentence = cls.query.get(sentence_id)
         if not sentence:
             return 0
-
+        logger.info(f"Предложение найдено: {sentence.id}")
+        
         if isinstance(sentence, HeadSentence):
-            return sentence.groups.count()  # SQL COUNT(*), не загружает объекты
+            return db.session.query(func.count(HeadSentenceGroup.id)).join(HeadSentence.groups).filter(HeadSentence.id == sentence_id).scalar()
 
         elif isinstance(sentence, BodySentence):
-            return sentence.groups.count()
+            return db.session.query(func.count(BodySentenceGroup.id)).join(BodySentence.groups).filter(BodySentence.id == sentence_id).scalar()
 
         elif isinstance(sentence, TailSentence):
-            return sentence.groups.count()
+            return db.session.query(func.count(TailSentenceGroup.id)).join(TailSentence.groups).filter(TailSentence.id == sentence_id).scalar()
 
         return 0
+    
+    
+    @classmethod
+    def update_sentence_position(cls, sentence_id, group_id, new_weight=None, new_index=None):
+        """
+        Универсальный метод для обновления позиции предложения.
+        - Если предложение `HeadSentence`, обновляет `sentence_index`.
+        - Если предложение `BodySentence` или `TailSentence`, обновляет `sentence_weight`.
+
+        Args:
+            sentence_id (int): ID предложения.
+            group_id (int): ID группы.
+            new_weight (int, optional): Новый вес (для `BodySentence` и `TailSentence`).
+            new_index (int, optional): Новый индекс (для `HeadSentence`).
+        """
+        # Определяем, какой параметр нужно обновлять
+        logger.info(f"(Обновление позиции предложения) Обновление ID={sentence_id} в группе ID={group_id} начато 🚀")
+        is_head = issubclass(cls, HeadSentence)
+        is_body_or_tail = issubclass(cls, (BodySentence, TailSentence))
+
+        if is_head and new_index is None:
+            logger.error(f"(Обновление позиции предложения) {cls.__name__} требует new_index, а не new_weight")
+            raise ValueError(f"{cls.__name__} требует new_index, а не new_weight")
+        if is_body_or_tail and new_weight is None:
+            logger.error(f"(Обновление позиции предложения) {cls.__name__} требует new_weight, а не new_index")
+            raise ValueError(f"{cls.__name__} требует new_weight, а не new_index")
+
+        logger.info(f"(Обновление позиции предложения) Обновление {cls.__name__} ID={sentence_id} в группе ID={group_id} "
+                    f"-> {'индекс' if is_head else 'вес'}: {new_index if is_head else new_weight}")
+
+        # Выбираем нужную связующую таблицу
+        if is_head:
+            link_table = head_sentence_group_link
+            field_name = "sentence_index"
+            new_value = new_index
+        else:
+            link_table = body_sentence_group_link if cls == BodySentence else tail_sentence_group_link
+            field_name = "sentence_weight"
+            new_value = new_weight
+
+        # Обновляем значение в связующей таблице
+        db.session.execute(
+            link_table.update()
+            .where(
+                (link_table.c[f"{cls.__tablename__}_id"] == sentence_id) &  # head_sentence_id, body_sentence_id, tail_sentence_id
+                (link_table.c.group_id == group_id)
+            )
+            .values({field_name: new_value})
+        )
+
+        db.session.commit()
+        logger.info(f"(Обновление позиции предложения) ✅  {cls.__name__} ID={sentence_id} в группе ID={group_id} успешно обновлён: {field_name} -> {new_value}")
     
     
     @classmethod
@@ -1296,13 +1444,16 @@ class SentenceGroupBase(BaseModel):
         if linked_count > 1:
             logger.info(f"Отвязываем группу ID={group_id} от сущности ID={entity_id}, так как у неё ещё есть {linked_count} связей.")
             
-            # Определяем, что за сущность (параграф или предложение)
+            # Определяем, что за сущность (параграф или предложение) и отвязываем
             if isinstance(group, HeadSentenceGroup):
-                Paragraph.query.filter_by(id=entity_id).update({"head_sentence_group_id": None})
+                HeadSentenceGroup.unlink_groupe(group_id, entity_id)
             elif isinstance(group, TailSentenceGroup):
-                Paragraph.query.filter_by(id=entity_id).update({"tail_sentence_group_id": None})
+                TailSentenceGroup.unlink_groupe(group_id, entity_id)
             elif isinstance(group, BodySentenceGroup):
-                HeadSentence.query.filter_by(id=entity_id).update({"body_sentence_group_id": None})
+                BodySentenceGroup.unlink_groupe(group_id, entity_id)
+            else:    
+                logger.error(f"Неизвестный тип группы: {type(group).__name__}")
+                raise ValueError(f"Неизвестный тип группы: {type(group).__name__}")
 
             db.session.commit()
             logger.info(f"Успешно отвязали группу ID={group_id} от сущности ID={entity_id}.")
@@ -1362,6 +1513,61 @@ class SentenceGroupBase(BaseModel):
 
         return 0  
    
+   
+    # Метод для отвязывания группы от родительской сущности (параграфа или предложения)
+    @classmethod
+    def unlink_groupe(cls, group_id, related_id):
+        """
+        Отвязывает группу от родительской сущности (параграфа или предложения).
+        Args:
+            group_id (int): ID группы.
+            related_id (int): ID родительской сущности (параграфа или предложения).
+        Returns:
+            bool: True, если отвязка прошла успешно, иначе False.
+        """
+        logger.info(f"Отвязываем группу ID={group_id} от сущности ID={related_id}")
+        # Определяем, что за сущность (параграф или предложение) и отвязываем
+        if cls == HeadSentenceGroup:
+            Paragraph.query.filter_by(id=related_id).update({"head_sentence_group_id": None})
+        elif cls == TailSentenceGroup:
+            Paragraph.query.filter_by(id=related_id).update({"tail_sentence_group_id": None})
+        elif cls == BodySentenceGroup:
+            HeadSentence.query.filter_by(id=related_id).update({"body_sentence_group_id": None})
+        else:
+            logger.error(f"Неизвестный тип группы: {cls.__name__}")
+            raise ValueError(f"Неизвестный тип группы: {cls.__name__}")
+
+        db.session.commit()
+        logger.info(f"Успешно отвязали группу ID={group_id} от сущности ID={related_id}.")
+        return 
+
+
+    # Метод для связывания группы с родительской сущностью (параграфом или предложением)
+    @classmethod
+    def link_group(cls, group_id, related_id):
+        """
+        Связывает группу с родительской сущностью (параграфом или предложением).
+        Args:
+            group_id (int): ID группы.
+            related_id (int): ID родительской сущности (параграфа или предложения).
+        Returns:
+            bool: True, если связь прошла успешно, иначе False.
+        """
+        logger.info(f"Связываем группу ID={group_id} с сущностью ID={related_id}")
+        # Определяем, что за сущность (параграф или предложение) и связываем
+        if cls == HeadSentenceGroup:
+            Paragraph.query.filter_by(id=related_id).update({"head_sentence_group_id": group_id})
+        elif cls == TailSentenceGroup:
+            Paragraph.query.filter_by(id=related_id).update({"tail_sentence_group_id": group_id})
+        elif cls == BodySentenceGroup:
+            HeadSentence.query.filter_by(id=related_id).update({"body_sentence_group_id": group_id})
+        else:
+            logger.error(f"Неизвестный тип группы: {cls.__name__}")
+            raise ValueError(f"Неизвестный тип группы: {cls.__name__}")
+
+        db.session.commit()
+        logger.info(f"Успешно связали группу ID={group_id} с сущностью ID={related_id}.")
+        return
 
 
     @classmethod
@@ -1378,6 +1584,30 @@ class SentenceGroupBase(BaseModel):
         return new_group
 
     
+    @classmethod
+    def get_group_sentences(cls, group_id):
+        """
+        Возвращает все предложения, связанные с группой.
+        Args:
+            group_id (int): ID группы.
+        Returns:
+            list[SentenceBase]: Список предложений, связанных с группой.
+        """
+        logger.info(f"Поиск предложений для группы ID={group_id}")
+
+        if cls == HeadSentenceGroup:
+            group = HeadSentenceGroup.get_by_id(group_id)  # Исправлено
+            return sorted(group.head_sentences, key=lambda s: s.sentence_index) if group else []
+
+        elif cls == BodySentenceGroup:
+            group = BodySentenceGroup.get_by_id(group_id)  # Исправлено
+            return sorted(group.body_sentences, key=lambda s: s.sentence_weight) if group else []
+
+        elif cls == TailSentenceGroup:
+            group = TailSentenceGroup.get_by_id(group_id)  # Исправлено
+            return sorted(group.tail_sentences, key=lambda s: s.sentence_weight) if group else []
+
+        return []
         
         
 class HeadSentenceGroup(SentenceGroupBase):

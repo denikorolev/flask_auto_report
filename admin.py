@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, request, jsonify, current_app
 from models import *
+from logger import logger
 import re
 from flask_security.decorators import auth_required, roles_required
 
@@ -52,12 +53,10 @@ def get_model_fields():
 @auth_required()
 def admin():
     
-    # menu = current_app.config["MENU"]
     
     all_models, association_tables = get_model_fields()
     
     return render_template("admin.html",
-                        #    menu=menu,
                            title="Admin",
                            all_models=all_models,
                            association_tables=association_tables)
@@ -70,6 +69,7 @@ def fetch_data():
     selected_tables = data.get("tables", [])
     selected_columns = data.get("columns", {})
     result = {}
+    logger.info(f"Запрос данных для таблиц: {selected_tables}")
 
     table_models = current_app.config.get("TABLE_MODELS", {})
     associative_tables = current_app.config.get("ASSOCIATIVE_TABLES", [])
@@ -102,7 +102,8 @@ def fetch_data():
                 print(f"Ошибка при запросе к таблице {table_name}: {e}")
                 result[table_name] = {"error": f"Ошибка: {e}"}
 
-    return jsonify(result)
+    return jsonify({"status": "success",
+                    "data": result})
 
 
 @admin_bp.route("/delete/<table_name>/<int:record_id>", methods=["DELETE"])

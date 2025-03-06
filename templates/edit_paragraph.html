@@ -49,9 +49,12 @@
 
     <!-- Главные предложения -->
     <h3>Главные предложения</h3>
-    <ul class="edit-sentence__list">
+    <ul class="edit-sentence__list"
+        id="editHeadSentenceList"
+        data-paragraph-id="{{ paragraph.id }}"
+        >
         {% for sentence in paragraph.head_sentences %}
-            <li class="wrapper__card edit-sentence__item
+            <li class="wrapper__card edit-sentence__item edit-sentence__item--head 
                 {% if sentence.body_sentences %}
                     wrapper__card--text
                 {% endif %}
@@ -73,8 +76,8 @@
             </div>
 
             <div>
-                <button class="btn report__btn edit-sentence__btn-head--edit" data-sentence-id="{{ sentence.id }}">Редактировать предложение</button>
-                <button class="btn report__btn edit-sentence__btn-head--delete" data-sentence-id="{{ sentence.id }}">Удалить предложение</button>
+                <button class="btn report__btn edit-sentence__btn--edit-head" data-sentence-id="{{ sentence.id }}">Редактировать </button>
+                <button class="btn report__btn edit-sentence__btn--delete-head" data-sentence-id="{{ sentence.id }}">Удалить </button>
             </div>
                
             </li>
@@ -87,23 +90,24 @@
     <hr>
     <!-- Дополнительные предложения -->
     <h3 class="edit-sentence__title" id="editSentenceTitle">Дополнительные предложения параграфа</h3>
-    <ul class="edit-sentence__list" style="display: block;" id="editTailSentenceList">
+    <ul class="edit-sentence__list" 
+        style="display: block;" 
+        id="editTailSentenceList"
+        data-paragraph-id="{{ paragraph.id }}"
+        >
         {% for sentence in paragraph.tail_sentences %}
-            <li class="wrapper__card wrapper__card--tail edit-sentence__item" 
+            <li class="wrapper__card wrapper__card--tail edit-sentence__item edit-sentence__item--tail" 
             data-sentence-id="{{ sentence.id }}"
             data-paragraph-id="{{ paragraph.id }}"
-            data-sentence-index="{{ sentence.weight }}"
+            data-sentence-weight="{{ sentence.weight }}"
             data-sentence-type="tail"
             data-sentence-tags="{{ sentence.tags }}"
             data-sentence-comment="{{ sentence.comment }}">
 
-            <div class=""> {{sentence.weight}}</div> <!-- Отображаю вес -->
-                
+            <div> {{sentence.weight}}</div> 
             <p class="edit-sentence__text">{{ sentence.sentence }}</p>
-               
-            <div>
-                <button class="btn report__btn edit-sentence__btn-tail--delete" data-sentence-id="{{ sentence.id }}">Удалить предложение</button>
-            </div>
+            <button class="btn report__btn edit-sentence__btn--delete-tail">Удалить</button>
+            
             </li>
         {% endfor %}
         <hr>
@@ -117,6 +121,8 @@
 <script>
     const paragraphData = {{ paragraph | tojson | safe }};
 </script>
+
+
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
 <script src="{{ url_for('static', filename='js/edit_paragraph.js') }}"></script>

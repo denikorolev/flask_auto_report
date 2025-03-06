@@ -48,7 +48,11 @@
 
     <h3 class="edit-sentence__title" id="editSentenceTitle">Дополнительные предложение для главного предложения</h3>
     <div class="edit-sentence__sentence">
-        <ul class="edit-sentence__list" id="bodySentenceList" style="display: block;">
+        <ul class="edit-sentence__list" 
+            id="bodySentenceList" 
+            style="display: block;"
+            data-head-sentence-id="{{ head_sentence.id }}"
+            >
             {% for sentence in head_sentence.body_sentences %}
                 <li class="wrapper__card edit-sentence__item" 
                 data-sentence-id="{{ sentence.id }}" 
@@ -63,9 +67,8 @@
                     <div class="">
                             {{ sentence.weight }}
                     </div>
-                    <div>
-                        <p class="edit-sentence__text">{{ sentence.sentence }}</p>
-                    </div>
+                    <p class="edit-sentence__text">{{ sentence.sentence }}</p>
+                   
                     <button class="btn report__btn edit-sentence__btn--delete" type="button">Удалить</button>
                 </li>
             {% endfor %}

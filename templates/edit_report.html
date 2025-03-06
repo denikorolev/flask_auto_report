@@ -53,9 +53,10 @@
        
             <!-- Уровень параграфа -->
             {% if report_paragraphs %}
+                <ul class="edit-paragraph__list" id="editParagraphsList">
                     {% for paragraph in report_paragraphs %}
                         
-                        <div class="wrapper__card edit-paragraph__item
+                        <li class="wrapper__card edit-paragraph__item
                             {% if paragraph.paragraph_type in ["scanparam"] %}
                             wrapper__card--scanparam
                             {% elif paragraph.paragraph_type in ["text","custom"] %}
@@ -73,7 +74,7 @@
                             
                             <div class="drag-handle">☰</div> <!-- Хваталка -->
 
-                            <div class="edit-paragraph__info-box
+                            <div class="flex edit-paragraph__info-box
                                 {% if paragraph.title_paragraph %}
                                     flex_column
                                 {% endif %}
@@ -95,7 +96,6 @@
                                     data-paragraph-visible="{{ paragraph.paragraph_visible }}"
                                     data-bold-paragraph="{{ paragraph.bold_paragraph }}"
                                     data-title-paragraph="{{ paragraph.title_paragraph }}"
-                                    
                                     >
                                     <b> {{ paragraph.paragraph }} </b>
                                 </p>
@@ -107,22 +107,21 @@
                                     {% endfor %}
                                 </div>
                             </div>
+                            
+                            <div>
                                 <button class="btn report__btn edit-paragraph__btn--edit"  data-paragraph-id="{{ paragraph.id }}">Редактировать параграф</button>
                                 <button class="btn report__btn edit-paragraph__btn--delete"  data-paragraph-id="{{ paragraph.id }}">Удалить параграф</button>
-                            <div>
-
-                            
                             </div>
-                        </div>
+                        </li>
                     {% endfor %}
-                
+                </ul>
             {% endif %}
             <br>
             <hr class="sentence-separator">
             <br>
             <form method="POST" action="{{ url_for('editing_report.edit_report', report_id=report_data.id) }}" class="new-paragraph-form">
                 <label class="label edit-paragraph__label" for="new_paragraph">Добавить новый параграф</label> <!--Нужно еще сделать логику js-->
-                <button class="btn report__btn edit-paragraph__button" type="button" id="new_paragraph" name="new_paragraph" onclick="newParagraphCreate()">Добавить</button>
+                <button class="btn report__btn edit-paragraph__button" type="button" id="addParagraphButton" name="new_paragraph">Добавить</button>
             </form>
     </div>
     

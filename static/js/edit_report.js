@@ -11,6 +11,8 @@ document.addEventListener("DOMContentLoaded", function () {
         handleUpdateReportButtonClick();
     });
 
+    // Слушатель на кнопку "Добавить параграф"
+    document.getElementById("addParagraphButton").addEventListener("click", addParagraph);
 
 
     // Слушатель на кнопку "Редактировать параграф"
@@ -37,7 +39,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 // Функция инициализации SortableJS
 function initSortable() {
-    const paragraphContainer = document.querySelector(".edit-paragraph");
+    const paragraphContainer = document.querySelector(".edit-paragraph__list");
 
     if (paragraphContainer) {
         new Sortable(paragraphContainer, {
@@ -69,6 +71,7 @@ function updateParagraphOrder() {
         method: "POST",
         data: { paragraphs: newOrder }
     }).then(response => {
+        window.location.reload();
         console.log("Порядок параграфов обновлен", response);
     }).catch(error => {
         console.error("Ошибка обновления порядка:", error);
@@ -147,8 +150,53 @@ function showParagraphPopup(event, paragraphElement) {
 }
 
 
+// Функция для добавления параграфа
+async function addParagraph() {
+    const reportId = document.getElementById("editReportContainer").getAttribute("data-report-id");
+    const paragraphsList = document.getElementById("editParagraphsList");
 
-// Функция для редактирования параграфа (переход на страницу редактирования параграфа)
+    try {
+        const response = await sendRequest({
+            url: "/editing_report/add_new_paragraph",
+            method: "POST",
+            data: { report_id: reportId }
+        });
+
+        // Создаем новый элемент списка
+        const newParagraphHTML = `
+            <li class="wrapper__card edit-sentence__item" 
+                data-paragraph-id="${response.id}" 
+
+                <div class="drag-handle">☰</div>
+                <div>
+                <p class="edit-paragraph__title"><b>${response.paragraph}</b></p>
+                <p class="edit-sentences__list">Это новый параграф и у него еще нет предложений.</p>
+                </div>
+                <div>
+                    <button class="btn report__btn edit-sentence__btn--edit-head" data-sentence-id="${response.id}">Редактировать </button>
+                    <button class="btn report__btn edit-sentence__btn--delete-head" data-sentence-id="${response.id}">Удалить </button>
+                </div>
+            </li>
+        `;
+
+        // Находим все <li> кроме кнопки "Добавить предложение"
+        const paragraphs = paragraphsList.querySelectorAll(".edit-paragraph__item");
+        if (paragraphs.length > 0) {
+            // Вставляем новый <li> после последнего предложения
+            paragraphs[paragraphs.length - 1].insertAdjacentHTML("afterend", newParagraphHTML);
+        } else {
+            // Если список пуст, просто добавляем первым элементом
+            paragraphsList.insertAdjacentHTML("afterbegin", newParagraphHTML);
+        }
+
+        console.log("Новое предложение добавлено:", response);
+    } catch (error) {
+        console.error("Ошибка запроса:", error);
+    }
+}   
+
+// Функция для редактирования параграфа (переход на страницу редактирования параграфа) 
+// Не обновлял!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 function editParagraph(button) {
     const paragraphId = button.getAttribute("data-paragraph-id");
     const reportId = document.getElementById("editReportContainer").getAttribute("data-report-id");
@@ -162,7 +210,8 @@ function editParagraph(button) {
 }
 
 
-// Обработчик для кнопки edit-paragraph__button--edit работает через onclick
+// Обработчик для кнопки edit-paragraph__button--edit работает через onclick 
+// Не обновлял!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 function handleEditParagraphButtonClick(button){
     const paragraphId = button.getAttribute("data-paragraph-id");
     const form = button.closest("form");
@@ -176,7 +225,7 @@ function handleEditParagraphButtonClick(button){
 };
 
 
-// Обработчик для кнопки edit-paragraph__button--delete работает через onclick
+// Обработчик для кнопки "Удалить параграф" 
 function deleteParagraph(button){
     console.log("Удаление параграфа");
     const paragraphId = button.getAttribute("data-paragraph-id") 
@@ -192,7 +241,8 @@ function deleteParagraph(button){
 };
        
    
-// запуск чекеров
+// запуск чекеров. 
+// Обновил но костылями !!!!!!!!!!!!!!!!!!!!!!!
 function startReportCheckers(button) {
     const reportId = button.getAttribute("data-report-id");
     const checksReportUl = document.getElementById("reportCheckList");

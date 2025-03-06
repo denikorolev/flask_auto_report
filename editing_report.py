@@ -3,7 +3,7 @@
 from flask import Blueprint, render_template, request, current_app, jsonify, g
 from flask_security import current_user
 from models import db, Report, Paragraph, Sentence, HeadSentence, BodySentence, TailSentence, HeadSentenceGroup, TailSentenceGroup, BodySentenceGroup
-from utils import get_max_index, check_unique_indices
+from utils import get_max_index, check_unique_indices, normalize_paragraph_indices
 from flask_security.decorators import auth_required
 from logger import logger
 
@@ -233,66 +233,119 @@ def update_report():
 
 
 
-
-@editing_report_bp.route('/new_paragraph', methods=['POST'])
+@editing_report_bp.route('/add_new_paragraph', methods=['POST'])
 @auth_required()
-def new_paragraph():
+def add_paragraph():
     
     report_id = request.json.get("report_id")
     report = Report.query.get(report_id)
 
     if not report or report.profile_id != g.current_profile.id:
-        return jsonify({"status": "error", "message": "Report not found or it's profile data doesn't match with current profile"}), 403
+        return jsonify({"status": "error", "message": "Протокол не найден или не соответствует данному профилю"}), 403
 
     try:
         paragraph_index = get_max_index(Paragraph, "report_id", report_id, Paragraph.paragraph_index)
         
-        Paragraph.create(
+        new_paragraph = Paragraph.create(
             report_id=report.id,
             paragraph_index=paragraph_index,
             paragraph="Введите текст параграфа"
         )
-        return jsonify({"status": "success", "message": "Параграф успешно добавлен"}), 200
+        return jsonify({"status": "success", 
+                        "message": "Параграф успешно добавлен",
+                        "paragraph_index": paragraph_index,
+                        "paragraph_id": new_paragraph.id,
+                        "paragraph": "Введите текст параграфа"
+                        }), 200
     except Exception as e:
         logger.error(f"Ошибка добавления параграфа: {str(e)}")
         return jsonify({"status": "error", "message": f"Ошибка добавления параграфа, код ошибки: {e}"}), 400
 
 
-@editing_report_bp.route("/add_new_body_sentence", methods=["POST"])
+
+@editing_report_bp.route("/add_new_sentence", methods=["POST"])
 @auth_required()
-def add_new_body_sentence():
+def add_new_sentence():
     """Создаёт новое дополнительное предложение (BodySentence) для главного предложения."""
     data = request.get_json()
-    head_sentence_id = data.get("head_sentence_id")
+    related_id = data.get("related_id")
     report_id = data.get("report_id") 
+    sentence_type = data.get("sentence_type")
+    sentence_index = data.get("sentence_index") or None
     logger.info(f"Получены данные для создания нового дополнительного предложения: {data}")
 
-    if not head_sentence_id or not report_id:
-        return jsonify({"status": "error", "message": "Отсутствует head_sentence_id или report_id"}), 400
+    if not related_id or not report_id or not sentence_type:
+        logger.error(f"Отсутствют необходимые данные для создания предложения")
+        return jsonify({"status": "error", "message": "Отсутствют необходимые данные для создания предложения"}), 400
 
     report_type_id = Report.get_report_type(report_id)
+    
+    if sentence_type == "body":
+        try:
+            new_body_sentence, _ = BodySentence.create(
+                user_id=current_user.id,
+                report_type_id=report_type_id,  
+                sentence="Введите текст предложения", 
+                related_id=related_id
+            )
+            if new_body_sentence:
+                logger.info(f"Успешно создано новое дополнительное предложение с id={new_body_sentence.id}")
+            return jsonify({
+                "status": "success",
+                "id": new_body_sentence.id,
+                "weight": new_body_sentence.sentence_weight,
+                "sentence": new_body_sentence.sentence,
+                "tags": new_body_sentence.tags,
+                "comment": new_body_sentence.comment
+            }), 201
 
-    try:
-        new_body_sentence, _ = BodySentence.create(
-            user_id=current_user.id,
-            report_type_id=report_type_id,  
-            sentence="Введите текст предложения", 
-            related_id=head_sentence_id
-        )
-        if new_body_sentence:
-            logger.info(f"Успешно создано новое дополнительное предложение с id={new_body_sentence.id}")
-        return jsonify({
-            "status": "success",
-            "id": new_body_sentence.id,
-            "weight": new_body_sentence.sentence_weight,
-            "sentence": new_body_sentence.sentence,
-            "tags": new_body_sentence.tags,
-            "comment": new_body_sentence.comment
-        }), 201
-
-    except Exception as e:
-        return jsonify({"status": "error", "message": f"Ошибка при создании предложения: {e}"}), 500
-
+        except Exception as e:
+            return jsonify({"status": "error", "message": f"Ошибка при создании предложения: {e}"}), 500
+        
+    elif sentence_type == "tail":
+        try:
+            new_tail_sentence, _ = TailSentence.create(
+                user_id=current_user.id,
+                report_type_id=report_type_id,
+                sentence="Введите текст предложения",
+                related_id=related_id
+            )
+            if new_tail_sentence:
+                logger.info(f"Успешно создано новое дополнительное предложение с id={new_tail_sentence.id}")
+            return jsonify({
+                "status": "success",
+                "id": new_tail_sentence.id,
+                "weight": new_tail_sentence.sentence_weight,
+                "sentence": new_tail_sentence.sentence,
+                "tags": new_tail_sentence.tags,
+                "comment": new_tail_sentence.comment
+            }), 201
+        except Exception as e:
+            return jsonify({"status": "error", "message": f"Ошибка при создании предложения: {e}"}), 500
+        
+    elif sentence_type == "head":
+        try:
+            new_head_sentence, _ = HeadSentence.create(
+                user_id=current_user.id,
+                report_type_id=report_type_id,
+                sentence="Введите текст предложения",
+                related_id=related_id,
+                sentence_index=sentence_index
+            )
+            if new_head_sentence:
+                logger.info(f"Успешно создано новое дополнительное предложение с id={new_head_sentence.id}")
+            return jsonify({
+                "status": "success",
+                "id": new_head_sentence.id,
+                "index": new_head_sentence.sentence_index,
+                "sentence": new_head_sentence.sentence,
+                "tags": new_head_sentence.tags,
+                "comment": new_head_sentence.comment
+            }), 201
+        except Exception as e:
+            return jsonify({"status": "error", "message": f"Ошибка при создании предложения: {e}"}), 500
+    else:
+        return jsonify({"status": "error", "message": "Неизвестный тип предложения"}), 400
 
 
 @editing_report_bp.route('/delete_paragraph', methods=["DELETE"])
@@ -300,12 +353,50 @@ def add_new_body_sentence():
 def delete_paragraph():
     logger.info("Логика удаления параграфа запущена ----------------------------")
     paragraph_id = request.json.get("paragraph_id")
-    paragraph = Paragraph.query.get(paragraph_id)
+    paragraph = Paragraph.get_by_id(paragraph_id)
+    report_id = paragraph.report_id
+    head_sentence_group = paragraph.head_sentence_group
+    tail_sentence_group = paragraph.tail_sentence_group
 
     if not paragraph or paragraph.paragraph_to_report.profile_id != g.current_profile.id:
         return jsonify({"status": "error", "message": "Параграф не найден или не соответствует профилю"}), 404
+    
     try:
-        Paragraph.delete_by_id(paragraph_id)
+        if tail_sentence_group:
+            logger.info(f"У параграфа есть группа tail предложений")
+            tail_sentence_group_count = TailSentenceGroup.is_linked(tail_sentence_group.id)
+            if  tail_sentence_group_count > 1:
+                logger.info(f"Tail предложения параграфа связаны с другими протоколами. Просто удаляю связь с текущим параграфом")
+                TailSentenceGroup.unlink_groupe(tail_sentence_group.id, paragraph_id)
+                logger.info(f"Связь с параграфом успешно удалена")
+                pass
+            else:
+                logger.info(f"Параграф связан только с текущим протоколом. Удаляю группу tail предложений")
+                TailSentenceGroup.delete_group(tail_sentence_group.id, paragraph_id)
+                logger.info(f"Группа tail предложений успешно удалена")
+                pass
+        if head_sentence_group:
+            logger.info(f"У параграфа есть группа head предложений")
+            head_sentence_group_count = HeadSentenceGroup.is_linked(head_sentence_group.id)
+            if head_sentence_group_count > 1:
+                logger.info(f"Head предложения параграфа связаны с другими протоколами. Просто удаляю связь с текущим параграфом")
+                HeadSentenceGroup.unlink_groupe(head_sentence_group.id, paragraph_id)
+                logger.info(f"Связь с параграфом успешно удалена")
+                pass
+            else:
+                logger.info(f"Параграф связан только с текущим протоколом. Удаляю группу head предложений")
+                HeadSentenceGroup.delete_group(head_sentence_group.id, paragraph_id)
+                logger.info(f"Группа head предложений успешно удалена")
+                pass
+        paragraph.delete()
+        logger.info(f"Параграф успешно удален")
+        try:
+            normalize_paragraph_indices(report_id)
+        except Exception as e:
+            logger.error(f"Ошибка при нормализации индексов параграфов: {str(e)}")
+            return jsonify({"status": "error", "message": f"Ошибка при ренормализации индексов параграфов: {e}"}), 500
+        
+            
         logger.info("Логика удаления параграфа успешно завершена ----------------------------")
         return jsonify({"status": "success", "message": "Параграф успешно удален"}), 200
     except Exception as e:
@@ -391,24 +482,58 @@ def edit_sentences_bulk():
 @editing_report_bp.route('/delete_sentence', methods=['DELETE'])
 @auth_required()
 def delete_sentence():
-    if not request.is_json:
-        return jsonify({"status": "error", "message": "Invalid request format"}), 400
-
+    """Удаляет предложение или отвязывает его от группы."""
     data = request.get_json()
     sentence_id = data.get("sentence_id")
-    sentence = Sentence.query.get(sentence_id)
+    sentence_type = data.get("sentence_type")
+    related_id = data.get("related_id") 
+    logger.info(f"Получены данные для удаления предложения: {data}")
+   
+    if not sentence_id or not related_id or not sentence_type:
+        logger.error(f"Отсутствуют необходимые данные для удаления предложения")
+        return jsonify({"status": "error", "message": "Отсутствуют необходимые данные для удаления предложения"}), 400
+    
+    group_id = 0
+    if sentence_type == "body":
+        group_id = HeadSentence.query.get(related_id).body_sentence_group_id
+        logger.info(f"Предложение является {sentence_type} и его группа предложений = {group_id}")
+        try:
+            BodySentence.delete_sentence(sentence_id, group_id)
+            return jsonify({"status": "success", "message": "Предложение удалено"}), 200
+        except ValueError as e:
+            logger.error(f"Ошибка при удалении предложения: {str(e)}")
+            return jsonify({"status": "error", "message": str(e)}), 404
+    
+    elif sentence_type == "tail":
+        group_id = Paragraph.query.get(related_id).tail_sentence_group_id
+        logger.info(f"Предложение является {sentence_type} и его группа предложений = {group_id}")
+        try:
+            TailSentence.delete_sentence(sentence_id, group_id)
+            return jsonify({"status": "success", "message": "Предложение удалено"}), 200
+        except ValueError as e:
+            logger.error(f"Ошибка при удалении предложения: {str(e)}")
+            return jsonify({"status": "error", "message": str(e)}), 404
+        
+    elif sentence_type == "head":
+        group_id = Paragraph.query.get(related_id).head_sentence_group_id
+        logger.info(f"Предложение является {sentence_type} и его группа предложений = {group_id}")
+        try:
+            HeadSentence.delete_sentence(sentence_id, group_id)
+            return jsonify({"status": "success", "message": "Предложение удалено"}), 200
+        except ValueError as e:
+            logger.error(f"Ошибка при удалении предложения: {str(e)}")
+            return jsonify({"status": "error", "message": str(e)}), 404
+        
+    else:
+        logger.error(f"Неизвестный тип предложения: {sentence_type}")
+        return jsonify({"status": "error", "message": "Неизвестный тип предложения"}), 400
+        
+        
+        
+        
+    
 
-    if not sentence:
-        return jsonify({"status": "error", "message": "Sentence not found"}), 404
-
-    if sentence.sentence_to_paragraph.paragraph_to_report.report_to_profile.id != g.current_profile.id:
-        return jsonify({"status": "error", "message": "You don't have permission to delete this sentence"}), 403
-
-    try:
-        Sentence.delete_by_id(sentence_id)
-        return jsonify({"status": "success", "message": "Sentence deleted successfully"}), 200
-    except Exception as e:
-        return jsonify({"status": "error", "message": f"Failed to delete sentence. Error code: {e}"}), 400
+    
     
     
     
