@@ -544,13 +544,6 @@ def sentence_transition_from_sentence_class():
     all_sentences = Sentence.query.all()
     logger.info(f"start sentence transition")
     # Устраняю несоответствие в данных
-    for x_sentence in all_sentences:
-        print(f"Проверяю предложение: {x_sentence.sentence}")
-        x_sentence.comment = ""
-        if x_sentence.index == 0 and x_sentence.sentence_type != "tail":
-            x_sentence.sentence_type = "tail"
-        x_sentence.save()
-    logger.info(f"end data correction")
         
     for paragraph in all_paragraphs:
         
@@ -560,7 +553,7 @@ def sentence_transition_from_sentence_class():
         
         for head_sentence in head_sentences:
             new_head_sentence, _ = HeadSentence.create(
-                user_id = current_user.id,  
+                user_id = 1,  
                 report_type_id = head_sentence.report_type_id,
                 sentence = head_sentence.sentence,
                 related_id = paragraph.id,
