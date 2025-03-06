@@ -565,7 +565,7 @@ def sentence_transition_from_sentence_class():
             for body_sentence in body_sentences:
                 if body_sentence.index == head_sentence.index:
                     new_body_sentence, _ = BodySentence.create(
-                        user_id = current_user.id,
+                        user_id = 1,
                         report_type_id = body_sentence.report_type_id,
                         sentence = body_sentence.sentence,
                         related_id = new_head_sentence.id,
@@ -580,7 +580,7 @@ def sentence_transition_from_sentence_class():
         tail_sentences = sentences.get("tail", [])
         for tail_sentence in tail_sentences:
             new_tail_sentence, _ = TailSentence.create(
-                user_id = current_user.id,
+                user_id = 1,
                 report_type_id = tail_sentence.report_type_id,
                 sentence = tail_sentence.sentence,
                 related_id = paragraph.id,
