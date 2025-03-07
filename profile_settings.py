@@ -2,7 +2,7 @@
 
 from flask import Blueprint, render_template, request, redirect, url_for, current_app, session, g, jsonify
 from flask_login import current_user
-from models import UserProfile, db, AppConfig, Paragraph, HeadSentence, Sentence
+from models import UserProfile, db, AppConfig, Paragraph
 from utils import check_unique_indices
 from profile_constructor import ProfileSettingsManager
 from flask_security.decorators import auth_required

@@ -3,7 +3,6 @@
 from sqlalchemy import func
 from logger import logger
 from flask import g
-from flask_security.decorators import auth_required
 
 
 

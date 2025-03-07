@@ -1,59 +1,5 @@
 <!-- macros.html -->
   
-<!-- использую в report_editing -->
-{% macro render_sentence(sentence, sentence_type) %}
-    <div class="wrapper__card 
-        {% if sentence_type == "head" %} 
-        wrapper__card--sentence-head 
-        {% elif sentence_type == "tail" %} 
-        wrapper__card--sentence-tail
-        {% endif %}"
-        >
-
-        <div class="flex edit-sentence__info-box">
-            {% if sentence_type == "head" %}
-                <div class="edit-sentence__wrapper edit-sentence__wrapper--short">
-                        <label class="label edit-sentence__label" for="sentence_index">Индекс:</label>
-                    <input class="input edit-sentence__input" type="text" name="sentence_index" value="{{ sentence.index }}">
-                </div>
-            {% endif %}
-
-            {% if sentence_type != "head" %}
-                <div class="edit-sentence__wrapper edit-sentence__wrapper--short">
-                        <label class="label edit-sentence__label" for="sentence_weight">Вес:</label>
-                    <input class="input edit-sentence__input" type="text" name="sentence_weight" value="{{ sentence.weight }}">
-                </div>
-            {% endif %}
-            
-            <button class="btn report__btn edit-sentence__btn edit-sentence__btn--delete-sentence" type="button">Удалить</button>
-            {% if sentence_type == "head" and sentence.body_sentences|length != 0 %}
-                <button class="btn report__btn edit-sentence__btn" 
-                    type="button"
-                    data-state="collapsed" 
-                    data-button-sentence-type="body"
-                    data-sentences-count="{{ sentence.body_sentences|length }}"
-                    data-sentence-id="{{ sentence.id }}"
-                    onclick="expandSentencesOfParagraph(this)"
-                    
-                    > Показать предложения ({{ sentence.body_sentences|length }})
-                </button>
-            {% endif %}
-        </div>
-
-        <div class="edit-sentence__wrapper">
-            <label class="label edit-sentence__label edit-sentence__label--text" for="sentence_sentence">Текст предложения:</label>
-            <input class="input edit-sentence__input edit-sentence__input-text" type="text" name="sentence_sentence" value="{{ sentence.sentence }}">
-        </div>
-        
-    </div>
-{% endmacro %}
-
-
-
-
-
-
-
 <!-- использую несколько раз в working_with_report -->
 {% macro render_paragraph_and_sentence(paragraph) %}
     {% if paragraph %}

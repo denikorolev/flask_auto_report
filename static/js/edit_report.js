@@ -61,7 +61,7 @@ function updateParagraphOrder() {
 
     paragraphs.forEach((paragraph, index) => {
         const paragraphId = paragraph.getAttribute("data-paragraph-id");
-        newOrder.push({ id: paragraphId, index: index });
+        newOrder.push({ id: paragraphId, index: index});
     });
 
     // Отправляем новый порядок на сервер

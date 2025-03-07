@@ -1,18 +1,15 @@
 # app.py
 
-from flask import Flask, redirect, url_for, render_template, request, session, g, jsonify
+from flask import Flask, redirect, url_for, render_template, request, session, g
 from flask_login import current_user
 import logging
 from config import get_config
 from flask_migrate import Migrate
-from models import db, User, UserProfile, Role, Sentence, HeadSentence, BodySentence, TailSentence, TailSentenceGroup, BodySentenceGroup, HeadSentenceGroup, Paragraph
+from models import db, User, UserProfile, Role
 from menu_constructor import build_menu
-from sentence_processing import sentence_transition_from_sentence_class
 from profile_constructor import ProfileSettingsManager
-from db_processing import sync_all_profiles_settings, migrate_sentence_data
+from db_processing import sync_all_profiles_settings
 from logger import logger
-from collections import defaultdict
-from rapidfuzz import fuzz
 import os
 
 from flask_wtf.csrf import CSRFProtect
@@ -31,7 +28,7 @@ from openai_api import openai_api_bp
 from key_words import key_words_bp
 from admin import admin_bp
 
-version = "0.9.3.3"
+version = "0.9.3.4"
 
 app = Flask(__name__)
 app.config.from_object(get_config()) # Load configuration from file config.py
@@ -242,48 +239,13 @@ def close_db(error):
 @auth_required()
 @roles_required("superadmin")
 def playground():
-    """
-    Переносит предложения из таблицы Sentence в новые таблицы HeadSentence, BodySentence и TailSentence.
-    """
     
-    logger.info("Playground route is called")
-    # Запрос всех предложений
-    sentences = Sentence.query.all() or []
-    head_sentences = HeadSentence.query.all() or []
-    body_sentences = BodySentence.query.all() or []
-    tail_sentences = TailSentence.query.all() or []
-        
     return render_template(
         "playground.html",
-        title="Playground",
-        head_sentences=head_sentences,
-        body_sentences=body_sentences,
-        tail_sentences=tail_sentences,
-        sentences=sentences
+        title="Playground"
     )
     
-  
-@app.route("/playground_button_click", methods=["POST"])
-@auth_required()
-@roles_required("superadmin")
-def playground_button_click():
-    """
-    Переносит предложения из таблицы Sentence в новые таблицы HeadSentence, BodySentence и TailSentence.
-    """
-    data = request.json
-    print(data)
-    try:
-        if data.get("flag") == "migrate":
-            print("Migrating data")
-            sentence_transition_from_sentence_class()
-        elif data.get("flag") == "sentence_structure":
-            print("Migrating sentence structure")
-            migrate_sentence_data()
-        return jsonify({"status": "success", "message": "Data migrated successfully"})
-    except Exception as e:
-        logger.error(f"Error in playground: {str(e)}")
-        return jsonify({"status": "error", "message": str(e)})
-    
+
     
 
 # Фильтруем логи 

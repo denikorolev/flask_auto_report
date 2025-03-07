@@ -20,20 +20,22 @@ working_with_reports_bp = Blueprint('working_with_reports', __name__)
 @working_with_reports_bp.route("/choosing_report", methods=['POST', 'GET'])
 @auth_required()
 def choosing_report(): 
-    logger.info("Выбор шаблона протокола")
+    logger.info(f"(Выбор шаблона протокола) 🚀 Начинаю обработку запроса")
     current_profile = g.current_profile
     report_types_and_subtypes = ReportType.get_types_with_subtypes(current_profile.id) 
     current_profile_reports = Report.find_by_profile(current_profile.id)
 
     if request.method == "POST":
-        logger.info("Получен POST-запрос на выбор шаблона протокола текущего профиля")
+        logger.info("(Выбор шаблона протокола) Получен POST-запрос на выбор шаблона протокола.")
         if request.is_json:
             data = request.get_json()
             rep_subtype = data.get("report_subtype")
             reports = Report.find_by_subtypes(rep_subtype)
             if not reports:
+                logger.error("(Выбор шаблона протокола) ❌ Не найдено шаблонов протоколов для выбранного типа")
                 return jsonify({"status": "error", "message": "Не найдено шаблонов протоколов для выбранного типа"}), 404
             # Возвращаем данные в формате JSON
+            logger.info("(Выбор шаблона протокола) ✅ Отправляю данные о найденных шаблонах протоколов")
             return jsonify({
                 "status": "success",
                 "reports": [
@@ -41,7 +43,7 @@ def choosing_report():
                     for report in reports
                 ]
             })
-        
+    logger.info("(Выбор шаблона протокола) Простая загрузка страницы.")
     return render_template(
         "choose_report.html",
         title="Выбор шаблона протокола",
@@ -53,16 +55,16 @@ def choosing_report():
 @working_with_reports_bp.route("/working_with_reports", methods=['GET'])
 @auth_required()
 def working_with_reports(): 
-    current_report_id = request.args.get("reportId")
+    current_report_id = int(request.args.get("reportId"))
     full_name = request.args.get("fullname")
     birthdate = request.args.get("birthdate")
     report_number = request.args.get("reportNumber")
     
-    
+    if not current_report_id:
+        return render_template("error.html", message="Нет данных о подходящем протоколе для работы")
     try:
         report_data, paragraphs_data = Report.get_report_data(
-            current_report_id, 
-            g.current_profile.id
+            current_report_id
             )
         if report_data is None or paragraphs_data is None:
             logger.error("Метод get_report_data вернул None")

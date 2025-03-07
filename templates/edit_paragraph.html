@@ -53,35 +53,39 @@
         id="editHeadSentenceList"
         data-paragraph-id="{{ paragraph.id }}"
         >
-        {% for sentence in paragraph.head_sentences %}
-            <li class="wrapper__card edit-sentence__item edit-sentence__item--head 
-                {% if sentence.body_sentences %}
-                    wrapper__card--text
-                {% endif %}
-                " 
-            data-sentence-id="{{ sentence.id }}"
-            data-paragraph-id="{{ paragraph.id }}"
-            data-sentence-index="{{ sentence.index }}"
-            data-sentence-type="head"
-            data-sentence-tags="{{ sentence.tags }}"
-            data-sentence-comment="{{ sentence.comment }}">
+        {% if paragraph.head_sentences %}
+            {% for sentence in paragraph.head_sentences %}
+                <li class="wrapper__card edit-sentence__item edit-sentence__item--head 
+                    {% if sentence.body_sentences %}
+                        wrapper__card--text
+                    {% endif %}
+                    " 
+                data-sentence-id="{{ sentence.id }}"
+                data-paragraph-id="{{ paragraph.id }}"
+                data-sentence-index="{{ sentence.index }}"
+                data-sentence-type="head"
+                data-sentence-tags="{{ sentence.tags }}"
+                data-sentence-comment="{{ sentence.comment }}">
 
-            <div class="drag-handle">☰</div> <!-- Хваталка -->
+                <div class="drag-handle">☰</div> <!-- Хваталка -->
+                    
+                <div>
+                    <p class="edit-sentence__text">{{ sentence.sentence }}</p>
+                    {% if not sentence.body_sentences %}
+                        <p class="edit-paragraph__title--invisible">У данного главного предложения нет дополнительных предложений</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <button class="btn report__btn edit-sentence__btn--edit-head" data-sentence-id="{{ sentence.id }}">Редактировать </button>
+                    <button class="btn report__btn edit-sentence__btn--delete-head" data-sentence-id="{{ sentence.id }}">Удалить </button>
+                </div>
                 
-            <div>
-                <p class="edit-sentence__text">{{ sentence.sentence }}</p>
-                {% if not sentence.body_sentences %}
-                    <p class="edit-paragraph__title--invisible">У данного главного предложения нет дополнительных предложений</p>
-                {% endif %}
-            </div>
-
-            <div>
-                <button class="btn report__btn edit-sentence__btn--edit-head" data-sentence-id="{{ sentence.id }}">Редактировать </button>
-                <button class="btn report__btn edit-sentence__btn--delete-head" data-sentence-id="{{ sentence.id }}">Удалить </button>
-            </div>
-               
-            </li>
-        {% endfor %}
+                </li>
+            {% endfor %}
+        {% else %}
+            <p>У параграфа пока нет главных предложений</p>
+        {% endif %}
     </ul>
     <hr>
 

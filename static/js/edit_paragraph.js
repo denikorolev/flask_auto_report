@@ -126,7 +126,11 @@ async function addHeadSentence() {
     const paragraphId = parseInt(headSentenceList.getAttribute("data-paragraph-id"));
     const reportId = document.getElementById("editParagraphContainer").getAttribute("data-report-id");
     const sentences = paragraphData.head_sentences;
-    const sentenceIndexes = sentences.map(sentence => sentence.index);
+    console.log("Данные с сервера:", paragraphData);
+    console.log("Предложения:", sentences);
+    const sentenceIndexes = sentences.map(sentence => sentence.sentence_index);
+    console.log("Индексы предложений:", sentenceIndexes);
+    console.log("Индексы предложений:", sentenceIndexes);
     const maxIndex = findMaxIndex(sentenceIndexes);
     console.log("Максимальный индекс:", maxIndex);
     
@@ -286,7 +290,9 @@ function saveHeadSentencesOrder() {
     const allSentences = document.querySelectorAll(".edit-sentence__item--head");
     const sentences = Array.from(allSentences).filter(sentence => sentence.getAttribute("data-sentence-type") === "head");
     const updatedOrder = [];
+    const paragraphId = document.getElementById("editParagraphContainer").getAttribute("data-paragraph-id");
 
+    console.log("Параграф ID:", paragraphId);
     sentences.forEach((sentence, newIndex) => {
         const sentenceId = sentence.getAttribute("data-sentence-id");
         updatedOrder.push({
@@ -298,7 +304,9 @@ function saveHeadSentencesOrder() {
     sendRequest({
         url: "/editing_report/update_head_sentence_order",
         method: "POST",
-        data: { updated_order: updatedOrder }
+        data: { updated_order: updatedOrder,
+                paragraph_id: paragraphId 
+            }
     }).then(response => {
         if (response.status === "success") {
             window.location.reload();

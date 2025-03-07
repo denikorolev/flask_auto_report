@@ -28,7 +28,6 @@ class Config:
         "ReportSubtype": ReportSubtype,
         "Report": Report,
         "Paragraph": Paragraph,
-        "Sentence": Sentence,
         "HeadSentence": HeadSentence,
         "BodySentence": BodySentence,
         "TailSentence": TailSentence,

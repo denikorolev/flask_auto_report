@@ -2,7 +2,7 @@
 
 from flask import g, current_app
 from flask_login import current_user
-from models import KeyWord, db, AppConfig, HeadSentence, BodySentence, TailSentence, head_sentence_group_link, body_sentence_group_link, tail_sentence_group_link, UserProfile
+from models import KeyWord, db, AppConfig, UserProfile
 from logger import logger
 from utils import get_max_index
 from sqlalchemy.orm import joinedload
@@ -69,57 +69,4 @@ def sync_all_profiles_settings(user_id):
 
     logger.info(f"Синхронизация настроек для всех профилей пользователя {user_id} завершена")
     
-    
-
-# Использую для миграции данных перед удалением полей индексов и весов из таблиц предложений
-def migrate_sentence_data():
-    """
-    Переносит индексы главных предложений и веса body/tail предложений
-    в соответствующие таблицы связей.
-    """
-    logger.info("🔄 Начало миграции индексов и весов предложений")
-    # 1️⃣ Перенос индексов у `HeadSentence`
-    head_sentences = db.session.query(HeadSentence).options(joinedload(HeadSentence.groups)).all()
-    for sentence in head_sentences:
-        logger.info(f"Обработка главного предложения {sentence.id}")
-        for group in sentence.groups:
-            db.session.execute(
-                head_sentence_group_link.update()
-                .where(
-                    (head_sentence_group_link.c.head_sentence_id == sentence.id) &
-                    (head_sentence_group_link.c.group_id == group.id)
-                )
-                .values(sentence_index=sentence.sentence_index)
-            )
-
-    # 2️⃣ Перенос весов у `BodySentence`
-    body_sentences = db.session.query(BodySentence).options(joinedload(BodySentence.groups)).all()
-    for sentence in body_sentences:
-        logger.info(f"Обработка body предложения {sentence.id}")
-        for group in sentence.groups:
-            db.session.execute(
-                body_sentence_group_link.update()
-                .where(
-                    (body_sentence_group_link.c.body_sentence_id == sentence.id) &
-                    (body_sentence_group_link.c.group_id == group.id)
-                )
-                .values(sentence_weight=sentence.sentence_weight)
-            )
-
-    # 3️⃣ Перенос весов у `TailSentence`
-    tail_sentences = db.session.query(TailSentence).options(joinedload(TailSentence.groups)).all()
-    for sentence in tail_sentences:
-        logger.info(f"Обработка tail предложения {sentence.id}")
-        for group in sentence.groups:
-            db.session.execute(
-                tail_sentence_group_link.update()
-                .where(
-                    (tail_sentence_group_link.c.tail_sentence_id == sentence.id) &
-                    (tail_sentence_group_link.c.group_id == group.id)
-                )
-                .values(sentence_weight=sentence.sentence_weight)
-            )
-
-    db.session.commit()
-    logger.info("✅ Миграция индексов и весов завершена успешно")
     
