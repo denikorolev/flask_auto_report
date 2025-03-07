@@ -62,7 +62,7 @@
                     " 
                 data-sentence-id="{{ sentence.id }}"
                 data-paragraph-id="{{ paragraph.id }}"
-                data-sentence-index="{{ sentence.index }}"
+                data-sentence-index="{{ sentence.sentence_index }}"
                 data-sentence-type="head"
                 data-sentence-tags="{{ sentence.tags }}"
                 data-sentence-comment="{{ sentence.comment }}">
@@ -79,7 +79,17 @@
                 <div>
                     <button class="btn report__btn edit-sentence__btn--edit-head" data-sentence-id="{{ sentence.id }}">Редактировать </button>
                     <button class="btn report__btn edit-sentence__btn--delete-head" data-sentence-id="{{ sentence.id }}">Удалить </button>
+                    {% if sentence.has_linked_body %}
+                        <button class="btn report__btn edit-sentence__btn--unlink-body" data-sentence-id="{{ sentence.id }}">Отвязать дополнительное предложение </button>
+                    {% else %}
+                        <button class="btn report__btn edit-sentence__btn--link-body" data-sentence-id="{{ sentence.id }}">Привязать дополнительное предложение </button>
+                    {% endif %}
+
                 </div>
+
+                {% if sentence.has_linked_body %}
+                    <span> 🔗</span>
+                {% endif %}
                 
                 </li>
             {% endfor %}
@@ -103,12 +113,12 @@
             <li class="wrapper__card wrapper__card--tail edit-sentence__item edit-sentence__item--tail" 
             data-sentence-id="{{ sentence.id }}"
             data-paragraph-id="{{ paragraph.id }}"
-            data-sentence-weight="{{ sentence.weight }}"
+            data-sentence-weight="{{ sentence.sentence_weight }}"
             data-sentence-type="tail"
             data-sentence-tags="{{ sentence.tags }}"
             data-sentence-comment="{{ sentence.comment }}">
 
-            <div> {{sentence.weight}}</div> 
+            <div> {{sentence.sentence_weight}}</div> 
             <p class="edit-sentence__text">{{ sentence.sentence }}</p>
             <button class="btn report__btn edit-sentence__btn--delete-tail">Удалить</button>
             

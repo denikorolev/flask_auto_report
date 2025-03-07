@@ -26,7 +26,7 @@ def edit_report():
         return jsonify({"status": "error", "message": "Протокол не найден или у вас нет прав на его редактирование"}), 403
     try:
         report_data = Report.get_report_info(report_id)
-        report_paragraphs = Report.get_report_structure(report_id)
+        report_paragraphs = Report.get_report_paragraphs(report_id)
     except Exception as e:
         logger.error(f"(Страница редактирования протокола) ❌ Ошибка при получении данных протокола: {str(e)}")
         return jsonify({"status": "error", "message": f"Ошибка при получении данных протокола: {str(e)}"}), 500
@@ -200,32 +200,56 @@ def update_head_sentence_order():
 
 
 
-@editing_report_bp.route('/update_report', methods=['PUT'])
+@editing_report_bp.route('/update_report', methods=["PATCH"])
 @auth_required()
 def update_report():
-
-    report_id = request.form.get("report_id")
+    logger.info("(Обновление протокола) 🚀 Начато обновление данных протокола")
+    data = request.json
+    report_id = data.get("report_id")
     report = Report.query.get(report_id)
     
-    report_name = request.form.get("report_name")
-    if not report_name:
-        logger.error(f"Не указано название протокола")
-        return jsonify({"status": "error", "message": "Не указано название протокола"}), 400
-    
     if not report or report.profile_id != g.current_profile.id:
-        logger.error(f"Такой протокол в данном профиле не найден")
-        return jsonify({"status": "error", "message": "Такой протокол в данном профиле не найден"}), 403
+        logger.error(f"(Обновление протокола) ❌ Протокол не найден или не соответствует профилю")
+        return jsonify({"status": "error", "message": "Протокол не найден или не соответствует профилю"}), 403
+    
+    new_report_data = {
+        "report_name": data.get("report_name"),
+        "comment": data.get("report_comment"),
+        "report_side": data.get("report_side") == "True"
+    }
+    logger.info(f"(Обновление протокола) Получены данные для обновления протокола: {new_report_data}")
 
     try:
-        report.report_name = report_name
-        report.comment = request.form.get("comment")
-        report.report_side = True if request.form.get("report_side") == "true" else False
-        report.save()
+        report.update(**new_report_data)
+        logger.info(f"(Обновление протокола) ✅ Данные протокола успешно обновлены")
         return jsonify({"status": "success", "message": "Данные протокола успешно обновлены"}), 200
     except Exception as e:
-        logger.error(f"Error updating report: {str(e)}")
-        return jsonify({"status": "error", "message": f"Не удалось обновить данные протокола. Ошибка: {e}"}), 400
+        logger.error(f"(Обновление протокола) ❌ Ошибка при обновлении протокола: {str(e)}")
+        return jsonify({"status": "error", "message": f"Ошибка при обновлении протокола: {str(e)}"}), 500
+        
 
+@editing_report_bp.route('/update_paragraph_text', methods=["PATCH"])
+@auth_required()
+def update_paragraph_text():
+    logger.info("(Обновление текста параграфа) 🚀 Начато обновление текста параграфа")
+    data = request.json
+    paragraph_id = data.get("paragraph_id")
+    paragraph = Paragraph.query.get(paragraph_id)
+    
+    if not paragraph or paragraph.paragraph_to_report.profile_id != g.current_profile.id:
+        logger.error(f"(Обновление текста параграфа) ❌ Параграф не найден или не соответствует профилю")
+        return jsonify({"status": "error", "message": "Параграф не найден или не соответствует профилю"}), 403
+    
+    new_paragraph_text = data.get("paragraph_text")
+    logger.info(f"(Обновление текста параграфа) Получены данные для обновления текста параграфа: {new_paragraph_text}")
+    
+    try:
+        paragraph.update(paragraph=new_paragraph_text)
+        logger.info(f"(Обновление текста параграфа) ✅ Текст параграфа успешно обновлен")
+        return jsonify({"status": "success", "message": "Текст параграфа успешно обновлен"}), 200
+    except Exception as e:
+        logger.error(f"(Обновление текста параграфа) ❌ Ошибка при обновлении текста параграфа: {str(e)}")
+        return jsonify({"status": "error", "message": f"Ошибка при обновлении текста параграфа: {str(e)}"}), 500
 
 
 
@@ -431,7 +455,7 @@ def report_checkers():
     if not report_id:
         logger.error(f"Не указан id отчета")
         return jsonify({"status": "error", "message": "Отчет не найден"}), 404
-    paragraphs_by_type = Paragraph.get_report_paragraphs(report_id)
+    paragraphs_by_type = Report.get_report_paragraphs(report_id)
     try:
         check_unique_indices(paragraphs_by_type)
         return jsonify({"status": "success", "message": "Индексы параграфов и главных предложений уникальны"}), 200

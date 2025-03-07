@@ -235,8 +235,8 @@ def create_report_from_existing_few():
                     paragraph_visible=paragraph.paragraph_visible,
                     title_paragraph=paragraph.title_paragraph,
                     bold_paragraph=paragraph.bold_paragraph,
-                    head_sentence_group_id=paragraph.head_sentence_group_id,
-                    tail_sentence_group_id=paragraph.tail_sentence_group_id
+                    head_sentence_group_id=paragraph.head_sentence_group_id or None,
+                    tail_sentence_group_id=paragraph.tail_sentence_group_id or None
                 )
         # Если протоколов несколько то нужно будет заморочиться для 
         # адекватной обработки параметров сканирования, заключений и т.д.
@@ -283,8 +283,8 @@ def create_report_from_existing_few():
                         paragraph_visible=paragraph.paragraph_visible,
                         title_paragraph=paragraph.title_paragraph,
                         bold_paragraph=paragraph.bold_paragraph,
-                        head_sentence_group_id=paragraph.head_sentence_group_id,
-                        tail_sentence_group_id=paragraph.tail_sentence_group_id
+                        head_sentence_group_id=paragraph.head_sentence_group_id or None,
+                        tail_sentence_group_id=paragraph.tail_sentence_group_id or None
                     )
                     paragraph_index += 1
 
@@ -312,8 +312,8 @@ def create_report_from_existing_few():
                     paragraph_visible=paragraph.paragraph_visible,
                     title_paragraph=paragraph.title_paragraph,
                     bold_paragraph=paragraph.bold_paragraph,
-                    head_sentence_group_id=paragraph.head_sentence_group_id,
-                    tail_sentence_group_id=paragraph.tail_sentence_group_id
+                    head_sentence_group_id=paragraph.head_sentence_group_id or None,
+                    tail_sentence_group_id=paragraph.tail_sentence_group_id or None
                 )
             scanparam_exist = []
                 
@@ -326,8 +326,8 @@ def create_report_from_existing_few():
                     paragraph_visible=paragraph.paragraph_visible,
                     title_paragraph=paragraph.title_paragraph,
                     bold_paragraph=paragraph.bold_paragraph,
-                    head_sentence_group_id=paragraph.head_sentence_group_id,
-                    tail_sentence_group_id=paragraph.tail_sentence_group_id
+                    head_sentence_group_id=paragraph.head_sentence_group_id or None,
+                    tail_sentence_group_id=paragraph.tail_sentence_group_id or None
                 )
             impression_exist = []
                 

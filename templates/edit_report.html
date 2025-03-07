@@ -24,19 +24,19 @@
             </div>
             <div class="flex_column">
                 <label class="report_label__item" for="report_name">Report Name:</label>
-                <input class="input report_input__item" type="text" id="report_name" name="report_name" value="{{ report_data.report_name }}" required>
+                <input class="input report_input__item" type="text" id="reportName" name="report_name" value="{{ report_data.report_name }}" required>
             </div>
             <div class="flex_column">
                 <label class="report_label__item" for="comment">Comment:</label>
-                <input class="input report_input__item" type="text" id="comment" name="comment" value="{{ report_data.comment }}" required>
+                <input class="input report_input__item" type="text" id="reportComment" name="comment" value="{{ report_data.comment }}" required>
             </div>
             <!-- side boolean changer -->
             <div class="flex_column">
                 <label class="report_label__item">Учитывать сторону:</label> <!-- Подпись для радиокнопок -->
                 <div class="flex_row">
-                    <input type="radio" id="report_side_yes" name="report_side" value="true" class="form-check-input" {% if report_data.report_side == True %}checked{% endif %}> 
+                    <input type="radio" name="report_side" value="True" class="form-check-input" {% if report_data.report_side == True %}checked{% endif %}> 
                     <label for="report_side_yes" class="form-check-label">Да</label>
-                    <input type="radio" id="report_side_no" name="report_side" value="false" class="form-check-input" {% if report_data.report_side == False %}checked{% endif %}> 
+                    <input type="radio" name="report_side" value="False" class="form-check-input" {% if report_data.report_side == False %}checked{% endif %}> 
                     <label for="report_side_no" class="form-check-label">Нет</label>
                 </div>
             </div>
@@ -79,7 +79,7 @@
                                     flex_column
                                 {% endif %}
                                 ">
-                                <p class="edit-paragraph__title
+                                <h3 class="edit-paragraph__title
                                     {% if paragraph.bold_paragraph %}
                                     report__paragraph--bold
                                     {% endif %}
@@ -98,7 +98,7 @@
                                     data-title-paragraph="{{ paragraph.title_paragraph }}"
                                     >
                                     <b> {{ paragraph.paragraph }} </b>
-                                </p>
+                                </h3>
                                 <div class="edit-sentences__list">
                                     {% for sentence in paragraph.head_sentences %}
                                         <span class="edit-sentence__item" data-sentence-id="{{ sentence.id }}">
@@ -111,8 +111,25 @@
                             <div>
                                 <button class="btn report__btn edit-paragraph__btn--edit"  data-paragraph-id="{{ paragraph.id }}">Редактировать параграф</button>
                                 <button class="btn report__btn edit-paragraph__btn--delete"  data-paragraph-id="{{ paragraph.id }}">Удалить параграф</button>
+                                {% if paragraph.has_linked_head %}
+                                    <button class="btn report__btn edit-paragraph__btn--unlink-head"  data-paragraph-id="{{ paragraph.id }}">Отвязать главные предложения</button>
+                                {% else %}
+                                    <button class="btn report__btn edit-paragraph__btn--link-head"  data-paragraph-id="{{ paragraph.id }}">Привязать главные предложения</button>
+                                {% endif %}
+
+                                {% if paragraph.has_linked_tail %}
+                                    <button class="btn report__btn edit-paragraph__btn--unlink-tail"  data-paragraph-id="{{ paragraph.id }}">Отвязать дополнительные предложения</button>
+                                {% else %}
+                                    <button class="btn report__btn edit-paragraph__btn--link-tail"  data-paragraph-id="{{ paragraph.id }}">Привязать дополнительные предложения</button>
+                                {% endif %}
                             </div>
-                            <span> 🔗</span>
+
+                            {% if paragraph.has_linked_head %}
+                                <span> 🔗</span>
+                            {% endif %}
+                            {% if paragraph.has_linked_tail %}
+                                <span> 🔗</span>
+                            {% endif %}
                         </li>
                     {% endfor %}
                 </ul>

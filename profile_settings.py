@@ -249,7 +249,7 @@ def run_checker():
     if checker == "main_sentences":
         global_errors = []
         for report in reports:
-            paragraphs = Report.get_report_structure(report.id, profile_id)
+            paragraphs = Report.get_report_paragraphs(report.id)
             try:
                 check_unique_indices(paragraphs)
             except ValueError as e:

@@ -192,6 +192,36 @@ class BaseModel(db.Model):
     def delete(self):
         db.session.delete(self)
         db.session.commit()
+        
+        
+    def update(self, **kwargs):
+        """
+        Универсальный метод обновления модели.
+
+        Args:
+            **kwargs: Пары ключ-значение, где ключ — это имя поля модели, а значение — новое значение.
+        
+        Returns:
+            bool: True, если обновление прошло успешно, иначе False.
+        """
+        logger.info(f"(базовый метод update) 🚀 Начинаю обновление {self.__class__.__name__}")
+        allowed_columns = {column.name for column in self.__table__.columns}
+        
+        for key, value in kwargs.items():
+            if key in allowed_columns:
+                setattr(self, key, value)
+            else:
+                logger.warning(f"(update) ❌ Поле '{key}' отсутствует в {self.__class__.__name__} и будет проигнорировано")
+
+        try:
+            db.session.commit()
+            logger.info(f"(update) ✅ Объект {self.__class__.__name__} ID={self.id} успешно обновлён")
+            return 
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"(update) ❌ Ошибка обновления {self.__class__.__name__} ID={self.id}: {e}")
+            raise ValueError(f"Ошибка обновления {self.__class__.__name__} ID={self.id}: {e}")
+        
 
     @classmethod
     def delete_by_id(cls, object_id):
@@ -201,9 +231,12 @@ class BaseModel(db.Model):
             return True
         return False
 
+
     @classmethod
     def get_by_id(cls, object_id):
         return cls.query.get(object_id)
+    
+    
 
 
 class Role(db.Model, RoleMixin):
@@ -544,7 +577,7 @@ class Report(BaseModel):
             logger.error(f"Отчет не найден: report_id={report_id}")
             return None, None
         try:
-            sorted_paragraphs = Paragraph.get_report_paragraphs(report_id)
+            sorted_paragraphs = Report.get_report_paragraphs(report_id)
         except Exception as e:
             logger.error(f"(get_report_data) ❌ Ошибка при получении параграфов отчета из (get_report_paragraphs): {e}")
             raise e
@@ -552,32 +585,68 @@ class Report(BaseModel):
         return report_data, sorted_paragraphs
     
     
-    # Упрощенная версия метода get_report_data для получения легковесной структуры 
-    # отчета для использования в edit_report нужно будет переделать потом и заменить 
-    # все на report_data чтобы не плодить сущности
+    
+    # Метод для получения параграфов отчета, отсортированных 
+    # по index (использю его в методе get_report_data)
     @classmethod
-    def get_report_structure(cls, report_id):
+    def get_report_paragraphs(cls, report_id):
         """
-        Возвращает структуру отчета: список параграфов с их head-предложениями.
+        Получает список параграфов отчета, отсортированных по index.
+        
         Args:
             report_id (int): ID отчета.
-            profile_id (int): ID профиля пользователя.
+        
         Returns:
-            list: Отсортированный список параграфов, где head_sentences содержат только id, index и sentence.
+            list: Список параграфов, отсортированных по index.
         """
-        logger.info(f"Получение структуры отчета: report_id={report_id}")
+        logger.info(f"(get_report_paragraphs)🚀 Начинаю выполнение запроса параграфов для отчета.")
 
-        report = cls.query.filter_by(id=report_id).first()
-        if not report:
-            return None  # Если отчет не найден или принадлежит другому пользователю
-
+        # Получаем все параграфы отчета и сортируем по paragraph_index
         paragraphs = Paragraph.query.filter_by(report_id=report_id).order_by(Paragraph.paragraph_index).all()
-        report_structure = []
+        sorted_paragraphs = []
 
         for paragraph in paragraphs:
-            head_sentences = HeadSentenceGroup.get_group_sentences(paragraph.head_sentence_group_id)
+            head_sentences = []
+            has_linked_head = False
+            has_linked_tail = False
+            if paragraph.head_sentence_group_id:
+                logger.info(f"(метод get_report_paragraphs класса Report) Подтверждено наличие группы head предложений для параграфа {paragraph.id}")
+                if HeadSentenceGroup.is_linked(paragraph.head_sentence_group_id) > 1:
+                    logger.info(f"(метод get_report_paragraphs класса Report) 📌 Подтверждено наличие >1 связей для head у данного параграфа. Информация добавлена в аттрибуты")
+                    has_linked_head = True
+                # Загружаем head-предложения
+                for head_sentence in HeadSentenceGroup.get_group_sentences(paragraph.head_sentence_group_id):
+                    body_sentences = []
+                    has_linked_body = False
+                    if head_sentence["body_sentence_group_id"]:
+                        logger.info(f"(метод get_report_paragraphs класса Report) Подтверждено наличие группы body предложений для head-предложения {head_sentence['id']}.")
+                        if BodySentenceGroup.is_linked(head_sentence["body_sentence_group_id"]) > 1:
+                            logger.info(f"(метод get_report_paragraphs класса Report) 📌 Подтверждено наличие >1 связей для body у данного head-предложения. Информация добавлена в аттрибуты.")
+                            has_linked_body = True
+                        body_sentences = BodySentenceGroup.get_group_sentences(head_sentence["body_sentence_group_id"])
 
-            report_structure.append({
+                    head_sentences.append({
+                        "id": head_sentence["id"],
+                        "index": head_sentence["sentence_index"],
+                        "comment": head_sentence["comment"],
+                        "sentence": head_sentence["sentence"],
+                        "tags": head_sentence["tags"],
+                        "report_type_id": head_sentence["report_type_id"],
+                        "has_linked_body": has_linked_body,
+                        "body_sentences": body_sentences  
+                    })
+
+            tail_sentences = []
+            if paragraph.tail_sentence_group_id:
+                logger.info(f"(метод get_report_paragraphs класса Report) Подтверждено наличие группы tail предложений для параграфа {paragraph.id}.")
+                if TailSentenceGroup.is_linked(paragraph.tail_sentence_group_id) > 1:
+                    logger.info(f"(метод get_report_paragraphs класса Report) 📌 Подтверждено наличие >1 связей для tail у данного параграфа. Информация добавлена в аттрибуты.")
+                    has_linked_tail = True
+                tail_sentences = TailSentenceGroup.get_group_sentences(paragraph.tail_sentence_group_id)
+
+            # Формируем данные по параграфу
+            logger.info(f"(метод get_report_paragraphs класса Report) Начало формирования финальных данных по параграфу {paragraph.id}.")
+            paragraph_data = {
                 "id": paragraph.id,
                 "paragraph_index": paragraph.paragraph_index,
                 "paragraph": paragraph.paragraph,
@@ -588,11 +657,19 @@ class Report(BaseModel):
                 "paragraph_comment": paragraph.comment,
                 "paragraph_weight": paragraph.paragraph_weight,
                 "tags": paragraph.tags,
-                "head_sentences": head_sentences  
-            })
+                "has_linked_head": has_linked_head,
+                "has_linked_tail": has_linked_tail,
+                "head_sentences": head_sentences,  # Теперь body_sentences внутри head
+                "tail_sentences": tail_sentences
+            }
 
-        return report_structure
-    
+            sorted_paragraphs.append(paragraph_data)
+            logger.info(f"(метод get_report_paragraphs класса Report) Параграф {paragraph.id} обработан и добавлен в список параграфов.")
+
+        logger.info(f"(метод get_report_paragraphs класса Report) ✅ Получил параграфы для отчета: report_id={report_id}. Возвращаю данные")
+        return sorted_paragraphs  
+
+
     
 class Paragraph(BaseModel):
     __tablename__ = "report_paragraphs"
@@ -677,78 +754,6 @@ class Paragraph(BaseModel):
             return None
         
     
-    # Метод для получения параграфов отчета, отсортированных 
-    # по index (использю его в методе get_report_data)
-    @classmethod
-    def get_report_paragraphs(cls, report_id):
-        """
-        Получает список параграфов отчета, отсортированных по index.
-        
-        Args:
-            report_id (int): ID отчета.
-        
-        Returns:
-            list: Список параграфов, отсортированных по index.
-        """
-        logger.info(f"(get_report_paragraphs)🚀 Начинаю выполнение запроса параграфов для отчета.")
-
-        # Получаем все параграфы отчета и сортируем по paragraph_index
-        paragraphs = Paragraph.query.filter_by(report_id=report_id).order_by(Paragraph.paragraph_index).all()
-        sorted_paragraphs = []
-
-        for paragraph in paragraphs:
-            head_sentences = []
-            
-            if paragraph.head_sentence_group_id:
-                logger.info(f"(get_report_paragraphs) Подтверждено наличие группы head предложений для параграфа {paragraph.id}. Начата выгрузка предложений группы.")
-                # Загружаем head-предложения
-                for head_sentence in HeadSentenceGroup.get_group_sentences(paragraph.head_sentence_group_id):
-                    body_sentences = []
-                    
-                    if head_sentence["body_sentence_group_id"]:
-                        logger.info(f"(get_report_paragraphs) Подтверждено наличие группы body предложений для head-предложения {head_sentence['id']}. Начата выгрузка предложений группы.")
-                        # Загружаем body-предложения для конкретного head-предложения
-                        body_sentences = BodySentenceGroup.get_group_sentences(head_sentence["body_sentence_group_id"])
-
-                    head_sentences.append({
-                        "id": head_sentence["id"],
-                        "index": head_sentence["sentence_index"],
-                        "comment": head_sentence["comment"],
-                        "sentence": head_sentence["sentence"],
-                        "tags": head_sentence["tags"],
-                        "report_type_id": head_sentence["report_type_id"],
-                        "body_sentences": body_sentences  
-                    })
-
-            tail_sentences = []
-            if paragraph.tail_sentence_group_id:
-                logger.info(f"(get_report_paragraphs) Подтверждено наличие группы tail предложений для параграфа {paragraph.id}. Начата выгрузка предложений группы.")
-                tail_sentences = TailSentenceGroup.get_group_sentences(paragraph.tail_sentence_group_id)
-
-            # Формируем данные по параграфу
-            logger.info(f"(get_report_paragraphs) Начало формирования финальных данных по параграфу {paragraph.id}.")
-            paragraph_data = {
-                "id": paragraph.id,
-                "paragraph_index": paragraph.paragraph_index,
-                "paragraph": paragraph.paragraph,
-                "paragraph_visible": paragraph.paragraph_visible,
-                "title_paragraph": paragraph.title_paragraph,
-                "bold_paragraph": paragraph.bold_paragraph,
-                "paragraph_type": paragraph.paragraph_type,
-                "paragraph_comment": paragraph.comment,
-                "paragraph_weight": paragraph.paragraph_weight,
-                "tags": paragraph.tags,
-                "head_sentences": head_sentences,  # Теперь body_sentences внутри head
-                "tail_sentences": tail_sentences
-            }
-
-            sorted_paragraphs.append(paragraph_data)
-            logger.info(f"(get_report_paragraphs) Параграф {paragraph.id} обработан и добавлен в список параграфов.")
-
-        logger.info(f"(get_report_paragraphs) ✅ Получил параграфы для отчета: report_id={report_id}. Возвращаю данные")
-        return sorted_paragraphs  
-
-
     # Метод для получения групп предложений параграфа. Возвращает кортеж (head_group, tail_group)
     @classmethod
     def get_paragraph_groups(cls, paragraph_id):
@@ -1439,6 +1444,7 @@ class SentenceGroupBase(BaseModel):
         Returns:
             int: Количество объектов, с которыми связана группа.
         """
+        logger.info(f"(метод is_linked класса SentenceGroupBase) 🚀 Начата проверка количества связей для группы ID={group_id}")
         if not group_id:
             return 0
         
@@ -1450,7 +1456,8 @@ class SentenceGroupBase(BaseModel):
 
         elif cls == BodySentenceGroup:
             return HeadSentence.query.filter_by(body_sentence_group_id=group_id).count()
-
+        
+        logger.error(f"(метод is_linked класса SentenceGroupBase) ❌ Неизвестный тип группы: {cls.__name__}, возвращаю 0")
         return 0  
    
    

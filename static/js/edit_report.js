@@ -6,16 +6,20 @@ document.addEventListener("DOMContentLoaded", function () {
 
     initParagraphPopup(); // Вызываем функцию для включения и выключения попапа параграфа при нажатии на его текст
 
+    initParagraphUpdate(); // Вызываем функцию для обновления текста параграфа при клике на него
+
     // слушатель на кнопку изменения протокола
     document.getElementById("updateReportButton").addEventListener("click", function() {
         handleUpdateReportButtonClick();
     });
 
+    
+
     // Слушатель на кнопку "Добавить параграф"
     document.getElementById("addParagraphButton").addEventListener("click", addParagraph);
 
 
-    // Слушатель на кнопку "Редактировать параграф"
+    // Слушатель на кнопку "Редактировать параграф" перенаправляет на страницу редактирования параграфа
     document.querySelectorAll(".edit-paragraph__btn--edit").forEach(button => {
         button.addEventListener("click", function() {
             editParagraph(this);
@@ -94,6 +98,16 @@ function initParagraphPopup() {
         if (popup && !popup.contains(event.target) && !event.target.classList.contains("edit-paragraph__title")) {
             popup.remove();
         }
+    });
+}
+
+
+function initParagraphUpdate() {
+    document.querySelectorAll(".edit-paragraph__title").forEach(paragraph => {
+        paragraph.addEventListener("click", function (event) {
+            event.stopPropagation(); // Останавливаем всплытие события
+            makeEditable(this);
+        });
     });
 }
 
@@ -209,20 +223,32 @@ function editParagraph(button) {
     window.location.href = `/editing_report/edit_paragraph?paragraph_id=${paragraphId}&report_id=${reportId}`;
 }
 
+// Функция для обновления протокола
+async function handleUpdateReportButtonClick() {
 
-// Обработчик для кнопки edit-paragraph__button--edit работает через onclick 
-// Не обновлял!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-function handleEditParagraphButtonClick(button){
-    const paragraphId = button.getAttribute("data-paragraph-id");
-    const form = button.closest("form");
-    const formData = new FormData(form);
-    formData.append("paragraph_id", paragraphId);
-    
-    sendRequest({
-        url: `/editing_report/edit_paragraph`,
-        data: formData
-    });
-};
+    data = { report_name: document.getElementById("reportName").value,
+             report_id: document.getElementById("editReportContainer").getAttribute("data-report-id"),
+             report_comment: document.getElementById("reportComment").value,
+             report_side: document.querySelector('input[name="report_side"]:checked').value
+            };
+
+    console.log("Обновление протокола:", data);
+
+    try {
+        const response = await sendRequest({
+            url: `/editing_report/update_report`,
+            method: "PATCH",
+            data: data
+        });
+        if (response.status === "success") {
+            console.log("Протокол обновлен:", response.message);
+        }
+        
+    } catch (error) {
+        console.error("Ошибка обновления протокола:", response.message);
+    }
+}
+
 
 
 // Обработчик для кнопки "Удалить параграф" 
@@ -266,6 +292,67 @@ function startReportCheckers(button) {
     });
 }
 
+
+
+
+// Вызываемые функции (не нужно инициировать при загрузке страницы)
+
+// Функция делает заголовок параграфа редактируемым и собирает изменения
+function makeEditable(paragraphElement) {
+    if (paragraphElement.getAttribute("contenteditable") === "true") return; // Уже редактируется
+
+    const oldText = paragraphElement.textContent.trim(); // Запоминаем старый текст
+    paragraphElement.setAttribute("contenteditable", "true");
+    paragraphElement.focus(); // Даём фокус
+
+    // Функция для завершения редактирования
+    function finishEditing() {
+        paragraphElement.setAttribute("contenteditable", "false"); // Заканчиваем редактирование
+        paragraphElement.removeEventListener("keydown", onEnterPress); // Удаляем обработчик Enter
+
+        const newText = paragraphElement.textContent.trim();
+        if (newText !== oldText) {
+            updateParagraph(paragraphElement); // Отправляем на сервер только если текст изменился
+        }
+    }
+
+    // Обработчик потери фокуса (сохранение изменений)
+    paragraphElement.addEventListener("blur", finishEditing, { once: true });
+
+    // Обработчик нажатия Enter
+    function onEnterPress(event) {
+        if (event.key === "Enter") {
+            console.log("Нажат Enter (Return на Mac)");
+            event.preventDefault(); // Отменяем перенос строки
+            paragraphElement.blur(); // Симулируем потерю фокуса
+        }
+    }
+
+    paragraphElement.addEventListener("keydown", onEnterPress);
+}
+
+
+// Функция для обновления текста параграфа отправляет запрос на сервер
+async function updateParagraph(paragraphElement) {
+    const paragraphId = paragraphElement.getAttribute("data-paragraph-id");
+    const paragraphText = paragraphElement.textContent.trim();
+    console.log("Отправка обновленного текста:", paragraphText);
+
+    try {
+        const response = await sendRequest({
+            url: "/editing_report/update_paragraph_text",
+            method: "PATCH",
+            data: {
+                paragraph_id: paragraphId,
+                paragraph_text: paragraphText
+            }
+        });
+
+        console.log("Параграф обновлен:", response);
+    } catch (error) {
+        console.error("Ошибка обновления параграфа:", error);
+    }
+}
 
 
 

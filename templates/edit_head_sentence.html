@@ -58,14 +58,14 @@
                 data-sentence-id="{{ sentence.id }}" 
                 data-head-sentence-id="{{ head_sentence.id }}"
                 data-sentence-type="body" 
-                data-sentence-weight="{{ sentence.weight }}"
+                data-sentence-weight="{{ sentence.sentence_weight }}"
                 data-sentence-tags="{{ sentence.tags }}" 
                 data-sentence-comment="{{ sentence.comment }}"
                 data-body-sentence-group-id="{{ sentence.body_sentence_group_id }}"
                 data-body-group-links = "{{ sentence.body_group_links }}">
 
                     <div class="">
-                            {{ sentence.weight }}
+                            {{ sentence.sentence_weight }}
                     </div>
                     <p class="edit-sentence__text">{{ sentence.sentence }}</p>
                    
