@@ -771,7 +771,6 @@ class SentenceBase(BaseModel):
     sentence = db.Column(db.String(600), nullable=False)
     tags = db.Column(db.String(100), nullable=True)
     comment = db.Column(db.String(255), nullable=True) 
-    temp = db.Column(db.Boolean, nullable=True)  # Временное предложение
 
 
     # Перед удалением предложения, удаляем связь с группами
