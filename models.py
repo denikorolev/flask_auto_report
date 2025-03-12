@@ -945,15 +945,46 @@ class SentenceBase(BaseModel):
 
         # Если мягкое редактирование (обновляем существующую запись)
         if not hard_edit:
-            if new_text is not None:
-                sentence.sentence = new_text
-            if new_tags is not None:
-                sentence.tags = new_tags
-            if new_comment is not None:
-                sentence.comment = new_comment
-            logger.info(f"(метод edit_sentence класса SentenceBase) ✅ Предложение ID={sentence_id} успешно отредактировано ('Мягкое' редактирование).")
-            db.session.commit()
-            return sentence
+            from sentence_processing import find_similar_exist_sentence 
+            logger.info(f"(метод edit_sentence класса SentenceBase) 🛠 Начинаю 'мягкое' редактирование предложения ID={sentence_id}")
+            # определяем тип предложения
+            if cls == HeadSentence:
+                sentence_type = "head"
+            elif cls == BodySentence:
+                sentence_type = "body"
+            elif cls == TailSentence:
+                sentence_type = "tail"
+            else:
+                logger.error(f"(метод edit_sentence класса SentenceBase) ❌ Неизвестный тип предложения.")
+                raise ValueError("Неизвестный тип предложения.")
+            # Проверяем наличие уже в базе такого предложения каким должно стать предложение после редактирования
+            new_sentence_data = {
+                "sentence_text": new_text if new_text is not None else sentence.sentence,
+                "sentence_type": sentence_type,
+                "tags": new_tags if new_tags is not None else sentence.tags,
+                "user_id": sentence.user_id,
+                "report_type_id": sentence.report_type_id,
+                "comment": new_comment if new_comment is not None else sentence.comment,
+                "similarity_threshold": 98
+                }
+            
+            similar_sentence = find_similar_exist_sentence(**new_sentence_data)
+            if similar_sentence:
+                logger.info(f"(метод edit_sentence класса SentenceBase) 🧩 Предложение уже существует в базе данных. Привязываю найденное предложение.")
+                index_or_weight = cls.get_sentence_index_or_weight(sentence_id, group_id)
+                cls.link_to_group(similar_sentence.id, group_id, sentence_weight=index_or_weight, sentence_index=index_or_weight)
+                return similar_sentence
+            else:
+                logger.info(f"(метод edit_sentence класса SentenceBase) Аналога предложения с новыми данными не найдено. Продолжаю редактирование.")
+                if new_text is not None:
+                    sentence.sentence = new_text
+                if new_tags is not None:
+                    sentence.tags = new_tags
+                if new_comment is not None:
+                    sentence.comment = new_comment
+                logger.info(f"(метод edit_sentence класса SentenceBase) ✅ Предложение ID={sentence_id} успешно отредактировано ('Мягкое' редактирование).")
+                db.session.commit()
+                return sentence
         
         logger.info(f"(метод edit_sentence класса SentenceBase) 🛠 Начинаю жёсткое редактирование предложения ID={sentence_id}")
         # Жёсткое редактирование (создаём новое предложение через `create()`)
