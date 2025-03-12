@@ -65,12 +65,18 @@
                 data-sentence-index="{{ sentence.sentence_index }}"
                 data-sentence-type="head"
                 data-sentence-tags="{{ sentence.tags }}"
-                data-sentence-comment="{{ sentence.comment }}">
+                data-sentence-comment="{{ sentence.comment }}"
+                data-sentence-is-linked="{{ sentence.is_linked }}"
+                data-sentence-has-linked-body="{{ sentence.has_linked_body}}"
+                data-sentence-group-id="{{ sentence.group_id }}"
+                data-sentence-hard-edit="False"
+                >
 
                 <div class="drag-handle">☰</div> <!-- Хваталка -->
                     
                 <div>
                     <p class="edit-sentence__text">{{ sentence.sentence }}</p>
+                    <p>has_linked_body: {{ sentence.has_linked_body }}</p>
                     {% if not sentence.body_sentences %}
                         <p class="edit-paragraph__title--invisible">У данного главного предложения нет дополнительных предложений</p>
                     {% endif %}
@@ -88,7 +94,11 @@
                 </div>
 
                 {% if sentence.has_linked_body %}
-                    <span> 🔗</span>
+                    <span class="edit-sentence__links-icon--linked-body"> 🔒 </span>
+                {% endif %}
+
+                {% if sentence.is_linked %}
+                    <span class="edit-sentence__links-icon--is-linked"> 🔗 </span>
                 {% endif %}
                 
                 </li>
@@ -116,17 +126,39 @@
             data-sentence-weight="{{ sentence.sentence_weight }}"
             data-sentence-type="tail"
             data-sentence-tags="{{ sentence.tags }}"
-            data-sentence-comment="{{ sentence.comment }}">
+            data-sentence-comment="{{ sentence.comment }}"
+            data-sentence-is-linked="{{ sentence.is_linked }}"
+            data-sentence-group-id="{{ sentence.group_id }}"
+            data-sentence-hard-edit="False"
+            >
 
             <div> {{sentence.sentence_weight}}</div> 
             <p class="edit-sentence__text">{{ sentence.sentence }}</p>
             <button class="btn report__btn edit-sentence__btn--delete-tail">Удалить</button>
             
+            {% if sentence.is_linked %}
+                <span class="edit-sentence__links-icon--is-linked"> 🔗 </span>
+            {% endif %}
             </li>
         {% endfor %}
         <hr>
         <button class="btn report__btn" id="addTailSentenceButton">Добавить дополнительное предложение</button>
     </ul>
+</div>
+
+<!-- Попап с информацией о предложении -->
+<div id="sentencePopup" class="sentence-popup" style="display: none;">
+    <div class="sentence-popup__info-box">
+        <span class="sentence-popup__info-item"><strong>ID:</strong> <span id="popupSentenceId"></span></span>
+        <span class="sentence-popup__info-item"><strong>Индекс:</strong> <span id="popupSentenceIndex"></span></span>
+        <span class="sentence-popup__info-item"><strong>Комментарий:</strong> <span id="popupSentenceComment"></span></span>
+        <span class="sentence-popup__info-item"><strong>Теги:</strong> <span id="popupSentenceTags"></span></span>
+    </div>
+    <div class="sentence-popup__edit-button-group">
+        <button id="sentencePopupEditButton" class="btn report__btn">Редактировать</button>
+        <input type="checkbox" id="hardEditCheckbox" class="checkbox">
+    </div>
+    <button id="closeSentencePopup" class="btn report__btn">Закрыть</button>
 </div>
 
 {% endblock container %}

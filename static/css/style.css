@@ -775,6 +775,46 @@ body {
 }
 
 
+
+/* === Ripple Effect === */
+/* Стили связанные с редактирование предложений */
+.edit-sentence__links-icon--is-linked {
+    cursor: pointer;
+}
+
+.sentence-popup {
+    position: absolute;
+    background: white;
+    border: 1px solid #ccc;
+    padding: 10px;
+    z-index: 1000;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    min-width: 200px;
+    max-width: 300px;
+    font-size: 14px;
+    border-radius: 5px;
+}
+
+
+.ripple {
+    position: absolute;
+    border-radius: 50%;
+    transform: scale(0);
+    animation: ripple-effect 0.6s linear;
+    background-color: rgba(0, 0, 0, 0.3); /* Цвет круга */
+    pointer-events: none; /* Чтобы не мешать клику */
+    z-index: 100;
+  }
+  
+  @keyframes ripple-effect {
+    to {
+      transform: scale(4);
+      opacity: 0;
+    }
+  }
+
+  
+
 /* Это стиль для выделения главного предложения при изменении настроек профиля */
 .wrapper__card--sentence-head {
     background-color: var(--main-background-color);

@@ -17,18 +17,19 @@ editing_report_bp = Blueprint('editing_report', __name__)
 @editing_report_bp.route('/edit_report', methods=["GET"])
 @auth_required()
 def edit_report():
-    logger.info("(Страница редактирования протокола) 🚀 Начинаю получения данных для формирования страницы.")
+    logger.info("(Страница редактирования протокола /edit_report) 🚀 Начинаю получения данных для формирования страницы.")
     report_id = request.args.get("report_id")
     report = Report.query.get(report_id)
     
     if not report or report.profile_id != g.current_profile.id:
-        logger.error(f"(Страница редактирования протокола) ❌ Протокол не найден или у вас нет прав на его редактирование")
+        logger.error(f"(Страница редактирования протокола /edit_report) ❌ Протокол не найден или у вас нет прав на его редактирование")
         return jsonify({"status": "error", "message": "Протокол не найден или у вас нет прав на его редактирование"}), 403
     try:
         report_data = Report.get_report_info(report_id)
         report_paragraphs = Report.get_report_paragraphs(report_id)
+        logger.info(f"(Страница редактирования протокола /edit_report) ✅ Получены данные протокола.")
     except Exception as e:
-        logger.error(f"(Страница редактирования протокола) ❌ Ошибка при получении данных протокола: {str(e)}")
+        logger.error(f"(Страница редактирования протокола /edit_report) ❌ Ошибка при получении данных протокола: {str(e)}")
         return jsonify({"status": "error", "message": f"Ошибка при получении данных протокола: {str(e)}"}), 500
     # делаю выборку типов параграфов
     paragraph_types = current_app.config["PARAGRAPH_TYPE_LIST"]
@@ -46,61 +47,12 @@ def edit_report():
 @editing_report_bp.route('/edit_paragraph', methods=["GET"])
 @auth_required()
 def edit_paragraph():
-    logger.info("(Страница редактирования параграфа) 🚀 Начинаю получения данных для формирования страницы.")
+    logger.info("(Страница редактирования параграфа /edit_paragraph) 🚀 Начинаю получения данных для формирования страницы.")
     paragraph_id = int(request.args.get("paragraph_id"))
     report_id = int(request.args.get("report_id"))
    
-    paragraph = Paragraph.query.get(paragraph_id)
-    head_group_links = HeadSentenceGroup.is_linked(paragraph.head_sentence_group_id)
-    tail_group_links = TailSentenceGroup.is_linked(paragraph.tail_sentence_group_id)
-    logger.debug(f"(Страница редактирования параграфа) Получены данные для редактирования параграфа: paragraph_id = {paragraph_id}, report_id = {report_id}")
-    logger.debug(f"(Страница редактирования параграфа) Получены данные по наличию связей с предложениями: head_group_links = {head_group_links}, tail_group_links = {tail_group_links}")
-    
-    if not paragraph:
-        logger.error(f"(Страница редактирования параграфа) ❌ Параграф не найден")
-        return None  # Если параграфа нет, вернем None
-
-    # Собираем head-предложения
-    # Инициирую переменную для хранения главных предложений, на случай если у параграфа их нет
-    head_sentences = []
-    if paragraph.head_sentence_group:
-        head_sentences = HeadSentenceGroup.get_group_sentences(paragraph.head_sentence_group_id) or []
-        logger.debug(f"(Страница редактирования параграфа) Получены главные предложения: {head_sentences}")
-        logger.info(f"(Страница редактирования параграфа) Начат сбор body-предложений для главных предложений")
-        for sentence in head_sentences:
-            # Проверяем, есть ли у главного предложения связанная группа body-предложений
-            if sentence["body_sentence_group_id"] is not None:  
-                body_sentences = BodySentenceGroup.get_group_sentences(sentence["body_sentence_group_id"])
-            else:
-                body_sentences = []
-
-            sentence["body_sentences"] = body_sentences  # Добавляем body-предложения внутрь head-предложения
-        logger.info(f"(Страница редактирования параграфа) Сбор body-предложений для главных предложений завершен")
-    # Собираем tail-предложения
-    logger.info(f"(Страница редактирования параграфа) Начат сбор tail-предложений")
-    tail_sentences = TailSentenceGroup.get_group_sentences(paragraph.tail_sentence_group_id) or []
-    logger.info(f"(Страница редактирования параграфа) Сбор tail-предложений завершен")
-    # Формируем итоговые данные параграфа
-    paragraph_data = {
-        "id": paragraph.id,
-        "paragraph_index": paragraph.paragraph_index,
-        "paragraph": paragraph.paragraph,
-        "paragraph_visible": paragraph.paragraph_visible,
-        "title_paragraph": paragraph.title_paragraph,
-        "bold_paragraph": paragraph.bold_paragraph,
-        "paragraph_type": paragraph.paragraph_type,
-        "paragraph_comment": paragraph.comment,
-        "paragraph_weight": paragraph.paragraph_weight,
-        "tags": paragraph.tags,
-        "head_group_links": head_group_links or False,
-        "tail_group_links": tail_group_links or False,
-        "head_sentences": head_sentences,
-        "tail_sentences": tail_sentences
-    }
-    
-    if not paragraph:
-        logger.error(f"(Страница редактирования параграфа) ❌ Параграф не найден")
-        return jsonify({"status": "error", "message": "Параграф не найден."}), 403
+    paragraph_data = Paragraph.get_paragraph_data(paragraph_id)
+    logger.info(f"(Страница редактирования параграфа /edit_paragraph) Получены данные параграфа. Формирую страницу.")
     
     return render_template('edit_paragraph.html',
                             title=f"Редактирование параграфа {paragraph_data['paragraph']}",
@@ -113,36 +65,19 @@ def edit_paragraph():
 @auth_required()
 def edit_head_sentence():
     logger.info("(Страница редактирования head предложений) 🚀 Начинаю получения данных для формирования страницы.")
+    
     sentence_id = request.args.get("sentence_id")
     paragraph_id = request.args.get("paragraph_id")
     report_id = request.args.get("report_id")
-    sentence = HeadSentence.query.get(sentence_id)
-    body_group_links = BodySentenceGroup.is_linked(sentence.body_sentence_group_id)
     
-    logger.debug(f"(Страница редактирования head предложений) Получены данные для редактирования head предложения: sentence_id = {sentence_id}, paragraph_id = {paragraph_id}, report_id = {report_id}")
-    
-    if not sentence:
-        logger.error(f"(Страница редактирования head предложений) ❌ Предложение не найдено")
-        return jsonify({"status": "error", "message": "Предложение не найдено"}), 404
-    
-    if sentence.body_sentence_group_id:
-        body_sentences = BodySentenceGroup.get_group_sentences(sentence.body_sentence_group_id)
-    else:
-        body_sentences = []
-        
     group_id = Paragraph.get_by_id(paragraph_id).head_sentence_group_id
-    logger.info("(Страница редактирования head предложений) Собираю данные head предложения для формирования страницы")
-    sentence_data = {
-        "id": sentence.id,
-        "index": HeadSentence.get_sentence_index_or_weight(sentence_id, group_id),
-        "sentence": sentence.sentence,
-        "tags": sentence.tags,
-        "comment": sentence.comment,
-        "body_sentence_group_id": sentence.body_sentence_group_id,
-        "body_group_links": body_group_links or False,
-        "body_sentences": body_sentences or []
-    }
+    if not group_id:
+        logger.error("(Страница редактирования head предложений) ❌ Группа head предложений не найдена")
+        return jsonify({"status": "error", "message": "Группа head предложений не найдена"}), 404
+    
+    sentence_data = HeadSentence.get_sentence_data(sentence_id, group_id)
     logger.info("(Страница редактирования head предложений) ✅ Данные head предложения собраны")
+    
     return render_template('edit_head_sentence.html',
                            title=f"Редактирование главного предложения: {sentence_data['sentence']}",
                            head_sentence=sentence_data,
@@ -228,6 +163,7 @@ def update_report():
         return jsonify({"status": "error", "message": f"Ошибка при обновлении протокола: {str(e)}"}), 500
         
 
+
 @editing_report_bp.route('/update_paragraph_text', methods=["PATCH"])
 @auth_required()
 def update_paragraph_text():
@@ -250,6 +186,42 @@ def update_paragraph_text():
     except Exception as e:
         logger.error(f"(Обновление текста параграфа) ❌ Ошибка при обновлении текста параграфа: {str(e)}")
         return jsonify({"status": "error", "message": f"Ошибка при обновлении текста параграфа: {str(e)}"}), 500
+
+
+@editing_report_bp.route('/update_sentence_text', methods=["PATCH"])
+@auth_required()
+def update_sentence_text():
+    """Обновляет текст head, body или tail предложения."""
+    logger.info("(Обновление текста предложения /update_sentence_text) 🚀 Начато обновление текста предложения")
+    data = request.json
+    sentence_id = data.get("sentence_id")
+    sentence_text = data.get("sentence_text")
+    sentence_type = data.get("sentence_type")
+    group_id = data.get("group_id")
+    related_id = data.get("related_id")
+    hard_edit = data.get("hard_edit") == "True"
+
+    # Проверка типа предложения
+    if sentence_type not in ["head", "body", "tail"]:
+        logger.error("(Обновление текста предложения /update_sentence_text) ❌ Некорректный тип предложения")
+        return jsonify({"status": "error", "message": "Некорректный тип предложения."}), 400
+
+    # Выбор модели по типу
+    sentence_class = {"head": HeadSentence, "body": BodySentence, "tail": TailSentence}.get(sentence_type)
+    logger.info(f"(Обновление текста предложения /update_sentence_text)(тип предложения {sentence_class}) Получены данные для обновления текста предложения: {data}")
+    try:
+        sentence_class.edit_sentence(sentence_id=sentence_id,
+                                     group_id=group_id,
+                                     related_id=related_id,
+                                     new_text=sentence_text,
+                                     hard_edit=hard_edit
+                                     )
+        logger.info(f"(Обновление текста предложения /update_sentence_text) ✅ Текст предложения успешно обновлен")
+        return jsonify({"status": "success", "message": "Текст предложения успешно обновлен."}), 200
+    except Exception as e:
+        logger.error(f"(Обновление текста предложения /update_sentence_text) ❌ Ошибка при обновлении текста предложения: {str(e)}")
+        return jsonify({"status": "error", "message": f"Ошибка обновления текста: {str(e)}"}), 500
+
 
 
 

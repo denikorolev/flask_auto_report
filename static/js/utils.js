@@ -33,6 +33,8 @@ function updateSubtypes(reportTypeSelectId, reportSubtypeSelectId, allSubtypes) 
     }
 }
 
+
+
 /**
  * Initializes the subtype updating logic for a page.
  * 
@@ -218,3 +220,56 @@ function hidePopupSentences() {
 }
 
 
+
+
+/**
+ * Creates ripple effect centered on the given element.
+ * @param {HTMLElement} targetElement - The element from which the ripple should appear.
+ */
+function createRippleAtElement(targetElement) {
+    const circle = document.createElement("span");
+    circle.classList.add("ripple");
+
+    const diameter = Math.max(targetElement.clientWidth, targetElement.clientHeight);
+    circle.style.width = circle.style.height = `${diameter}px`;
+
+    // Позиционируем ripple по центру элемента
+    circle.style.left = `${(targetElement.clientWidth / 2) - (diameter / 2)}px`;
+    circle.style.top = `${(targetElement.clientHeight / 2) - (diameter / 2)}px`;
+
+    // Удаляем старый ripple, если есть
+    const existingRipple = targetElement.querySelector(".ripple");
+    if (existingRipple) existingRipple.remove();
+
+    targetElement.style.position = "relative"; // Обязательно для корректного позиционирования
+    targetElement.appendChild(circle);
+
+    // Удаляем ripple после завершения анимации
+    setTimeout(() => circle.remove(), 600);
+}
+
+
+/**
+ * Универсальная функция для обработки тройного клика на элементе.
+ * 
+ * @param {HTMLElement} element - Элемент, на котором нужно отслеживать тройной клик.
+ * @param {Function} callback - Функция, которая будет вызвана при тройном клике.
+ */
+function onTripleClick(element, callback) {
+    let clickCount = 0;
+    let clickTimer;
+
+    element.addEventListener("click", () => {
+        clickCount++;
+        if (clickCount === 3) {
+            callback();
+            clearTimeout(clickTimer);
+            clickCount = 0;
+        } else {
+            clearTimeout(clickTimer);
+            clickTimer = setTimeout(() => {
+                clickCount = 0;
+            }, 400); // 400 мс — таймаут между кликами
+        }
+    });
+}

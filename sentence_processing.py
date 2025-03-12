@@ -495,8 +495,8 @@ def compare_sentences_by_paragraph(new_sentences, report_id):
     return {"duplicates": duplicates, "unique": unique_sentences, "errors_count": errors_count}
 
 
-# Функция для поиска существующих аналогичных предложений того же типа в базе данных
-def find_similar_exist_sentence(sentence_text, sentence_type, report_type_id, user_id, tags=None, comment=None):
+# Функция для поиска существующих аналогичных предложений того же типа в базе данных использую в models.py
+def find_similar_exist_sentence(sentence_text, sentence_type, report_type_id, user_id, tags=None, comment=None, similarity_threshold=100):
     """
     Finds similar sentences of the same type in the database.
 
@@ -541,7 +541,7 @@ def find_similar_exist_sentence(sentence_text, sentence_type, report_type_id, us
     for exist_sentence in similar_type_sentences:
         cleaned_exist_sentence = clean_text_with_keywords(exist_sentence.sentence, key_words, except_words)
         similarity_rapidfuzz = fuzz.ratio(cleaned_input_sentence, cleaned_exist_sentence)
-        if similarity_rapidfuzz > 99:
+        if similarity_rapidfuzz > similarity_threshold:
             logger.info(f"(функция find_similar_exist_sentence) 🧩 Найдено совпадение с предложением '{exist_sentence.sentence}' в базе данных. Возвращаю предложение")
             return exist_sentence
     logger.info(f"(функция find_similar_exist_sentence) Совпадений не найдено. Возвращаю None")

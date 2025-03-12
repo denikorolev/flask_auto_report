@@ -55,14 +55,17 @@
             >
             {% for sentence in head_sentence.body_sentences %}
                 <li class="wrapper__card edit-sentence__item" 
-                data-sentence-id="{{ sentence.id }}" 
-                data-head-sentence-id="{{ head_sentence.id }}"
-                data-sentence-type="body" 
-                data-sentence-weight="{{ sentence.sentence_weight }}"
-                data-sentence-tags="{{ sentence.tags }}" 
-                data-sentence-comment="{{ sentence.comment }}"
-                data-body-sentence-group-id="{{ sentence.body_sentence_group_id }}"
-                data-body-group-links = "{{ sentence.body_group_links }}">
+                    data-sentence-id="{{ sentence.id }}" 
+                    data-head-sentence-id="{{ head_sentence.id }}"
+                    data-sentence-type="body" 
+                    data-sentence-weight="{{ sentence.sentence_weight }}"
+                    data-sentence-tags="{{ sentence.tags }}" 
+                    data-sentence-comment="{{ sentence.comment }}"
+                    data-body-sentence-group-id="{{ sentence.body_sentence_group_id }}"
+                    data-sentence-group-id="{{ sentence.group_id }}"
+                    data-sentence-is-linked="{{ sentence.is_linked }}"
+                    data-sentence-hard-edit="False"
+                    >
 
                     <div class="">
                             {{ sentence.sentence_weight }}
@@ -70,6 +73,11 @@
                     <p class="edit-sentence__text">{{ sentence.sentence }}</p>
                    
                     <button class="btn report__btn edit-sentence__btn--delete" type="button">Удалить</button>
+
+                    {% if sentence.is_linked %}
+                        <span class="edit-sentence__links-icon--is-linked"> 🔗 </span>
+                    {% endif %}
+
                 </li>
             {% endfor %}
             <br>
@@ -77,6 +85,22 @@
             <button class="btn report__btn edit-sentence__btn--add-sentence" type="button" id="addBodySentenceButton">Добавить дополнительное предложение</button>
         </ul>
     </div>
+
+
+<!-- Попап с информацией о предложении -->
+<div id="sentencePopup" class="sentence-popup" style="display: none;">
+    <div class="sentence-popup__info-box">
+        <span class="sentence-popup__info-item"><strong>ID:</strong> <span id="popupSentenceId"></span></span>
+        <span class="sentence-popup__info-item"><strong>Индекс:</strong> <span id="popupSentenceIndex"></span></span>
+        <span class="sentence-popup__info-item"><strong>Комментарий:</strong> <span id="popupSentenceComment"></span></span>
+        <span class="sentence-popup__info-item"><strong>Теги:</strong> <span id="popupSentenceTags"></span></span>
+    </div>
+    <div class="sentence-popup__edit-button-group">
+        <button id="sentencePopupEditButton" class="btn report__btn">Редактировать</button>
+        <input type="checkbox" id="hardEditCheckbox" class="checkbox">
+    </div>
+    <button id="closeSentencePopup" class="btn report__btn">Закрыть</button>
+</div>
 
 {% endblock container %}
 

@@ -55,31 +55,35 @@ def choosing_report():
 @working_with_reports_bp.route("/working_with_reports", methods=['GET'])
 @auth_required()
 def working_with_reports(): 
+    logger.info(f"(работа с протоколом) 🚀 Начинаю обработку запроса для вывода данных протокола")
     current_report_id = int(request.args.get("reportId"))
     full_name = request.args.get("fullname")
     birthdate = request.args.get("birthdate")
     report_number = request.args.get("reportNumber")
     
+    
     if not current_report_id:
+        logger.error(f"(работа с протоколом) ❌ Не получен id протокола")
         return render_template("error.html", message="Нет данных о подходящем протоколе для работы")
     try:
-        report_data, paragraphs_data = Report.get_report_data(
-            current_report_id
-            )
+        report_data, paragraphs_data = Report.get_report_data(current_report_id)
         if report_data is None or paragraphs_data is None:
-            logger.error("Метод get_report_data вернул None")
+            logger.error(f"(работа с протоколом) ❌ Метод get_report_data вернул None")
             return render_template("error.html", message="Метод get_report_data вернул None")
     except Exception as e:
-        logger.error(f"Не получилось сгруппировать данные протокола или данные его параграфов: {e}")
+        logger.error(f"(работа с протоколом) ❌ Не получилось сгруппировать данные протокола или данные его параграфов: {e}")
         return render_template("error.html", message=f"Не получилось сгруппировать данные протокола или данные его параграфов: {e}")
     
-        
     # Получаем ключевые слова для текущего пользователя
+    try:
+        key_words_obj = KeyWord.get_keywords_for_report(g.current_profile.id, current_report_id)
+        key_words_groups = group_keywords(key_words_obj)
+    except Exception as e:
+        logger.error(f"(работа с протоколом) ❌ Не получилось получить ключевые слова для текущего пользователя: {e}")
+        return render_template("error.html", message=f"Не получилось получить ключевые слова для текущего пользователя: {e}")
     
-    key_words_obj = KeyWord.get_keywords_for_report(g.current_profile.id, current_report_id)
-    key_words_groups = group_keywords(key_words_obj)
     
-    
+    logger.info(f"(работа с протоколом) ✅ Данные протокола и его параграфов успешно получены. Загружаю страницу")
     return render_template(
         "working_with_report.html", 
         title=report_data["report_name"],

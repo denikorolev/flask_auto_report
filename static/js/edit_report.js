@@ -4,9 +4,24 @@ document.addEventListener("DOMContentLoaded", function () {
 
     initSortable(); // Вызываем функцию для включения перетаскивания параграфов
 
-    initParagraphPopup(); // Вызываем функцию для включения и выключения попапа параграфа при нажатии на его текст
+    initParagraphPopupCloseHandlers(); // Инициализация слушателей на закрытие попапа
 
-    initParagraphUpdate(); // Вызываем функцию для обновления текста параграфа при клике на него
+
+    // Инициализация слушателей двойного клика на предложения для показа попапа
+    document.querySelectorAll(".edit-paragraph__title").forEach(sentence => {
+        sentence.addEventListener("dblclick", function (event) {
+            event.stopPropagation();
+            showParagraphPopup(this, event);
+        });
+    });
+
+    // Слушатель для вызова обновления текста параграфа при клике на него
+    document.querySelectorAll(".edit-paragraph__title").forEach(paragraph => {
+        paragraph.addEventListener("click", function (event) {
+            event.stopPropagation(); // Останавливаем всплытие события
+            makeEditable(this);
+        });
+    });
 
     // слушатель на кнопку изменения протокола
     document.getElementById("updateReportButton").addEventListener("click", function() {
@@ -83,75 +98,41 @@ function updateParagraphOrder() {
 }
 
 
-// Функция инициализации попапа
-function initParagraphPopup() {
-    document.querySelectorAll(".edit-paragraph__title").forEach(paragraph => {
-        paragraph.addEventListener("dblclick", function (event) {
-            event.stopPropagation();  // Останавливаем всплытие события. Чтобы не сработало событие на родителе
-            showParagraphPopup(event, this);
-        });
-    });
+// Функция показа попапа с информацией о предложении
+function showParagraphPopup(sentenceElement, event) {
+    const popup = document.getElementById("elementPopup");
 
-    // Закрытие попапа при клике вне его
-    document.addEventListener("click", function (event) {
-        const popup = document.getElementById("paragraph-popup");
-        if (popup && !popup.contains(event.target) && !event.target.classList.contains("edit-paragraph__title")) {
-            popup.remove();
+    // Получаем данные из атрибутов
+    const elementId = sentenceElement.getAttribute("data-paragraph-id");
+    const elementIndex = sentenceElement.getAttribute("data-paragraph-index");
+    const elementComment = sentenceElement.getAttribute("data-paragraph-comment") || "None";
+    const elementTags = sentenceElement.getAttribute("data-paragraph-tags") || "None";
+
+    // Заполняем попап
+    document.getElementById("popupElementId").textContent = elementId;
+    document.getElementById("popupElementIndex").textContent = elementIndex;
+    document.getElementById("popupElementComment").textContent = elementComment;
+    document.getElementById("popupElementTags").textContent = elementTags;
+
+    // Проверяем и скрываем, если значение None, пустое или null
+    document.querySelectorAll(".sentence-popup__info-item").forEach(item => {
+        const value = item.querySelector("span").textContent.trim();
+        if (!value || value === "None") {
+            item.style.display = "none";
+        } else {
+            item.style.display = "block"; // Показываем обратно, если были скрыты до этого
         }
     });
-}
 
+    // Показываем попап
+    popup.style.display = "block";
 
-function initParagraphUpdate() {
-    document.querySelectorAll(".edit-paragraph__title").forEach(paragraph => {
-        paragraph.addEventListener("click", function (event) {
-            event.stopPropagation(); // Останавливаем всплытие события
-            makeEditable(this);
-        });
-    });
-}
-
-
-// Функция показа попапа
-function showParagraphPopup(event, paragraphElement) {
-    const paragraphId = parseInt(paragraphElement.getAttribute("data-paragraph-id"));
-    const paragraphComment = paragraphElement.getAttribute("data-paragraph-comment") || "Нет комментария";
-    const paragraphType = paragraphElement.getAttribute("data-paragraph-type");
-    const paragraphIndex = parseInt(paragraphElement.getAttribute("data-paragraph-index"));
-    const paragraphWeight = parseInt(paragraphElement.getAttribute("data-paragraph-weight")) || 0;
-    const paragraphTags = paragraphElement.getAttribute("data-paragraph-tags");
-    
-
-    // Удаляем старый попап, если он есть
-    let existingPopup = document.getElementById("paragraph-popup");
-    if (existingPopup) {
-        console.log("remove existing popup");
-        existingPopup.remove();
-    }
-
-    // Создаем новый попап
-    const popup = document.createElement("div");
-    popup.id = "paragraph-popup";
-    popup.classList.add("paragraph-popup");
-    popup.innerHTML = `
-        <p><strong>ID:</strong> ${paragraphId}</p>
-        <p><strong>Тип:</strong> ${paragraphType}</p>
-        <p><strong>Индекс:</strong> ${paragraphIndex}</p>
-        <p><strong>Вес:</strong> ${paragraphWeight}</p>
-        <p><strong>Теги:</strong> ${paragraphTags}</p>
-        <p><strong>Комментарий:</strong> ${paragraphComment}</p>
-    `;
-
-    document.body.appendChild(popup);
-    console.log("show popup");
-
-    // Размещаем попап рядом с курсором
+    // Позиция попапа
     const popupWidth = popup.offsetWidth;
     const popupHeight = popup.offsetHeight;
-    let posX = event.clientX + 15;
-    let posY = event.clientY + 15;
+    let posX = event.pageX + 15;
+    let posY = event.pageY + 15;
 
-    // Предотвращаем выход за границы экрана
     if (posX + popupWidth > window.innerWidth) {
         posX -= popupWidth + 30;
     }
@@ -161,6 +142,34 @@ function showParagraphPopup(event, paragraphElement) {
 
     popup.style.left = `${posX}px`;
     popup.style.top = `${posY}px`;
+}
+
+/** 
+ * Инициализация обработчиков закрытия попапа предложения
+ */
+function initParagraphPopupCloseHandlers() {
+    const popup = document.getElementById("elementPopup");
+    const closeButton = document.getElementById("closeElementPopup");
+
+    if (!popup || !closeButton) {
+        console.error("Попап или кнопка закрытия не найдены!");
+        return;
+    }
+
+    // Функция скрытия попапа
+    function hidePopup() {
+        popup.style.display = "none";
+    }
+
+    // Закрытие по кнопке
+    closeButton.addEventListener("click", hidePopup);
+
+    // Закрытие при клике вне попапа
+    document.addEventListener("click", function (event) {
+        if (popup.style.display === "block" && !popup.contains(event.target)) {
+            hidePopup();
+        }
+    });
 }
 
 
@@ -210,7 +219,6 @@ async function addParagraph() {
 }   
 
 // Функция для редактирования параграфа (переход на страницу редактирования параграфа) 
-// Не обновлял!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 function editParagraph(button) {
     const paragraphId = button.getAttribute("data-paragraph-id");
     const reportId = document.getElementById("editReportContainer").getAttribute("data-report-id");
