@@ -4,7 +4,6 @@
 
 
 {% block container %}
-{% import 'macros.html' as macros %}
 <!-- Передаем csrf_token как скрытое поле формы -->
 <input type="hidden" data-report-id=" {{report_data.id}} " id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
 
@@ -59,22 +58,84 @@
 <!-- Сам протокол -->
 <div class="flex">
     <!-- Основной блок с отчетом -->
-    <div class=" report-container">
-        
-        {% for paragraph in paragraphs_data  %}
-            <!-- Устанавливаю классы параграфов в зависимости от типа -->
-            <ul class="
-                {% if paragraph.paragraph_type in ["scanparam","clincontext", "scanlimits", "dinamics"] %}
-                    paragraph__list--initial
-                {% elif paragraph.paragraph_type in ["text", "title", "custom"]  %}
-                    paragraph__list--core
-                {% else %}
-                    paragraph__list--impression
-                {% endif %}
-            ">
-                {{ macros.render_paragraph_and_sentence(paragraph) }}
+    <div class="report container">
+        {% if paragraphs_data %}
+            <!-- Уровень параграфа -->
+            <ul class="paragraph__list">
+                {% for paragraph in paragraphs_data  %}
+                    <!-- Устанавливаю классы параграфов в зависимости от типа и установки различных флагов-->
+                    <li class="paragraph__item
+                        {% if paragraph.is_impression %}
+                        paragraph__item--impression
+                        {% else %}
+                        paragraph__item--core
+                        {% endif %}
+                        {% if not paragraph.is_active %}
+                        paragraph__item--inactive
+                        {% endif %}
+                        "
+                        data-paragraph-id="{{ paragraph.id }}"
+                        >
+
+                        <p contenteditable="true" 
+                            data-paragraph-id="{{ paragraph.id }}" 
+                            data-title-paragraph="{{ paragraph.title_paragraph }}" 
+                            data-bold-paragraph="{{ paragraph.bold_paragraph }}" 
+                            data-visible-paragraph="{{ paragraph.paragraph_visible }}"
+                            data-paragraph-index="{{ paragraph.index }}"
+                            data-paragraph-comment="{{ paragraph.comment }}"
+                            data-paragraph-tags="{{ paragraph.tags }}"
+                            data-paragraph-weight="{{ paragraph.weight }}" 
+                
+                            class="paragraph__text 
+                            {% if paragraph.paragraph_visible %}
+                                paragraph__text--visible
+                                {% if paragraph.bold_paragraph %} 
+                                    paragraph__text--bold   
+                                {% endif %}
+                                {% if paragraph.title_paragraph %} 
+                                    paragraph__text--title
+                                {% else %} 
+                                    paragraph__text--untitle
+                                {% endif %}
+                            {% else %}
+                                paragraph__text--invisible
+                            {% endif %}
+                            ">
+                            {{ paragraph.paragraph }}
+                        </p>
+
+                        <!-- Уровень предложения -->
+                        <ul class="">
+                            <li class="">
+                                {% if paragraph.head_sentences %}
+                                    {% for head_sentence in paragraph.head_sentences %}
+                                        
+                                            <span contenteditable="true"
+                                                {% if not paragraph.is_active %}
+                                                style="display: none;"
+                                                {% endif %}
+                                                
+                                                class="report__sentence sentence" 
+                                                data-paragraph-id="{{ paragraph.id }}" 
+                                                data-index="{{ head_sentence.sentence_index }}"
+                                                data-id="{{ head_sentence.id }}"
+                                                data-sentence-type="head"
+
+                                                > 
+                                            {{ head_sentence.sentence }} 
+                                            </span>
+                                            <!-- Кнопка "+" для добавления предложения -->
+                                            <button class="icon-btn icon-btn--add-sentence" type="button" title="Add Sentence">+</button>
+                                        
+                                    {% endfor %}
+                                {% endif %}
+                            </li>
+                        </ul>
+                    </li>
+                {% endfor %}
             </ul>
-        {% endfor %}
+        {% endif %}
         
         
         <!-- PopUp для отображения предложений после двойного клика -->
@@ -85,13 +146,32 @@
     </div> 
     
     <!-- Контейнер справа -->
-    <div class="flex_column right-side-container">
+    <div class="flex_column right-side-container report-controlpanel">
 
         <!-- Кнопка для перехода к настройке текущего параграфа -->
         <a href="/editing_report/edit_report?report_id={{ report_data.id }}" target="_blank" class="btn report__btn push-down"
             title="Открывает этот протокол в новом окне">
             Редактировать протокол
         </a>
+
+       
+            <ul class="report-controlpanel__inactive-paragraphs-list" id="inactiveParagraphsList">
+                <h3>Неактивные параграфы:</h3>
+                <p>Параграфы, которые не участвуют в формировании заключения. Можно активировать нажав на имя параграфа</p>
+                <br>
+                <br>
+                {% for paragraph in paragraphs_data  %}
+                    {% if not paragraph.is_active %}
+                    <li class="report-controlpanel__inactive-paragraphs-item" data-paragraph-id="{{ paragraph.id }}"> 
+                        <span><b>{{ paragraph.paragraph }}</b></span> 
+                        <span>({{ paragraph.comment }})</span> 
+                    </li>
+                    {% endif %}       
+                {% endfor %}
+                <br>
+                <br>
+            </ul>
+       
 
         <!-- Кнопки экспорта в Word копирования текста и генерации ИИ заключения -->
         <div class="flex_column">

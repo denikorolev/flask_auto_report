@@ -14,31 +14,6 @@ from logger import logger
 
 db = SQLAlchemy()
 
-# Проверяет перед удалением группы предложений, можно ли её удалить
-def prevent_group_deletion(mapper, connection, target):
-    """
-    Проверяет перед удалением группы предложений, можно ли её удалить.
-    Если группа всё ещё используется, прерывает удаление.
-    """
-    logger.info("Стартовала надстройка для контроля возможности удаления группы предложений")
-    if isinstance(target, HeadSentenceGroup):
-        # Проверяем, есть ли параграфы, использующие эту группу
-        used_in_paragraphs = Paragraph.query.filter_by(head_sentence_group_id=target.id).count()
-        if used_in_paragraphs > 0:
-            raise Exception(f"Группа HeadSentenceGroup (ID={target.id}) всё ещё используется в параграфах, удаление отменено.")
-    
-    elif isinstance(target, TailSentenceGroup):
-        # Проверяем, есть ли параграфы, использующие эту группу
-        used_in_paragraphs = Paragraph.query.filter_by(tail_sentence_group_id=target.id).count()
-        if used_in_paragraphs > 0:
-            raise Exception(f"Группа TailSentenceGroup (ID={target.id}) всё ещё используется в параграфах, удаление отменено.")
-    
-    elif isinstance(target, BodySentenceGroup):
-        # Проверяем, есть ли предложения, использующие эту группу
-        used_in_head_sentences = HeadSentence.query.filter_by(body_sentence_group_id=target.id).count()
-        if used_in_head_sentences > 0:
-            raise Exception(f"Группа BodySentenceGroup (ID={target.id}) всё ещё используется в head-предложениях, удаление отменено.")
-
  
 # ✅ быстрее 👉 🔥 📌 ❌ 🚀 😎 🔄 1️⃣ 2️⃣ 3️⃣ ⚠️
 
@@ -48,14 +23,6 @@ sentence_type_enum = ENUM(
     name="sentence_type_enum",
     create_type=True  # Создаст тип в PostgreSQL
 )
-
-paragraph_type_enum = ENUM(
-    "text", "custom", "impression", "clincontext", 
-    "scanparam", "dinamics", "scanlimits", "title",
-    name="paragraph_type_enum",
-    create_type=True  # Создаст тип в PostgreSQL
-)
-
 
 
 # Ассоциативная таблица для связи ключевых слов с отчетами
@@ -210,15 +177,15 @@ class BaseModel(db.Model):
             if key in allowed_columns:
                 setattr(self, key, value)
             else:
-                logger.warning(f"(update) ❌ Поле '{key}' отсутствует в {self.__class__.__name__} и будет проигнорировано")
+                logger.warning(f"(базовый метод update) ❌ Поле '{key}' отсутствует в {self.__class__.__name__} и будет проигнорировано")
 
         try:
             db.session.commit()
-            logger.info(f"(update) ✅ Объект {self.__class__.__name__} ID={self.id} успешно обновлён")
+            logger.info(f"(базовый метод update) ✅ Объект {self.__class__.__name__} ID={self.id} успешно обновлён")
             return 
         except Exception as e:
             db.session.rollback()
-            logger.error(f"(update) ❌ Ошибка обновления {self.__class__.__name__} ID={self.id}: {e}")
+            logger.error(f"(базовый метод update) ❌ Ошибка обновления {self.__class__.__name__} ID={self.id}: {e}")
             raise ValueError(f"Ошибка обновления {self.__class__.__name__} ID={self.id}: {e}")
         
 
@@ -623,15 +590,16 @@ class Paragraph(BaseModel):
     __tablename__ = "report_paragraphs"
     id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
     report_id = db.Column(db.BigInteger, db.ForeignKey("reports.id"), nullable=False)
-    paragraph_type = db.Column(paragraph_type_enum, nullable=True, default="text")
     paragraph_index = db.Column(db.Integer, nullable=False)
     paragraph = db.Column(db.String(255), nullable=False)
     paragraph_visible = db.Column(db.Boolean, default=False, nullable=False)
     title_paragraph = db.Column(db.Boolean, default=False, nullable=False)
     bold_paragraph = db.Column(db.Boolean, default=False, nullable=False)
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
     comment = db.Column(db.String(255), nullable=True)
     paragraph_weight = db.Column(db.SmallInteger, nullable=False) 
     tags = db.Column(db.String(255), nullable=True)
+    is_impression = db.Column(db.Boolean, default=False, nullable=False)
     head_sentence_group_id = db.Column(db.BigInteger, db.ForeignKey("head_sentence_groups.id", ondelete="SET NULL"))
     tail_sentence_group_id = db.Column(db.BigInteger, db.ForeignKey("tail_sentence_groups.id", ondelete="SET NULL"))
 
@@ -660,13 +628,14 @@ class Paragraph(BaseModel):
                report_id, 
                paragraph_index, 
                paragraph, 
-               paragraph_type = "text", 
+               is_impression = False, 
                paragraph_visible=True, 
                title_paragraph=False, 
                bold_paragraph=False, 
                paragraph_weight=1, 
                tags=None, 
                comment=None, 
+               is_active=True,
                head_sentence_group_id = None, 
                tail_sentence_group_id = None
         ):
@@ -679,13 +648,14 @@ class Paragraph(BaseModel):
                 report_id=report_id,
                 paragraph_index=paragraph_index,
                 paragraph=paragraph,
-                paragraph_type=paragraph_type,
+                is_impression=is_impression,
                 paragraph_visible=paragraph_visible,
                 title_paragraph=title_paragraph,
                 bold_paragraph=bold_paragraph,
                 paragraph_weight=paragraph_weight,
                 tags=tags,
                 comment=comment,
+                is_active=is_active,
                 head_sentence_group_id=head_sentence_group_id,
                 tail_sentence_group_id=tail_sentence_group_id
             )
@@ -741,7 +711,8 @@ class Paragraph(BaseModel):
             "paragraph_visible": paragraph.paragraph_visible,
             "title_paragraph": paragraph.title_paragraph,
             "bold_paragraph": paragraph.bold_paragraph,
-            "paragraph_type": paragraph.paragraph_type,
+            "is_impression": paragraph.is_impression,
+            "is_active": paragraph.is_active,
             "comment": paragraph.comment,
             "paragraph_weight": paragraph.paragraph_weight,
             "tags": paragraph.tags,
@@ -841,20 +812,6 @@ class SentenceBase(BaseModel):
             logger.error(f"(метод delete_sentence класса SentenceBase) ❌ Ошибка при отвязке предложения ID={sentence_id} от группы ID={group_id}: {e}")
             raise ValueError(f"Ошибка при отвязке предложения ID={sentence_id} от группы ID={group_id}: {e}")
         
-
-        
-
-
-    # def update(self, **kwargs):
-    #     """
-    #     Обновляет существующее предложение.
-    #     """
-    #     logger.info(f"Начато обновление предложения {self.id}")
-    #     for key, value in kwargs.items():
-    #         setattr(self, key, value)  # Устанавливаем новое значение в атрибут объекта
-    #     db.session.commit()
-    #     logger.info(f"Обновление завершено")
-    #     return self
 
     @classmethod
     def get_sentence_data(cls, sentence_id, group_id):
@@ -1900,11 +1857,6 @@ class FileMetadata(BaseModel):
 
 
 
-
-# Вешаем триггер перед удалением группы предложений
-event.listen(HeadSentenceGroup, "before_delete", prevent_group_deletion)
-event.listen(TailSentenceGroup, "before_delete", prevent_group_deletion)
-event.listen(BodySentenceGroup, "before_delete", prevent_group_deletion)
 
 
 # Индексы для ускорения поиска по группам

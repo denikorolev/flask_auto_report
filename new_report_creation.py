@@ -231,7 +231,6 @@ def create_report_from_existing_few():
                     report_id=new_report.id,
                     paragraph_index=paragraph.paragraph_index,
                     paragraph=paragraph.paragraph,
-                    paragraph_type=paragraph.paragraph_type,
                     paragraph_visible=paragraph.paragraph_visible,
                     title_paragraph=paragraph.title_paragraph,
                     bold_paragraph=paragraph.bold_paragraph,
@@ -241,8 +240,7 @@ def create_report_from_existing_few():
         # Если протоколов несколько то нужно будет заморочиться для 
         # адекватной обработки параметров сканирования, заключений и т.д.
         else:
-            paragraph_index = 2
-            scanparam_exist = []
+            paragraph_index = 0
             impression_exist = []
 
             # Копируем данные из выбранных отчетов
@@ -257,16 +255,7 @@ def create_report_from_existing_few():
                 
                 # Копируем параграфы и предложения
                 for paragraph in sorted_paragraphs:
-                    if paragraph.paragraph_type == "scanparam":
-                        if len(scanparam_exist) == 0:
-                            scanparam_exist.append(paragraph)
-                            continue
-                        else:
-                            print("scanparam_exist continue")
-                            continue
-                        
-                            
-                    if paragraph.paragraph_type == "impression":
+                    if paragraph.is_impression:
                         if len(impression_exist) == 0:
                             impression_exist.append(paragraph)
                             continue
@@ -279,7 +268,6 @@ def create_report_from_existing_few():
                         report_id=new_report.id,
                         paragraph_index=paragraph_index,
                         paragraph=paragraph.paragraph,
-                        paragraph_type=paragraph.paragraph_type,
                         paragraph_visible=paragraph.paragraph_visible,
                         title_paragraph=paragraph.title_paragraph,
                         bold_paragraph=paragraph.bold_paragraph,
@@ -295,7 +283,6 @@ def create_report_from_existing_few():
                             report_id=new_report.id,
                             paragraph_index=paragraph_index,
                             paragraph="Автоматически добавленный параграф",
-                            paragraph_type="text",  
                             paragraph_visible=True,
                             title_paragraph=True,
                             bold_paragraph=False
@@ -303,26 +290,13 @@ def create_report_from_existing_few():
                         paragraph_index += 1
             
             # Добавляем параграфы с параметрами сканирования и заключениями
-            for paragraph in scanparam_exist:
-                Paragraph.create(
-                    report_id=new_report.id,
-                    paragraph_index=1,
-                    paragraph=paragraph.paragraph,
-                    paragraph_type=paragraph.paragraph_type,
-                    paragraph_visible=paragraph.paragraph_visible,
-                    title_paragraph=paragraph.title_paragraph,
-                    bold_paragraph=paragraph.bold_paragraph,
-                    head_sentence_group_id=paragraph.head_sentence_group_id or None,
-                    tail_sentence_group_id=paragraph.tail_sentence_group_id or None
-                )
-            scanparam_exist = []
                 
             for paragraph in impression_exist:
                 Paragraph.create(
                     report_id=new_report.id,
                     paragraph_index=paragraph_index,
                     paragraph=paragraph.paragraph,
-                    paragraph_type=paragraph.paragraph_type,
+                    is_impression=True,
                     paragraph_visible=paragraph.paragraph_visible,
                     title_paragraph=paragraph.title_paragraph,
                     bold_paragraph=paragraph.bold_paragraph,

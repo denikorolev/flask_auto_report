@@ -375,6 +375,10 @@ body {
 
 .right-side-container {
     width: 24%;
+    position: sticky;
+    top: 10px; 
+    align-self: flex-start; 
+    height: fit-content; 
 }
 
 
@@ -444,33 +448,56 @@ body {
     background-color: var(--main-bg-color);
 }
 
-.report__paragraph {
-    margin-bottom: 5px;
+.paragraph__text--visible {
+    display: block;
+    padding-left: 20px;
 }
 
-.report__paragraph--visible {
-    margin-bottom: 5px;
-    font-weight: bold;
-    cursor: pointer;
-}
-
-.report__paragraph--invisible {
+.paragraph__text--invisible {
     display: none;
     padding-left: 20px;
 }
 
-.report__paragraph--title{
+.paragraph__text--title{
     display: block;
 }
 
-.report__paragraph--untitle{
+.paragraph__text--untitle{
     display: inline;
 }
 
-.report__paragraph--bold {
+.paragraph__text--bold {
     text-transform: uppercase;
 
 }
+
+.paragraph__item--inactive {
+    display: none;
+}
+
+.paragraph__item {
+    margin-bottom: 7px;
+}
+
+.paragraph__text {
+   font-weight: bold;
+}
+
+
+/* Стиль для правой часть working_with_report */
+
+.report-controlpanel__inactive-paragraphs-list {
+    list-style-type: square;
+}
+
+.report-controlpanel__inactive-paragraphs-item {
+    margin-bottom: 5px;
+    cursor: pointer;
+}
+
+
+
+
 
 .edit-paragraph__title {
     font-size: 18px;
@@ -823,16 +850,8 @@ body {
     background-color: #cbeff4;
 }
 
-.wrapper__card--scanparam {
-    background-color: #d6f5c0;
-}
-
 .wrapper__card--text {
     background-color: #c3d7b5;
-}
-
-.wrapper__card--title {
-    background-color: #92a883;
 }
 
 .wrapper__card--impression {

@@ -6,6 +6,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
     initParagraphPopupCloseHandlers(); // Инициализация слушателей на закрытие попапа
 
+    // Слушатель на кнопку "сохранить" в попапе
+    document.getElementById("elementPopupSaveChangesButton").addEventListener("click", function() {
+        handleSaveChangesButtonClick();
+    });
+
 
     // Инициализация слушателей двойного клика на предложения для показа попапа
     document.querySelectorAll(".edit-paragraph__title").forEach(sentence => {
@@ -98,6 +103,75 @@ function updateParagraphOrder() {
 }
 
 
+
+/** 
+ * Handle save changes button click in paragraph popup.
+ * Sends updated paragraph data to server.
+ */
+async function handleSaveChangesButtonClick() {
+    const popup = document.getElementById("elementPopup");
+    const paragraphId = popup.getAttribute("data-element-id");
+
+    const changedData = { paragraph_id: paragraphId };
+
+    // Сбор значений чекбоксов и сравнение с текущими атрибутами
+    const checkboxMapping = [
+        { id: "elementVisibleCheckbox", key: "paragraph_visible", attr: "data-paragraph-visible" },
+        { id: "elementBoldCheckbox", key: "bold_paragraph", attr: "data-bold-paragraph" },
+        { id: "elementTitleCheckbox", key: "title_paragraph", attr: "data-title-paragraph" },
+        { id: "elementImpressionCheckbox", key: "is_impression", attr: "data-paragraph-impression" },
+        { id: "elementIsActiveCheckbox", key: "is_active", attr: "data-paragraph-active" }
+    ];
+
+    const paragraphElement = document.querySelector(`.edit-paragraph__title[data-paragraph-id="${paragraphId}"]`);
+
+    console.log("видимость параграфа", paragraphElement.getAttribute("data-paragraph-visible"));
+    console.log("параграф активный", paragraphElement.getAttribute("data-paragraph-active"));
+    console.log("параграф впечатление", paragraphElement.getAttribute("data-paragraph-impression"));
+    console.log("параграф жирный", paragraphElement.getAttribute("data-bold-paragraph"));
+    console.log("параграф заголовок", paragraphElement.getAttribute("data-title-paragraph"));
+
+    
+
+    checkboxMapping.forEach(({ id, key, attr }) => {
+        const checkbox = document.getElementById(id);
+        const currentValue = paragraphElement.getAttribute(attr)?.toLowerCase() === "true";
+        const checkboxValue = checkbox.checked === true;
+        if (checkboxValue !== currentValue) {
+            changedData[key] = checkboxValue;
+        }
+    });
+
+    console.log("Измененные данные параграфа:", changedData);
+
+    // Если нет изменений, не отправляем запрос
+    if (Object.keys(changedData).length === 1) {
+        console.log("Нет изменений для отправки.");
+        hidePopup();
+        return;
+    }
+    // Отправляем запрос на сервер
+    try {
+        const response = await sendRequest({
+            url: "/editing_report/update_paragraph_flags",
+            method: "PATCH",
+            data: changedData
+            
+        });
+
+        console.log("Ответ от сервера после обновления флагов параграфа:", response);
+
+        if (response?.status === "success") {
+            // пока просто перезагрузить страницу потом добавить динамическое обновление данных на странице
+            window.location.reload();
+        }
+    } catch (error) {
+        console.error("Ошибка при отправке данных обновления параграфа:", error);
+    }
+}
+
+
+
 // Функция показа попапа с информацией о предложении
 function showParagraphPopup(sentenceElement, event) {
     const popup = document.getElementById("elementPopup");
@@ -107,6 +181,9 @@ function showParagraphPopup(sentenceElement, event) {
     const elementIndex = sentenceElement.getAttribute("data-paragraph-index");
     const elementComment = sentenceElement.getAttribute("data-paragraph-comment") || "None";
     const elementTags = sentenceElement.getAttribute("data-paragraph-tags") || "None";
+
+    // Устанавливаем elementId в аттрибуты попапа
+    popup.setAttribute("data-element-id", elementId);
 
     // Заполняем попап
     document.getElementById("popupElementId").textContent = elementId;
@@ -122,6 +199,21 @@ function showParagraphPopup(sentenceElement, event) {
         } else {
             item.style.display = "block"; // Показываем обратно, если были скрыты до этого
         }
+    });
+
+    // Устанавливаем правильное состояние чекбоксов в попапе
+    const checkboxMapping = [
+        { id: "elementVisibleCheckbox", attr: "data-paragraph-visible" },
+        { id: "elementBoldCheckbox", attr: "data-bold-paragraph" },
+        { id: "elementTitleCheckbox", attr: "data-title-paragraph" },
+        { id: "elementImpressionCheckbox", attr: "data-paragraph-impression" },
+        { id: "elementIsActiveCheckbox", attr: "data-paragraph-active" }
+    ];
+
+    checkboxMapping.forEach(({ id, attr }) => {
+        const checkbox = document.getElementById(id);
+        const value = sentenceElement.getAttribute(attr)?.toLowerCase() === "true"; // Приводим к boolean
+        checkbox.checked = value; // Устанавливаем состояние чекбокса
     });
 
     // Показываем попап
@@ -144,6 +236,7 @@ function showParagraphPopup(sentenceElement, event) {
     popup.style.top = `${posY}px`;
 }
 
+
 /** 
  * Инициализация обработчиков закрытия попапа предложения
  */
@@ -156,11 +249,6 @@ function initParagraphPopupCloseHandlers() {
         return;
     }
 
-    // Функция скрытия попапа
-    function hidePopup() {
-        popup.style.display = "none";
-    }
-
     // Закрытие по кнопке
     closeButton.addEventListener("click", hidePopup);
 
@@ -171,6 +259,22 @@ function initParagraphPopupCloseHandlers() {
         }
     });
 }
+
+/**
+ * Hides the sentence popup.
+ */
+function hidePopup() {
+    const popup = document.getElementById("elementPopup");
+    if (popup) {
+        popup.style.display = "none";
+        // Очищаем атрибуты попапа
+        popup.removeAttribute("data-element-id");
+    } else {
+        console.warn("Попап для предложения не найден.");
+    }
+}
+
+
 
 
 // Функция для добавления параграфа

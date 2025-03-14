@@ -11,7 +11,6 @@ import logging
 
 load_dotenv()
 
-valid_paragraph_types = ["text", "impression", "clincontext", "scanparam", "custom", "dinamics", "scanlimits", "title"]
 
 
 
@@ -94,10 +93,6 @@ class Config:
                                 "EXCEPT_WORDS": ["мм", "см"],
                                 "EXCEPTIONS_AFTER_PUNCTUATION": ["МРТ", "КТ", "УЗИ", "РКТ", "ПЭТ", "ПЭТ-КТ", "МСКТ", "РГ", "ЭКГ", "ФГДС"]
                                 }
-    PARAGRAPH_TYPE_LIST = [
-    "text", "custom", "impression", "clincontext",
-    "scanparam", "dinamics", "scanlimits", "title"
-]
     
     @staticmethod
     def get_user_upload_folder():

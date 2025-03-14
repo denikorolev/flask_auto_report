@@ -1,8 +1,6 @@
 <!-- edit_report.html -->
 
 {% extends "base.html" %}
-{% from "macros.html" import render_sentence %}
-{% from "macros.html" import render_paragraph %}
 
 
 {% block container %}
@@ -57,16 +55,10 @@
                     {% for paragraph in report_paragraphs %}
                         
                         <li class="wrapper__card edit-paragraph__item
-                            {% if paragraph.paragraph_type in ["scanparam"] %}
-                            wrapper__card--scanparam
-                            {% elif paragraph.paragraph_type in ["text","custom"] %}
-                            wrapper__card--text
-                            {% elif paragraph.paragraph_type in ["title"] %}
-                            wrapper__card--title
-                            {% elif paragraph.paragraph_type == "impression" %}
+                            {% if paragraph.is_impression %}
                             wrapper__card--impression
                             {% else %}
-                            wrapper__card--scanparam
+                            wrapper__card--text
                             {% endif %}
                             "
                             data-paragraph-id="{{ paragraph.id }}">
@@ -89,13 +81,14 @@
                                     "
                                     data-paragraph-id="{{ paragraph.id }}"
                                     data-paragraph-index="{{ paragraph.paragraph_index }}"
-                                    data-paragraph-type="{{ paragraph.paragraph_type }}"
                                     data-paragraph-weight="{{ paragraph.paragraph_weight }}"
                                     data-paragraph-tags="{{ paragraph.tags }}"
                                     data-paragraph-comment="{{ paragraph.comment }}"
                                     data-paragraph-visible="{{ paragraph.paragraph_visible }}"
                                     data-bold-paragraph="{{ paragraph.bold_paragraph }}"
                                     data-title-paragraph="{{ paragraph.title_paragraph }}"
+                                    data-paragraph-impression="{{ paragraph.is_impression }}"
+                                    data-paragraph-active="{{ paragraph.is_active }}"
                                     >
                                     <b> {{ paragraph.paragraph }} </b>
                                 </h3>
@@ -174,6 +167,20 @@
         <span class="sentence-popup__info-item"><strong>Комментарий:</strong> <span id="popupElementComment"></span></span>
         <span class="sentence-popup__info-item"><strong>Теги:</strong> <span id="popupElementTags"></span></span>
     </div>
+    <div class="sentence-pupup_edit-box">
+        <input type="checkbox" id="elementVisibleCheckbox" class="sentence-popup__checkbox--visible">
+        <label for="elementVisibleCheckbox" class="form-check-label">Видимость</label>
+        <input type="checkbox" id="elementBoldCheckbox" class="sentence-popup__checkbox--bold">
+        <label for="elementBoldCheckbox" class="form-check-label">Жирный</label>
+        <input type="checkbox" id="elementTitleCheckbox" class="sentence-popup__checkbox--title">
+        <label for="elementTitleCheckbox" class="form-check-label">перенос строки</label>
+        <input type="checkbox" id="elementImpressionCheckbox" class="sentence-popup__checkbox--impression">
+        <label for="elementImpressionCheckbox" class="sentence-popup__checkbox--impression">Заключение</label>
+        <input type="checkbox" id="elementIsActiveCheckbox" class="sentence-popup__checkbox--active">
+        <label for="elementIsActiveCheckbox" class="sentence-popup__checkbox--active">Активный</label>
+        <button id="elementPopupSaveChangesButton" class="btn report__btn">Сохранить</button>
+    </div>
+
     <button id="closeElementPopup" class="btn report__btn">Закрыть</button>
 </div>
     

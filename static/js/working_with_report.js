@@ -16,6 +16,15 @@ document.addEventListener("DOMContentLoaded", function() {
     const boxForAiResponse = document.getElementById("aiResponse");     // Для обращения к блоку с ответом от AI
     const addImpressionButton = document.getElementById("addImpressionToReportButton"); // Для обращения к кнопке "Вставить заключение"
     
+
+    // Проверяем наличие списка неактивных абзацев и скрываем его, если он пуст
+    const inactiveParagraphsList = document.querySelector(".report-controlpanel__inactive-paragraphs-list");
+    const items = inactiveParagraphsList.querySelectorAll(".report-controlpanel__inactive-paragraphs-item");
+    if (items.length === 0) {
+        inactiveParagraphsList.style.display = "none"; // Скрываем ul
+    }
+    
+    
     linkSentences(); // Связываем предложения с данными
     
     updateCoreAndImpessionParagraphText(); // Запускает выделение ключевых слов при загрузке страницы
@@ -23,6 +32,14 @@ document.addEventListener("DOMContentLoaded", function() {
     sentenceDoubleClickHandle () // Включаем логику двойного клика на предложение
 
     addSentenceButtonLogic(); // Включаем логику кнопки "+"
+
+    
+    // Слушатели на список неактивных абзацев
+    document.getElementById("inactiveParagraphsList").querySelectorAll(".report-controlpanel__inactive-paragraphs-item").forEach(item => {
+        item.addEventListener("click", function() {
+            inactiveParagraphsListClickHandler(item);
+        });
+    });
 
 
     // Проверяем наличие кнопки экспорт в Word и при ее наличии запускаем логику связанную с данным экспортом
@@ -317,11 +334,11 @@ function handleKeywordClick(event) {
 
 
 /**
- * Обновляет текст абзацев с классом `paragraph__list--core` и "paragraph__list--impression" и выделяет ключевые слова.
+ * Обновляет текст абзацев с классом `paragraph__item--core` и "paragraph__item--impression" и выделяет ключевые слова.
  * 
  */
 function updateCoreAndImpessionParagraphText() {
-    const coreAndImpessionParagraphLists = document.querySelectorAll(".paragraph__list--core, .paragraph__list--impression");
+    const coreAndImpessionParagraphLists = document.querySelectorAll(".paragraph__item--core, .paragraph__item--impression");
     coreAndImpessionParagraphLists.forEach(paragraphList => {
         paragraphList.querySelectorAll("p, span").forEach(paragraph => {
             if (isElementVisible(paragraph)) { // Проверяем, виден ли элемент
@@ -335,7 +352,7 @@ function updateCoreAndImpessionParagraphText() {
 /**
  * Собирает данные абзацев и предложений для отправки на сервер.
  * 
- * Функция проходит по всем абзацам с классом `paragraph__list--core`, извлекает текст абзацев, 
+ * Функция проходит по всем абзацам с классом `paragraph__item--core`, извлекает текст абзацев, 
  * их идентификаторы, а также вложенные предложения. Собранные данные возвращаются в формате массива объектов.
  * Каждый объект содержит:
  * - `paragraph_id` — идентификатор абзаца;
@@ -353,17 +370,17 @@ function updateCoreAndImpessionParagraphText() {
  * @requires cleanSelectText - Глобальная функция, которая очищает текст предложения от HTML-тегов и других элементов.
  */
 function collectParagraphsData() {
-    const coreParagraphLists = document.querySelectorAll(".paragraph__list--core"); // Ищем списки с классом paragraph__list--core
+    const coreParagraphLists = document.querySelectorAll(".paragraph__item--core"); // Ищем списки с классом paragraph__item--core
     const paragraphsData = [];
 
     coreParagraphLists.forEach(paragraphList => {
-        // Находим элемент абзаца внутри текущего списка (paragraph__list--core)
-        const paragraphElement = paragraphList.querySelector(".report__paragraph > p");
+        // Находим элемент абзаца внутри текущего списка (paragraph__item--core)
+        const paragraphElement = paragraphList.querySelector(".paragraph__item > p");
         
 
         // Проверяем, что элемент абзаца существует
         if (!paragraphElement) {
-            console.error("Paragraph element not found in paragraph__list--core.");
+            console.error("Paragraph element not found in paragraph__item--core.");
             return;
         }
 
@@ -412,7 +429,7 @@ function collectTextFromParagraphs(paragraphClass) {
 
     paragraphLists.forEach(paragraphList => {
         // Находим элемент абзаца
-        const paragraphElement = paragraphList.querySelector(".report__paragraph > p");
+        const paragraphElement = paragraphList.querySelector(".paragraph__item > p");
         
         if (!paragraphElement) {
             console.error("Paragraph element not found in", paragraphClass);
@@ -747,7 +764,7 @@ function editButtonLogic(editButton) {
 function addSentenceButtonLogic() {
     document.querySelectorAll(".icon-btn--add-sentence").forEach(button => {
         button.addEventListener("click", function(event) {
-            const paragraphId = parseInt(this.closest(".report__paragraph").querySelector("p").getAttribute("data-paragraph-id"));
+            const paragraphId = parseInt(this.closest(".paragraph__item").querySelector("p").getAttribute("data-paragraph-id"));
             // Создаем пустое предложение и добавляем перед кнопкой
             const newSentenceElement = createEditableSentenceElement("", paragraphId);
             button.parentNode.insertBefore(newSentenceElement, button);
@@ -792,7 +809,6 @@ function addSentenceButtonLogic() {
  * Обрабатывает логику кнопки "Copy to Clipboard".
  * 
  * Функциональность:
- * - При нажатии на кнопку собирает текст из параграфов с классами "paragraph__list--initial", "paragraph__list--core", и "paragraph__list--impression".
  * - Формирует общий текст, объединяя данные из указанных параграфов.
  * - Копирует сформированный текст в буфер обмена.
  * - Отправляет собранные данные абзацев на сервер для обработки.
@@ -813,12 +829,11 @@ function copyButtonLogic(copyButton) {
     copyButton.addEventListener("click", async function () {
 
         // Собираем текст из параграфов
-        const initialText = collectTextFromParagraphs("paragraph__list--initial");
-        const coreText = collectTextFromParagraphs("paragraph__list--core");
-        const impressionText = collectTextFromParagraphs("paragraph__list--impression");
+        const coreText = collectTextFromParagraphs("paragraph__item--core");
+        const impressionText = collectTextFromParagraphs("paragraph__item--impression");
 
         // Соединяем все части с пустой строкой между ними
-        const textToCopy = `${initialText}\n\n${coreText}\n\n${impressionText}`.trim();
+        const textToCopy = `${coreText}\n\n${impressionText}`.trim();
         
         try {
             // Копируем текст в буфер обмена
@@ -827,7 +842,6 @@ function copyButtonLogic(copyButton) {
 
             // После успешного копирования выполняем отправку данных
             const paragraphsData = collectParagraphsData();
-            console.log(paragraphsData);
 
             // Отправляем данные параграфов
             // await sendParagraphsData(paragraphsData);
@@ -840,28 +854,6 @@ function copyButtonLogic(copyButton) {
 }
 
 
-/**
- * Функция для отправки данных предложений на сервер.
- * Это старая функция, я ее пока оставляю, но потом ее нужно будет переделать.
- * 
- * @param {Array} paragraphsData - The data of paragraphs to send.
- */
-// async function sendParagraphsData(paragraphsData) {
-//     try {
-//         const response = await sendRequest({
-//             url: "/working_with_reports/new_sentence_adding",
-//             method: "POST",
-//             data: { paragraphs: paragraphsData },
-//         });
-
-//         // Если запрос успешен, отображаем обработанные абзацы
-//         displayProcessedParagraphs(response.processed_paragraphs);
-//     } catch (error) {
-//         console.error("sendParagraphsData: Failed to send paragraphs data.", error);
-//         alert(error.message || "Не удалось обработать абзацы.");
-//     }
-// }
-
 
 /**
  * Обрабатывает логику кнопки "Export to Word".
@@ -869,7 +861,6 @@ function copyButtonLogic(copyButton) {
  * ОСТАЛЬНАЯ ЛОГИКА СИЛЬНО ПОМЕНЯЛАСЬ И ЭТА ФУНКЦИЯ МОЖЕТ НЕ РАБОТАТЬ В СВОЕМ СТАРОМ ВИДЕ
  * 
  * Функциональность:
- * - Собирает текст из абзацев с классами "paragraph__list--initial", "paragraph__list--core", и "paragraph__list--impression".
  * - Отправляет данные абзацев на сервер для обработки.
  * - При успешной обработке данных выполняет экспорт текста в формат Word.
  * - Формирует имя файла на основе имени пациента, типа отчета, подтипа отчета и текущей даты.
@@ -891,12 +882,10 @@ function wordButtonLogic(exportButton) {
     
     exportButton.addEventListener("click", async function() {
         // Собираем текст из разных списков абзацев
-        const initialText = collectTextFromParagraphs("paragraph__list--initial");
-        const coreText = collectTextFromParagraphs("paragraph__list--core");
-        const impressionText = collectTextFromParagraphs("paragraph__list--impression");
+        const coreText = collectTextFromParagraphs("paragraph__item--core");
+        const impressionText = collectTextFromParagraphs("paragraph__item--impression");
 
         const textToExport = `${coreText}\n\n${impressionText}`.trim();
-        const scanParam = initialText.trim();
 
         // Формируем данные абзацев
         const paragraphsData = collectParagraphsData();
@@ -932,7 +921,6 @@ function wordButtonLogic(exportButton) {
                     subtype: subtype,
                     report_type: reportType,
                     reportnumber: reportnumber,
-                    scanParam: scanParam,
                     side: reportSide
                 },
                 responseType: "blob",
@@ -974,14 +962,14 @@ function wordButtonLogic(exportButton) {
  * Логика для кнопки "Generate Impression".
  * 
  * Функция обрабатывает нажатие на кнопку "Generate Impression". Она:
- * 1. Собирает текст из абзацев с классом "paragraph__list--core".
+ * 1. Собирает текст из абзацев с классом "paragraph__item--core".
  * 2. Отправляет текст на сервер для генерации впечатления с помощью ассистента.
  * 3. Отображает результат в поле `aiResponse`.
  * 4. Обрабатывает ошибки, если запрос не удается.
  */
 function generateImpressionLogic(generateButton, boxForAiResponse) {
     generateButton.addEventListener("click", async function () {
-        const textToCopy = collectTextFromParagraphs("paragraph__list--core");
+        const textToCopy = collectTextFromParagraphs("paragraph__item--core");
         const assistantNames = ["airadiologist"];
         boxForAiResponse.textContent = "Ожидаю ответа ИИ...";
 
@@ -995,6 +983,8 @@ function generateImpressionLogic(generateButton, boxForAiResponse) {
     });
 }
 
+
+
 /**
  * Логика кнопки "Add Impression to Report".
  * 
@@ -1003,7 +993,7 @@ function generateImpressionLogic(generateButton, boxForAiResponse) {
  * Шаги выполнения:
  * 1. Извлекает текст заключения из элемента с ID `aiResponse`.
  * 2. Если текст пуст, отображает предупреждение пользователю о необходимости сгенерировать заключение.
- * 3. Ищет первый видимый элемент предложения в абзацах с классом `paragraph__list--impression`.
+ * 3. Ищет первый видимый элемент предложения в абзацах с классом `paragraph__item--impression`.
  * 4. Заменяет текст найденного предложения на текст из `aiResponse`.
  * 
  * В случае отсутствия видимого предложения:
@@ -1012,7 +1002,7 @@ function generateImpressionLogic(generateButton, boxForAiResponse) {
  * Требования:
  * - Элемент с ID `addImpressionToReportButton` (кнопка).
  * - Элемент с ID `aiResponse` для получения текста заключения.
- * - Элементы с классом `paragraph__list--impression .report__sentence` для вставки текста.
+ * - Элементы с классом `paragraph__item--impression .report__sentence` для вставки текста.
  * - Функция `isElementVisible` для проверки видимости элементов.
  */
 function addImpressionButtonLogic(addImpressionButton) {
@@ -1025,8 +1015,8 @@ function addImpressionButtonLogic(addImpressionButton) {
             return;
         }
 
-        // Ищем первый видимый элемент предложения в paragraph__list--impression
-        const impressionParagraphs = document.querySelectorAll(".paragraph__list--impression .report__sentence");
+        // Ищем первый видимый элемент предложения в paragraph__item--impression
+        const impressionParagraphs = document.querySelectorAll(".paragraph__item--impression .report__sentence");
         let foundVisibleSentence = false;
 
         impressionParagraphs.forEach(sentenceElement => {
@@ -1042,6 +1032,7 @@ function addImpressionButtonLogic(addImpressionButton) {
         }
     });
 }
+
 
 /** Функция для нормализации предложения.*/
 function normalizeSentence(sentence, keyWordsGroups) {
@@ -1252,3 +1243,33 @@ function generateImpressionRequest(text, assistantList) {
 
 
 
+// Функция для обработки клика по неактивному параграфу в списке неактивных параграфов
+function inactiveParagraphsListClickHandler(element) {
+    const paragraphId = element.getAttribute("data-paragraph-id");
+    const inactiveParagraphElement = document.querySelector(`.paragraph__item[data-paragraph-id="${paragraphId}"]`);
+
+    if (inactiveParagraphElement) {
+        const currentDisplay = window.getComputedStyle(inactiveParagraphElement).display;
+        const newDisplay = (currentDisplay === "none") ? "block" : "none";
+        inactiveParagraphElement.style.display = newDisplay;
+
+        // Показываем/скрываем все предложения (span) внутри параграфа
+        const sentenceSpans = inactiveParagraphElement.querySelectorAll(".report__sentence");
+        sentenceSpans.forEach(span => {
+            span.style.display = newDisplay;
+        });
+
+        // Работаем с параграфом (p)
+        const paragraphText = inactiveParagraphElement.querySelector("p");
+        if (paragraphText) {
+            if (newDisplay === "none") {
+                // Если скрываем весь li — скрываем и p
+                paragraphText.style.display = "none";
+            } else {
+                // Если показываем — проверяем data-visible-paragraph
+                const isVisible = paragraphText.getAttribute("data-visible-paragraph")?.toLowerCase() === "true";
+                paragraphText.style.display = isVisible ? "block" : "none";
+            }
+        }
+    }
+}

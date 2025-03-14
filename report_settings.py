@@ -2,7 +2,7 @@
 
 from flask import Blueprint, render_template, request, current_app, jsonify, g
 from flask_login import login_required
-from models import db, ReportType, ReportSubtype, paragraph_type_enum
+from models import db, ReportType, ReportSubtype
 from file_processing import file_uploader
 from flask_security.decorators import auth_required
 
@@ -23,13 +23,11 @@ def report_settings():
     print(profile_subtypes)
         
         
-    paragraph_types = paragraph_type_enum
         
     return render_template('report_settings.html', 
                            title = "Настройки протоколов",
                            user_types=profile_types,
-                           user_subtypes=profile_subtypes,
-                           paragraph_types=paragraph_types 
+                           user_subtypes=profile_subtypes
                            )
 
 
