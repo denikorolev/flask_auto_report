@@ -1,0 +1,21 @@
+{% macro buffer_popup() %}
+<div id="bufferPopup" class="buffer-popup" style="display: none;">
+    <div class="buffer-popup__header">
+        <h3>Буфер обмена</h3>
+        <button id="closeBufferPopup" class="btn btn-icon buffer-popup__btn--close" title="Закрыть">❌</button>
+    </div>
+    
+    <div id="bufferContent" class="buffer-popup__content">
+        <ul class="buffer-popup__list">
+            <!-- Сюда будут добавляться элементы -->
+             <li>Пусто</li>
+        </ul>
+        
+    </div>
+
+    <div class="buffer-popup__footer">
+        <button id="clearBufferButton" class="btn report__btn" title="Очистить буфер">🗑️ Очистить</button>
+        <button id="insertFromBufferButton" class="btn report__btn" title="Вставить выбранное">📥 Вставить</button>
+    </div>
+</div>
+{% endmacro %}

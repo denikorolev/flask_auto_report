@@ -11,6 +11,30 @@ document.addEventListener("DOMContentLoaded", function () {
         handleSaveChangesButtonClick();
     });
 
+    // Слушатель на кнопку открыть попап буфера
+    document.getElementById("openBufferPopupButton").addEventListener("click", function() {
+        showBufferPopup(this);
+    });
+
+    // Слушатель на кнопки 📑 и 🗒️
+    document.querySelectorAll(".control-btn--copy-group-to-buffer, .control-btn--copy-group-tail-to-buffer").forEach(btn => {btn.addEventListener("click", function() {
+        
+        if (this.classList.contains("control-btn--copy-group-to-buffer")) {
+            addGroupDataToBuffer(this, "head");
+        } else {
+            addGroupDataToBuffer(this, "tail");
+        }
+        });
+    });
+
+    // Слушатель на кнопку "🔗"
+    document.querySelectorAll(".control-btn--paste-buffer").forEach(btn => {
+        btn.addEventListener("click", function () {
+            openBufferPopupForInsert(this); // Передаем саму кнопку
+        });
+    });
+
+
 
     // Инициализация слушателей двойного клика на предложения для показа попапа
     document.querySelectorAll(".edit-paragraph__title").forEach(sentence => {
@@ -40,14 +64,14 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
     // Слушатель на кнопку "Редактировать параграф" перенаправляет на страницу редактирования параграфа
-    document.querySelectorAll(".edit-paragraph__btn--edit").forEach(button => {
+    document.querySelectorAll(".control-btn--edit").forEach(button => {
         button.addEventListener("click", function() {
             editParagraph(this);
         });
     });
 
     // Слушатель на кнопку "Удалить параграф"
-    document.querySelectorAll(".edit-paragraph__btn--delete").forEach(button => {
+    document.querySelectorAll(".control-btn--delete").forEach(button => {
         button.addEventListener("click", function() {
             deleteParagraph(this);
         });
@@ -169,6 +193,20 @@ async function handleSaveChangesButtonClick() {
         console.error("Ошибка при отправке данных обновления параграфа:", error);
     }
 }
+
+
+
+
+// Функция показа попапа с буфером
+function showBufferPopup(button) {
+    const popup = document.getElementById("bufferPopup");
+
+    popup.style.display === "block"
+}
+
+
+
+
 
 
 
@@ -299,10 +337,7 @@ async function addParagraph() {
                 <p class="edit-paragraph__title"><b>${response.paragraph}</b></p>
                 <p class="edit-sentences__list">Это новый параграф и у него еще нет предложений.</p>
                 </div>
-                <div>
-                    <button class="btn report__btn edit-sentence__btn--edit-head" data-sentence-id="${response.id}">Редактировать </button>
-                    <button class="btn report__btn edit-sentence__btn--delete-head" data-sentence-id="${response.id}">Удалить </button>
-                </div>
+                
             </li>
         `;
 
@@ -324,8 +359,8 @@ async function addParagraph() {
 
 // Функция для редактирования параграфа (переход на страницу редактирования параграфа) 
 function editParagraph(button) {
-    const paragraphId = button.getAttribute("data-paragraph-id");
-    const reportId = document.getElementById("editReportContainer").getAttribute("data-report-id");
+    const paragraphId = button.closest(".control-buttons").getAttribute("data-object-id");
+    const reportId = button.closest(".control-buttons").getAttribute("data-report-id");
 
     if (!paragraphId) {
         console.error("Не найден атрибут data-paragraph-id");
@@ -366,7 +401,7 @@ async function handleUpdateReportButtonClick() {
 // Обработчик для кнопки "Удалить параграф" 
 function deleteParagraph(button){
     console.log("Удаление параграфа");
-    const paragraphId = button.getAttribute("data-paragraph-id") 
+    const paragraphId = button.closest(".control-buttons").getAttribute("data-object-id");
         sendRequest({
             url: `/editing_report/delete_paragraph`,
             method: "DELETE",
@@ -468,7 +503,32 @@ async function updateParagraph(paragraphElement) {
 
 
 
+// Функция для добавления группы head предложений в буфер
+function addGroupDataToBuffer(button, sentenceType) {
+    const relatedId = button.closest(".control-buttons").getAttribute("data-object-id");
+    const objectType = "group"
+    const relatedText = button.closest(".control-buttons").getAttribute("data-text");
+    
+    let groupIdForBufferingGroup;
+    if (sentenceType === "head") {
+        groupIdForBufferingGroup = button.closest(".control-buttons").getAttribute("data-head-sentence-group-id");
+    }
+    else {
+        groupIdForBufferingGroup = button.closest(".control-buttons").getAttribute("data-tail-sentence-group-id");
+    }
 
 
+    dataToBuffer = {
+        related_id: relatedId,
+        object_type: objectType,
+        group_id: groupIdForBufferingGroup,
+        sentence_type: sentenceType,
+        related_text: relatedText
+    };
+
+    addToBuffer(dataToBuffer);
+    console.log("Добавление в буфер:", dataToBuffer);
+
+}
 
 

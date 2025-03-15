@@ -1,0 +1,69 @@
+{% macro control_buttons(object_id, object_type, report_id, head_sentence_group_id=None, tail_sentence_group_id=None, body_sentence_group_id=None, sentence_type=None, group_id=None, related_id=None, text=None) %}
+    <div class="control-buttons"
+        data-object-id="{{ object_id }}"
+        data-object-type="{{ object_type }}"
+        data-report-id="{{ report_id }}"
+        {% if sentence_type %} data-sentence-type="{{ sentence_type }}" {% endif %}
+        {% if group_id %} data-group-id="{{ group_id }}" {% endif %}
+        {% if related_id %} data-related-id="{{ related_id }}" {% endif %}
+        {% if text %} data-text="{{ text }}" {% endif %}
+        {% if head_sentence_group_id %} data-head-sentence-group-id="{{ head_sentence_group_id }}" {% endif %}
+        {% if tail_sentence_group_id %} data-tail-sentence-group-id="{{ tail_sentence_group_id }}" {% endif %}
+        {% if body_sentence_group_id %} data-body-sentence-group-id="{{ body_sentence_group_id }}" {% endif %}
+    >
+        <!-- Кнопка редактировать -->
+        {% if object_type == "paragraph" or (object_type == "sentence" and sentence_type == "head") %}
+            <button class="btn btn-icon control-btn--edit" title="Редактировать этот объект (предложение или группу)">
+                ✏️
+            </button>
+        {% endif %}
+        <!-- Кнопка удалить -->
+        <button class="btn btn-icon control-btn--delete" title="Удалить этот объект">
+            ❌
+        </button>
+        <!-- Кнопка копировать в буфер группы head предложений или предложения -->
+        {% if head_sentence_group_id or body_sentence_group_id %}
+            <button class="btn btn-icon control-btn--copy-group-to-buffer" title="Скопировать в буфер обмена предложения или группы главных предложений (для вставки в другие места)">
+                🗒️
+            </button>
+        {% endif %}
+        <!-- Кнопка копировать в буфер группы tail предложений -->
+        {% if tail_sentence_group_id %}
+            <button class="btn btn-icon control-btn--copy-group-tail-to-buffer" title="Скопировать в буфер обмена группы tail предложений (для вставки в другие места)">
+                📑
+            </button>
+        {% endif %}
+        {% if object_type == "sentence" %}
+            <button class="btn btn-icon control-btn--copy-sentence-to-buffer" title="Скопировать в буфер обмена предложение(для вставки в другие места)">
+                📌
+            </button>
+        {% endif %}
+        <!-- Кнопка вставить из буфера -->
+        <button class="btn btn-icon control-btn--paste-buffer" title="Вставить из буфера (привязать скопированный объект)">
+            🔗
+        </button>
+        <!-- Кнопка отвязать группу главных предложений или предложение -->
+        <button class="btn btn-icon control-btn--unlink" title="Отвязать данный объект от текущей группы или параграфа">
+            🔓
+        </button>
+        <!-- Кнопка отвязать группу tail предложений-->
+        <button class="btn btn-icon control-btn--unlink" title="Отвязать данный объект от текущей группы или параграфа">
+            ✂️
+        </button>
+    </div>
+{% endmacro %}
+
+
+
+
+
+{% macro info_icons(has_linked_body=False, is_linked=False) %}
+<div class="control-info-icons">
+    {% if has_linked_body %}
+        <span class="edit-sentence__links-icon--linked-obj" title="Есть привязанные дополнительные предложения">🔒</span>
+    {% endif %}
+    {% if is_linked %}
+        <span class="edit-sentence__links-icon--is-linked" title="Связано с другими группами">🔗</span>
+    {% endif %}
+</div>
+{% endmacro %}

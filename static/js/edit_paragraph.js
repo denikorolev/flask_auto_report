@@ -16,7 +16,24 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
 
+    // Слушатель на кнопку 🗒️
+    document.querySelectorAll(".control-btn--copy-sentence-to-buffer").forEach(btn => {btn.addEventListener("click", function() {
+            addGroupDataToBuffer(this, "body");
+        });
+    });
 
+                
+    // Слушатель на кнопку 📌
+    document.querySelectorAll(".control-btn--copy-sentence-to-buffer").forEach(btn => {btn.addEventListener("click", function() {
+            addSentenceDataToBuffer(this);
+        });
+    });
+
+
+    // Слушатель на кнопку открыть попап буфера
+    document.getElementById("openBufferPopupButton").addEventListener("click", function() {
+        showBufferPopup(this);
+    });
 
 
     // Слушатель на кнопку "Вернуться к редактированию протокола"
@@ -37,7 +54,7 @@ document.addEventListener("DOMContentLoaded", function () {
     
 
     // Слушатель на кнопку "Редактировать предложение" (переход на страницу редактирования)
-    document.querySelectorAll(".edit-sentence__btn--edit-head").forEach(button => {
+    document.querySelectorAll(".control-btn--edit").forEach(button => {
         button.addEventListener("click", function () {
             editSentence(this);
         });
@@ -54,20 +71,18 @@ document.addEventListener("DOMContentLoaded", function () {
     // Слушатель на кнопку "Добавить главное предложение"
     document.getElementById("addHeadSentenceButton").addEventListener("click", addHeadSentence);
 
-    // Слушатель на кнопку "Удалить дополнительное предложение"
-    document.querySelectorAll(".edit-sentence__btn--delete-tail").forEach(button => {
+    // Слушатель на кнопку "Удалить предложение"
+    document.querySelectorAll(".control-btn--delete").forEach(button => {
         button.addEventListener("click", function () {
-            deleteTailSentence(this);
+            const sentenceType = this.closest(".control-buttons").getAttribute("data-sentence-type");
+            if (sentenceType === "tail") {
+                deleteTailSentence(this);
+            }
+            else if (sentenceType === "head") {
+                deleteHeadSentence(this);
+            }
         });
     });
-
-    // Слушатель на кнопку "Удалить главное предложение"
-    document.querySelectorAll(".edit-sentence__btn--delete-head").forEach(button => {
-        button.addEventListener("click", function () {
-            deleteHeadSentence(this);
-        });
-    });
-
 
 });
 
@@ -97,9 +112,13 @@ function makeSentenceEditable(sentenceElement) {
     const sentenceItem = sentenceElement.closest(".edit-sentence__item");
     const isLinked = sentenceItem.getAttribute("data-sentence-is-linked") === "True";
     const hasLinkedBody = sentenceItem.getAttribute("data-sentence-has-linked-body") === "True";
-    const linkedBodyIcon = sentenceItem.querySelector(".edit-sentence__links-icon--linked-body");
-    const linkedIcon = sentenceItem.querySelector(".edit-sentence__links-icon--is-linked");
+    console.log("Sentence Item:", sentenceItem.outerHTML);
+    const linkedBodyIcon = sentenceItem.querySelector(".edit-sentence__links-icon--linked-obj");
+    const linkedIcon = sentenceItem.querySelector(".edit-sentence__links-icon--is-linked");    
     const audioKnock = new Audio("/static/audio/dzzz.mp3");
+    console.log("🔒 Найдена ли иконка:", linkedBodyIcon);
+    console.log("🔒 Найдена ли иконка связи:", linkedIcon);
+    console.log("Все иконки 🔒 на странице:", document.querySelectorAll(".edit-sentence__links-icon--linked-obj"));
 
     // Если есть связи с body 
     if (hasLinkedBody && linkedBodyIcon) {
@@ -156,6 +175,14 @@ function makeSentenceEditableActions(sentenceElement) {
 }
 
 
+// Функция показа попапа с буфером
+function showBufferPopup(button) {
+    const popup = document.getElementById("bufferPopup");
+
+    popup.style.display === "block"
+}
+
+
 
 /**
  * Инициализация обработчика кнопки "Редактировать" в попапе
@@ -190,7 +217,7 @@ function initPopupButtons(sentenceElement, sentenceId) {
         const linkedIcon = sentenceItem.querySelector(".edit-sentence__links-icon--is-linked");
         if (linkedIcon) linkedIcon.remove(); // Удаляем иконку связи
 
-        const bodyLinkedIcon = sentenceItem.querySelector(".edit-sentence__links-icon--linked-body");
+        const bodyLinkedIcon = sentenceItem.querySelector(".edit-sentence__links-icon--linked-obj");
         if (bodyLinkedIcon) bodyLinkedIcon.remove(); // Удаляем иконку body
 
         // Запускаем редактирование предложения
@@ -292,9 +319,9 @@ function hideSentencePopup() {
 
 // Функция редактирования предложения (переход на страницу редактирования)
 function editSentence(button) {
-    const sentenceId = button.getAttribute("data-sentence-id");
-    const paragraphId = document.getElementById("editParagraphContainer").getAttribute("data-paragraph-id");
-    const reportId = document.getElementById("editParagraphContainer").getAttribute("data-report-id");
+    const sentenceId = button.closest(".control-buttons").getAttribute("data-object-id");
+    const paragraphId = button.closest(".control-buttons").getAttribute("data-related-id");
+    const reportId = button.closest(".control-buttons").getAttribute("data-report-id");
 
     window.location.href = `/editing_report/edit_head_sentence?sentence_id=${sentenceId}&paragraph_id=${paragraphId}&report_id=${reportId}`;
     
@@ -429,9 +456,9 @@ async function addTailSentence() {
 
 // Функция удаления дополнительного предложения
 async function deleteTailSentence(button) {
-    const sentenceItem = button.closest(".edit-sentence__item");
-    const sentenceId = sentenceItem.getAttribute("data-sentence-id");
-    const paragraphId = sentenceItem.getAttribute("data-paragraph-id");
+    const sentenceItem = button.closest(".control-buttons");
+    const sentenceId = sentenceItem.getAttribute("data-object-id");
+    const paragraphId = sentenceItem.getAttribute("data-related-id");
     
 
     try {
@@ -445,7 +472,7 @@ async function deleteTailSentence(button) {
         });
 
         if (response.status === "success") {
-            sentenceItem.remove();
+            sentenceItem.closest(".edit-sentence__item").remove();
         } 
     } catch (error) {
         console.error("Ошибка запроса:", error);
@@ -454,9 +481,9 @@ async function deleteTailSentence(button) {
 
 // Функция удаления главного предложения
 async function deleteHeadSentence(button) {
-    const sentenceItem = button.closest(".edit-sentence__item");
-    const sentenceId = sentenceItem.getAttribute("data-sentence-id");
-    const paragraphId = sentenceItem.getAttribute("data-paragraph-id");
+    const sentenceItem = button.closest(".control-buttons");
+    const sentenceId = sentenceItem.getAttribute("data-object-id");
+    const paragraphId = sentenceItem.getAttribute("data-related-id");
 
     try {
         const response = await sendRequest({
@@ -469,7 +496,7 @@ async function deleteHeadSentence(button) {
         });
 
         if (response.status === "success") {
-            sentenceItem.remove();
+            sentenceItem.closest(".edit-sentence__item").remove();
         } 
     } catch (error) {
         console.error("Ошибка запроса:", error);
@@ -547,3 +574,47 @@ async function updateSentence(sentenceElement) {
 
 
 
+// Функция для добавления группы head предложений в буфер
+function addGroupDataToBuffer(button) {
+    const relatedId = button.closest(".control-buttons").getAttribute("data-object-id");
+    const objectType = "sentence"
+    const relatedText = button.closest(".control-buttons").getAttribute("data-text");
+    const groupIdForBufferingGroup = button.closest(".control-buttons").getAttribute("data-body-sentence-group-id");
+    
+
+
+    dataToBuffer = {
+        related_id: relatedId,
+        object_type: objectType,
+        group_id: groupIdForBufferingGroup,
+        sentence_type: sentenceType,
+        related_text: relatedText
+    };
+
+    addToBuffer(dataToBuffer);
+    console.log("Добавление в буфер:", dataToBuffer);
+
+}
+
+
+// Функция для добавления предложения в буфер
+function addSentenceDataToBuffer(button) {
+    const relatedId = button.closest(".control-buttons").getAttribute("data-related-id");
+    const sentenceId = button.closest(".control-buttons").getAttribute("data-object-id");
+    const objectType = "sentence"
+    const relatedText = button.closest(".control-buttons").getAttribute("data-text");
+    const groupId = button.closest(".control-buttons").getAttribute("data-group-id");
+    const sentenceType = button.closest(".control-buttons").getAttribute("data-sentence-type");
+
+    dataToBuffer = {
+        related_id: relatedId,
+        object_type: objectType,
+        group_id: groupId,
+        sentence_type: sentenceType,
+        related_text: relatedText,
+        sentence_id: sentenceId,
+    };
+
+    addToBuffer(dataToBuffer);
+    console.log("Добавление в буфер:", dataToBuffer);
+}

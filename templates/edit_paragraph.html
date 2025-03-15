@@ -3,6 +3,9 @@
 {% extends "base.html" %}
 
 {% block container %}
+{% from "macros/edit_sentence_buttons.html" import control_buttons, info_icons %}
+{% from "macros/buffer_popup.html" import buffer_popup %}
+{% from "macros/buttons.html" import buffer_open_button %}
 {{ super() }}
 <input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
 
@@ -39,6 +42,8 @@
         </div>
         <!-- Кнопка сохранения -->
         <button class="btn report__btn edit-paragraph__btn--save-paragraph-data" id="saveParagraphDataButton">Сохранить изменения</button>
+        <!-- Кнопка для вызова попапа буфера -->
+        {{ buffer_open_button() }}
     </div>
 
     <hr>
@@ -78,24 +83,12 @@
                     {% endif %}
                 </div>
 
-                <div>
-                    <button class="btn report__btn edit-sentence__btn--edit-head" data-sentence-id="{{ sentence.id }}">Редактировать </button>
-                    <button class="btn report__btn edit-sentence__btn--delete-head" data-sentence-id="{{ sentence.id }}">Удалить </button>
-                    {% if sentence.has_linked_body %}
-                        <button class="btn report__btn edit-sentence__btn--unlink-body" data-sentence-id="{{ sentence.id }}">Отвязать дополнительное предложение </button>
-                    {% else %}
-                        <button class="btn report__btn edit-sentence__btn--link-body" data-sentence-id="{{ sentence.id }}">Привязать дополнительное предложение </button>
-                    {% endif %}
-
+                <div class="control-buttons__wrapper">
+                    <!-- Кнопки управления из макроса -->
+                    {{ control_buttons(sentence.id, 'sentence', report_id, related_id=paragraph.id, sentence_type="head", body_sentence_group_id=sentence.body_sentence_group_id, text=sentence.sentence, group_id=sentence.group_id) }}
+                    <!-- Блок информационных значков из макроса -->
+                    {{ info_icons(sentence.has_linked_body, sentence.is_linked) }}
                 </div>
-
-                {% if sentence.has_linked_body %}
-                    <span class="edit-sentence__links-icon--linked-body"> 🔒 </span>
-                {% endif %}
-
-                {% if sentence.is_linked %}
-                    <span class="edit-sentence__links-icon--is-linked"> 🔗 </span>
-                {% endif %}
                 
                 </li>
             {% endfor %}
@@ -130,11 +123,14 @@
 
             <div> {{sentence.sentence_weight}}</div> 
             <p class="edit-sentence__text">{{ sentence.sentence }}</p>
-            <button class="btn report__btn edit-sentence__btn--delete-tail">Удалить</button>
-            
-            {% if sentence.is_linked %}
-                <span class="edit-sentence__links-icon--is-linked"> 🔗 </span>
-            {% endif %}
+
+            <div class="control-buttons__wrapper">
+                <!-- Кнопки управления из макроса -->
+                {{ control_buttons(sentence.id, 'sentence', report_id, related_id=paragraph.id, sentence_type="tail", text=sentence.sentence, group_id=sentence.group_id) }}
+                <!-- Блок информационных значков из макроса -->
+                {{ info_icons(sentence.has_linked_body, sentence.is_linked) }}
+            </div>
+
             </li>
         {% endfor %}
         <hr>
@@ -157,6 +153,11 @@
     <button id="closeSentencePopup" class="btn report__btn">Закрыть</button>
 </div>
 
+
+<!-- Буфер обмена (попап) из макроса -->
+{{ buffer_popup() }}
+
+
 {% endblock container %}
 
 {% block scripts %}
@@ -164,8 +165,8 @@
     const paragraphData = {{ paragraph | tojson | safe }};
 </script>
 
-
-
+<script src="{{ url_for('static', filename='js/buffer_popup.js') }}"></script>
+<script src="{{ url_for('static', filename='js/sentence_buffer.js') }}"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
 <script src="{{ url_for('static', filename='js/edit_paragraph.js') }}"></script>
 {% endblock scripts %}

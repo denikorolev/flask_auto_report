@@ -3,6 +3,9 @@
 {% extends "base.html" %}
 
 {% block container %}
+{% from "macros/edit_sentence_buttons.html" import control_buttons, info_icons %}
+{% from "macros/buffer_popup.html" import buffer_popup %}
+{% from "macros/buttons.html" import buffer_open_button %}
 {{ super() }}
 <input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
 
@@ -40,6 +43,9 @@
             {% endif %}
 
             <button class="btn report__btn edit-sentence__btn--save-sentence-data" id="saveSentenceDataButton">Сохранить изменения</button>
+            <!-- Кнопка для вызова попапа буфера -->
+            {{ buffer_open_button() }}
+
         </div>
         <textarea class="edit-sentence__textarea" id="sentenceText">{{ head_sentence.sentence }}</textarea>
     </div>
@@ -72,11 +78,12 @@
                     </div>
                     <p class="edit-sentence__text">{{ sentence.sentence }}</p>
                    
-                    <button class="btn report__btn edit-sentence__btn--delete" type="button">Удалить</button>
-
-                    {% if sentence.is_linked %}
-                        <span class="edit-sentence__links-icon--is-linked"> 🔗 </span>
-                    {% endif %}
+                    <!-- Кнопки управления из макроса -->
+                <div class="control-buttons__wrapper">
+                    {{ control_buttons(sentence.id, 'sentence', report_id, related_id=head_sentence.id, sentence_type="body", text=sentence.sentence, group_id=sentence.group_id) }}
+                    <!-- Блок информационных значков из макроса -->
+                    {{ info_icons(sentence.has_linked_body, sentence.is_linked) }}
+                </div>
 
                 </li>
             {% endfor %}
@@ -102,6 +109,10 @@
     <button id="closeSentencePopup" class="btn report__btn">Закрыть</button>
 </div>
 
+
+<!-- Буфер обмена (попап) из макроса -->
+{{ buffer_popup() }}
+
 {% endblock container %}
 
 {% block scripts %}
@@ -109,5 +120,7 @@
     const sentenceData = {{ head_sentence | tojson | safe }};
 </script>
 
+<script src="{{ url_for('static', filename='js/buffer_popup.js') }}"></script>
+<script src="{{ url_for('static', filename='js/sentence_buffer.js') }}"></script>
 <script src="{{ url_for('static', filename='js/edit_head_sentence.js') }}"></script>
 {% endblock scripts %}

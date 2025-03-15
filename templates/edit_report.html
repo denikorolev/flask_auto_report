@@ -1,6 +1,9 @@
 <!-- edit_report.html -->
 
 {% extends "base.html" %}
+{% from "macros/edit_sentence_buttons.html" import control_buttons, info_icons %}
+{% from "macros/buffer_popup.html" import buffer_popup %}
+{% from "macros/buttons.html" import buffer_open_button %}
 
 
 {% block container %}
@@ -40,10 +43,13 @@
             </div>
             
             <button class="btn report__btn" type="button" id="updateReportButton">Сохранить изменения</button>
+            <!-- Кнопка для вызова попапа буфера -->
+            {{ buffer_open_button() }}
         </div>
     </form>
     <br>
     <hr class="sentence-separator">
+    
     <br>
 
     <div class="report_borderline"></div>
@@ -101,28 +107,13 @@
                                 </div>
                             </div>
                             
-                            <div>
-                                <button class="btn report__btn edit-paragraph__btn--edit"  data-paragraph-id="{{ paragraph.id }}">Редактировать параграф</button>
-                                <button class="btn report__btn edit-paragraph__btn--delete"  data-paragraph-id="{{ paragraph.id }}">Удалить параграф</button>
-                                {% if paragraph.has_linked_head %}
-                                    <button class="btn report__btn edit-paragraph__btn--unlink-head"  data-paragraph-id="{{ paragraph.id }}">Отвязать главные предложения</button>
-                                {% else %}
-                                    <button class="btn report__btn edit-paragraph__btn--link-head"  data-paragraph-id="{{ paragraph.id }}">Привязать главные предложения</button>
-                                {% endif %}
-
-                                {% if paragraph.has_linked_tail %}
-                                    <button class="btn report__btn edit-paragraph__btn--unlink-tail"  data-paragraph-id="{{ paragraph.id }}">Отвязать дополнительные предложения</button>
-                                {% else %}
-                                    <button class="btn report__btn edit-paragraph__btn--link-tail"  data-paragraph-id="{{ paragraph.id }}">Привязать дополнительные предложения</button>
-                                {% endif %}
+                            <div class="control-buttons__wrapper">
+                                <!-- Кнопки управления из макроса -->
+                                {{ control_buttons(paragraph.id, 'paragraph', report_data.id, head_sentence_group_id=paragraph.head_sentence_group_id, tail_sentence_group_id=paragraph.tail_sentence_group_id, text=paragraph.paragraph) }}
+                                <!-- Блок информационных значков из макроса -->
+                                {{ info_icons(paragraph.has_linked_head, paragraph.has_linked_tail) }}
                             </div>
 
-                            {% if paragraph.has_linked_head %}
-                                <span> 🔗</span>
-                            {% endif %}
-                            {% if paragraph.has_linked_tail %}
-                                <span> 🔗</span>
-                            {% endif %}
                         </li>
                     {% endfor %}
                 </ul>
@@ -183,6 +174,11 @@
 
     <button id="closeElementPopup" class="btn report__btn">Закрыть</button>
 </div>
+
+
+<!-- Буфер обмена (попап) из макроса -->
+{{ buffer_popup() }}
+
     
 {% endblock container %}
 
@@ -192,6 +188,8 @@
     const reportParagraphs = {{ report_paragraphs | tojson | safe }};
 </script>
 
+<script src="{{ url_for('static', filename='js/buffer_popup.js') }}"></script>
+<script src="{{ url_for('static', filename='js/sentence_buffer.js') }}"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
 <script src="{{ url_for('static', filename='js/edit_report.js') }}"></script>
 {% endblock scripts %}

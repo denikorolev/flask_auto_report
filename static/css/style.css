@@ -624,13 +624,13 @@ body {
 
 /* Блок стиля предложений у которых есть всплывающие предложения */
 .has-linked-sentences-highlighted-sentence {
-    background-color: #daf7f7;  
+    background-color: #d9fafa;  
     
 }
 
 /* Блок стиля предложений которые были изменены */
 .was-changed-highlighted-sentence {
-    background-color: #4ce0e0;      
+    background-color: #72e8e8;      
 }
 
 
@@ -801,11 +801,58 @@ body {
     min-height: 60px;
 }
 
+/* Стили для попапа буфера обмена */
+
+.buffer-popup {
+    position: fixed;
+    top: 20%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: white;
+    border: 2px solid #ccc;
+    padding: 20px;
+    width: 400px;
+    max-height: 70vh;
+    overflow-y: auto;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    z-index: 9999;
+    border-radius: 8px;
+}
+
+.buffer-popup__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.buffer-popup__content {
+    margin: 15px 0;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.buffer-popup__footer {
+    display: flex;
+    justify-content: space-between;
+}
+
+.btn-icon {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 18px;
+}
+
+
 
 
 /* === Ripple Effect === */
 /* Стили связанные с редактирование предложений */
 .edit-sentence__links-icon--is-linked {
+    display: inline-block; /* чтобы размеры были видны */
+    width: 16px;
+    height: 16px;
+    position: relative; /* важно для ripple */
     cursor: pointer;
 }
 
@@ -1080,7 +1127,7 @@ body {
 }
 
 .keyword-highlighted {
-    color: red;
+    color: rgb(199, 3, 3);
     cursor: pointer;
 }
 
