@@ -68,8 +68,10 @@ document.addEventListener("DOMContentLoaded", function () {
     // Слушатель на кнопку "Добавить дополнительное предложение"
     document.getElementById("addTailSentenceButton").addEventListener("click", addTailSentence);
 
+
     // Слушатель на кнопку "Добавить главное предложение"
     document.getElementById("addHeadSentenceButton").addEventListener("click", addHeadSentence);
+
 
     // Слушатель на кнопку "Удалить предложение"
     document.querySelectorAll(".control-btn--delete").forEach(button => {

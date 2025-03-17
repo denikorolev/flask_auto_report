@@ -496,33 +496,19 @@ def compare_sentences_by_paragraph(new_sentences, report_id):
 
 
 # Функция для поиска существующих аналогичных предложений того же типа в базе данных использую в models.py
-def find_similar_exist_sentence(sentence_text, sentence_type, report_type_id, user_id, tags=None, comment=None, similarity_threshold=100):
+def find_similar_exist_sentence(sentence_text, sentence_type, report_type_id, user_id, tags=None, comment=None):
     """
     Finds similar sentences of the same type in the database.
 
     Args:
         sentence_text (str): The text of the sentence to compare.
         sentence_type (str): The type of the sentence.
-        key_words (list): List of key words to remove during cleaning.
 
     Returns:
-        list: List of similar sentences.
+        similar sentence.
     """
     logger.info(f"(функция find_similar_exist_sentence)(тип предложения: '{sentence_type}') 🚀 Начат поиск существующих аналогичных предложений в базе данных")
-    try:
-        except_words = current_app.config["PROFILE_SETTINGS"]["EXCEPT_WORDS"]
-        logger.info(f"(функция find_similar_exist_sentence) Получены слова исключения. Количество: {len(except_words)}")
-    except KeyError:
-        logger.error(f"(функция find_similar_exist_sentence) ❌ Не удалось получить список слов исключений")
-        except_words = []
     
-    key_words_list = KeyWord.find_by_profile(g.current_profile.id)
-    logger.debug(f"(функция find_similar_exist_sentence) Получены ключевые слова: {key_words_list}")
-    key_words = [kw.key_word for kw in key_words_list]
-    logger.debug(f"(функция find_similar_exist_sentence) Выполнен mapping для ключевых слов: {key_words}")
-    logger.info(f"(функция find_similar_exist_sentence) Получены ключевые слова. Количество: {len(key_words)}")
-    
-    logger.info(f"(функция find_similar_exist_sentence) значения комментария: {comment}, значения тегов: {tags}")
     # Получаем все предложения того же типа и с такими же базовыми параметрами из базы данных
     if sentence_type == "head":
         similar_type_sentences = HeadSentence.query.filter_by(tags=tags, comment=comment, report_type_id=report_type_id, user_id = user_id).all()
@@ -534,14 +520,11 @@ def find_similar_exist_sentence(sentence_text, sentence_type, report_type_id, us
         raise ValueError(f"Invalid sentence type: {sentence_type}")
     
     logger.info(f"(функция find_similar_exist_sentence) Найдено {len(similar_type_sentences)} предложений удовлетворяющих предварительным условиям")    
-    # Очищаем входное предложение
-    cleaned_input_sentence = clean_text_with_keywords(sentence_text, key_words, except_words)
+    
     
     # Сравниваем входное предложение с каждым из существующих
     for exist_sentence in similar_type_sentences:
-        cleaned_exist_sentence = clean_text_with_keywords(exist_sentence.sentence, key_words, except_words)
-        similarity_rapidfuzz = fuzz.ratio(cleaned_input_sentence, cleaned_exist_sentence)
-        if similarity_rapidfuzz > similarity_threshold:
+        if exist_sentence.sentence == sentence_text:
             logger.info(f"(функция find_similar_exist_sentence) 🧩 Найдено совпадение с предложением '{exist_sentence.sentence}' в базе данных. Возвращаю предложение")
             return exist_sentence
     logger.info(f"(функция find_similar_exist_sentence) Совпадений не найдено. Возвращаю None")

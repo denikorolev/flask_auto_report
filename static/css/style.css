@@ -448,15 +448,9 @@ body {
     background-color: var(--main-bg-color);
 }
 
-.paragraph__text--visible {
-    display: block;
-    padding-left: 20px;
-}
 
-.paragraph__text--invisible {
-    display: none;
-    padding-left: 20px;
-}
+
+
 
 .paragraph__text--title{
     display: block;

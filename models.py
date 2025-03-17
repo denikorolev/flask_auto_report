@@ -586,14 +586,19 @@ class Paragraph(BaseModel):
     report_id = db.Column(db.BigInteger, db.ForeignKey("reports.id"), nullable=False)
     paragraph_index = db.Column(db.Integer, nullable=False)
     paragraph = db.Column(db.String(255), nullable=False)
+    
     paragraph_visible = db.Column(db.Boolean, default=False, nullable=False)
     title_paragraph = db.Column(db.Boolean, default=False, nullable=False)
     bold_paragraph = db.Column(db.Boolean, default=False, nullable=False)
+    str_before = db.Column(db.Boolean, nullable=False)
+    str_after = db.Column(db.Boolean, nullable=False)
+    is_additional = db.Column(db.Boolean, nullable=False)
     is_active = db.Column(db.Boolean, default=True, nullable=False)
+    is_impression = db.Column(db.Boolean, default=False, nullable=False)
+    
     comment = db.Column(db.String(255), nullable=True)
     paragraph_weight = db.Column(db.SmallInteger, nullable=False) 
     tags = db.Column(db.String(255), nullable=True)
-    is_impression = db.Column(db.Boolean, default=False, nullable=False)
     head_sentence_group_id = db.Column(db.BigInteger, db.ForeignKey("head_sentence_groups.id", ondelete="SET NULL"))
     tail_sentence_group_id = db.Column(db.BigInteger, db.ForeignKey("tail_sentence_groups.id", ondelete="SET NULL"))
 
@@ -626,6 +631,9 @@ class Paragraph(BaseModel):
                paragraph_visible=True, 
                title_paragraph=False, 
                bold_paragraph=False, 
+               str_before=False,
+               str_after=False,
+               is_additional=False,
                paragraph_weight=1, 
                tags=None, 
                comment=None, 
@@ -647,6 +655,9 @@ class Paragraph(BaseModel):
                 title_paragraph=title_paragraph,
                 bold_paragraph=bold_paragraph,
                 paragraph_weight=paragraph_weight,
+                str_before=str_before,
+                str_after=str_after,
+                is_additional=is_additional,
                 tags=tags,
                 comment=comment,
                 is_active=is_active,
@@ -915,8 +926,7 @@ class SentenceBase(BaseModel):
                 "tags": new_tags if new_tags is not None else sentence.tags,
                 "user_id": sentence.user_id,
                 "report_type_id": sentence.report_type_id,
-                "comment": new_comment if new_comment is not None else sentence.comment,
-                "similarity_threshold": 98
+                "comment": new_comment if new_comment is not None else sentence.comment
                 }
             
             similar_sentence = find_similar_exist_sentence(**new_sentence_data)
@@ -924,6 +934,8 @@ class SentenceBase(BaseModel):
                 logger.info(f"(метод edit_sentence класса SentenceBase) 🧩 Предложение уже существует в базе данных. Привязываю найденное предложение.")
                 index_or_weight = cls.get_sentence_index_or_weight(sentence_id, group_id)
                 cls.link_to_group(similar_sentence.id, group_id, sentence_weight=index_or_weight, sentence_index=index_or_weight)
+                cls.delete_sentence(sentence_id, group_id)
+                logger.info(f"(метод edit_sentence класса SentenceBase) ✅ Предложение ID={sentence_id} успешно отредактировано ('Мягкое' редактирование).")
                 return similar_sentence
             else:
                 logger.info(f"(метод edit_sentence класса SentenceBase) Аналога предложения с новыми данными не найдено. Продолжаю редактирование.")
@@ -961,8 +973,9 @@ class SentenceBase(BaseModel):
         
         try:
             new_sentence, used_group = cls.create(**new_sentence_data)
-            cls.unlink_from_group(sentence_id, group_id)
-            logger.info(f"(метод edit_sentence класса SentenceBase) ✅ Предложение ID={sentence_id} успешно отредактировано через создание нового предложения.")
+            cls.delete_sentence(sentence_id, group_id)
+            logger.info(f"(метод edit_sentence класса SentenceBase) ✅ Предложение ID={sentence_id} успешно отредактировано (жесткое редактирование).")
+            
             return new_sentence
         except Exception as e:
             logger.error(f"(метод edit_sentence класса SentenceBase) ❌ Ошибка при создании нового предложения: {e}")
@@ -1053,8 +1066,7 @@ class SentenceBase(BaseModel):
             tags=tags, 
             user_id=user_id,
             report_type_id=report_type_id,
-            comment=comment,
-            similarity_threshold=98
+            comment=comment
         )
         if similar_sentence:
             logger.info(f"(метод create класса SentenceBase) 🧩🧩🧩 Найдено похожее предложение с ID {similar_sentence.id} в базе данных. Создание нового предложения не требуется.")

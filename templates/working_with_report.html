@@ -86,20 +86,21 @@
                             data-paragraph-comment="{{ paragraph.comment }}"
                             data-paragraph-tags="{{ paragraph.tags }}"
                             data-paragraph-weight="{{ paragraph.weight }}" 
-                
-                            class="paragraph__text 
-                            {% if paragraph.paragraph_visible %}
-                                paragraph__text--visible
-                                {% if paragraph.bold_paragraph %} 
-                                    paragraph__text--bold   
-                                {% endif %}
-                                {% if paragraph.title_paragraph %} 
-                                    paragraph__text--title
-                                {% else %} 
-                                    paragraph__text--untitle
-                                {% endif %}
+
+                            style="display:
+                            {% if paragraph.paragraph_visible and paragraph.is_active %}
+                            block
                             {% else %}
-                                paragraph__text--invisible
+                            none
+                            {% endif %};"
+                            class="paragraph__text 
+                            {% if paragraph.bold_paragraph %} 
+                                paragraph__text--bold   
+                            {% endif %}
+                            {% if paragraph.title_paragraph %} 
+                                paragraph__text--title
+                            {% else %} 
+                                paragraph__text--untitle
                             {% endif %}
                             ">
                             {{ paragraph.paragraph }}
