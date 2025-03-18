@@ -6,7 +6,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     initParagraphPopupCloseHandlers(); // Инициализация слушателей на закрытие попапа
 
-    // Слушатель на кнопку "сохранить" в попапе
+    // Слушатель на кнопку "сохранить" в попапе текста параграфа
     document.getElementById("elementPopupSaveChangesButton").addEventListener("click", function() {
         handleSaveChangesButtonClick();
     });
@@ -128,10 +128,7 @@ function updateParagraphOrder() {
 
 
 
-/** 
- * Handle save changes button click in paragraph popup.
- * Sends updated paragraph data to server.
- */
+// Функция для обновления флагов параграфа
 async function handleSaveChangesButtonClick() {
     const popup = document.getElementById("elementPopup");
     const paragraphId = popup.getAttribute("data-element-id");
@@ -144,18 +141,14 @@ async function handleSaveChangesButtonClick() {
         { id: "elementBoldCheckbox", key: "bold_paragraph", attr: "data-bold-paragraph" },
         { id: "elementTitleCheckbox", key: "title_paragraph", attr: "data-title-paragraph" },
         { id: "elementImpressionCheckbox", key: "is_impression", attr: "data-paragraph-impression" },
-        { id: "elementIsActiveCheckbox", key: "is_active", attr: "data-paragraph-active" }
+        { id: "elementIsActiveCheckbox", key: "is_active", attr: "data-paragraph-active" },
+        { id: "elementStrBefore", key: "str_before", attr: "data-paragraph-str-before" },
+        { id: "elementStrAfter", key: "str_after", attr: "data-paragraph-str-after" },
+        { id: "elementIsAdditional", key: "is_additional", attr: "data-paragraph-additional" },
     ];
 
     const paragraphElement = document.querySelector(`.edit-paragraph__title[data-paragraph-id="${paragraphId}"]`);
 
-    console.log("видимость параграфа", paragraphElement.getAttribute("data-paragraph-visible"));
-    console.log("параграф активный", paragraphElement.getAttribute("data-paragraph-active"));
-    console.log("параграф впечатление", paragraphElement.getAttribute("data-paragraph-impression"));
-    console.log("параграф жирный", paragraphElement.getAttribute("data-bold-paragraph"));
-    console.log("параграф заголовок", paragraphElement.getAttribute("data-title-paragraph"));
-
-    
 
     checkboxMapping.forEach(({ id, key, attr }) => {
         const checkbox = document.getElementById(id);
@@ -245,7 +238,10 @@ function showParagraphPopup(sentenceElement, event) {
         { id: "elementBoldCheckbox", attr: "data-bold-paragraph" },
         { id: "elementTitleCheckbox", attr: "data-title-paragraph" },
         { id: "elementImpressionCheckbox", attr: "data-paragraph-impression" },
-        { id: "elementIsActiveCheckbox", attr: "data-paragraph-active" }
+        { id: "elementIsActiveCheckbox", attr: "data-paragraph-active" },
+        { id: "elementStrBefore", attr: "data-paragraph-str-before" },
+        { id: "elementStrAfter", attr: "data-paragraph-str-after" },
+        { id: "elementIsAdditional", attr: "data-paragraph-additional" },
     ];
 
     checkboxMapping.forEach(({ id, attr }) => {

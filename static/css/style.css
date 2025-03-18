@@ -451,18 +451,8 @@ body {
 
 
 
-
-.paragraph__text--title{
-    display: block;
-}
-
-.paragraph__text--untitle{
-    display: inline;
-}
-
 .paragraph__text--bold {
     text-transform: uppercase;
-
 }
 
 .paragraph__item--inactive {

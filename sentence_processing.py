@@ -6,7 +6,7 @@ from rapidfuzz import fuzz
 import re
 from docx import Document
 from spacy_manager import SpacyModel
-from models import db, Paragraph, KeyWord, Report, HeadSentence, BodySentence, TailSentence, HeadSentenceGroup
+from models import db, Paragraph, KeyWord, Report, HeadSentence, BodySentence, TailSentence, HeadSentenceGroup, BodySentenceGroup, TailSentenceGroup
 from logger import logger
 from collections import defaultdict
 
@@ -432,14 +432,16 @@ def compare_sentences_by_paragraph(new_sentences, report_id):
             - "duplicates": List of new sentences that match existing ones.
             - "unique": List of new sentences considered unique.
     """
+    logger.info(f"(функция compare_sentences_by_paragraph) 🚀 Начато сравнение новых предложений с существующими в базе данных")
     similarity_threshold_fuzz = float(current_app.config["PROFILE_SETTINGS"]["SIMILARITY_THRESHOLD_FUZZ"])
     except_words = current_app.config["PROFILE_SETTINGS"]["EXCEPT_WORDS"]
-    print(f"SIMILARITY_THRESHOLD_FUZZ: {similarity_threshold_fuzz}")
-    print(f"EXCEPT_WORDS: {except_words}")
+    logger.info(f"(функция compare_sentences_by_paragraph) Порог схожести: {similarity_threshold_fuzz}")
+    logger.info(f"(функция compare_sentences_by_paragraph) Исключаемые слова: {except_words}")
     
     existing_paragraphs = Paragraph.query.filter_by(report_id=report_id).all()
     key_words_obj = KeyWord.get_keywords_for_report(g.current_profile.id, report_id)
     key_words = [keyword.key_word for keyword in key_words_obj]
+    logger.info(f"(функция compare_sentences_by_paragraph) Получено {len(key_words)} ключевых слов.")
     
     duplicates = []
     unique_sentences = []
@@ -448,27 +450,62 @@ def compare_sentences_by_paragraph(new_sentences, report_id):
     for new_sentence in new_sentences:
         new_paragraph_id = int(new_sentence.get("paragraph_id"))
         new_text = new_sentence.get("text")
-        new_text_index = new_sentence.get("sentence_index")
+        new_sentence_type = new_sentence.get("sentence_type")
+        new_sentence_head_sentence_id = new_sentence.get("head_sentence_id") or None
         
-        if not new_paragraph_id or not new_text:
+        if not new_paragraph_id or not new_text.strip():
             errors_count += 1
             continue  # Пропускаем некорректные данные
         
         # Находим соответствующий параграф
         paragraph = next((p for p in existing_paragraphs if p.id == new_paragraph_id), None)
+        # Находим соответствующую группу для предложения
+        related_group_id = None
+        sentence_class = None
         
-        if not paragraph:
-            unique_sentences.append(new_sentence)  # Если параграф не найден, считаем предложение уникальным
-            continue
-
+        if new_sentence_type == "body":
+            head_sentence = HeadSentence.query.get(new_sentence_head_sentence_id)
+            related_group_id = head_sentence.body_sentence_group_id or None
+            if not related_group_id:
+                logger.info(f"(функция compare_sentences_by_paragraph) Группа главных предложений не найдена. Пропускаю предложение")
+                errors_count += 1
+                continue
+            sentence_group_class = BodySentenceGroup
+        else:
+            if not paragraph:
+                logger.info(f"(функция compare_sentences_by_paragraph) Параграф с id={new_paragraph_id} не найден. Пропускаю предложение")
+                errors_count += 1
+                continue
+            related_group_id = paragraph.tail_sentence_group_id or None
+            if not related_group_id:
+                logger.info(f"(функция compare_sentences_by_paragraph) Группа хвостовых предложений не найдена. Пропускаю предложение")
+                errors_count += 1
+                continue
+            sentence_group_class = TailSentenceGroup
+            
+        
+            
         # Получаем те предложения этого параграфа чей индекс равен индексу нового предложения
-        existing_sentences = [
-            {"id": sent.id, "index": sent.index, "text": sent.sentence} for sent in paragraph.paragraph_to_sentences if sent.index == new_text_index
-        ]
+        existing_sentences = sentence_group_class.get_group_sentences(related_group_id)
+        logger.info(f"(функция compare_sentences_by_paragraph) {existing_sentences}")
+        
+        
+        ###!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!###
+        #перенести key_words и except_words в функцию clean_text_with_keywords
+        
+        
+        
+        
         # Очищаем существующие предложения
-        cleaned_existing = [
-            {"id": sent.get("id"), "original_text": sent["text"], "cleaned_text": clean_text_with_keywords(sent.get("text"), key_words, except_words)} for sent in existing_sentences
-            ]
+        cleaned_existing = []
+        for sent in existing_sentences:
+            cleaned_item = {
+                "id": sent.get("id"),
+                "original_text": sent["sentence"],
+                "cleaned_text": clean_text_with_keywords(sent.get("sentence"), key_words, except_words)
+            }
+            cleaned_existing.append(cleaned_item)
+            
         # Очищаем новое предложение
         cleaned_new_text = clean_text_with_keywords(new_text, key_words, except_words)
         # Проверяем на схожесть с существующими предложениями
@@ -478,7 +515,7 @@ def compare_sentences_by_paragraph(new_sentences, report_id):
             if similarity_rapidfuzz >= similarity_threshold_fuzz:
                 duplicates.append({
                     "new_sentence": new_sentence,
-                    "new_sentence_index": new_sentence.get("sentence_index"),
+                   
                     "new_sentence_paragraph": new_sentence.get("paragraph_id"),
                     "matched_with": {
                                 "id": existing["id"],
@@ -495,18 +532,15 @@ def compare_sentences_by_paragraph(new_sentences, report_id):
     return {"duplicates": duplicates, "unique": unique_sentences, "errors_count": errors_count}
 
 
+
 # Функция для поиска существующих аналогичных предложений того же типа в базе данных использую в models.py
-def find_similar_exist_sentence(sentence_text, sentence_type, report_type_id, user_id, tags=None, comment=None):
+def find_similar_exist_sentence(sentence_text, sentence_type, report_type_id):
     """
-    Finds similar sentences of the same type in the database.
-
-    Args:
-        sentence_text (str): The text of the sentence to compare.
-        sentence_type (str): The type of the sentence.
-
-    Returns:
-        similar sentence.
+    Ищет похожие предложения в базе данных.
     """
+    user_id = current_user.id
+    tags = None
+    comment = None
     logger.info(f"(функция find_similar_exist_sentence)(тип предложения: '{sentence_type}') 🚀 Начат поиск существующих аналогичных предложений в базе данных")
     
     # Получаем все предложения того же типа и с такими же базовыми параметрами из базы данных
@@ -530,6 +564,7 @@ def find_similar_exist_sentence(sentence_text, sentence_type, report_type_id, us
     logger.info(f"(функция find_similar_exist_sentence) Совпадений не найдено. Возвращаю None")
     return None
     
+      
       
 # Функция для оценки уникальности индексов в главных предложениях параграфа. Номера индексов не должны повторяться
 def check_head_sentence_indexes(paragraph_id):

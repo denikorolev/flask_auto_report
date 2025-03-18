@@ -76,6 +76,11 @@
                         "
                         data-paragraph-id="{{ paragraph.id }}"
                         >
+                        
+                        <!-- Вставляю строку если есть соответствующий флаг -->
+                        {% if paragraph.str_before %}
+                            <br>
+                        {% endif %}
 
                         <p contenteditable="true" 
                             data-paragraph-id="{{ paragraph.id }}" 
@@ -86,10 +91,16 @@
                             data-paragraph-comment="{{ paragraph.comment }}"
                             data-paragraph-tags="{{ paragraph.tags }}"
                             data-paragraph-weight="{{ paragraph.weight }}" 
+                            data-paragraph-str-before="{{ paragraph.str_before }}"
+                            data-paragraph-str-after="{{ paragraph.str_after }}"
 
                             style="display:
                             {% if paragraph.paragraph_visible and paragraph.is_active %}
-                            block
+                                {% if paragraph.title_paragraph %}
+                                    block
+                                {% else %}
+                                    inline
+                                {% endif %}
                             {% else %}
                             none
                             {% endif %};"
@@ -97,18 +108,20 @@
                             {% if paragraph.bold_paragraph %} 
                                 paragraph__text--bold   
                             {% endif %}
-                            {% if paragraph.title_paragraph %} 
-                                paragraph__text--title
-                            {% else %} 
-                                paragraph__text--untitle
-                            {% endif %}
                             ">
+
+                            
+
                             {{ paragraph.paragraph }}
                         </p>
+                        <!-- Вставляю строку если есть соответствующий флаг -->
+                        {% if paragraph.str_after %}
+                            <br>
+                            {% endif %}
 
                         <!-- Уровень предложения -->
-                        <ul class="">
-                            <li class="">
+                        <ul class="" {% if not paragraph.paragraph_title %}style="display: inline;"{% endif %}>
+                            <li class="" {% if not paragraph.paragraph_title %}style="display: inline;"{% endif %}>
                                 {% if paragraph.head_sentences %}
                                     {% for head_sentence in paragraph.head_sentences %}
                                         

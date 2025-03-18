@@ -20,6 +20,7 @@ working_with_reports_bp = Blueprint('working_with_reports', __name__)
 @working_with_reports_bp.route("/choosing_report", methods=['POST', 'GET'])
 @auth_required()
 def choosing_report(): 
+    logger.info(f"(Выбор шаблона протокола) ------------------------------------")
     logger.info(f"(Выбор шаблона протокола) 🚀 Начинаю обработку запроса")
     current_profile = g.current_profile
     report_types_and_subtypes = ReportType.get_types_with_subtypes(current_profile.id) 
@@ -35,6 +36,7 @@ def choosing_report():
                 logger.error("(Выбор шаблона протокола) ❌ Не найдено шаблонов протоколов для выбранного типа")
                 return jsonify({"status": "error", "message": "Не найдено шаблонов протоколов для выбранного типа"}), 404
             # Возвращаем данные в формате JSON
+            logger.info("(Выбор шаблона протокола) ------------------------------------")
             logger.info("(Выбор шаблона протокола) ✅ Отправляю данные о найденных шаблонах протоколов")
             return jsonify({
                 "status": "success",
@@ -54,7 +56,8 @@ def choosing_report():
 
 @working_with_reports_bp.route("/working_with_reports", methods=['GET'])
 @auth_required()
-def working_with_reports(): 
+def working_with_reports():
+    logger.info(f"(работа с протоколом) ------------------------------------") 
     logger.info(f"(работа с протоколом) 🚀 Начинаю обработку запроса для вывода данных протокола")
     current_report_id = int(request.args.get("reportId"))
     full_name = request.args.get("fullname")
@@ -82,7 +85,7 @@ def working_with_reports():
         logger.error(f"(работа с протоколом) ❌ Не получилось получить ключевые слова для текущего пользователя: {e}")
         return render_template("error.html", message=f"Не получилось получить ключевые слова для текущего пользователя: {e}")
     
-    
+    logger.info(f"(работа с протоколом) ------------------------------------")
     logger.info(f"(работа с протоколом) ✅ Данные протокола и его параграфов успешно получены. Загружаю страницу")
     return render_template(
         "working_with_report.html", 
@@ -104,23 +107,23 @@ def save_modified_sentences():
     Handles splitting of multi-sentence inputs and normalizes valid sentences.
     Keeps track of saved, skipped, and missed sentences.
     """
-    logger.info("Начало попытки сохранения измененных предложений")
+    
+    logger.info(f"(Сохранение измененных предложений) ------------------------------------")
+    logger.info(f"(Сохранение измененных предложений) 🚀 Начинаю обработку запроса на сохранение измененных предложений")
     try:
         # Получаем данные из запроса
         data = request.get_json()
-        logger.debug(f"Полученные данные: {data}")
+        logger.debug(f"(Сохранение измененных предложений) Полученные данные: {data}")
+        logger.info(f"(Сохранение измененных предложений) Полученные данные: {data}")
 
-        if not data or "sentences" not in data:
-            return jsonify({"status": "error", "message": "Неправильный формат данных"}), 400
-
-        sentences = ensure_list(data.get("sentences"))
         report_id = int(data.get("report_id"))
+        sentences = ensure_list(data.get("sentences"))
         user_id = current_user.id
         report_type_id = Report.get_report_type(report_id)
-        print(report_type_id)
         
         if not sentences or not report_id:
-            return jsonify({"status": "error", "message": "Пропущена часть необходимых данных. Не хватает текстов предложений или id протокола"}), 400
+            logger.error(f"(Сохранение измененных предложений) ❌ Не хватает текстов предложений или id протокола")
+            return jsonify({"status": "error", "message": "Не хватает текстов предложений или id протокола"}), 400
         
         processed_sentences = []  # Для хранения обработанных предложений, 
         #отправлю их потом на сравнение в функцию compare_sentences_by_paragraph
@@ -161,7 +164,7 @@ def save_modified_sentences():
                     processed_sentences.append({
                         "paragraph_id": paragraph_id,
                         "head_sentence_id": head_sentence_id,
-                        "sentence_type": "tail" if sentence_type == "tail" else "body",
+                        "sentence_type": "body" if sentence_type == "body" else "tail",
                         "text": unsplited_sentence.strip()
                     })
 
@@ -181,14 +184,14 @@ def save_modified_sentences():
         saved_sentences = []  # Для хранения сохранённых предложений и последующего включения в отчет
 
         for sentence in new_sentences:
-            paragraph_id = sentence["paragraph_id"]
+            processed_paragraph_id = sentence["paragraph_id"]
             new_sentence_text = clean_and_normalize_text(sentence["text"])
             sentence_type = sentence["sentence_type"]
             try:
                 if sentence_type == "tail":
                    new_sentence, _ = TailSentence.create(
                         sentence=new_sentence_text,
-                        related_id=paragraph_id,
+                        related_id=processed_paragraph_id,
                         user_id=user_id,
                         report_type_id=report_type_id,
                         comment="Added automatically"
@@ -205,13 +208,13 @@ def save_modified_sentences():
                         comment="Added automatically",
                         )
                     else:
-                        logger.warning(f"Не удалось получить данные по id главного предложения для предложения: {new_sentence_text}. Пропускаем.")
+                        logger.warning(f"(Сохранение измененных предложений) ⚠️ Не найден head_sentence_id для предложения: {new_sentence_text}. Пропускаю предложение")
                         missed_count += 1   
                         continue
                 saved_count += 1
                 saved_sentences.append({"id": new_sentence.id, "text": new_sentence_text})
             except Exception as e:
-                logger.error(f"Ошибка при сохранении предложения: {str(e)}")
+                logger.error(f"(Сохранение измененных предложений) ❌ При попытке сохранения предложения произошла ошибка: {str(e)}. Ошибка добавлена в счётчик")
                 missed_count += 1
 
         sentences_adding_report = {
@@ -229,6 +232,8 @@ def save_modified_sentences():
             "sentences_adding_report_snippet.html", 
             **sentences_adding_report)
         
+        logger.info(f"(Сохранение измененных предложений) ✅ Проанализировано {len(processed_sentences)} предложений.")
+        logger.info(f"(Сохранение измененных предложений) ------------------------------------")
         return jsonify({
             "status": "success",
             "message": f"Проанализировано {len(processed_sentences)} предложений.",
@@ -236,7 +241,7 @@ def save_modified_sentences():
         }), 200
 
     except Exception as e:
-        print(e)
+        logger.error(f"(Сохранение измененных предложений) ❌ При попытке сохранения предложений произошла ошибка: {str(e)}")
         return jsonify({"status": "error", "message": f"При попытке автоматического сохранения предложений произошла ошибка: {str(e)}"}), 500
 
 

@@ -718,6 +718,9 @@ class Paragraph(BaseModel):
             "bold_paragraph": paragraph.bold_paragraph,
             "is_impression": paragraph.is_impression,
             "is_active": paragraph.is_active,
+            "str_before": paragraph.str_before,
+            "str_after": paragraph.str_after,
+            "is_additional": paragraph.is_additional,
             "comment": paragraph.comment,
             "paragraph_weight": paragraph.paragraph_weight,
             "tags": paragraph.tags,
@@ -923,10 +926,7 @@ class SentenceBase(BaseModel):
             new_sentence_data = {
                 "sentence_text": new_text if new_text is not None else sentence.sentence,
                 "sentence_type": sentence_type,
-                "tags": new_tags if new_tags is not None else sentence.tags,
-                "user_id": sentence.user_id,
-                "report_type_id": sentence.report_type_id,
-                "comment": new_comment if new_comment is not None else sentence.comment
+                "report_type_id": sentence.report_type_id
                 }
             
             similar_sentence = find_similar_exist_sentence(**new_sentence_data)
@@ -1063,10 +1063,7 @@ class SentenceBase(BaseModel):
         similar_sentence = find_similar_exist_sentence(
             sentence_text=sentence, 
             sentence_type=sentence_type, 
-            tags=tags, 
-            user_id=user_id,
-            report_type_id=report_type_id,
-            comment=comment
+            report_type_id=report_type_id
         )
         if similar_sentence:
             logger.info(f"(метод create класса SentenceBase) 🧩🧩🧩 Найдено похожее предложение с ID {similar_sentence.id} в базе данных. Создание нового предложения не требуется.")

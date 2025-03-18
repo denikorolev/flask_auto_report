@@ -79,7 +79,7 @@
                                 ">
                                 <h3 class="edit-paragraph__title
                                     {% if paragraph.bold_paragraph %}
-                                    report__paragraph--bold
+                                    paragraph__text--bold
                                     {% endif %}
                                     {% if not paragraph.paragraph_visible %}
                                     edit-paragraph__title--invisible
@@ -95,6 +95,9 @@
                                     data-title-paragraph="{{ paragraph.title_paragraph }}"
                                     data-paragraph-impression="{{ paragraph.is_impression }}"
                                     data-paragraph-active="{{ paragraph.is_active }}"
+                                    data-paragraph-str-before="{{ paragraph.str_before }}"
+                                    data-paragraph-str-after="{{ paragraph.str_after }}"
+                                    data-paragraph-additional="{{ paragraph.is_additional }}"
                                     >
                                     <b> {{ paragraph.paragraph }} </b>
                                 </h3>
@@ -158,17 +161,39 @@
         <span class="sentence-popup__info-item"><strong>Комментарий:</strong> <span id="popupElementComment"></span></span>
         <span class="sentence-popup__info-item"><strong>Теги:</strong> <span id="popupElementTags"></span></span>
     </div>
-    <div class="sentence-pupup_edit-box">
-        <input type="checkbox" id="elementVisibleCheckbox" class="sentence-popup__checkbox--visible">
-        <label for="elementVisibleCheckbox" class="form-check-label">Видимость</label>
-        <input type="checkbox" id="elementBoldCheckbox" class="sentence-popup__checkbox--bold">
-        <label for="elementBoldCheckbox" class="form-check-label">Жирный</label>
-        <input type="checkbox" id="elementTitleCheckbox" class="sentence-popup__checkbox--title">
-        <label for="elementTitleCheckbox" class="form-check-label">перенос строки</label>
-        <input type="checkbox" id="elementImpressionCheckbox" class="sentence-popup__checkbox--impression">
-        <label for="elementImpressionCheckbox" class="sentence-popup__checkbox--impression">Заключение</label>
-        <input type="checkbox" id="elementIsActiveCheckbox" class="sentence-popup__checkbox--active">
-        <label for="elementIsActiveCheckbox" class="sentence-popup__checkbox--active">Активный</label>
+    <div class="flex_column sentence-pupup_edit-box">
+        <div class="sentence-popup__checkbox-wrapper">
+            <input type="checkbox" id="elementVisibleCheckbox" class="sentence-popup__checkbox--visible">
+            <label for="elementVisibleCheckbox" class="form-check-label">Видимость</label>
+        </div>
+        <div class="sentence-popup__checkbox-wrapper">
+            <input type="checkbox" id="elementBoldCheckbox" class="sentence-popup__checkbox--bold">
+            <label for="elementBoldCheckbox" class="form-check-label">Жирный</label>
+        </div>
+        <div class="sentence-popup__checkbox-wrapper">
+            <input type="checkbox" id="elementTitleCheckbox" class="sentence-popup__checkbox--title">
+            <label for="elementTitleCheckbox" class="form-check-label">перенос строки</label>
+        </div>
+        <div class="sentence-popup__checkbox-wrapper">
+            <input type="checkbox" id="elementImpressionCheckbox" class="sentence-popup__checkbox--impression">
+            <label for="elementImpressionCheckbox" class="sentence-popup__checkbox--impression">Заключение</label>
+        </div>
+        <div class="sentence-popup__checkbox-wrapper">
+            <input type="checkbox" id="elementIsActiveCheckbox" class="sentence-popup__checkbox--active">
+            <label for="elementIsActiveCheckbox" class="sentence-popup__checkbox--active">Активный</label>
+        </div>
+        <div class="sentence-popup__checkbox-wrapper">
+            <input type="checkbox" id="elementStrBefore" class="sentence-popup__checkbox--str-before">
+            <label for="elementStrBefore" class="sentence-popup__checkbox--str-before">Строка до</label>
+        </div>
+        <div class="sentence-popup__checkbox-wrapper">
+            <input type="checkbox" id="elementStrAfter" class="sentence-popup__checkbox--str-after">
+            <label for="elementStrAfter" class="sentence-popup__checkbox--str-after">Строка после</label>
+        </div>
+        <div class="sentence-popup__checkbox-wrapper">
+            <input type="checkbox" id="elementIsAdditional" class="sentence-popup__checkbox--additional">
+            <label for="elementIsAdditional" class="sentence-popup__checkbox--additional">Дополнительный</label>
+        </div>
         <button id="elementPopupSaveChangesButton" class="btn report__btn">Сохранить</button>
     </div>
 
