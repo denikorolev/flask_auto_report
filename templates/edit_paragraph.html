@@ -73,19 +73,21 @@
                 data-sentence-hard-edit="False"
                 >
 
-                <div class="drag-handle">☰</div> <!-- Хваталка -->
+                <div class="flex">
+                    <div class="drag-handle">☰</div> <!-- Хваталка -->
                     
-                <div>
-                    <p class="edit-sentence__text">{{ sentence.sentence }}</p>
-                    <p>has_linked_body: {{ sentence.has_linked_body }}</p>
-                    {% if not sentence.body_sentences %}
-                        <p class="edit-paragraph__title--invisible">У данного главного предложения нет дополнительных предложений</p>
-                    {% endif %}
+                    <div>
+                        <p class="edit-sentence__text">{{ sentence.sentence }}</p>
+                        <p>has_linked_body: {{ sentence.has_linked_body }}</p>
+                        {% if not sentence.body_sentences %}
+                            <p class="edit-paragraph__title--invisible">У данного главного предложения нет дополнительных предложений</p>
+                        {% endif %}
+                    </div>
                 </div>
 
                 <div class="control-buttons__wrapper">
                     <!-- Кнопки управления из макроса -->
-                    {{ control_buttons(sentence.id, 'sentence', report_id, related_id=paragraph.id, sentence_type="head", body_sentence_group_id=sentence.body_sentence_group_id, text=sentence.sentence, group_id=sentence.group_id) }}
+                    {{ control_buttons(sentence.id, 'sentence', paragraph.id, sentence.sentence, sentence_type="head", group_id=sentence.group_id) }}
                     <!-- Блок информационных значков из макроса -->
                     {{ info_icons(sentence.has_linked_body, sentence.is_linked) }}
                 </div>
@@ -121,12 +123,14 @@
             data-sentence-hard-edit="False"
             >
 
-            <div> {{sentence.sentence_weight}}</div> 
-            <p class="edit-sentence__text">{{ sentence.sentence }}</p>
+            <div class="flex">
+                <div class="drag-handle"> {{sentence.sentence_weight}}</div>
+                <p class="edit-sentence__text">{{ sentence.sentence }}</p>
+            </div>
 
             <div class="control-buttons__wrapper">
                 <!-- Кнопки управления из макроса -->
-                {{ control_buttons(sentence.id, 'sentence', report_id, related_id=paragraph.id, sentence_type="tail", text=sentence.sentence, group_id=sentence.group_id) }}
+                {{ control_buttons(sentence.id, 'sentence', paragraph.id, sentence.sentence, sentence_type="tail", group_id=sentence.group_id) }}
                 <!-- Блок информационных значков из макроса -->
                 {{ info_icons(sentence.has_linked_body, sentence.is_linked) }}
             </div>

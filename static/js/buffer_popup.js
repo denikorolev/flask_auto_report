@@ -54,9 +54,10 @@ document.addEventListener("DOMContentLoaded", function () {
             li.classList.add("buffer-popup__item");
             li.setAttribute("data-buffer-index", index);
             li.innerHTML = `
-                <span><strong>${item.object_type === 'group' ? 'Группа' : 'Предложение'} (${item.sentence_type})</strong></span> — 
-                <span>${item.sentence_text || item.related_text || 'Нет текста'}</span>
+                <span><strong>${item.object_type === 'paragraph' ? 'Параграф' : 'Предложение'} (${item.object_type === 'sentence' ? item.sentence_type : item.object_id})</strong></span> — 
+                <span>${item.object_text || 'Нет текста'}</span>
                 <button class="btn btn-icon buffer-popup__btn--remove" title="Удалить из буфера" data-index="${index}">❌</button>
+                <button class="btn btn-icon buffer-popup__btn--insert" title="Вставить" data-index="${index}">📌</button>
             `;
             bufferList.appendChild(li);
         });

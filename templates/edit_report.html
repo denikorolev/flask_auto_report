@@ -15,24 +15,24 @@
     {% if report_data %}
     <form class="edit-report__form--report" id="edit-report-form">
         <div class="flex">
-            <div class="flex_column">
+            <div class="edit-report__input-block">
                 <label class="report_label__item" for="report_type">Report Type:</label>
                 <input class="input report_input__item report_input__item--type" id="report_type" name="report_type" value="{{ report_data.report_type }}" readonly>
             </div>
-            <div class="flex_column">
+            <div class="edit-report__input-block">
                 <label class="report_label__item" for="report_subtype">Report Subtype:</label>
                 <input class="input report_input__item" id="report_subtype" name="report_subtype" value="{{ report_data.report_subtype }}" readonly>
             </div>
-            <div class="flex_column">
+            <div class="edit-report__input-block">
                 <label class="report_label__item" for="report_name">Report Name:</label>
                 <input class="input report_input__item" type="text" id="reportName" name="report_name" value="{{ report_data.report_name }}" required>
             </div>
-            <div class="flex_column">
+            <div class="edit-report__input-block">
                 <label class="report_label__item" for="comment">Comment:</label>
                 <input class="input report_input__item" type="text" id="reportComment" name="comment" value="{{ report_data.comment }}" required>
             </div>
             <!-- side boolean changer -->
-            <div class="flex_column">
+            <div class="edit-report__input-block">
                 <label class="report_label__item">Учитывать сторону:</label> <!-- Подпись для радиокнопок -->
                 <div class="flex_row">
                     <input type="radio" name="report_side" value="True" class="form-check-input" {% if report_data.report_side == True %}checked{% endif %}> 
@@ -59,65 +59,77 @@
             {% if report_paragraphs %}
                 <ul class="edit-paragraph__list" id="editParagraphsList">
                     {% for paragraph in report_paragraphs %}
+
+                        {% if paragraph.str_before %}
+                            <br>
+                        {% endif %}
                         
                         <li class="wrapper__card edit-paragraph__item
                             {% if paragraph.is_impression %}
                             wrapper__card--impression
-                            {% else %}
+                            {% elif paragraph.is_active %}
                             wrapper__card--text
                             {% endif %}
                             "
                             data-paragraph-id="{{ paragraph.id }}">
 
                             
-                            <div class="drag-handle">☰</div> <!-- Хваталка -->
+                            <div class="edit-paragraph__title-wrapper">
+                                <div class="drag-handle">☰</div> <!-- Хваталка -->
 
-                            <div class="flex edit-paragraph__info-box
-                                {% if paragraph.title_paragraph %}
-                                    flex_column
-                                {% endif %}
-                                ">
-                                <h3 class="edit-paragraph__title
-                                    {% if paragraph.bold_paragraph %}
-                                    paragraph__text--bold
-                                    {% endif %}
-                                    {% if not paragraph.paragraph_visible %}
-                                    edit-paragraph__title--invisible
-                                    {% endif %}
-                                    "
-                                    data-paragraph-id="{{ paragraph.id }}"
-                                    data-paragraph-index="{{ paragraph.paragraph_index }}"
-                                    data-paragraph-weight="{{ paragraph.paragraph_weight }}"
-                                    data-paragraph-tags="{{ paragraph.tags }}"
-                                    data-paragraph-comment="{{ paragraph.comment }}"
-                                    data-paragraph-visible="{{ paragraph.paragraph_visible }}"
-                                    data-bold-paragraph="{{ paragraph.bold_paragraph }}"
-                                    data-title-paragraph="{{ paragraph.title_paragraph }}"
-                                    data-paragraph-impression="{{ paragraph.is_impression }}"
-                                    data-paragraph-active="{{ paragraph.is_active }}"
-                                    data-paragraph-str-before="{{ paragraph.str_before }}"
-                                    data-paragraph-str-after="{{ paragraph.str_after }}"
-                                    data-paragraph-additional="{{ paragraph.is_additional }}"
-                                    >
-                                    <b> {{ paragraph.paragraph }} </b>
-                                </h3>
-                                <div class="edit-sentences__list">
-                                    {% for sentence in paragraph.head_sentences %}
-                                        <span class="edit-sentence__item" data-sentence-id="{{ sentence.id }}">
-                                            {{ sentence.sentence }}
-                                        </span>
-                                    {% endfor %}
+                                <div class="edit-paragraph__info-box">
+                                    <h3 class="edit-paragraph__title
+                                        {% if paragraph.bold_paragraph %}
+                                        paragraph__text--bold
+                                        {% endif %}
+                                        {% if not paragraph.paragraph_visible %}
+                                        edit-paragraph__title--invisible
+                                        {% endif %}
+                                        "
+                                        data-paragraph-id="{{ paragraph.id }}"
+                                        data-paragraph-index="{{ paragraph.paragraph_index }}"
+                                        data-paragraph-weight="{{ paragraph.paragraph_weight }}"
+                                        data-paragraph-tags="{{ paragraph.tags }}"
+                                        data-paragraph-comment="{{ paragraph.comment }}"
+                                        data-paragraph-visible="{{ paragraph.paragraph_visible }}"
+                                        data-bold-paragraph="{{ paragraph.bold_paragraph }}"
+                                        data-title-paragraph="{{ paragraph.title_paragraph }}"
+                                        data-paragraph-impression="{{ paragraph.is_impression }}"
+                                        data-paragraph-active="{{ paragraph.is_active }}"
+                                        data-paragraph-str-before="{{ paragraph.str_before }}"
+                                        data-paragraph-str-after="{{ paragraph.str_after }}"
+                                        data-paragraph-additional="{{ paragraph.is_additional }}"
+                                
+                                        {% if not paragraph.title_paragraph %}
+                                        style="display: inline;"
+                                        {% else %}
+                                        style="display: block;"
+                                        {% endif %}
+                                        >
+                                        <b> {{ paragraph.paragraph }} </b>
+                                    </h3>
+                                
+                                        {% for sentence in paragraph.head_sentences %}
+                                            <span class="edit-sentence__item" data-sentence-id="{{ sentence.id }}">
+                                                {{ sentence.sentence }}
+                                            </span>
+                                        {% endfor %}
+                                
                                 </div>
                             </div>
                             
                             <div class="control-buttons__wrapper">
                                 <!-- Кнопки управления из макроса -->
-                                {{ control_buttons(paragraph.id, 'paragraph', report_data.id, head_sentence_group_id=paragraph.head_sentence_group_id, tail_sentence_group_id=paragraph.tail_sentence_group_id, text=paragraph.paragraph) }}
+                                {{ control_buttons(paragraph.id, 'paragraph', report_data.id, paragraph.paragraph) }}
                                 <!-- Блок информационных значков из макроса -->
                                 {{ info_icons(paragraph.has_linked_head, paragraph.has_linked_tail) }}
                             </div>
 
                         </li>
+
+                        {% if paragraph.str_after %}
+                            <br>
+                        {% endif %}
                     {% endfor %}
                 </ul>
             {% endif %}

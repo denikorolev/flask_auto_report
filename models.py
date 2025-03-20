@@ -962,6 +962,8 @@ class SentenceBase(BaseModel):
         
         if cls == HeadSentence:
             new_sentence_data["sentence_index"] = cls.get_sentence_index_or_weight(sentence_id, group_id)
+            old_body_group_id = sentence.body_sentence_group_id or None
+            
             
            
         elif cls == BodySentence or cls == TailSentence:
@@ -973,6 +975,9 @@ class SentenceBase(BaseModel):
         
         try:
             new_sentence, used_group = cls.create(**new_sentence_data)
+            if old_body_group_id:
+                BodySentenceGroup.link_group(old_body_group_id, new_sentence.id)
+                
             cls.delete_sentence(sentence_id, group_id)
             logger.info(f"(метод edit_sentence класса SentenceBase) ✅ Предложение ID={sentence_id} успешно отредактировано (жесткое редактирование).")
             
@@ -1234,7 +1239,6 @@ class SentenceBase(BaseModel):
 
 
     
-    
     @classmethod
     def is_linked(cls, sentence_id):
         """
@@ -1461,11 +1465,11 @@ class SentenceGroupBase(BaseModel):
             
             # Определяем, что за сущность (параграф или предложение) и отвязываем
             if cls == HeadSentenceGroup:
-                cls.unlink_groupe(group_id, entity_id)
+                cls.unlink_group(group_id, entity_id)
             elif cls == BodySentenceGroup:
-                cls.unlink_groupe(group_id, entity_id)
+                cls.unlink_group(group_id, entity_id)
             elif cls == TailSentenceGroup:
-                cls.unlink_groupe(group_id, entity_id)
+                cls.unlink_group(group_id, entity_id)
             else:    
                 logger.error(f"(метод delete_group класса SentenceGroupBase) ❌ Неизвестный тип группы: {type(group).__name__}")
                 raise ValueError(f"Неизвестный тип группы: {type(group).__name__}")
@@ -1537,7 +1541,7 @@ class SentenceGroupBase(BaseModel):
    
     # Метод для отвязывания группы от родительской сущности (параграфа или предложения)
     @classmethod
-    def unlink_groupe(cls, group_id, related_id):
+    def unlink_group(cls, group_id, related_id):
         """
         Отвязывает группу от родительской сущности (параграфа или предложения).
         Args:
@@ -1590,6 +1594,48 @@ class SentenceGroupBase(BaseModel):
         logger.info(f"Успешно связали группу ID={group_id} с сущностью ID={related_id}.")
         return
 
+
+    @classmethod
+    def copy_group(cls, group_id, new_group_id=None):
+        """
+        Создает копию указанной группы и привязывает туда все предложения из заданной группы.
+
+        Args:
+            group (BaseModel): Группа, из которой перепривязываем.
+            new_group (BaseModel): Группа, в которую перепривязываем.
+        """
+        logger.info(f"(метод relink_all_to_group класса SentenceBase) 🚀 Начата перепривязка всех предложений из группы {group_id} в группу {new_group_id}")
+        group = cls.query.get(group_id)
+        if new_group_id:
+            new_group = cls.query.get(new_group_id)
+        else:
+            new_group = cls.create()
+            new_group_id = new_group.id
+        
+        if not group or not new_group:
+            logger.error(f"(метод relink_all_to_group класса SentenceBase) ❌ Группа {group_id} или {new_group_id} не найдена.")
+            raise ValueError(f"Группа {group_id} или {new_group_id} не найдена.")
+        
+        if isinstance(group, HeadSentenceGroup):
+            sentences = group.head_sentences
+            for sentence in sentences:
+                new_group.head_sentences.append(sentence)
+        elif isinstance(group, BodySentenceGroup):
+            sentences = group.body_sentences
+            for sentence in sentences:
+                new_group.body_sentences.append(sentence)
+        elif isinstance(group, TailSentenceGroup):
+            sentences = group.tail_sentences
+            for sentence in sentences:
+                new_group.tail_sentences.append(sentence)
+        else:
+            logger.error(f"(метод relink_all_to_group класса SentenceBase) ❌ Изменения не были внесены так как не была идентифицирована группа")
+            raise ValueError(f"Изменения не были внесены так как не была идентифицирована группа")
+        
+        db.session.commit()
+        logger.info(f"(метод relink_all_to_group класса SentenceBase) ✅ Все предложения из группы {group_id} успешно перепривязаны в группу {new_group_id}")
+        return True
+    
 
     @classmethod
     def create(cls):

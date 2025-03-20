@@ -387,7 +387,7 @@ def delete_paragraph():
             tail_sentence_group_count = TailSentenceGroup.is_linked(tail_sentence_group.id)
             if  tail_sentence_group_count > 1:
                 logger.info(f"(Логика удаления параграфа) Tail предложения параграфа связаны с другими протоколами. Просто удаляю связь с текущим параграфом")
-                TailSentenceGroup.unlink_groupe(tail_sentence_group.id, paragraph_id)
+                TailSentenceGroup.unlink_group(tail_sentence_group.id, paragraph_id)
                 logger.info(f"(Логика удаления параграфа) Связь с параграфом успешно удалена")
                 pass
             else:
@@ -400,7 +400,7 @@ def delete_paragraph():
             head_sentence_group_count = HeadSentenceGroup.is_linked(head_sentence_group.id)
             if head_sentence_group_count > 1:
                 logger.info(f"(Логика удаления параграфа) Head предложения параграфа связаны с другими протоколами. Просто удаляю связь с текущим параграфом")
-                HeadSentenceGroup.unlink_groupe(head_sentence_group.id, paragraph_id)
+                HeadSentenceGroup.unlink_group(head_sentence_group.id, paragraph_id)
                 logger.info(f"(Логика удаления параграфа) Связь с параграфом успешно удалена")
                 pass
             else:
@@ -484,6 +484,55 @@ def delete_sentence():
         return jsonify({"status": "error", "message": "Неизвестный тип предложения"}), 400
         
         
+@editing_report_bp.route('/delete_subsidiaries', methods=["DELETE"])
+@auth_required()
+def delete_subsidiaries():
+    logger.info(f"(Удаление дочерних групп) --------------------------------------------")
+    logger.info(f"(Удаление дочерних групп) 🚀 Начинаю удаление Дочерних групп")
+    data = request.get_json()
+    if not data:
+        logger.error(f"(Удаление дочерних групп) ❌ Отсутствуют данные для удаления")
+        return jsonify({"status": "error", "message": "Отсутствуют данные для удаления"}), 400
+    
+    logger.info(f"(Удаление дочерних групп) Получены данные для удаления: {data}")
+    object_type = data.get("object_type") or None
+    
+    if object_type and object_type == "paragraph":
+        logger.info(f"(Удаление дочерних групп) Тип объекта - ПАРАГРАФ. Начинаю удаление дочерних групп head и tail предложений")
+        paragraph_id = data.get("object_id")
+        paragraph = Paragraph.get_by_id(paragraph_id)
+        head_group_id = paragraph.head_sentence_group_id
+        tail_group_id = paragraph.tail_sentence_group_id
+        
+        if head_group_id:
+            HeadSentenceGroup.delete_group(head_group_id, paragraph_id)
+            logger.info(f"(Удаление дочерних групп) Группа head предложений успешно удалена")
+        if tail_group_id:
+            TailSentenceGroup.delete_group(tail_group_id, paragraph_id)
+            logger.info(f"(Удаление дочерних групп) Группа tail предложений успешно удалена")
+            
+        logger.info(f"(Удаление дочерних групп) ✅ Дочерние группы успешно удалены")
+        logger.info(f"(Удаление дочерних групп) --------------------------------------------")
+        return jsonify({"status": "success", "message": "Дочерние группы успешно удалены"}), 200
+    
+    elif object_type and object_type == "sentence":
+        logger.info(f"(Удаление дочерних групп) Тип объекта - ПРЕДЛОЖЕНИЕ. Начинаю удаление дочерних групп body предложений")
+        sentence_id = data.get("object_id") or None
+        sentence = HeadSentence.query.get(sentence_id) or None
+        group_id = sentence.body_sentence_group_id
+        if group_id:
+            BodySentenceGroup.delete_group(group_id, sentence_id)
+            logger.info(f"(Удаление дочерних групп) Группа body предложений успешно удалена")
+            logger.info(f"(Удаление дочерних групп) ✅ Дочерние группы успешно удалены")
+            logger.info(f"(Удаление дочерних групп) --------------------------------------------")
+            return jsonify({"status": "success", "message": "Дочерние группы успешно удалены"}), 200
+        logger.info(f"(Удаление дочерних групп) ✅ Дочерние группы успешно удалены")
+        logger.info(f"(Удаление дочерних групп) --------------------------------------------")
+        return jsonify({"status": "success", "message": "Дочерние группы успешно удалены"}), 200
+    
+    else:
+        logger.error(f"(Удаление дочерних групп) ❌ Неизвестный тип объекта")
+        return jsonify({"status": "error", "message": "Неизвестный тип объекта"}), 400
         
     
 # проверяет уникальность индексов параграфов и главных предложений

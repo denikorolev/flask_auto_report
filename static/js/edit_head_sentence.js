@@ -27,8 +27,8 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
 
-    // Слушатель на кнопку 📌
-    document.querySelectorAll(".control-btn--copy-sentence-to-buffer").forEach(btn => {btn.addEventListener("click", function() {
+    // Слушатель на кнопку 🗒️
+    document.querySelectorAll(".control-btn--copy-to-buffer").forEach(btn => {btn.addEventListener("click", function() {
             addSentenceDataToBuffer(this);
         });
     });
@@ -389,20 +389,20 @@ async function updateSentence(sentenceElement) {
 
 // Функция для добавления предложения в буфер
 function addSentenceDataToBuffer(button) {
+    const objectId = button.closest(".control-buttons").getAttribute("data-object-id");
+    const objectType = button.closest(".control-buttons").getAttribute("data-object-type");
     const relatedId = button.closest(".control-buttons").getAttribute("data-related-id");
-    const sentenceId = button.closest(".control-buttons").getAttribute("data-object-id");
-    const objectType = "sentence"
-    const relatedText = button.closest(".control-buttons").getAttribute("data-text");
-    const groupId = button.closest(".control-buttons").getAttribute("data-group-id");
+    const objectText = button.closest(".control-buttons").getAttribute("data-text");
     const sentenceType = button.closest(".control-buttons").getAttribute("data-sentence-type");
+    const sentenceGroupId = button.closest(".control-buttons").getAttribute("data-group-id");
 
     dataToBuffer = {
-        related_id: relatedId,
+        object_id: objectId,
         object_type: objectType,
-        group_id: groupId,
+        related_id: relatedId,
+        object_text: objectText,
         sentence_type: sentenceType,
-        related_text: relatedText,
-        sentence_id: sentenceId,
+        group_id: sentenceGroupId
     };
 
     addToBuffer(dataToBuffer);

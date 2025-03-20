@@ -73,14 +73,14 @@
                     data-sentence-hard-edit="False"
                     >
 
-                    <div class="">
-                            {{ sentence.sentence_weight }}
+                    <div class="flex">
+                        <div class="drag-handle">{{ sentence.sentence_weight }}</div>
+                        <p class="edit-sentence__text">{{ sentence.sentence }}</p>
                     </div>
-                    <p class="edit-sentence__text">{{ sentence.sentence }}</p>
                    
                     <!-- Кнопки управления из макроса -->
                 <div class="control-buttons__wrapper">
-                    {{ control_buttons(sentence.id, 'sentence', report_id, related_id=head_sentence.id, sentence_type="body", text=sentence.sentence, group_id=sentence.group_id) }}
+                    {{ control_buttons(sentence.id, 'sentence', head_sentence.id, sentence.sentence, sentence_type="body", group_id=sentence.group_id) }}
                     <!-- Блок информационных значков из макроса -->
                     {{ info_icons(sentence.has_linked_body, sentence.is_linked) }}
                 </div>

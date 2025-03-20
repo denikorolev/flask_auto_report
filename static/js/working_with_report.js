@@ -417,7 +417,7 @@ function collectTextFromParagraphs(paragraphClass) {
         const strBefore = paragraphElement.getAttribute("data-paragraph-str-before") === "True";
         const strAfter = paragraphElement.getAttribute("data-paragraph-str-after") === "True";
 
-        // Добавляем новую строку перед абзацем, если есть соответсвующий флаг работает даже если текст абзаца невидим
+        // Добавляем новую строку перед абзацем, если есть соответсвующий флаг даже если текст абзаца не виден
         if (strBefore) {
             collectedText += "\n";
         }
@@ -438,11 +438,13 @@ function collectTextFromParagraphs(paragraphClass) {
             } else {
                 collectedText += " "; // Добавляем пробел после обычных абзацев
             }
+
+            // Добавляем новую строку после абзаца, если есть соответсвующий флаг. 
+            if (strAfter) {
+                collectedText += "\n";
+            }
         }
-        // Добавляем новую строку после абзаца, если есть соответсвующий флаг. Работает даже если текст абзаца невидим
-        if (strAfter) {
-            collectedText += "\n";
-        }
+        
 
         let hasSentences = false;  // Флаг для проверки наличия предложений
 

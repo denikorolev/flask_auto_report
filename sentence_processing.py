@@ -213,10 +213,13 @@ def clean_text_with_keywords(sentence, key_words, except_words=None):
     """ Функция очистки текста от лишних пробелов, знаков припенания, 
     цифр, слов исключений и ключевых слов с приведением всех слов 
     предложения к нижнему регистру """
-    # Приводим текст к строчным буквам
-    sentence = str(sentence)
     
-    sentence = sentence.lower()
+    
+    
+    
+    # Приводим текст к строчным буквам
+    sentence = str(sentence).lower()
+    
     # Удаляем ключевые слова
     if key_words:
         for word in key_words:
@@ -461,16 +464,19 @@ def compare_sentences_by_paragraph(new_sentences, report_id):
         paragraph = next((p for p in existing_paragraphs if p.id == new_paragraph_id), None)
         # Находим соответствующую группу для предложения
         related_group_id = None
-        sentence_class = None
+        sentence_group_class = None
         
         if new_sentence_type == "body":
             head_sentence = HeadSentence.query.get(new_sentence_head_sentence_id)
-            related_group_id = head_sentence.body_sentence_group_id or None
-            if not related_group_id:
-                logger.info(f"(функция compare_sentences_by_paragraph) Группа главных предложений не найдена. Пропускаю предложение")
+            if not head_sentence:
+                logger.info(f"(функция compare_sentences_by_paragraph) Главное предложение с id={new_sentence_head_sentence_id} не найдено. Пропускаю предложение")
                 errors_count += 1
                 continue
-            sentence_group_class = BodySentenceGroup
+            related_group_id = head_sentence.body_sentence_group_id or None
+            existing_sentences = BodySentenceGroup.get_group_sentences(related_group_id) or []
+            logger.info(f"(функция compare_sentences_by_paragraph) {existing_sentences}")
+            existing_sentences.append({"id": head_sentence.id, "sentence": head_sentence.sentence})
+            
         else:
             if not paragraph:
                 logger.info(f"(функция compare_sentences_by_paragraph) Параграф с id={new_paragraph_id} не найден. Пропускаю предложение")
@@ -478,23 +484,11 @@ def compare_sentences_by_paragraph(new_sentences, report_id):
                 continue
             related_group_id = paragraph.tail_sentence_group_id or None
             if not related_group_id:
-                logger.info(f"(функция compare_sentences_by_paragraph) Группа хвостовых предложений не найдена. Пропускаю предложение")
-                errors_count += 1
+                logger.info(f"(функция compare_sentences_by_paragraph) Группа хвостовых предложений не найдена. Добавляю в уникальные")
+                unique_sentences.append(new_sentence)
                 continue
-            sentence_group_class = TailSentenceGroup
-            
-        
-            
-        # Получаем те предложения этого параграфа чей индекс равен индексу нового предложения
-        existing_sentences = sentence_group_class.get_group_sentences(related_group_id)
-        logger.info(f"(функция compare_sentences_by_paragraph) {existing_sentences}")
-        
-        
-        ###!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!###
-        #перенести key_words и except_words в функцию clean_text_with_keywords
-        
-        
-        
+            existing_sentences = TailSentenceGroup.get_group_sentences(related_group_id)
+            logger.info(f"(функция compare_sentences_by_paragraph) {existing_sentences}")
         
         # Очищаем существующие предложения
         cleaned_existing = []
@@ -540,16 +534,15 @@ def find_similar_exist_sentence(sentence_text, sentence_type, report_type_id):
     """
     user_id = current_user.id
     tags = None
-    comment = None
     logger.info(f"(функция find_similar_exist_sentence)(тип предложения: '{sentence_type}') 🚀 Начат поиск существующих аналогичных предложений в базе данных")
     
     # Получаем все предложения того же типа и с такими же базовыми параметрами из базы данных
     if sentence_type == "head":
-        similar_type_sentences = HeadSentence.query.filter_by(tags=tags, comment=comment, report_type_id=report_type_id, user_id = user_id).all()
+        similar_type_sentences = HeadSentence.query.filter_by(tags=tags, report_type_id=report_type_id, user_id = user_id).all()
     elif sentence_type == "body":
-        similar_type_sentences = BodySentence.query.filter_by(tags=tags, comment=comment, report_type_id=report_type_id, user_id = user_id).all()
+        similar_type_sentences = BodySentence.query.filter_by(tags=tags, report_type_id=report_type_id, user_id = user_id).all()
     elif sentence_type == "tail":
-        similar_type_sentences = TailSentence.query.filter_by(tags=tags, comment=comment, report_type_id=report_type_id, user_id = user_id).all()
+        similar_type_sentences = TailSentence.query.filter_by(tags=tags, report_type_id=report_type_id, user_id = user_id).all()
     else:
         raise ValueError(f"Invalid sentence type: {sentence_type}")
     

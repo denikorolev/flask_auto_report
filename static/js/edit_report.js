@@ -16,21 +16,16 @@ document.addEventListener("DOMContentLoaded", function () {
         showBufferPopup(this);
     });
 
-    // Слушатель на кнопки 📑 и 🗒️
-    document.querySelectorAll(".control-btn--copy-group-to-buffer, .control-btn--copy-group-tail-to-buffer").forEach(btn => {btn.addEventListener("click", function() {
-        
-        if (this.classList.contains("control-btn--copy-group-to-buffer")) {
-            addGroupDataToBuffer(this, "head");
-        } else {
-            addGroupDataToBuffer(this, "tail");
-        }
+    // Слушатель на кнопки 🗒️
+    document.querySelectorAll(".control-btn--copy-to-buffer").forEach(btn => {btn.addEventListener("click", function() {
+        addGroupDataToBuffer(this);
         });
     });
 
-    // Слушатель на кнопку "🔗"
-    document.querySelectorAll(".control-btn--paste-buffer").forEach(btn => {
-        btn.addEventListener("click", function () {
-            openBufferPopupForInsert(this); // Передаем саму кнопку
+    // Слушатель на кнопку "✂️"
+    document.querySelectorAll(".control-btn--unlink").forEach(btn => {
+        btn.addEventListener("click", function() {
+            deleteSubsidiaries(this);
         });
     });
 
@@ -201,9 +196,7 @@ function showBufferPopup(button) {
 
 
 
-
-
-// Функция показа попапа с информацией о предложении
+// Функция показа попапа с информацией о параграфе
 function showParagraphPopup(sentenceElement, event) {
     const popup = document.getElementById("elementPopup");
 
@@ -271,9 +264,7 @@ function showParagraphPopup(sentenceElement, event) {
 }
 
 
-/** 
- * Инициализация обработчиков закрытия попапа предложения
- */
+// Инициализация слушателей попапа параграфа
 function initParagraphPopupCloseHandlers() {
     const popup = document.getElementById("elementPopup");
     const closeButton = document.getElementById("closeElementPopup");
@@ -294,9 +285,9 @@ function initParagraphPopupCloseHandlers() {
     });
 }
 
-/**
- * Hides the sentence popup.
- */
+
+
+// Функция закрытия попапа параграфа
 function hidePopup() {
     const popup = document.getElementById("elementPopup");
     if (popup) {
@@ -356,7 +347,7 @@ async function addParagraph() {
 // Функция для редактирования параграфа (переход на страницу редактирования параграфа) 
 function editParagraph(button) {
     const paragraphId = button.closest(".control-buttons").getAttribute("data-object-id");
-    const reportId = button.closest(".control-buttons").getAttribute("data-report-id");
+    const reportId = button.closest(".control-buttons").getAttribute("data-related-id");
 
     if (!paragraphId) {
         console.error("Не найден атрибут data-paragraph-id");
@@ -499,27 +490,18 @@ async function updateParagraph(paragraphElement) {
 
 
 
-// Функция для добавления группы head предложений в буфер
+// Функция для добавления параграфа в буфер
 function addGroupDataToBuffer(button, sentenceType) {
-    const relatedId = button.closest(".control-buttons").getAttribute("data-object-id");
-    const objectType = "group"
-    const relatedText = button.closest(".control-buttons").getAttribute("data-text");
-    
-    let groupIdForBufferingGroup;
-    if (sentenceType === "head") {
-        groupIdForBufferingGroup = button.closest(".control-buttons").getAttribute("data-head-sentence-group-id");
-    }
-    else {
-        groupIdForBufferingGroup = button.closest(".control-buttons").getAttribute("data-tail-sentence-group-id");
-    }
-
+    const objectId = button.closest(".control-buttons").getAttribute("data-object-id");
+    const objectType = button.closest(".control-buttons").getAttribute("data-object-type");
+    const relatedId = button.closest(".control-buttons").getAttribute("data-related-id");
+    const objectText = button.closest(".control-buttons").getAttribute("data-text");
 
     dataToBuffer = {
-        related_id: relatedId,
+        object_id: objectId,
         object_type: objectType,
-        group_id: groupIdForBufferingGroup,
-        sentence_type: sentenceType,
-        related_text: relatedText
+        related_id: relatedId,
+        object_text: objectText
     };
 
     addToBuffer(dataToBuffer);
@@ -528,3 +510,17 @@ function addGroupDataToBuffer(button, sentenceType) {
 }
 
 
+function deleteSubsidiaries (button) {
+    const objectId = button.closest(".control-buttons").getAttribute("data-object-id");
+    const objectType = button.closest(".control-buttons").getAttribute("data-object-type");
+
+    sendRequest({
+        url: `/editing_report/delete_subsidiaries`,
+        method: "DELETE",
+        data: { object_id: objectId, object_type: objectType, related_id: relatedId }
+    }).then(response => {
+        window.location.reload();
+    }).catch(error => {
+        console.error(response.message || "Ошибка удаления дочерних элементов:", error);
+    });
+}

@@ -17,8 +17,16 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
     // Слушатель на кнопку 🗒️
-    document.querySelectorAll(".control-btn--copy-sentence-to-buffer").forEach(btn => {btn.addEventListener("click", function() {
-            addGroupDataToBuffer(this, "body");
+    document.querySelectorAll(".control-btn--copy-to-buffer").forEach(btn => {btn.addEventListener("click", function() {
+            addSentenceToBuffer(this);
+        });
+    });
+
+
+    // Слушатель на кнопку "✂️"
+    document.querySelectorAll(".control-btn--unlink").forEach(btn => {
+        btn.addEventListener("click", function() {
+            deleteSubsidiaries(this);
         });
     });
 
@@ -323,7 +331,7 @@ function hideSentencePopup() {
 function editSentence(button) {
     const sentenceId = button.closest(".control-buttons").getAttribute("data-object-id");
     const paragraphId = button.closest(".control-buttons").getAttribute("data-related-id");
-    const reportId = button.closest(".control-buttons").getAttribute("data-report-id");
+    const reportId = document.getElementById("editParagraphContainer").getAttribute("data-report-id");
 
     window.location.href = `/editing_report/edit_head_sentence?sentence_id=${sentenceId}&paragraph_id=${paragraphId}&report_id=${reportId}`;
     
@@ -577,46 +585,47 @@ async function updateSentence(sentenceElement) {
 
 
 // Функция для добавления группы head предложений в буфер
-function addGroupDataToBuffer(button) {
-    const relatedId = button.closest(".control-buttons").getAttribute("data-object-id");
-    const objectType = "sentence"
-    const relatedText = button.closest(".control-buttons").getAttribute("data-text");
-    const groupIdForBufferingGroup = button.closest(".control-buttons").getAttribute("data-body-sentence-group-id");
-    
-
-
-    dataToBuffer = {
-        related_id: relatedId,
-        object_type: objectType,
-        group_id: groupIdForBufferingGroup,
-        sentence_type: sentenceType,
-        related_text: relatedText
-    };
-
-    addToBuffer(dataToBuffer);
-    console.log("Добавление в буфер:", dataToBuffer);
-
-}
-
-
-// Функция для добавления предложения в буфер
-function addSentenceDataToBuffer(button) {
+function addSentenceToBuffer(button) {
+    const objectId = button.closest(".control-buttons").getAttribute("data-object-id");
+    const objectType = button.closest(".control-buttons").getAttribute("data-object-type");
     const relatedId = button.closest(".control-buttons").getAttribute("data-related-id");
-    const sentenceId = button.closest(".control-buttons").getAttribute("data-object-id");
-    const objectType = "sentence"
-    const relatedText = button.closest(".control-buttons").getAttribute("data-text");
-    const groupId = button.closest(".control-buttons").getAttribute("data-group-id");
+    const objectText = button.closest(".control-buttons").getAttribute("data-text");
     const sentenceType = button.closest(".control-buttons").getAttribute("data-sentence-type");
+    const sentenceGroupId = button.closest(".control-buttons").getAttribute("data-group-id");
 
     dataToBuffer = {
-        related_id: relatedId,
+        object_id: objectId,
         object_type: objectType,
-        group_id: groupId,
+        related_id: relatedId,
+        object_text: objectText,
         sentence_type: sentenceType,
-        related_text: relatedText,
-        sentence_id: sentenceId,
+        group_id: sentenceGroupId
     };
 
     addToBuffer(dataToBuffer);
     console.log("Добавление в буфер:", dataToBuffer);
+
 }
+
+
+
+function deleteSubsidiaries (button) {
+    const objectId = button.closest(".control-buttons").getAttribute("data-object-id");
+    const objectType = button.closest(".control-buttons").getAttribute("data-object-type");
+    const relatedId = button.closest(".control-buttons").getAttribute("data-related-id");
+    const sentenceType = button.closest(".control-buttons").getAttribute("data-sentence-type");
+    const sentenceGroupId = button.closest(".control-buttons").getAttribute("data-group-id");
+
+    sendRequest({
+        url: `/editing_report/delete_subsidiaries`,
+        method: "DELETE",
+        data: { object_id: objectId, 
+            object_type: objectType, 
+         }
+    }).then(response => {
+        window.location.reload();
+    }).catch(error => {
+        console.error(response.message || "Ошибка удаления дочерних элементов:", error);
+    });
+}
+
