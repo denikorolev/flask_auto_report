@@ -13,10 +13,6 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
 
-    // Слушатель на заголовок "Дополнительные предложения для главного предложения"
-    document.getElementById("editSentenceTitle").addEventListener("click", function () {
-        expandBodySentencesHandler();
-    }); 
 
     // Слушатель на клик по тексту предложения чтобы сделать его редактируемым
     document.querySelectorAll(".edit-sentence__text").forEach(sentenceText => {
@@ -52,8 +48,13 @@ document.addEventListener("DOMContentLoaded", function () {
         window.history.go(-2);
     });
 
+
     // Cлушатель для кнопки "Добавить дополнительное предложение"
-    document.getElementById("addBodySentenceButton").addEventListener("click", addBodySentence);
+    document.getElementById("addBodySentenceButton").addEventListener("click", function () {
+        const itemFromBuffer = null;
+        addBodySentence(itemFromBuffer);
+    });
+
 
     // Слушатель на кнопку "Удалить предложение"
     document.querySelectorAll(".control-btn--delete").forEach(button => {
@@ -66,49 +67,35 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
 // Функция для добавления нового дополнительного предложения
-async function addBodySentence() {
+async function addBodySentence(itemFromBuffer) {
     const bodySentenceList = document.getElementById("bodySentenceList");
     const headSentenceId = bodySentenceList.getAttribute("data-head-sentence-id");
     const reportId = document.getElementById("editSentenceContainer").getAttribute("data-report-id");
-    
+
+    data = {
+        related_id: headSentenceId,
+        report_id: reportId,
+        sentence_type: "body"
+    }
+
+    if (itemFromBuffer) {
+        // Если есть данные из буфера, используем их
+        data.sentence_id = itemFromBuffer.object_id;
+    }
+
+    console.log("Отправка запроса на добавление нового предложения:", data);
 
     try {
         const response = await sendRequest({
             url: "/editing_report/add_new_sentence",
             method: "POST",
-            data: { related_id: headSentenceId,
-                    report_id: reportId,
-                    sentence_type: "body"
-             }
+            data: data
         });
 
-        // Создаем новый элемент списка
-        const newSentenceHTML = `
-            <li class="wrapper__card edit-sentence__item" 
-                data-sentence-id="${response.id}" 
-                data-head-sentence-id="${headSentenceId}"
-                data-sentence-type="body" 
-                data-sentence-weight="${response.weight}"
-                data-sentence-tags="${response.tags || ""}" 
-                data-sentence-comment="${response.comment || ""}">
-
-                <div>${response.weight}</div>
-                <p class="edit-sentence__text">${response.sentence}</p>
-                <button class="btn report__btn edit-sentence__btn--delete" type="button">Удалить</button>
-            </li>
-        `;
-
-        // Находим все <li> кроме кнопки "Добавить предложение"
-        const bodySentences = bodySentenceList.querySelectorAll(".edit-sentence__item");
-        if (bodySentences.length > 0) {
-            // Вставляем новый <li> после последнего предложения
-            bodySentences[bodySentences.length - 1].insertAdjacentHTML("afterend", newSentenceHTML);
-        } else {
-            // Если список пуст, просто добавляем первым элементом
-            bodySentenceList.insertAdjacentHTML("afterbegin", newSentenceHTML);
-        }
-
-        console.log("Новое предложение добавлено:", response);
+        if (response.status === "success") {
+            window.location.reload();
+        } 
+            
     } catch (error) {
         console.error("Ошибка запроса:", error);
     }
@@ -118,16 +105,32 @@ async function addBodySentence() {
 
 function makeSentenceEditable(sentenceElement) {
     const sentenceItem = sentenceElement.closest(".edit-sentence__item");
-    const isLinked = sentenceItem.getAttribute("data-sentence-is-linked") === "True";
-    const audioLocked = new Audio("/static/audio/dzzz.mp3");
-    const audioGlass = new Audio("/static/audio/glass_smash.mp3");
-    const linkedIcon = sentenceItem.querySelector(".edit-sentence__links-icon--is-linked");
+    const sentenceType = sentenceItem.getAttribute("data-sentence-type");
 
-    if (isLinked && linkedIcon) {
+    const sentenceGroupTitle = document.getElementById("editSentenceTitleBody");
+
+    const sentenceGroupIsLinked = sentenceGroupTitle.getAttribute("data-group-is-linked") === "True";
+    const groupIsLinkedIcon = sentenceGroupTitle.querySelector(".edit-sentence__title-span");
+
+    const isLinked = sentenceItem.getAttribute("data-sentence-is-linked") === "True";
+    const sentenceIsLinkedIcon = sentenceItem.querySelector(".edit-sentence__links-icon--is-linked");   
+
+    const audioLocked = new Audio("/static/audio/dzzz.mp3");
+
+    if(sentenceGroupIsLinked && groupIsLinkedIcon) {
+        audioLocked.play();
+        toastr.warning("Нельзя редактировать - это связанная группа предложений");
+        // Запускаем анимацию вокруг значка 🔗
+        createRippleAtElement(groupIsLinkedIcon);
+        return;
+    }
+
+
+    if (isLinked && sentenceIsLinkedIcon) {
         audioLocked.play();
         toastr.warning("Нельзя редактировать - это связанное предложение");
         // Запускаем анимацию вокруг значка 🔗
-        createRippleAtElement(linkedIcon);
+        createRippleAtElement(sentenceIsLinkedIcon);
         return;
         
     }
@@ -315,18 +318,6 @@ function hideSentencePopup() {
     }
 }
 
-// Функция обработки клика на заголовок "Дополнительные предложения для главного предложения"
-function expandBodySentencesHandler() {
-    const bodySentencesList = document.getElementById("bodySentenceList");
-
-    if (!bodySentencesList) {
-        console.warn("Список дополнительных предложений не найден.");
-        return;
-    }
-
-    bodySentencesList.style.display = bodySentencesList.style.display === "none" ? "block" : "none";
-}
-
 
 // Вызываемые функции (не требуют инициализации при загрузке страницы)
 
@@ -407,4 +398,26 @@ function addSentenceDataToBuffer(button) {
 
     addToBuffer(dataToBuffer);
     console.log("Добавление в буфер:", dataToBuffer);
+}
+
+
+// Функция для вставки предложения из буфера, буду использовать функцию создания нового предложения, но с данными из буфера
+function insertFromBuffer(index) {
+    const itemFromBuffer = getFromBuffer(index);
+    if (!itemFromBuffer) {
+        console.error("Элемент из буфера не найден.");
+        return;
+    }
+    console.log("Вставка из буфера:", itemFromBuffer);
+
+    if (itemFromBuffer.object_type === "paragraph") {
+        alert("Нельзя вставить параграф в данной секции.");
+        return;
+    } else if (itemFromBuffer.sentence_type != "body") {
+        alert("Нельзя вставить head или tail предложение в данной секции.");
+        return
+    }
+    
+    addBodySentence(itemFromBuffer);
+    
 }

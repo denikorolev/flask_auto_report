@@ -49,7 +49,19 @@
     <hr>
 
     <!-- Главные предложения -->
-    <h3>Главные предложения</h3>
+    <div class="flex edit-sentence__title-wrapper" 
+        id="editSentenceTitleHead" 
+        data-group-is-linked="{{ paragraph.has_linked_head }}" 
+        data-sentence-type="head"
+        data-group-id="{{ paragraph.head_sentence_group_id }}"
+        data-related-id="{{ paragraph.id }}"
+        >
+        <h3 class="edit-sentence__title">Главные предложения</h3>
+        {% if paragraph.has_linked_head %}
+            <span class="edit-sentence__title-span">🔗</span>
+        {% endif %}
+        
+    </div>
     <ul class="edit-sentence__list"
         id="editHeadSentenceList"
         data-paragraph-id="{{ paragraph.id }}"
@@ -89,7 +101,7 @@
                     <!-- Кнопки управления из макроса -->
                     {{ control_buttons(sentence.id, 'sentence', paragraph.id, sentence.sentence, sentence_type="head", group_id=sentence.group_id) }}
                     <!-- Блок информационных значков из макроса -->
-                    {{ info_icons(sentence.has_linked_body, sentence.is_linked) }}
+                    {{ info_icons(sentence.is_linked) }}
                 </div>
                 
                 </li>
@@ -104,7 +116,19 @@
 
     <hr>
     <!-- Дополнительные предложения -->
-    <h3 class="edit-sentence__title" id="editSentenceTitle">Дополнительные предложения параграфа</h3>
+    <div class="flex edit-sentence__title-wrapper" 
+        id="editSentenceTitleTail" 
+        data-group-is-linked="{{ paragraph.has_linked_tail }}" 
+        data-sentence-type="tail"
+        data-group-id="{{ paragraph.tail_sentence_group_id }}"
+        data-related-id="{{ paragraph.id }}"
+        >
+        <h3 class="edit-sentence__title">Дополнительные предложения параграфа</h3>
+        {% if paragraph.has_linked_tail %}
+            <span class="edit-sentence__title-span">🔗</span>
+        {% endif %}
+    </div>
+
     <ul class="edit-sentence__list" 
         style="display: block;" 
         id="editTailSentenceList"
@@ -132,7 +156,7 @@
                 <!-- Кнопки управления из макроса -->
                 {{ control_buttons(sentence.id, 'sentence', paragraph.id, sentence.sentence, sentence_type="tail", group_id=sentence.group_id) }}
                 <!-- Блок информационных значков из макроса -->
-                {{ info_icons(sentence.has_linked_body, sentence.is_linked) }}
+                {{ info_icons(sentence.is_linked) }}
             </div>
 
             </li>

@@ -288,16 +288,55 @@ def update_sentence_text():
 def add_paragraph():
     logger.info("(Добавление нового параграфа) --------------------------------------------")
     logger.info(f"(Добавление нового параграфа) 🚀 Начато добавление нового параграфа")
-    report_id = request.json.get("report_id")
+    data = request.json
+    
+    report_id = data.get("report_id")
     report = Report.query.get(report_id)
-
+    
+    copy_paste = data.get("object_type") == "paragraph"
+    paragraph_index = get_max_index(Paragraph, "report_id", report_id, Paragraph.paragraph_index)
+    
     if not report or report.profile_id != g.current_profile.id:
         logger.error(f"(Добавление нового параграфа) ❌ Протокол не найден или не соответствует данному профилю")
         return jsonify({"status": "error", "message": "Протокол не найден или не соответствует данному профилю"}), 403
+    
+    if copy_paste:
+        logger.info(f"(Добавление нового параграфа) Параграф будет вставлен из буфера обмена")
+        paragraph_id = data.get("object_id")
+        exist_paragraph = Paragraph.get_by_id(paragraph_id)
+        
+        paragraph_data = {
+            "report_id": report_id,
+            "paragraph": exist_paragraph.paragraph,
+            "paragraph_index": paragraph_index,
+            "head_sentence_group_id": exist_paragraph.head_sentence_group_id,
+            "tail_sentence_group_id": exist_paragraph.tail_sentence_group_id,
+            "paragraph_visible": exist_paragraph.paragraph_visible,
+            "title_paragraph": exist_paragraph.title_paragraph,
+            "bold_paragraph": exist_paragraph.bold_paragraph,
+            "str_before": exist_paragraph.str_before,
+            "str_after": exist_paragraph.str_after,
+            "is_active": exist_paragraph.is_active,
+            "is_additional": exist_paragraph.is_additional,
+        }
+        
+        try:
+            new_paragraph = Paragraph.create(**paragraph_data)
+            logger.info(f"(Добавление нового параграфа) ✅ Параграф успешно добавлен")
+            logger.info("(Добавление нового параграфа) --------------------------------------------")
+            return jsonify({"status": "success",
+                            "message": "Параграф успешно добавлен",
+                            "paragraph_id": new_paragraph.id,
+                            "paragraph_index": new_paragraph.paragraph_index,
+                            "paragraph": new_paragraph.paragraph
+                            }), 200
+        except Exception as e:
+            logger.error(f"(Добавление нового параграфа) ❌ Ошибка добавления параграфа: {e}")
+            return jsonify({"status": "error", "message": f"Ошибка добавления параграфа: {e}"}), 400
+        
+
 
     try:
-        paragraph_index = get_max_index(Paragraph, "report_id", report_id, Paragraph.paragraph_index)
-        
         new_paragraph = Paragraph.create(
             report_id=report.id,
             paragraph_index=paragraph_index,
@@ -325,13 +364,11 @@ def add_new_sentence():
     logger.info("(Создание нового предложения) 🚀  Начат сбор данных для создания нового  предложения")
     data = request.get_json()
     
-    sentence_data = {
-            "user_id": current_user.id,
-            "report_type_id": Report.get_report_type(int(data.get("report_id"))) or None,
-            "sentence": "Введите текст предложения",
-            "related_id": int(data.get("related_id")) or None,
-            "sentence_index": data.get("sentence_index") or None
-        }
+    if not data:
+        logger.error("(Создание нового предложения) ❌ Отсутствуют данные для создания нового предложения")
+        return jsonify({"status": "error", "message": "Отсутствуют данные для создания нового предложения"}), 400
+    
+    logger.info(f"(Создание нового предложения) Получены данные для создания нового предложения: {data}")
     
     sentence_type = data.get("sentence_type")
     
@@ -345,10 +382,39 @@ def add_new_sentence():
         logger.error(f"(Создание нового предложения) ❌ Неизвестный тип предложения")
         return jsonify({"status": "error", "message": "Неизвестный тип предложения"}), 400
     
+    report_type_id = Report.get_report_type(int(data.get("report_id")))
+    related_id = data.get("related_id")
+    sentence_index = data.get("sentence_index")
+    if not report_type_id or not related_id:
+        logger.error(f"(Создание нового предложения) ❌ Отсутствуют необходимые данные для создания предложения")
+        return jsonify({"status": "error", "message": "Отсутствуют необходимые данные для создания предложения"}), 400
+    
+    sentence_id = data.get("sentence_id")
+    sentence_data = {
+            "user_id": current_user.id,
+            "report_type_id": report_type_id,
+            "sentence": "Введите текст предложения",
+            "related_id": related_id,
+            "sentence_index": sentence_index
+        }
+    
+    if sentence_id:
+        sentence = class_type.get_by_id(sentence_id)
+        if not sentence:
+            logger.error(f"(Создание нового предложения) ❌ Предложение не найдено")
+            return jsonify({"status": "error", "message": "Предложение не найдено"}), 404
+        
+        sentence_data["sentence"] = sentence.sentence
+    
     logger.info(f"(Создание нового предложения) Получены все необходимые данные для создания предложения {sentence_data}. Начато создание нового предложения")
     
     try:
         new_sentence, new_sentence_group = class_type.create(**sentence_data)
+        if sentence_id and sentence_type == "head":
+            new_sentence.body_sentence_group_id = sentence.body_sentence_group_id
+            db.session.commit()
+            
+            logger.info(f"(Создание нового предложения) ✅ Успешно добавлено новое предложение с id={new_sentence.id} из буфера обмена")
         logger.info(f"(Создание нового предложения) ✅ Успешно создано новое {sentence_type} предложение с id={new_sentence.id}")
         logger.info("(Создание нового предложения) --------------------------------------------")
         
@@ -553,3 +619,54 @@ def report_checkers():
         return jsonify({"status": "error", "message": f"В протоколе присутствует ошибка: {str(e)}"}), 400
 
 
+# Создает новую группу предложений и заменяет ей старую
+@editing_report_bp.route('//unlink_group', methods=['PATCH'])
+@auth_required()
+def unlink_group():
+    logger.info(f"(Отделение группы) --------------------------------------------")
+    logger.info(f"(Отделение группы) 🚀 Начинаю отделение группы")
+    data = request.get_json()
+    
+    group_id = data.get("group_id")
+    sentence_type = data.get("sentence_type")
+    related_id = data.get("related_id") 
+    if not group_id or not sentence_type or not related_id: 
+        logger.error(f"(Отделение группы) ❌ Не указаны необходимые данные для отделения группы")
+        return jsonify({"status": "error", "message": "Не указаны необходимые данные для отделения группы"}), 400
+    
+    
+    if sentence_type == "head":
+        try:
+            new_group_id = HeadSentenceGroup.copy_group(group_id)
+            paragragh = Paragraph.query.get(related_id)
+            paragragh.head_sentence_group_id = new_group_id
+            db.session.commit()
+        except ValueError as e:
+            logger.error(f"(Отделение группы) ❌ Ошибка при отделении группы: {str(e)}")
+            return jsonify({"status": "error", "message": f"Ошибка при отделении группы: {str(e)}"}), 400
+       
+    elif sentence_type == "tail":
+        try:
+            new_group_id = TailSentenceGroup.copy_group(group_id)
+            paragragh = Paragraph.query.get(related_id)
+            paragragh.tail_sentence_group_id = new_group_id
+            db.session.commit()
+        except ValueError as e:
+            logger.error(f"(Отделение группы) ❌ Ошибка при отделении группы: {str(e)}")
+            return jsonify({"status": "error", "message": f"Ошибка при отделении группы: {str(e)}"}), 400
+    else:
+        try:
+            new_group_id = BodySentenceGroup.copy_group(group_id)
+            head_sentence = HeadSentence.query.get(related_id)
+            head_sentence.body_sentence_group_id = new_group_id
+            db.session.commit()
+        except ValueError as e:
+            logger.error(f"(Отделение группы) ❌ Ошибка при отделении группы: {str(e)}")
+            return jsonify({"status": "error", "message": f"Ошибка при отделении группы: {str(e)}"}), 400
+    
+    logger.info(f"(Отделение группы) ✅ Группа успешно отделена")
+    logger.info(f"(Отделение группы) --------------------------------------------")
+    return jsonify({"status": "success", "message": "Группа успешно отделена"}), 200
+   
+    
+    

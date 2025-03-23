@@ -960,6 +960,9 @@ body {
     font-size: 18px;
     font-weight: bold;
     margin-bottom: 10px;
+}
+
+.edit-sentence__title-span{
     cursor: pointer;
 }
 

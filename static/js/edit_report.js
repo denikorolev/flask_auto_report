@@ -55,7 +55,11 @@ document.addEventListener("DOMContentLoaded", function () {
     
 
     // Слушатель на кнопку "Добавить параграф"
-    document.getElementById("addParagraphButton").addEventListener("click", addParagraph);
+    document.getElementById("addParagraphButton").addEventListener("click", function() {
+        const itemFromBuffer = null
+        addParagraph(itemFromBuffer);
+        }
+    );
 
 
     // Слушатель на кнопку "Редактировать параграф" перенаправляет на страницу редактирования параграфа
@@ -301,48 +305,40 @@ function hidePopup() {
 
 
 
-
 // Функция для добавления параграфа
-async function addParagraph() {
+async function addParagraph(itemFromBuffer) {
     const reportId = document.getElementById("editReportContainer").getAttribute("data-report-id");
+    console.log("Добавление нового параграфа в протокол:", reportId);
     const paragraphsList = document.getElementById("editParagraphsList");
+
+    if (itemFromBuffer) {
+        console.log("Добавление нового параграфа с данными:", itemFromBuffer);
+        data = { paragraph_text: itemFromBuffer.object_text,
+                 object_id: itemFromBuffer.object_id,
+                 object_type: itemFromBuffer.object_type,
+                 report_id: reportId
+                };
+    } else {
+        data = { report_id: reportId };
+    }
 
     try {
         const response = await sendRequest({
             url: "/editing_report/add_new_paragraph",
             method: "POST",
-            data: { report_id: reportId }
+            data: data
+            
         });
 
-        // Создаем новый элемент списка
-        const newParagraphHTML = `
-            <li class="wrapper__card edit-sentence__item" 
-                data-paragraph-id="${response.id}" 
-
-                <div class="drag-handle">☰</div>
-                <div>
-                <p class="edit-paragraph__title"><b>${response.paragraph}</b></p>
-                <p class="edit-sentences__list">Это новый параграф и у него еще нет предложений.</p>
-                </div>
-                
-            </li>
-        `;
-
-        // Находим все <li> кроме кнопки "Добавить предложение"
-        const paragraphs = paragraphsList.querySelectorAll(".edit-paragraph__item");
-        if (paragraphs.length > 0) {
-            // Вставляем новый <li> после последнего предложения
-            paragraphs[paragraphs.length - 1].insertAdjacentHTML("afterend", newParagraphHTML);
-        } else {
-            // Если список пуст, просто добавляем первым элементом
-            paragraphsList.insertAdjacentHTML("afterbegin", newParagraphHTML);
-        }
-
-        console.log("Новое предложение добавлено:", response);
+        
+        if (response.status === "success") {
+            window.location.reload();
+        } 
     } catch (error) {
         console.error("Ошибка запроса:", error);
     }
 }   
+
 
 // Функция для редактирования параграфа (переход на страницу редактирования параграфа) 
 function editParagraph(button) {
@@ -356,6 +352,7 @@ function editParagraph(button) {
 
     window.location.href = `/editing_report/edit_paragraph?paragraph_id=${paragraphId}&report_id=${reportId}`;
 }
+
 
 // Функция для обновления протокола
 async function handleUpdateReportButtonClick() {
@@ -517,10 +514,25 @@ function deleteSubsidiaries (button) {
     sendRequest({
         url: `/editing_report/delete_subsidiaries`,
         method: "DELETE",
-        data: { object_id: objectId, object_type: objectType, related_id: relatedId }
+        data: { object_id: objectId, object_type: objectType}
     }).then(response => {
         window.location.reload();
     }).catch(error => {
         console.error(response.message || "Ошибка удаления дочерних элементов:", error);
     });
+}
+
+
+// Функция для вставки параграфа из буфера, буду использовать функцию создания нового параграфа, но с данными из буфера
+function insertFromBuffer(index) {
+    const itemFromBuffer = getFromBuffer(index);
+
+    if (!itemFromBuffer) {
+        alert("Элемент не найден в буфере");
+        return;
+    }
+
+    console.log("Вставка из буфера:", itemFromBuffer);
+    // Создаем новый параграф
+    addParagraph(itemFromBuffer);
 }

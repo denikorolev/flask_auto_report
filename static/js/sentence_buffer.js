@@ -28,6 +28,12 @@ function addToBuffer(item) {
     logBuffer();
 }
 
+// Взять элемент из буфера по индексу
+function getFromBuffer(index) {
+    const buffer = getBuffer();
+    return buffer[index];
+}
+
 
 /**
  * Получить текущий буфер (с учетом автоочистки по TTL).

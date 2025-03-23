@@ -52,7 +52,13 @@
     <br>
     <hr>
 
-    <h3 class="edit-sentence__title" id="editSentenceTitle">Дополнительные предложение для главного предложения</h3>
+    <div class="flex edit-sentence_title-wrapper" id="editSentenceTitleBody" data-group-is-linked="{{ head_sentence.has_linked_body }}">
+        <h3 class="edit-sentence__title" >Дополнительные предложение для главного предложения</h3>
+        {% if head_sentence.has_linked_body %}
+            <span class="edit-sentence_title-span">🔗</span>
+        {% endif %}
+    </div>
+
     <div class="edit-sentence__sentence">
         <ul class="edit-sentence__list" 
             id="bodySentenceList" 
@@ -82,7 +88,7 @@
                 <div class="control-buttons__wrapper">
                     {{ control_buttons(sentence.id, 'sentence', head_sentence.id, sentence.sentence, sentence_type="body", group_id=sentence.group_id) }}
                     <!-- Блок информационных значков из макроса -->
-                    {{ info_icons(sentence.has_linked_body, sentence.is_linked) }}
+                    {{ info_icons(sentence.is_linked) }}
                 </div>
 
                 </li>

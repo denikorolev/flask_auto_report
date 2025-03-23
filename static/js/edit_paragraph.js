@@ -30,12 +30,22 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
 
-                
-    // Слушатель на кнопку 📌
-    document.querySelectorAll(".control-btn--copy-sentence-to-buffer").forEach(btn => {btn.addEventListener("click", function() {
-            addSentenceDataToBuffer(this);
+
+    // Слушатель на кнопку 🔗 двойной клик
+    document.querySelectorAll(".edit-sentence__title-span").forEach(item => {item.addEventListener("dblclick", function() {
+        const itemWrapper = this.closest(".edit-sentence__title-wrapper");
+        unlinkGroup(itemWrapper);
         });
     });
+
+    
+    // Слушатель на кнопку 🔗 одинарный клик
+    document.querySelectorAll(".edit-sentence__title-span").forEach(item => {item.addEventListener("click", function() {
+        const itemWrapper = this.closest(".edit-sentence__title-wrapper");
+        allowEditing(itemWrapper);
+        });
+    });
+
 
 
     // Слушатель на кнопку открыть попап буфера
@@ -68,17 +78,19 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
 
-    // Слушатель на заголовок "Дополнительные предложения"
-    document.getElementById("editSentenceTitle").addEventListener("click", function () {
-        expandTailSentencesHandler();
-    }); 
 
     // Слушатель на кнопку "Добавить дополнительное предложение"
-    document.getElementById("addTailSentenceButton").addEventListener("click", addTailSentence);
+    document.getElementById("addTailSentenceButton").addEventListener("click", function () {
+        const itemFromBuffer = null;
+        addTailSentence(itemFromBuffer);
+    });
 
 
     // Слушатель на кнопку "Добавить главное предложение"
-    document.getElementById("addHeadSentenceButton").addEventListener("click", addHeadSentence);
+    document.getElementById("addHeadSentenceButton").addEventListener("click", function () {
+        const itemFromBuffer = null;
+        addHeadSentence(itemFromBuffer);
+    });
 
 
     // Слушатель на кнопку "Удалить предложение"
@@ -117,22 +129,28 @@ function initSortableHeadSentences() {
 
 
 
-// Функция для редактирования предложений с разблокировкой на тройной клик
+// Функция для редактирования предложений
 function makeSentenceEditable(sentenceElement) {
+    console.log("Редактирование предложения:", sentenceElement);
     const sentenceItem = sentenceElement.closest(".edit-sentence__item");
+    const sentenceType = sentenceItem.getAttribute("data-sentence-type");
+    let sentenceGroupTitle = null;
+    console.log("Тип предложения:", sentenceType);
+    if (sentenceType === "tail") {
+        sentenceGroupTitle = document.getElementById("editSentenceTitleTail");
+    } else {
+        sentenceGroupTitle = document.getElementById("editSentenceTitleHead");
+    }
+    const sentenceGroupIsLinked = sentenceGroupTitle.getAttribute("data-group-is-linked") === "True";
+
     const isLinked = sentenceItem.getAttribute("data-sentence-is-linked") === "True";
-    const hasLinkedBody = sentenceItem.getAttribute("data-sentence-has-linked-body") === "True";
-    console.log("Sentence Item:", sentenceItem.outerHTML);
-    const linkedBodyIcon = sentenceItem.querySelector(".edit-sentence__links-icon--linked-obj");
-    const linkedIcon = sentenceItem.querySelector(".edit-sentence__links-icon--is-linked");    
+    const groupIsLinkedIcon = sentenceGroupTitle.querySelector(".edit-sentence__title-span");
+    const sentenceIsLinkedIcon = sentenceItem.querySelector(".edit-sentence__links-icon--is-linked");    
     const audioKnock = new Audio("/static/audio/dzzz.mp3");
-    console.log("🔒 Найдена ли иконка:", linkedBodyIcon);
-    console.log("🔒 Найдена ли иконка связи:", linkedIcon);
-    console.log("Все иконки 🔒 на странице:", document.querySelectorAll(".edit-sentence__links-icon--linked-obj"));
 
     // Если есть связи с body 
-    if (hasLinkedBody && linkedBodyIcon) {
-        createRippleAtElement(linkedBodyIcon);
+    if (sentenceGroupIsLinked && groupIsLinkedIcon) {
+        createRippleAtElement(groupIsLinkedIcon);
         toastr.warning("Нельзя редактировать: связано с дополнительными предложениями");
         audioKnock.play();
         return;
@@ -140,7 +158,7 @@ function makeSentenceEditable(sentenceElement) {
 
     // Если связано с другими протоколами
     if (isLinked) {
-        createRippleAtElement(linkedIcon);
+        createRippleAtElement(sentenceIsLinkedIcon);
         toastr.warning("Нельзя редактировать: связано с другими протоколами. ");
         audioKnock.play();
         return;
@@ -339,76 +357,43 @@ function editSentence(button) {
 
 
 
-// Обработчик клика на заголовок "Дополнительные предложения"- разворачивает/сворачивает список
-function expandTailSentencesHandler() {
-    const tailSentencesList = document.getElementById("editTailSentenceList");
-    if (!tailSentencesList) {
-        console.warn("Список дополнительных предложений не найден.");
-        return;
-    }
-
-    tailSentencesList.style.display = tailSentencesList.style.display === "none" ? "block" : "none";
-}
-
-
 // Функция для добавления нового дополнительного предложения
-async function addHeadSentence() {
+async function addHeadSentence(itemFromBuffer) {
     const headSentenceList = document.getElementById("editHeadSentenceList");
     const paragraphId = parseInt(headSentenceList.getAttribute("data-paragraph-id"));
     const reportId = document.getElementById("editParagraphContainer").getAttribute("data-report-id");
     const sentences = paragraphData.head_sentences;
-    console.log("Данные с сервера:", paragraphData);
-    console.log("Предложения:", sentences);
     const sentenceIndexes = sentences.map(sentence => sentence.sentence_index);
-    console.log("Индексы предложений:", sentenceIndexes);
-    console.log("Индексы предложений:", sentenceIndexes);
     const maxIndex = findMaxIndex(sentenceIndexes);
-    console.log("Максимальный индекс:", maxIndex);
     
+    if (itemFromBuffer) {
+        data = {
+            sentence_id: itemFromBuffer.object_id,
+            sentence_text: itemFromBuffer.object_text,
+            sentence_type: "head",
+            related_id: paragraphId,
+            report_id: reportId,
+            sentence_index: maxIndex + 1
+        }; 
+    } else {
+            data = {
+                related_id: paragraphId,
+                report_id: reportId,
+                sentence_index: maxIndex + 1,
+                sentence_type: "head"
+            }
+    };
+
     try {
         const response = await sendRequest({
             url: "/editing_report/add_new_sentence",
             method: "POST",
-            data: { related_id: paragraphId,
-                    report_id: reportId,
-                    sentence_index: maxIndex + 1,
-                    sentence_type: "head"
-             }
+            data: data
         });
 
-        // Создаем новый элемент списка
-        const newSentenceHTML = `
-            <li class="wrapper__card edit-sentence__item edit-sentence__item--head" 
-                data-sentence-id="${response.id}" 
-                data-paragraph-id="${paragraphId}"
-                data-sentence-type="head" 
-                data-sentence-index="${response.index}"
-                data-sentence-tags="${response.tags || ""}" 
-                data-sentence-comment="${response.comment || ""}">
-
-                <div class="drag-handle">☰</div>
-                <div>
-                <p class="edit-sentence__text">${response.sentence}</p>
-                <p class="edit-paragraph__title--invisible">У данного главного предложения нет дополнительных предложений</p>
-                </div>
-                <div>
-                    <button class="btn report__btn edit-sentence__btn--edit-head" data-sentence-id="${response.id}">Редактировать </button>
-                    <button class="btn report__btn edit-sentence__btn--delete-head" data-sentence-id="${response.id}">Удалить </button>
-                </div>
-            </li>
-        `;
-
-        // Находим все <li> кроме кнопки "Добавить предложение"
-        const headSentences = headSentenceList.querySelectorAll(".edit-sentence__item--head");
-        if (headSentences.length > 0) {
-            // Вставляем новый <li> после последнего предложения
-            headSentences[headSentences.length - 1].insertAdjacentHTML("afterend", newSentenceHTML);
-        } else {
-            // Если список пуст, просто добавляем первым элементом
-            headSentenceList.insertAdjacentHTML("afterbegin", newSentenceHTML);
-        }
-
-        console.log("Новое предложение добавлено:", response);
+        if (response.status === "success") {
+            window.location.reload();
+        } 
     } catch (error) {
         console.error("Ошибка запроса:", error);
     }
@@ -416,48 +401,40 @@ async function addHeadSentence() {
 
 
 // Функция для добавления нового дополнительного предложения
-async function addTailSentence() {
+async function addTailSentence(itemFromBuffer) {
     const tailSentenceList = document.getElementById("editTailSentenceList");
     const paragraphId = tailSentenceList.getAttribute("data-paragraph-id");
     const reportId = document.getElementById("editParagraphContainer").getAttribute("data-report-id");
+
+    if (itemFromBuffer) {
+        data = {
+            sentence_id: itemFromBuffer.object_id,
+            sentence_text: itemFromBuffer.object_text,
+            sentence_type: "tail",
+            related_id: paragraphId,
+            report_id: reportId
+        }; 
+    }
+    else {
+        data = {
+            related_id: paragraphId,
+            report_id: reportId,
+            sentence_type: "tail"
+        };
+    }
+
 
     try {
         const response = await sendRequest({
             url: "/editing_report/add_new_sentence",
             method: "POST",
-            data: { related_id: paragraphId,
-                    report_id: reportId,
-                    sentence_type: "tail"
-             }
+            data: data
         });
 
-        // Создаем новый элемент списка
-        const newSentenceHTML = `
-            <li class="wrapper__card wrapper__card--tail edit-sentence__item edit-sentence__item--tail" 
-                data-sentence-id="${response.id}" 
-                data-paragraph-id="${paragraphId}"
-                data-sentence-type="tail" 
-                data-sentence-weight="${response.weight}"
-                data-sentence-tags="${response.tags || ""}" 
-                data-sentence-comment="${response.comment || ""}">
-
-                <div>${response.weight}</div>
-                <p class="edit-sentence__text">${response.sentence}</p>
-                <button class="btn report__btn edit-sentence__btn--delete-tail" type="button">Удалить</button>
-            </li>
-        `;
-
-        // Находим все <li> кроме кнопки "Добавить предложение"
-        const tailSentences = tailSentenceList.querySelectorAll(".edit-sentence__item--tail");
-        if (tailSentences.length > 0) {
-            // Вставляем новый <li> после последнего предложения
-            tailSentences[tailSentences.length - 1].insertAdjacentHTML("afterend", newSentenceHTML);
-        } else {
-            // Если список пуст, просто добавляем первым элементом
-            tailSentenceList.insertAdjacentHTML("afterbegin", newSentenceHTML);
-        }
-
-        console.log("Новое предложение добавлено:", response);
+        
+        if (response.status === "success") {
+            window.location.reload();
+        } 
     } catch (error) {
         console.error("Ошибка запроса:", error);
     }
@@ -629,3 +606,77 @@ function deleteSubsidiaries (button) {
     });
 }
 
+
+
+// Функция для вставки предложения из буфера, буду использовать функцию создания нового предложения, но с данными из буфера
+function insertFromBuffer(index) {
+    const itemFromBuffer = getFromBuffer(index);
+    if (!itemFromBuffer) {
+        console.error("Элемент из буфера не найден.");
+        return;
+    }
+    console.log("Вставка из буфера:", itemFromBuffer);
+
+    if (itemFromBuffer.object_type === "paragraph") {
+        alert("Нельзя вставить параграф в данной секции.");
+        return;
+    }
+
+    if (itemFromBuffer.sentence_type === "head") {
+        addHeadSentence(itemFromBuffer);
+    }
+    else if (itemFromBuffer.sentence_type === "tail") {
+        addTailSentence(itemFromBuffer);
+    } else {
+        alert("Некорректный тип предложения для вставки в данной секции.");
+    }
+
+    
+}
+
+
+// Функция для отсоединения группы предложений
+function unlinkGroup(itemWrapper) {
+    const groupId = itemWrapper.getAttribute("data-group-id");
+    const sentenceType = itemWrapper.getAttribute("data-sentence-type");
+    const relatedId = itemWrapper.getAttribute("data-related-id");
+    
+
+    sendRequest({
+        url: "/editing_report/unlink_group",
+        method: "PATCH",
+        data: { group_id: groupId,
+                sentence_type: sentenceType,
+                related_id: relatedId
+            }
+    }).then(response => {
+        if (response.status === "success") {
+            window.location.reload();
+        } else {
+            console.error("Ошибка при отсоединении группы:", response.message);
+        }
+    }
+    ).catch(error => {
+        console.error("Ошибка при отсоединении группы:", error);
+    });
+}
+
+
+// Функция для разрешения редактирования предложения (снимает блок вызванный наличием связей у группы предложений)
+function allowEditing(itemWrapper) {
+    const groupIsLinked = itemWrapper.getAttribute("data-group-is-linked").toLowerCase();
+    const sentenceTitleElement = itemWrapper.querySelector(".edit-sentence__title");
+
+    if (groupIsLinked === "true") {
+        itemWrapper.setAttribute("data-group-is-linked", "False");
+        sentenceTitleElement.textContent += "(временно разброкировано) 🔓";
+        return;
+       
+    } else if (groupIsLinked === "false") {
+        itemWrapper.setAttribute("data-group-is-linked", "True");
+        sentenceTitleElement.textContent.replace("(временно разброкировано) 🔓", "");
+        sentenceTitleElement.textContent += "(заблокировано) 🔒";
+        return;
+    }
+
+}

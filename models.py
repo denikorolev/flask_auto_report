@@ -1619,22 +1619,40 @@ class SentenceGroupBase(BaseModel):
         if isinstance(group, HeadSentenceGroup):
             sentences = group.head_sentences
             for sentence in sentences:
-                new_group.head_sentences.append(sentence)
+                sentence_index = HeadSentence.get_sentence_index_or_weight(sentence.id, group_id)
+                db.session.execute(
+                    head_sentence_group_link.insert().values(
+                    head_sentence_id=sentence.id,
+                    group_id=new_group_id,
+                    sentence_index=sentence_index)
+                )
         elif isinstance(group, BodySentenceGroup):
             sentences = group.body_sentences
             for sentence in sentences:
-                new_group.body_sentences.append(sentence)
+                sentence_weight = BodySentence.get_sentence_index_or_weight(sentence.id, group_id)
+                db.session.execute(
+                    body_sentence_group_link.insert().values(
+                    body_sentence_id=sentence.id,
+                    group_id=new_group_id,
+                    sentence_weight=sentence_weight)
+                )
         elif isinstance(group, TailSentenceGroup):
             sentences = group.tail_sentences
             for sentence in sentences:
-                new_group.tail_sentences.append(sentence)
+                sentence_weight = TailSentence.get_sentence_index_or_weight(sentence.id, group_id)
+                db.session.execute(
+                    tail_sentence_group_link.insert().values(
+                    tail_sentence_id=sentence.id,
+                    group_id=new_group_id,
+                    sentence_weight=sentence_weight)
+                )
         else:
             logger.error(f"(метод relink_all_to_group класса SentenceBase) ❌ Изменения не были внесены так как не была идентифицирована группа")
             raise ValueError(f"Изменения не были внесены так как не была идентифицирована группа")
         
         db.session.commit()
         logger.info(f"(метод relink_all_to_group класса SentenceBase) ✅ Все предложения из группы {group_id} успешно перепривязаны в группу {new_group_id}")
-        return True
+        return new_group_id
     
 
     @classmethod

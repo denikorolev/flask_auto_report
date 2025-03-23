@@ -32,10 +32,8 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
-    // Вставить из буфера (заглушка, реализуем потом)
-    insertFromBufferBtn?.addEventListener("click", function () {
-        alert("Функция вставки из буфера пока не реализована");
-    });
+    
+
 
     /**
      * Функция для обновления содержимого попапа из буфера
@@ -68,6 +66,13 @@ document.addEventListener("DOMContentLoaded", function () {
                 const indexToRemove = parseInt(this.getAttribute("data-index"));
                 removeFromBuffer(indexToRemove);
                 refreshBufferPopup(); // Обновляем после удаления
+            });
+        });
+        bufferList.querySelectorAll(".buffer-popup__btn--insert").forEach(button => {
+            button.addEventListener("click", function () {
+                const indexToInsert = parseInt(this.getAttribute("data-index"));
+                // Вставляем элемент в редактор, функция будет на соответствующей странице (edit_report.js, edit_paragraph.js, edit_head_sentence.js)
+                insertFromBuffer(indexToInsert);
             });
         });
     }
