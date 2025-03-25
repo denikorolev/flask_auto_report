@@ -33,6 +33,9 @@ document.addEventListener("DOMContentLoaded", function() {
 
     addSentenceButtonLogic(); // Включаем логику кнопки "+"
 
+
+    
+
     
     // Слушатели на список неактивных абзацев
     document.getElementById("inactiveParagraphsList").querySelectorAll(".report-controlpanel__inactive-paragraphs-item").forEach(item => {
@@ -171,16 +174,7 @@ function handleSentenceBlur() {
 
 /**
  * Создает редактируемый элемент предложения, обернутый в <span>.
- * Добавляет необходимые атрибуты и привязывает обработчики событий `focus` и `blur`.
- * 
- * 🔹 Позволяет пользователю редактировать текст предложения.  
- * 🔹 Привязывает предложение к конкретному абзацу через `data-paragraph-id`.  
- * 🔹 Устанавливает индекс предложения (`data-index`) в `0` для новых предложений.  
- * 🔹 Автоматически отслеживает изменения в тексте через события `focus` и `blur`.  
- * 
- * @param {string} sentenceText - Текст предложения, который нужно добавить в элемент.
- * @param {string} paragraphId - ID абзаца, к которому принадлежит предложение.
- * @returns {HTMLElement} - Новый элемент <span>, содержащий редактируемое предложение.
+ * Добавляет необходимые атрибуты и привязывает обработчики событий 
  */
 function createEditableSentenceElement(sentenceText, paragraphId) {
     const newSentenceElement = document.createElement("span");
@@ -197,6 +191,14 @@ function createEditableSentenceElement(sentenceText, paragraphId) {
     newSentenceElement.addEventListener("focus", handleSentenceFocus); // Сохраняем исходный текст при фокусе
     newSentenceElement.addEventListener("blur", handleSentenceBlur);   // Проверяем изменения при потере фокуса
 
+    // Слушатель на энтер для потери фокуса при его нажатии
+    newSentenceElement.addEventListener("keydown", function(e) {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            this.blur();
+        }
+    });
+
     return newSentenceElement;
 }
 
@@ -204,9 +206,6 @@ function createEditableSentenceElement(sentenceText, paragraphId) {
 
 /**
  * Проверяет, виден ли элемент на экране.
- * 
- * @param {HTMLElement} element - HTML-элемент, который нужно проверить.
- * @returns {boolean} - Возвращает `true`, если элемент виден, и `false` в противном случае.
  */
 function isElementVisible(element) {
     const style = window.getComputedStyle(element);
@@ -216,18 +215,6 @@ function isElementVisible(element) {
 
 /**
  * Очищает текст элемента, удаляя кнопки и HTML-теги.
- * 
- * Функция предназначена для получения чистого текста из HTML-элемента. Удаляет все кнопки и HTML-теги, 
- * заменяет теги <select> выбранным текстом и убирает лишние пробелы.
- * 
- * @param {HTMLElement} element - HTML-элемент, содержащий текст для очистки.
- * @returns {string} - Очищенный текст.
- * 
- * Логика работы:
- * - Удаляет все кнопки внутри элемента.
- * - Удаляет все оставшиеся HTML-теги, оставляя только текст.
- * - Преобразует HTML-сущности в обычные символы (например, &amp; → &).
- * - Убирает лишние пробелы, оставляя только один пробел между словами.
  */
 function cleanSelectText(element) {
     let text = element.innerHTML;
@@ -236,12 +223,6 @@ function cleanSelectText(element) {
     element.querySelectorAll("button").forEach(button => {
         button.remove();  // Remove buttons from DOM to avoid interference with text collection
     });
-
-    // Replace all <select> elements with their selected text
-    // element.querySelectorAll("select").forEach(select => {
-    //     const selectedOption = select.options[select.selectedIndex].textContent;
-    //     text = text.replace(select.outerHTML, selectedOption);
-    // });
 
     // Remove all HTML tags except text
     text = text.replace(/<[^>]*>/gm, '').trim();
@@ -260,12 +241,6 @@ function cleanSelectText(element) {
 
 /**
  * Выделяет ключевые слова в переданном элементе.
- * 
- * 🔹 Обновляет `innerHTML` элемента, заменяя ключевые слова на <span>.
- * 🔹 Не изменяет уже выделенные ключевые слова.
- * 🔹 Поддерживает обработку отдельных элементов и целых блоков.
- * 
- * @param {HTMLElement} element - HTML-элемент, текст которого нужно обработать.
  */
 function highlightKeyWords(element) {
     if (!element || !(element instanceof HTMLElement)) return;
@@ -309,12 +284,6 @@ function highlightKeyWords(element) {
 
 /**
  * Обрабатывает клик по ключевому слову и открывает popup с вариантами.
- * 
- * 🔹 Берет список связанных слов из `data-keywords`.
- * 🔹 Открывает popup в позиции клика.
- * 🔹 Позволяет выбрать слово и заменить его в тексте.
- * 
- * @param {Event} event - Событие клика.
  */
 function handleKeywordClick(event) {
     const span = event.target;
@@ -343,7 +312,7 @@ function handleKeywordClick(event) {
 function updateCoreAndImpessionParagraphText() {
     const coreAndImpessionParagraphLists = document.querySelectorAll(".paragraph__item--core, .paragraph__item--impression");
     coreAndImpessionParagraphLists.forEach(paragraphList => {
-        paragraphList.querySelectorAll("p, span").forEach(paragraph => {
+        paragraphList.querySelectorAll("span").forEach(paragraph => {
             if (isElementVisible(paragraph)) { // Проверяем, виден ли элемент
                 highlightKeyWords(paragraph);
             }
@@ -503,6 +472,13 @@ function linkSentences() {
             if (sentenceElement.linkedSentences.length > 0) {
                 sentenceElement.classList.add("has-linked-sentences-highlighted-sentence");
             }
+            // Слушатель на enter для потери фокуса при его нажатии
+            sentenceElement.addEventListener("keydown", function(e) {
+                if (e.key === "Enter") {
+                    e.preventDefault();
+                    this.blur();
+                }
+            });
     });
 }
 
@@ -654,7 +630,19 @@ function addSentenceButtonLogic() {
 
             // Логика скрытия popup или удаления предложения
             newSentenceElement.addEventListener("input", function() {
-                hidePopupSentences(); // Скрываем popup при начале ввода
+                const inputText = this.textContent.toLowerCase().trim();
+                const filtered = tailSentences.filter(sentence =>
+                    sentence.sentence.toLowerCase().includes(inputText)
+                );
+
+                if (filtered.length > 0) {
+                    showPopupSentences(event.pageX, event.pageY, filtered, function (selectedSentence) {
+                        newSentenceElement.textContent = selectedSentence.sentence;
+                        highlightKeyWords(newSentenceElement);
+                    });
+                } else {
+                    hidePopupSentences();
+                }
             });
 
             newSentenceElement.addEventListener("blur", function() {

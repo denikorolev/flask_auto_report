@@ -9,6 +9,8 @@
     --main-background-color: rgb(252, 252, 233);
     --main-background-color-light: rgb(251, 251, 247);
     --main-background-color-dark: rgb(202, 202, 191);
+    --main-hightlight-color-light: #b4f4f4b3;
+    --main-font-color: rgb(158, 43, 43);
     --main-text-block-height: 20px;
     
   }
@@ -803,6 +805,11 @@ body {
     align-items: center;
     cursor: pointer;
 }
+/* Стили для my_reports */
+.report-card__item--short{
+    width: 70px;
+}
+
 
 
 /* стиль для карточки предложения в edit_report */
@@ -821,6 +828,7 @@ body {
     width: 100%;
     min-height: 60px;
 }
+
 
 /* Стили для попапа буфера обмена */
 
@@ -915,7 +923,7 @@ body {
     background-color: var(--main-background-color);
 }
 .wrapper__card--tail {
-    background-color: #d9f2f5a2;
+    background-color: var(--main-hightlight-color-light)
 }
 
 .wrapper__card--text {
@@ -1104,57 +1112,11 @@ body {
 }
 
 /* Разные цвета для отчетов разные цвета не работают, нужно разобраться с кодом js позже настрою чтобы разными цветами подсвечивались разные варианты (например одним цветом, когда текст параграфа совпадает)*/
-.paragraph-block[data-report="1"] { border-left-color: #28a745; } /* Зеленый */
-.paragraph-block[data-report="2"] { border-left-color: #dc3545; } /* Красный */
-.paragraph-block[data-report="3"] { border-left-color: #ffc107; } /* Желтый */
-.paragraph-block[data-report="4"] { border-left-color: #17a2b8; } /* Голубой */
 
 
-.paragraph-block.dragging {
-    opacity: 0.5;
-    border: 2px dashed #007bff;
-}
 
-.paragraph-block.linked {
-    background-color: rgba(0, 123, 255, 0.2);
-    border: 2px solid #007bff;
-    position: relative;
-}
+/* Стили для попапа в working_with_report*/
 
-.link-indicator {
-    position: absolute;
-    bottom: 5px;
-    left: 5px;
-    background: #007bff;
-    color: white;
-    padding: 2px 5px;
-    font-size: 12px;
-    border-radius: 3px;
-}
-
-.link-button {
-    display: block;
-    width: 100%;
-    margin-top: 10px;
-    padding: 10px;
-    background: #28a745;
-    color: white;
-    border: none;
-    cursor: pointer;
-    text-align: center;
-    font-size: 16px;
-    border-radius: 5px;
-}
-
-.link-button:hover {
-    background: #218838;
-}
-
-.keyword-highlighted {
-    color: rgb(199, 3, 3);
-    cursor: pointer;
-}
-
-.select-short {
-    width: 50px;
+.selected-sentence {
+    background-color: var(--main-hightlight-color-light);
 }

@@ -1,14 +1,11 @@
 // my_reports.js
 
 document.addEventListener('DOMContentLoaded', function() {
-    const linkReportsButton = document.getElementById("linkReports");
 
-    // Инициализируем фильтрацию отчетов по типу при изменении фильтра. 
-    document.getElementById('filter_type').addEventListener('change', function() {
-        filterReportsByType();
-    });
+    document.getElementById('filter_type').addEventListener('change', filterReports);
+    document.getElementById('reportSearch').addEventListener('input', filterReports);
+
     
-
     // Инициализирую слушатель кнопки удалить отчет
     document.querySelectorAll('.my-report-list__button--delete').forEach(button => {
         button.addEventListener('click', deleteReport);
@@ -21,25 +18,24 @@ document.addEventListener('DOMContentLoaded', function() {
 
 //Функции
 
-
-// Фильтрует список протоколов по их типу.
-function filterReportsByType() {
-    reportTypeSelect = document.getElementById('filter_type');
-    existingReportList = document.getElementById('myReportList');
-    const selectedType = reportTypeSelect.value;  // Получаем выбранный тип
-    const reports = existingReportList.querySelectorAll("li, .my-report-list__item");  // Получаем все протоколы
+// Филтрует отчеты по типу и тексту
+function filterReports() {
+    const selectedType = document.getElementById('filter_type').value;
+    const searchText = document.getElementById("reportSearch").value.toLowerCase();
+    const reports = document.querySelectorAll(".my-report-list__item");
 
     reports.forEach(report => {
-        const reportType = report.getAttribute("data-report-type");  // Получаем тип отчета
-       
-        // Если выбран тип "" (All) или тип совпадает с атрибутом отчета, показываем его
-        if (selectedType === "" || reportType === selectedType) {
-            report.style.display = "flex";  
-        } else {
-            report.style.display = "none";  // Скрываем отчет, если тип не совпадает
-        }
+        const reportType = report.getAttribute("data-report-type");
+
+        const subtype = report.querySelector('input[name="report_subtype"]').value.toLowerCase();
+        const name = report.querySelector('input[name="report_name"]').value.toLowerCase();
+        const comment = report.querySelector('input[name="comment"]').value.toLowerCase();
+
+        const matchType = selectedType === "" || reportType === selectedType;
+        const matchText = subtype.includes(searchText) || name.includes(searchText) || comment.includes(searchText);
+
+        report.style.display = (matchType && matchText) ? "flex" : "none";
     });
-    
 }
 
 

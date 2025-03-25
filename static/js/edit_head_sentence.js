@@ -4,6 +4,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
     initSentencePopupCloseHandlers(); // Инициализация слушателей на закрытие попапа
 
+    document.getElementById("sentenceSearch").addEventListener("input", filterSentencesByText); // Слушатель на поиск предложений по тексту
+
+
 
     // Инициализация слушателей двойного клика на предложения для показа попапа
     document.querySelectorAll(".edit-sentence__text").forEach(sentence => {
@@ -420,4 +423,17 @@ function insertFromBuffer(index) {
     
     addBodySentence(itemFromBuffer);
     
+}
+
+
+// Функция поиска предложений по словам в тексте
+function filterSentencesByText() {
+    const searchText = document.getElementById("sentenceSearch").value.toLowerCase();
+    const sentences = document.querySelectorAll(".edit-sentence__item");
+
+    sentences.forEach(item => {
+        const sentenceText = item.querySelector(".edit-sentence__text").textContent.toLowerCase();
+        const match = sentenceText.includes(searchText);
+        item.style.display = match ? "flex" : "none";
+    });
 }

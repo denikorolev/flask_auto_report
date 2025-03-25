@@ -6,6 +6,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
     initSentencePopupCloseHandlers(); // Инициализация слушателей на закрытие попапа
 
+    document.getElementById("sentenceSearch").addEventListener("input", filterSentencesByText); // Слушатель на поиск предложений по тексту
+
 
     // Инициализация слушателей двойного клика на предложения для показа попапа
     document.querySelectorAll(".edit-sentence__text").forEach(sentence => {
@@ -31,7 +33,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
 
-    // Слушатель на кнопку 🔗 двойной клик
+    // Слушатель на кнопку 🔒 двойной клик
     document.querySelectorAll(".edit-sentence__title-span").forEach(item => {item.addEventListener("dblclick", function() {
         const itemWrapper = this.closest(".edit-sentence__title-wrapper");
         unlinkGroup(itemWrapper);
@@ -666,17 +668,31 @@ function unlinkGroup(itemWrapper) {
 function allowEditing(itemWrapper) {
     const groupIsLinked = itemWrapper.getAttribute("data-group-is-linked").toLowerCase();
     const sentenceTitleElement = itemWrapper.querySelector(".edit-sentence__title");
+    const unblockSentence = "Главные предложения (разблокировано)";
+    const blockSentence = "Главные предложения (заблокировано)";
 
     if (groupIsLinked === "true") {
         itemWrapper.setAttribute("data-group-is-linked", "False");
-        sentenceTitleElement.textContent += "(временно разброкировано) 🔓";
+        sentenceTitleElement.textContent = unblockSentence;
         return;
        
     } else if (groupIsLinked === "false") {
         itemWrapper.setAttribute("data-group-is-linked", "True");
-        sentenceTitleElement.textContent.replace("(временно разброкировано) 🔓", "");
-        sentenceTitleElement.textContent += "(заблокировано) 🔒";
+        sentenceTitleElement.textContent = blockSentence;
         return;
     }
 
+}
+
+
+// Функция поиска предложений по словам в тексте
+function filterSentencesByText() {
+    const searchText = document.getElementById("sentenceSearch").value.toLowerCase();
+    const sentences = document.querySelectorAll(".edit-sentence__item");
+
+    sentences.forEach(item => {
+        const sentenceText = item.querySelector(".edit-sentence__text").textContent.toLowerCase();
+        const match = sentenceText.includes(searchText);
+        item.style.display = match ? "flex" : "none";
+    });
 }

@@ -45,7 +45,7 @@
         <!-- Кнопка для вызова попапа буфера -->
         {{ buffer_open_button() }}
     </div>
-
+    <input type="text" id="sentenceSearch" class="input" placeholder="🔍 Найти предложение...">
     <hr>
 
     <!-- Главные предложения -->
@@ -58,7 +58,7 @@
         >
         <h3 class="edit-sentence__title">Главные предложения</h3>
         {% if paragraph.has_linked_head %}
-            <span class="edit-sentence__title-span">🔗</span>
+            <span class="edit-sentence__title-span">🔒</span>
         {% endif %}
         
     </div>
@@ -125,7 +125,7 @@
         >
         <h3 class="edit-sentence__title">Дополнительные предложения параграфа</h3>
         {% if paragraph.has_linked_tail %}
-            <span class="edit-sentence__title-span">🔗</span>
+            <span class="edit-sentence__title-span">🔒</span>
         {% endif %}
     </div>
 
