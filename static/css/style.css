@@ -1120,3 +1120,9 @@ body {
 .selected-sentence {
     background-color: var(--main-hightlight-color-light);
 }
+
+/* Ключевые слова */
+.keyword-highlighted {
+    color: var(--main-font-color);
+    cursor: pointer;
+}

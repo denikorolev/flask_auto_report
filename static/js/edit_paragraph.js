@@ -687,12 +687,13 @@ function allowEditing(itemWrapper) {
 
 // Функция поиска предложений по словам в тексте
 function filterSentencesByText() {
-    const searchText = document.getElementById("sentenceSearch").value.toLowerCase();
+    const searchText = document.getElementById("sentenceSearch").value.toLowerCase().trim();
+    const searchWords = searchText.split(/\s+/);  // Разбиваем слова в поле поиска по пробелам
     const sentences = document.querySelectorAll(".edit-sentence__item");
 
     sentences.forEach(item => {
         const sentenceText = item.querySelector(".edit-sentence__text").textContent.toLowerCase();
-        const match = sentenceText.includes(searchText);
-        item.style.display = match ? "flex" : "none";
+        const isMatch = searchWords.every(word => sentenceText.includes(word));
+        item.style.display = isMatch ? "flex" : "none";
     });
 }

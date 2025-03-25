@@ -598,6 +598,14 @@ function editButtonLogic(editButton) {
     });
 }
 
+// Функция для поиска по введенным в поисковое поле словам среди прикрепленных 
+// предложений. Используется в showPopupSentences и addSentenceButtonLogic
+function matchesAllWords(text, query) {
+    const words = query.toLowerCase().trim().split(/\s+/);
+    const normalized = text.toLowerCase().replace(/[.,!?;:]/g, "");
+    return words.every(word => normalized.includes(word));
+}
+
 
 // Логика для кнопки "+". Открывает popup с отфильтрованными предложениями.
 function addSentenceButtonLogic() {
@@ -632,7 +640,7 @@ function addSentenceButtonLogic() {
             newSentenceElement.addEventListener("input", function() {
                 const inputText = this.textContent.toLowerCase().trim();
                 const filtered = tailSentences.filter(sentence =>
-                    sentence.sentence.toLowerCase().includes(inputText)
+                    matchesAllWords(sentence.sentence, inputText)
                 );
 
                 if (filtered.length > 0) {

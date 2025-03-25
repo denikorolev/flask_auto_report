@@ -37,7 +37,7 @@ function showPopupSentences(x, y, sentenceList, onSelect) {
 
         // Отфильтрованный список предложений
         const visibleSentences = sentenceList.filter(sentence =>
-            sentence.sentence.toLowerCase().includes(filterText)
+            matchesAllWords(sentence.sentence, filterText)
         );
 
         // Отображаем только те предложения, которые соответствуют фильтру
@@ -95,6 +95,14 @@ function showPopupSentences(x, y, sentenceList, onSelect) {
                 onSelect(selectedSentence);
                 hidePopupSentences();
             }
+        }
+
+        if (event.key === "Enter" && filterInput.value.trim()) {
+            event.preventDefault();
+            const newText = filterInput.value.trim();
+            const customSentence = { sentence: newText };
+            onSelect(customSentence);  // Вставляем текст в целевой элемент
+            hidePopupSentences();
         }
         
     });
