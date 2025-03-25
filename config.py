@@ -34,7 +34,8 @@ class Config:
         "BodySentenceGroup": BodySentenceGroup,
         "HeadSentenceGroup": HeadSentenceGroup,
         "KeyWord": KeyWord,
-        "FileMetadata": FileMetadata
+        "FileMetadata": FileMetadata,
+        "ReportTextSnapshot": ReportTextSnapshot
     }
     
     ASSOCIATIVE_TABLES = [

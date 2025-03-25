@@ -3,7 +3,7 @@
 from flask import Blueprint, render_template, request, jsonify, send_file, g
 from flask_security import current_user
 import os
-from models import db, Report, ReportType, KeyWord, TailSentence, BodySentence
+from models import db, Report, ReportType, KeyWord, TailSentence, BodySentence, ReportTextSnapshot
 from file_processing import save_to_word
 from sentence_processing import group_keywords, split_sentences_if_needed, clean_and_normalize_text, compare_sentences_by_paragraph, preprocess_sentence
 from utils import ensure_list
@@ -278,6 +278,34 @@ def export_to_word():
         return jsonify({"status": "error", "message": f"Failed to export to Word: {e}"}), 500
 
 
+@working_with_reports_bp.route("/save_report_snapshot", methods=["POST"])
+@auth_required()
+def save_report_snapshot():
+    logger.info(f"(Сохранение копии протокола) ------------------------------------")
+    logger.info(f"(Сохранение копии протокола) 🚀 Начинаю обработку запроса на сохранение копии протокола")
+    try:
+        data = request.get_json()
+        if not data:
+            logger.error(f"(Сохранение копии протокола) ❌ Не получены данные в формате JSON")
+            return jsonify({"status": "error", "message": "No JSON data received"}), 400
+        report_id = data.get("report_id")
+        text = data.get("text")
+        if not report_id or not text:
+            logger.error(f"(Сохранение копии протокола) ❌ Не хватает id протокола или текста копии")
+            return jsonify({"status": "error", "message": "Missing required information."}), 400
+        
+        user_id = current_user.id
+        
+    except Exception as e:
+        logger.error(f"(Сохранение копии протокола) ❌ Ошибка при обработке запроса: {e}")
+        return jsonify({"status": "error", "message": f"Error processing request: {e}"}), 500
 
+    try:
+        ReportTextSnapshot.create(report_id, user_id, text)
+        logger.info(f"(Сохранение копии протокола) ✅ Копия протокола успешно сохранена")
+        return jsonify({"status": "success", "message": "Report snapshot saved"}), 200
+    except Exception as e:
+        logger.error(f"(Сохранение копии протокола) ❌ Не получилось сохранить копию протокола: {e}")
+        return jsonify({"status": "error", "message": f"Failed to save report snapshot: {e}"}), 500
     
 

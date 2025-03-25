@@ -135,7 +135,7 @@
                                                 data-index="{{ head_sentence.sentence_index }}"
                                                 data-id="{{ head_sentence.id }}"
                                                 data-sentence-type="head"
-
+                                                data-paragraph-additional="{{ paragraph.is_additional }}"
                                                 > 
                                             {{ head_sentence.sentence }} 
                                             </span>
@@ -194,15 +194,17 @@
                 <button class="btn report__btn" id="exportButton">Экспорт в Word</button>
             {% endif %}
             <button class="btn report__btn push-down" id="generateImpression">ИИ заключение</button>
+            
         </div>
 
 
         <!-- Место вывода ответа ИИ -->
         
-        <div class="">
+        <div class="flex_column">
             <p>Ответ ИИ</p>
             <p contenteditable="true" class="" id="aiResponse"></p>
             <button class="btn report__btn" id="addImpressionToReportButton">Вставить заключение</button>
+            <button class="btn report__btn" id="finishWork">Завершить</button>
         </div>
 
 

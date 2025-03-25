@@ -82,6 +82,11 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     addFocusListeners(); // Добавляем логику для автоматической отправки на сервер новых предложений
+
+    // Слушатель на кнопку "Завершить"
+    document.getElementById("finishWork").addEventListener("click", function() {
+        finishWorkAndSaveSnapShot();
+    });
 });
 
 
@@ -322,50 +327,50 @@ function updateCoreAndImpessionParagraphText() {
 
 
 // Собирает данные абзацев и предложений для отправки на сервер. САМОЕ ВАЖНОЕ
-function collectParagraphsData() {
-    const coreParagraphLists = document.querySelectorAll(".paragraph__item--core"); // Ищем списки с классом paragraph__item--core
-    const paragraphsData = [];
+// function collectParagraphsData() {
+//     const coreParagraphLists = document.querySelectorAll(".paragraph__item--core"); // Ищем списки с классом paragraph__item--core
+//     const paragraphsData = [];
 
-    coreParagraphLists.forEach(paragraphList => {
-        // Находим элемент абзаца внутри текущего списка (paragraph__item--core)
-        const paragraphElement = paragraphList.querySelector(".paragraph__item > p");
-        // Проверяем, что абзац не является дополнительным
-        const isAdditional = paragraphElement.getAttribute("data-paragraph-additional") === "True";
-        if (isAdditional) {
-            console.log("Additional paragraph found. Skipping...");
-            return;
-        }
+//     coreParagraphLists.forEach(paragraphList => {
+//         // Находим элемент абзаца внутри текущего списка (paragraph__item--core)
+//         const paragraphElement = paragraphList.querySelector(".paragraph__item > p");
+//         // Проверяем, что абзац не является дополнительным
+//         const isAdditional = paragraphElement.getAttribute("data-paragraph-additional") === "True";
+//         if (isAdditional) {
+//             console.log("Additional paragraph found. Skipping...");
+//             return;
+//         }
 
-        // Проверяем, что элемент абзаца существует
-        if (!paragraphElement) {
-            console.error("Paragraph element not found in paragraph__item--core.");
-            return;
-        }
+//         // Проверяем, что элемент абзаца существует
+//         if (!paragraphElement) {
+//             console.error("Paragraph element not found in paragraph__item--core.");
+//             return;
+//         }
 
-        const paragraphId = paragraphElement.getAttribute("data-paragraph-id");
-        const paragraphText = paragraphElement.innerText.trim();
-        const sentences = [];
+//         const paragraphId = paragraphElement.getAttribute("data-paragraph-id");
+//         const paragraphText = paragraphElement.innerText.trim();
+//         const sentences = [];
 
-        // Находим все предложения внутри текущего абзаца
-        paragraphList.querySelectorAll(".report__sentence").forEach(sentenceElement => {
-            const sentenceText = cleanSelectText(sentenceElement);
-            if (sentenceText) {
-                sentences.push(sentenceText);
-            }
-        });
+//         // Находим все предложения внутри текущего абзаца
+//         paragraphList.querySelectorAll(".report__sentence").forEach(sentenceElement => {
+//             const sentenceText = cleanSelectText(sentenceElement);
+//             if (sentenceText) {
+//                 sentences.push(sentenceText);
+//             }
+//         });
 
-        if (sentences.length > 0) {
-            paragraphsData.push({
-                paragraph_id: paragraphId,
-                paragraph_text: paragraphText,
-                sentences: sentences,
-            });
-        }
-    });
+//         if (sentences.length > 0) {
+//             paragraphsData.push({
+//                 paragraph_id: paragraphId,
+//                 paragraph_text: paragraphText,
+//                 sentences: sentences,
+//             });
+//         }
+//     });
     
 
-    return paragraphsData;
-}
+//     return paragraphsData;
+// }
 
 
 // Собирает текст из абзацев на основе указанного класса. САМОЕ ВАЖНОЕ
@@ -678,10 +683,10 @@ function copyButtonLogic(copyButton) {
         try {
             // Копируем текст в буфер обмена
             await navigator.clipboard.writeText(textToCopy);
-            toastr.success("Text copied to clipboard successfully", "Success");
+            toastr.success("Текст успешно скопирован в буфер обмена");
 
             // После успешного копирования выполняем отправку данных
-            const paragraphsData = collectParagraphsData();
+            // const paragraphsData = collectParagraphsData();
 
             // Отправляем данные параграфов
             // await sendParagraphsData(paragraphsData);
@@ -706,7 +711,7 @@ function wordButtonLogic(exportButton) {
         const textToExport = `${coreText}\n\n${impressionText}`.trim();
 
         // Формируем данные абзацев
-        const paragraphsData = collectParagraphsData();
+        // const paragraphsData = collectParagraphsData();
 
         try {
             await sendModifiedSentencesToServer();
@@ -872,9 +877,9 @@ function addFocusListeners() {
 async function sendModifiedSentencesToServer() {
     // Находим все предложения, помеченные как изменённые
     const modifiedSentences = document.querySelectorAll("[data-sentence-modified='true']");
-    const reportId = document.getElementById("csrf_token").dataset.reportId; // нужно будет переделать и брать id отчета из другого места
+    const reportId = reportData.id;
     if (modifiedSentences.length === 0) {
-        toastr.info("No changes detected to save.");
+        toastr.info("Ни одно предложение не было изменено.");
         return;
     }
 
@@ -882,6 +887,11 @@ async function sendModifiedSentencesToServer() {
 
     modifiedSentences.forEach(sentenceElement => {
         const paragraphId = sentenceElement.getAttribute("data-paragraph-id");
+        const isAdditionalParagraph = sentenceElement.getAttribute("data-paragraph-additional") === "True";
+        if (isAdditionalParagraph) {
+            console.log("Additional paragraph found. Skipping...");
+            return;
+        }
         const sentenceType = sentenceElement.getAttribute("data-sentence-type") === "head" ? "body" : "tail";
         const currentText = cleanSelectText(sentenceElement).trim();
         const headSentenceId = sentenceElement.getAttribute("data-id" || null);
@@ -901,7 +911,7 @@ async function sendModifiedSentencesToServer() {
 
     // Если нет данных для отправки, выводим сообщение и завершаем выполнение
     if (dataToSend.length === 0) {
-        toastr.info("No valid modified sentences to send.");
+        toastr.info("Нет подходящих предложений для автоматического добавления в базу данных");
         return;
     }
 
@@ -1035,4 +1045,30 @@ function inactiveParagraphsListClickHandler(element) {
             }
         }
     }
+}
+
+
+// Функция для обработки клика по кнопке завершить. Завершает работу, 
+// отправляется текст на сервер и переходит на страницу выбора отчета
+function finishWorkAndSaveSnapShot() {
+    const coreText = collectTextFromParagraphs("paragraph__item--core");
+    const impressionText = collectTextFromParagraphs("paragraph__item--impression");
+
+    const textToSave = `${coreText}\n\n${impressionText}`.trim();
+    
+    return sendRequest({
+        url: "/working_with_reports/save_report_snapshot",
+        method: "POST",
+        data: {
+            text: textToSave,
+            report_id: reportData.id
+        },
+    }).then(data => {
+        if (data.status === "success") {
+            
+            window.location.href = "/working_with_reports/choosing_report";
+        } 
+    }).catch(error => {
+        console.error("Ошибка сохранения отчета:", error);
+    });
 }
