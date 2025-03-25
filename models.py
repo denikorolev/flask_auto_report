@@ -1923,6 +1923,62 @@ class FileMetadata(BaseModel):
             return None
 
 
+class ReportTextSnapshot(BaseModel):
+    __tablename__ = "report_text_snapshots"
+
+    report_id = db.Column(db.BigInteger, db.ForeignKey("reports.id", ondelete="SET NULL"), nullable=True)
+    report_type = db.Column(db.SmallInteger, nullable=False)
+    user_id = db.Column(db.BigInteger, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    text = db.Column(db.Text, nullable=False)  
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    report = db.relationship("Report", backref=db.backref("snapshots", lazy=True))
+    user = db.relationship("User", backref=db.backref("text_snapshots", lazy=True))
+
+    def __repr__(self):
+        return f"<ReportTextSnapshot id={self.id} report_id={self.report_id} created_at={self.created_at}>"
+
+
+    @classmethod
+    def create(cls, report_id, user_id, text):
+        """
+        Создает и сохраняет снапшот текста отчета.
+
+        Args:
+            report_id (int): ID отчета, к которому относится снапшот.
+            user_id (int): ID пользователя, сохранившего снапшот.
+            text (str): Текст отчета на момент создания снапшота.
+
+        Returns:
+            ReportTextSnapshot: созданный объект снапшота.
+        """
+        try:
+            from models import Report  # избегаем циклического импорта
+            logger.info(f"(ReportTextSnapshot.create) 🚀 Начато создание снапшота текста отчета ID={report_id}")
+            report = Report.query.get(report_id)
+            if not report:
+                logger.error(f"(ReportTextSnapshot.create) ❌ Report с id={report_id} не найден")
+                raise ValueError(f"Report с id={report_id} не найден")
+
+            report_type = report.report_to_subtype.subtype_to_type.id
+
+            snapshot = cls(
+                report_id=report_id,
+                report_type=report_type,
+                user_id=user_id,
+                text=text
+            )
+            db.session.add(snapshot)
+            db.session.commit()
+            logger.info(f"(ReportTextSnapshot.create) ✅ Создан снапшот текста отчета ID={report_id}")
+            return snapshot
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"(ReportTextSnapshot.create) ❌ Ошибка при создании снапшота: {e}")
+            raise ValueError(f"Ошибка при создании снапшота: {e}")
+
+
+
 
 
 
