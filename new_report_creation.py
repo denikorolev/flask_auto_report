@@ -31,6 +31,7 @@ def create_report():
                            )
     
     
+    
 # Создание нового отчета вручную
 @new_report_creation_bp.route('/create_manual_report', methods=['POST'])
 @auth_required()
@@ -67,6 +68,7 @@ def create_manual_report():
         logger.error(f"Failed to create report. Error: {str(e)}")
         return jsonify({"status": "error", "message": f"Не удалось создать протокол. Ошибка: {str(e)}"}), 500    
 
+    
     
 # Создание нового отчета из загруженного файла
 @new_report_creation_bp.route('/create_report_from_file', methods=['POST'])
@@ -181,6 +183,7 @@ def create_report_from_file():
     except Exception as e:
         return jsonify({"status": "error", "message": f"Ошибка при создании протокола: {str(e)}"}), 500
 
+    
     
 # Создание нового отчета на основе одного или нескольких существующих
 @new_report_creation_bp.route('/create_report_from_existing_few', methods=['POST'])

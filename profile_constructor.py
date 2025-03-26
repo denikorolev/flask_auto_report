@@ -15,7 +15,7 @@ class ProfileSettingsManager:
         """
         Загружает настройки для указанного профиля из таблицы AppConfig в current_app.config.
         """
-        
+        logger.info("Loading profile settings...")
         try:
             profile = getattr(g, "current_profile", None)
             profile_id = profile.id if profile else session.get("profile_id") or None
@@ -23,10 +23,11 @@ class ProfileSettingsManager:
                 settings = AppConfig.query.filter_by(profile_id=profile_id).all()
                 profile_settings = {setting.config_key: ProfileSettingsManager._parse_value(setting) for setting in settings}
                 # Сохраняем все настройки в app.config под ключом PROFILE_SETTINGS
+                logger.info(f"Loaded settings for profile_id={profile_id} ✅ successfull.")
                 current_app.config["PROFILE_SETTINGS"] = profile_settings
                 
                 if not profile_settings:
-                    logger.warning(f"No settings found for profile_id={profile_id}. Using default settings.")
+                    logger.warning(f"No settings found for profile_id={profile_id}. ⚠️ Using default settings.")
                     profile_settings = current_app.config.get("DEFAULT_PROFILE_SETTINGS", {})
                     current_app.config["PROFILE_SETTINGS"] = profile_settings
                     

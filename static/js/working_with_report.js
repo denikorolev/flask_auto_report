@@ -690,7 +690,10 @@ function copyButtonLogic(copyButton) {
 
             // Отправляем данные параграфов
             // await sendParagraphsData(paragraphsData);
-            await sendModifiedSentencesToServer();
+            
+            if (userSettings.USE_SENTENCE_AUTOSAVE) {
+                await sendModifiedSentencesToServer();
+            }
             
         } catch (error) {
             alert(error.message || "Failed to process paragraphs.");
@@ -956,7 +959,7 @@ function firstGrammaSentence(sentence) {
     if (!sentence) return sentence; // Если пустая строка — ничего не делаем
 
     sentence = sentence.replace(/\.{2,}$/g, ".") // Убираем двойные точки в конце предложения
-    sentence = sentence.replace(/(\d+)\.(?!\d)/g, "$1)"); // Меняем `1.` → `1)`, если после точки нет цифры
+    sentence = sentence.replace(/(\d+)\.(?!\d)(?!\s*[A-ZА-ЯЁ])(?!\s*$)/g, "$1)"); // Меняем `1.` → `1)`, если после точки нет цифры
     
     // Ставим точку в конце предложения, если ее нет, это специально 
     // сделано после скобки после цифры, чтобы не менять автоточку после даты
@@ -976,7 +979,7 @@ function firstGrammaSentence(sentence) {
     sentence = sentence.replace(/\s([,.!?:;])/g, "$1"); // Убираем пробел перед знаками препинания
     sentence = sentence.replace(/\s+/g, " "); // Заменяем несколько пробелов на один
 
-    const abbreviations = ["КТ", "МРТ", "ПЭТ-КТ", "УЗИ", "ФГДС","ОМТ","ОГК","ОБП","ЗП","ЦВК","ЭКС"];
+    const abbreviations = userSettings.EXCEPTIONS_AFTER_PUNCTUATION;
     // Если слово в нижнем регистре и является аббревиатурой, то делаем его заглавным
     sentence = sentence.replace(/(?<!\p{L})[а-яёa-z-]+(?!\p{L})/giu, (match) => {
         const upperMatch = match.toUpperCase();
@@ -1029,7 +1032,7 @@ function inactiveParagraphsListClickHandler(element) {
         // Показываем/скрываем все предложения (span) внутри параграфа
         const sentenceSpans = inactiveParagraphElement.querySelectorAll(".report__sentence");
         sentenceSpans.forEach(span => {
-            span.style.display = newDisplay;
+            span.style.display = (newDisplay === "none") ? "none" : "inline";
         });
 
         // Работаем с параграфом (p)

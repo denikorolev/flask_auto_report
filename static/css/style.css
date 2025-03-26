@@ -422,9 +422,10 @@ body {
 
 
 .report__sentence {
+    display: inline;
     max-height: 25px;
-    margin-right: 10px;
-    margin-bottom: 5px;
+    margin-right: 8px;
+    vertical-align: middle;
 }
 
 .report__sentence.editing {
@@ -1126,3 +1127,9 @@ body {
     color: var(--main-font-color);
     cursor: pointer;
 }
+
+.icon-btn--add-sentence {
+    display: inline;
+    vertical-align: middle;    
+}
+

@@ -1,6 +1,6 @@
 #working_with_reports.py
 
-from flask import Blueprint, render_template, request, jsonify, send_file, g
+from flask import Blueprint, render_template, request, jsonify, send_file, g, current_app
 from flask_security import current_user
 import os
 from models import db, Report, ReportType, KeyWord, TailSentence, BodySentence, ReportTextSnapshot
@@ -85,6 +85,8 @@ def working_with_reports():
         logger.error(f"(работа с протоколом) ❌ Не получилось получить ключевые слова для текущего пользователя: {e}")
         return render_template("error.html", message=f"Не получилось получить ключевые слова для текущего пользователя: {e}")
     
+    # Подготовка настроек полоьзователя для передачи на страницу
+    
     logger.info(f"(работа с протоколом) ------------------------------------")
     logger.info(f"(работа с протоколом) ✅ Данные протокола и его параграфов успешно получены. Загружаю страницу")
     return render_template(
@@ -95,7 +97,7 @@ def working_with_reports():
         full_name=full_name,
         birthdate=birthdate,
         report_number=report_number,
-        key_words_groups=key_words_groups
+        key_words_groups=key_words_groups,
     )
 
 

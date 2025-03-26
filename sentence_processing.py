@@ -115,6 +115,7 @@ def check_existing_keywords(key_words):
 
     return None
 
+
 # Функция для извлечения абзацев и предложений из документа Word.
 # Используется в new_report_creation.py
 def extract_paragraphs_and_sentences(file_path):
@@ -436,7 +437,7 @@ def compare_sentences_by_paragraph(new_sentences, report_id):
             - "unique": List of new sentences considered unique.
     """
     logger.info(f"(функция compare_sentences_by_paragraph) 🚀 Начато сравнение новых предложений с существующими в базе данных")
-    similarity_threshold_fuzz = float(current_app.config["PROFILE_SETTINGS"]["SIMILARITY_THRESHOLD_FUZZ"])
+    similarity_threshold_fuzz = int(current_app.config["PROFILE_SETTINGS"]["SIMILARITY_THRESHOLD_FUZZ"])
     except_words = current_app.config["PROFILE_SETTINGS"]["EXCEPT_WORDS"]
     logger.info(f"(функция compare_sentences_by_paragraph) Порог схожести: {similarity_threshold_fuzz}")
     logger.info(f"(функция compare_sentences_by_paragraph) Исключаемые слова: {except_words}")

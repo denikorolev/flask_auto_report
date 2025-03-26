@@ -9,7 +9,6 @@ from flask_security.decorators import auth_required
 from file_processing import sync_profile_files
 from models import Report
 from logger import logger
-import json
 
 profile_settings_bp = Blueprint('profile_settings', __name__)
 
@@ -28,8 +27,7 @@ def set_profile_as_default(profile_id):
     """
     Устанавливает профиль по умолчанию для пользователя.
     """
-    print("set_profile_as_default started----------------")
-    print(f"profile_id = {profile_id}")
+    logger.info(f"set_profile_as_default started and profile_id = {profile_id}")
     user_profiles = UserProfile.get_user_profiles(current_user.id)
     if not user_profiles:
         return False
@@ -37,15 +35,15 @@ def set_profile_as_default(profile_id):
         for profile in user_profiles:
             if profile.id == int(profile_id):
                 profile.default_profile = True
-                print(f"set profile {profile.id} as default")
+                logger.info(f"set profile {profile.id} as default")
             else:
-                print(f"set profile {profile.id} as NOT default")
+                logger.info(f"set profile {profile.id} as NOT default")
                 profile.default_profile = False
             profile.save()
     except Exception as e:
-        print(f"Error while setting default profile: {e}")
+        logger.error(f"set_profile_as_default error {e}")
         return False
-    print("End of set_profile_as_default----------------")
+    logger.info(f"set_profile_as_default end work successfull")
     return True
     
 
@@ -70,21 +68,19 @@ def profile_settings():
 def choosing_profile():
     # Вот пользователь авторизован и у него либо нет профиля 
     # либо их несколько и нет дефолтного
-    print("profile settings started-------------")
-    print(f"profile settings started and profile in g = {getattr(g,'current_profile', None)}")
-    print(f"profile settings, looking for profile in session, profile = {session.get('profile_id')}")
-    print("not use profile from session")
+    print(f"(route 'choosing_profile') ---------------------------------------------------")
+    logger.info(f"(route 'choosing_profile') 🚀 Profile settings started and profile in g = {getattr(g,'current_profile', None)}")
     user_profiles = UserProfile.get_user_profiles(current_user.id)
-    print(f"looking for user_profiles: {user_profiles}")
+    logger.info(f"(rout 'choosing_profile') User profiles: {user_profiles}")
     if not user_profiles:
-        print("profile settings end work with success if it's new user -------------")
+        logger.info(f"(route 'choosing_profile') ⚠️ User has no profiles")
         return render_template("choosing_profile.html",
                            title="Создание нового профиля",
                            new_user=True)
     profile_id = request.args.get("profile_id") or None
-    print(f"profile_id from url: {profile_id}")
+    logger.info(f"(route 'choosing_profile') Profile id from url: {profile_id}")
     if profile_id:
-        print("inside profile_id from url logic")
+        logger.info(f"(route 'choosing_profile') Starting profile id from url logic")
         profile = UserProfile.find_by_id_and_user(profile_id, current_user.id)
         if profile:
             session["profile_id"] = profile.id
@@ -92,14 +88,14 @@ def choosing_profile():
             ProfileSettingsManager.load_profile_settings()
             # Синхронизацию файлов пока оставлю здесь, но ее нужно будет перенести
             sync_profile_files(profile.id)
-            print("profile settings end work with success -------------")
+            logger.info(f"(route 'choosing_profile') Profile {profile.id} selected")
             return redirect(url_for("working_with_reports.choosing_report"))
         else:
-            print("profile settings end work with error -------------")
+            logger.error(f"(route 'choosing_profile') ❌ Profile {profile_id} not found or you do not have permission to access it")
             return render_template(url_for("error"),
                            title="Данные о выбранном профиле не получены"
                            )
-    print("not dive into profile_id from url logic")
+    logger.info(f"(route 'choosing_profile') Profile id from url not found")
     return render_template("choosing_profile.html",
                            title="Выбор профиля",
                            user_profiles=user_profiles)
