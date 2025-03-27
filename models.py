@@ -15,7 +15,7 @@ from logger import logger
 db = SQLAlchemy()
 
  
-# ✅ быстрее 👉 🔥 📌 ❌ 🚀 😎 🔄 1️⃣ 2️⃣ 3️⃣ ⚠️ 💻
+# ✅ быстрее 👉 🔥 📌 ❌ 🚀 😎 🔄 1️⃣ 2️⃣ 3️⃣ ⚠️ 💻 🧠
 
 
 
@@ -62,6 +62,7 @@ tail_sentence_group_link = db.Table(
     db.Column("sentence_weight", db.Integer, nullable=False, server_default="1"),  # Храним вес в связи!
     db.Index("ix_tail_sentence_group", "tail_sentence_id", "group_id")  
 )
+
 
 
 
@@ -197,8 +198,6 @@ class BaseModel(db.Model):
         return cls.query.get(object_id)
     
     
-
-
 class Role(db.Model, RoleMixin):
     __tablename__ = 'roles'
     id = db.Column(db.BigInteger, primary_key=True)
@@ -217,20 +216,15 @@ class User(BaseModel, db.Model, UserMixin):
     active = db.Column(db.Boolean, default=True, nullable=False)
     fs_uniquifier = db.Column(db.String(255), unique=True, nullable=False)
     email = db.Column(db.String, unique=True, nullable=False)
-    confirmed_at = db.Column(db.DateTime, nullable=True)  # Время подтверждения email
-    last_login_at = db.Column(db.DateTime, nullable=True)  # Последняя авторизация
-    current_login_at = db.Column(db.DateTime, nullable=True)  # Текущая авторизация
-    last_login_ip = db.Column(db.String(45), nullable=True)  # Последний IP-адрес
-    current_login_ip = db.Column(db.String(45), nullable=True)  # Текущий IP-адрес
+    confirmed_at = db.Column(db.DateTime, nullable=True) 
+    last_login_at = db.Column(db.DateTime, nullable=True) 
+    current_login_at = db.Column(db.DateTime, nullable=True) 
+    last_login_ip = db.Column(db.String(45), nullable=True) 
+    current_login_ip = db.Column(db.String(45), nullable=True)  
     login_count = db.Column(db.Integer, default=0, nullable=False)  # Счетчик входов
 
 
-
-    roles = db.relationship(
-        'Role',
-        secondary=roles_users,
-        backref=db.backref('users', lazy='dynamic')
-    )
+    roles = db.relationship('Role', secondary=roles_users, backref=db.backref('users', lazy='dynamic'))
     user_to_profiles = db.relationship('UserProfile', lazy="joined", backref=db.backref("profile_to_user"), cascade="all, delete-orphan")
     user_to_reports = db.relationship('Report', lazy=True)
 
@@ -259,6 +253,10 @@ class User(BaseModel, db.Model, UserMixin):
         if role and role not in self.roles:
             self.roles.append(role)
             db.session.commit()
+
+
+    def find_by_email(email):
+        return User.query.filter_by(email=email).first()
 
 
 class UserProfile(BaseModel):
@@ -498,7 +496,7 @@ class Report(BaseModel):
         Returns:
             dict: Словарь с информацией об отчете или None, если отчет не найден.
         """
-        logger.info(f"(get_report_info) 🚀 Начинаю выполнение запроса данных протокола report_id={report_id}")
+        logger.debug(f"(get_report_info) 🚀 Начинаю выполнение запроса данных протокола report_id={report_id}")
         
         report = cls.query.filter_by(id=report_id).first()
         if not report:
@@ -515,7 +513,7 @@ class Report(BaseModel):
             "user_id": report.user_id,
             "report_public": report.public
         }
-        logger.info(f"(get_report_info)✅ Получил данные отчета: report_id={report_id}. Возвращаю данные")
+        logger.debug(f"(get_report_info)✅ Получил данные отчета: report_id={report_id}. Возвращаю данные")
         return report_data
     
     
@@ -529,7 +527,7 @@ class Report(BaseModel):
         Returns:
             tuple: (dict, list) - (report_data, sorted_paragraphs)
         """
-        logger.info(f"(get_report_data) 🚀 Начат процесс получения данных отчета: report_id={report_id}")  
+        logger.debug(f"(get_report_data) 🚀 Начат процесс получения данных отчета: report_id={report_id}")  
         try:
             report_data = cls.get_report_info(report_id)
         except Exception as e:
@@ -544,7 +542,7 @@ class Report(BaseModel):
         except Exception as e:
             logger.error(f"(get_report_data) ❌ Ошибка при получении параграфов отчета из (get_report_paragraphs): {e}")
             raise e
-        logger.info(f"(get_report_data) ✅ Получил обобщенные данные отчета: report_id={report_id}. Возвращаю.")
+        logger.debug(f"(get_report_data) ✅ Получил обобщенные данные отчета: report_id={report_id}. Возвращаю.")
         return report_data, sorted_paragraphs
     
     
@@ -562,7 +560,7 @@ class Report(BaseModel):
         Returns:
             list: Список параграфов, отсортированных по index.
         """
-        logger.info(f"(get_report_paragraphs)🚀 Начинаю выполнение запроса параграфов для отчета.")
+        logger.debug(f"(get_report_paragraphs)🚀 Начинаю выполнение запроса параграфов для отчета.")
 
         # Получаем все параграфы отчета и сортируем по paragraph_index
         paragraphs = Paragraph.query.filter_by(report_id=report_id).order_by(Paragraph.paragraph_index).all()
@@ -576,9 +574,9 @@ class Report(BaseModel):
                 continue
 
             sorted_paragraphs.append(paragraph_data)
-            logger.info(f"(метод get_report_paragraphs класса Report) Параграф {paragraph.id} обработан и добавлен в список параграфов.")
+            logger.debug(f"(метод get_report_paragraphs класса Report) Параграф {paragraph.id} обработан и добавлен в список параграфов.")
 
-        logger.info(f"(метод get_report_paragraphs класса Report) ✅ Получил параграфы для отчета: report_id={report_id}. Возвращаю данные")
+        logger.debug(f"(метод get_report_paragraphs класса Report) ✅ Получил параграфы для отчета: report_id={report_id}. Возвращаю данные")
         return sorted_paragraphs  
 
 
@@ -595,6 +593,35 @@ class ReportShare(db.Model):
     shared_by = db.relationship("User", foreign_keys=[shared_by_user_id])
     shared_with = db.relationship("User", foreign_keys=[shared_with_user_id])
 
+
+    from flask_login import current_user
+
+    @classmethod
+    def create(cls, report_id, shared_with_user_id):
+        """
+        Создает объект ReportShare — пользователь current_user делится отчетом с другим пользователем.
+
+        Args:
+            report_id (int): ID отчета, которым делятся.
+            shared_with_user_id (int): ID пользователя, с которым делятся.
+
+        Returns:
+            ReportShare: Созданный объект, если успех. None в случае ошибки.
+        """
+        logger.info(f"[ReportShare.create] 🚀 Начинаю создание записи о шаринге отчета {report_id} с пользователем {shared_with_user_id}")
+        try:
+            new_share = cls(
+                report_id=report_id,
+                shared_by_user_id=current_user.id,
+                shared_with_user_id=shared_with_user_id
+            )
+            db.session.add(new_share)
+            db.session.commit()
+            return new_share
+        except Exception as e:
+            logger.error(f"[ReportShare.create] ❌ Ошибка при создании записи о шаринге: {e}")
+            db.session.rollback()
+            return None
 
 
     
@@ -702,7 +729,7 @@ class Paragraph(BaseModel):
         if paragraph.head_sentence_group_id:
             logger.debug(f"(метод get_paragraph_data класса Paragraph) Подтверждено наличие группы head предложений для параграфа {paragraph_id}")
             if HeadSentenceGroup.is_linked(paragraph.head_sentence_group_id) > 1:
-                logger.info(f"(метод get_paragraph_data класса Paragraph) 📌 Подтверждено наличие >1 связей для head у данного параграфа. Информация добавлена в аттрибуты")
+                logger.debug(f"(метод get_paragraph_data класса Paragraph) 📌 Подтверждено наличие >1 связей для head у данного параграфа. Информация добавлена в аттрибуты")
                 has_linked_head = True
         if paragraph.tail_sentence_group_id:
             logger.debug(f"(метод get_paragraph_data класса Paragraph) Подтверждено наличие группы tail предложений для параграфа {paragraph_id}.")

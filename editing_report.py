@@ -2,9 +2,10 @@
 
 from flask import Blueprint, render_template, request, current_app, jsonify, g
 from flask_security import current_user
-from models import db, Report, Paragraph, HeadSentence, BodySentence, TailSentence, HeadSentenceGroup, TailSentenceGroup, BodySentenceGroup
+from models import db, User, Report, Paragraph, HeadSentence, BodySentence, TailSentence, HeadSentenceGroup, TailSentenceGroup, BodySentenceGroup, ReportShare
 from utils import get_max_index, check_unique_indices, normalize_paragraph_indices
 from flask_security.decorators import auth_required
+from decorators import require_role_rank
 from logger import logger
 
 
@@ -669,4 +670,71 @@ def unlink_group():
     return jsonify({"status": "success", "message": "Группа успешно отделена"}), 200
    
     
+# Обрабатывает запрос на то, чтобы поделиться протоколом с другим пользователем
+@editing_report_bp.route('/share_report', methods=['POST'])
+@auth_required()
+def share_report():
+    logger.info(f"(Поделиться протоколом) --------------------------------------------")
+    logger.info(f"(Поделиться протоколом) 🚀 Начинаю обработку запроса на поделиться протоколом")
+    data = request.get_json()
+    report_id = data.get("report_id")
+    email = data.get("email")
+    if not report_id or not email:
+        logger.error(f"(Поделиться протоколом) ❌ Не указаны необходимые данные необходимые чтобы поделиться протоколом")
+        return jsonify({"status": "error", "message": "Не указаны необходимые данные необходимые чтобы поделиться протоколом"}), 400
+    shared_with_user = User.find_by_email(email)
+    if not shared_with_user:
+        logger.error(f"(Поделиться протоколом) ❌ Пользователь не найден")
+        return jsonify({"status": "error", "message": "Пользователь с таким email не найден"}), 404
     
+    shared_with_user_id = shared_with_user.id 
+    
+    try:
+        ReportShare.create(report_id, shared_with_user_id)
+        logger.info(f"(Поделиться протоколом) ✅ Протокол успешно поделен")
+        logger.info(f"(Поделиться протоколом) --------------------------------------------")
+        return jsonify({"status": "success", "message": f"Удалось успешно поделиться протоколом с пользователем {email}"}), 200
+    except Exception as e:
+        logger.error(f"(Поделиться протоколом) ❌ Ошибка при попытке поделиться протоколом: {str(e)}")
+        return jsonify({"status": "error", "message": f"Ошибка при попытке поделиться протоколом: {str(e)}"}), 500
+    
+    
+    
+@editing_report_bp.route("/toggle_public_report", methods=["PATCH"])
+@auth_required()
+@require_role_rank(4)
+def toggle_public_report():
+    logger.info("[toggle_public_report] --------------------------------------------")  
+    logger.info("[toggle_public_report] 🚀 Начато переключение статуса общедоступности протокола")
+    try:
+        data = request.get_json()
+        report_id = data.get("report_id")
+        logger.info(f"[toggle_public_report] Получены данные для переключения статуса: {data}")
+
+        if not report_id:
+            logger.error("[toggle_public_report] ❌ ID протокола не передан.")
+            return jsonify({"status": "error", "message": "ID протокола не передан."}), 400
+
+        report = Report.get_by_id(report_id)
+
+        if not report or report.user_id != current_user.id:
+            return jsonify({"status": "error", "message": "Протокол не найден или не принадлежит вам."}), 403
+
+        # Переключаем флаг public
+        report.public = not report.public
+        db.session.commit()
+        logger.info("[toggle_public_report] ✅ Статус общедоступности успешно изменён")
+        logger.info("[toggle_public_report] --------------------------------------------")
+
+        return jsonify({
+            "status": "success",
+            "message": f"Статус общедоступности изменён: {'общедоступный' if report.public else 'приватный'}",
+            "new_public_status": report.public
+        })
+
+    except Exception as e:
+        logger.error(f"[toggle_public_report] ❌ Ошибка при переключении статуса: {e}")
+        return jsonify({
+            "status": "error",
+            "message": f"Ошибка при переключении статуса: {str(e)}"
+        }), 500

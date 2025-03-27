@@ -5,15 +5,20 @@ let selectedReports = [];
 
 document.addEventListener("DOMContentLoaded", function() {
     
-    // Вешаем обработчик на изменение подтипа отчета
+    // Вешаем обработчик на изменение типа отчета
     document.getElementById("reportType").addEventListener("change", handleReportTypeChange);
     // Триггерим для начальной настройки(имитируем нажатие от пользователя, чтобы запустить логику выбора)
     document.getElementById("reportType").dispatchEvent(new Event("change"));
 
     // Вешаем обработчик на изменение способа создания отчета
-    document.getElementById("action").addEventListener("change", handleActionChange); 
-    // Триггерим для начальной настройки(имитируем нажатие от пользователя, чтобы запустить логику выбора)
-    document.getElementById("action").dispatchEvent(new Event("change")); 
+    document.querySelectorAll('input[name="action"]').forEach(radio => {
+        radio.addEventListener("change", function () {
+            handleActionChange(this.value);
+        });
+    });
+
+    // // Триггерим для начальной настройки(имитируем нажатие от пользователя, чтобы запустить логику выбора)
+    // document.getElementById("reportCreationActionGroup").dispatchEvent(new Event("change")); 
     // Вешаем функцию обработчик на кнопку "Создать протокол"
     document.getElementById("createReportButton")?.addEventListener("click", handleCreateReportClick);
     // Вешаем обработчик на чекбоксы существующих отчетов
@@ -32,6 +37,7 @@ function handleReportTypeChange() {
     // Получаем подтипы для выбранного типа
     const selectedType = reportTypesAndSubtypes.find(type => type.type_id === reportType);
     const currentSubtypes = selectedType ? selectedType.subtypes : [];
+    const reportTypeText = selectedType ? selectedType.type_text : "неизвестный тип";
 
     // Если нет подтипов, добавлям заглушку
     if (currentSubtypes.length === 0) {
@@ -57,7 +63,7 @@ function handleReportTypeChange() {
 
     existingReportsList.forEach(item => {
         const itemReportType = item.dataset.reportType;
-        if (itemReportType === String(reportType)) {
+        if (itemReportType === String(reportTypeText)) {
             item.style.display = "block";
         } else {
             item.style.display = "none";
@@ -94,18 +100,17 @@ function updateOrderCircles() {
 }
 
 
-/**
- * Обрабатывает выбор отчетов, управляет массивом `selectedReports`.
- */
+// Обрабатывает выбор отчетов, управляет массивом `selectedReports`.
 function handleReportSelection(event) {
     const target = event.target;
 
-    // Проверяем, что кликнули по чекбоксу и что он находится внутри списка отчетов
-    if (target.type === "checkbox" && target.closest("#existingReportList")) {
+    if (target.type === "checkbox") {
         const reportId = target.value;
 
         if (target.checked) {
-            selectedReports.push(reportId);
+            if (!selectedReports.includes(reportId)) {
+                selectedReports.push(reportId);
+            }
         } else {
             selectedReports = selectedReports.filter(id => id !== reportId);
         }
@@ -115,11 +120,10 @@ function handleReportSelection(event) {
 }
 
 
-/**
- * Определяет выбранное действие и вызывает соответствующую функцию.
- */
+// Определяет выбранное действие и вызывает соответствующую функцию.
 function handleCreateReportClick() {
-    const selectedAction = document.getElementById("action")?.value;
+    const selectedRadio = document.querySelector('input[name="action"]:checked');
+    const selectedAction = selectedRadio ? selectedRadio.value : null;
 
     switch (selectedAction) {
         case "manual":
@@ -129,6 +133,8 @@ function handleCreateReportClick() {
             createReportFromFile();
             break;
         case "existing_few":
+        case "shared":
+        case "public":
             createReportFromExistingFew();
             break;
         default:
@@ -138,27 +144,113 @@ function handleCreateReportClick() {
 }
 
 
-/**
- * Определяет какое значение выбрано в action и настраивает вид окна в зависимости от этого.
- */
-function handleActionChange() {
-    const actionSelect = document.getElementById("action");
-    const fileUploadContainer = document.getElementById("file-upload-container");
-    const existingReportContainer = document.getElementById("existing-report-container");
-    const additionalParagraphContainer = document.getElementById("additional_paragraphs_container");
+// Определяет какое значение выбрано в radio input и настраивает вид окна в зависимости от этого.
+function handleActionChange(selectedAction) {
+    const fileUploadContainer = document.getElementById("reportCreationForm");
+    const existingReportContainer = document.getElementById("existingReportContainer");
+    const sharedReportContainer = document.getElementById("sharedReportContainer");
+    const publicReportContainer = document.getElementById("publicReportContainer");
 
-    if (!actionSelect) return;
-    
-    const selectedAction = actionSelect.value;
+    // Скрываем все
+    fileUploadContainer.style.display = "none";
+    existingReportContainer.style.display = "none";
+    sharedReportContainer.style.display = "none";
+    publicReportContainer.style.display = "none";
 
-    // Показываем или скрываем контейнеры в зависимости от выбора
-    fileUploadContainer.style.display = selectedAction === "file" ? "flex" : "none";
-    existingReportContainer.style.display = selectedAction === "existing_few" ? "block" : "none";
-    additionalParagraphContainer.style.display = selectedAction === "existing_few" ? "block" : "none";
+    // Показываем выбранный
+    if (selectedAction === "file") {
+        fileUploadContainer.style.display = "flex";
+    } else if (selectedAction === "existing_few") {
+        existingReportContainer.style.display = "block";
+    } else if (selectedAction === "shared") {
+        sharedReportContainer.style.display = "block";
+        loadSharedReports();  // функция уже есть
+    } else if (selectedAction === "public") {
+        publicReportContainer.style.display = "block";
+        loadPublicReports();  // создадим её ниже
+    }
 
-    // Если изменили действие, сбрасываем выбор отчетов
+
+    // Сброс выбранных отчетов
     selectedReports = [];
+    // Сброс состояния всех чекбоксов
+    document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+        checkbox.checked = false;
+    });
+
     updateOrderCircles();
+
+}
+
+
+// Отправляет запрос на сервер для получения данных о существующих shared отчетах
+async function loadSharedReports() {
+    const list = document.getElementById("sharedReportList");
+    list.innerHTML = ""; // очистим
+
+    try {
+        const response = await sendRequest({
+            url: "/new_report_creation/get_shared_reports",
+            method: "GET"
+        });
+
+        if (response.status != "error") {
+            if (response.reports.length === 0) {
+                console.log("Нет доступных протоколов от других пользователей.");
+                list.innerHTML = `<li>Нет доступных протоколов от других пользователей.</li>`;
+                return;
+            }
+            response.reports.forEach(report => {
+                const li = document.createElement("li");
+                li.setAttribute("data-report-type", report.report_type);
+                li.classList.add("existing-fewreports__item");
+                li.innerHTML = `
+                    <label>
+                        <input type="checkbox" value="${report.id}" />
+                        ${report.report_name} - ${report.report_type}  (${report.shared_by_email})
+                    </label>
+                `;
+                list.appendChild(li);
+            });
+        } else {
+            list.innerHTML = `<li>Ошибка: ${response.message}</li>`;
+        }
+    } catch (error) {
+        list.innerHTML = `<li>Не удалось загрузить протоколы других пользователей.</li>`;
+    }
+}
+
+// Отправляет запрос на сервер для получения данных о существующих public отчетах
+async function loadPublicReports() {    
+    const list = document.getElementById("publicReportList");
+    list.innerHTML = ""; // очистка
+
+    try {
+        const response = await sendRequest({
+            method: "GET",
+            url: "/new_report_creation/get_public_reports"
+        });
+
+        if (response.status === "success" && response.reports.length > 0) {
+            response.reports.forEach(report => {
+                const li = document.createElement("li");
+                li.setAttribute("data-report-type", report.report_type);
+                li.classList.add("existing-fewreports__item");
+                li.innerHTML = `
+                    <label>
+                        <input type="checkbox" value="${report.id}" />
+                        ${report.report_name} - ${report.report_type}
+                    </label>
+                `;
+                list.appendChild(li);
+            });
+        } else {
+            list.innerHTML = `<li>Нет общедоступных протоколов.</li>`;
+        }
+    } catch (error) {
+        list.innerHTML = `<li>Не удалось загрузить общедоступные протоколы.</li>`;
+        console.error(error);
+    }
 }
 
 
@@ -197,13 +289,13 @@ function createManualReport() {
 }
 
 
-/**
- * Создание протокола из файла с валидацией
- */
+// Создание протокола из файла с валидацией
 function createReportFromFile() {
-    const reportForm = document.getElementById("report-creation__form");
+    const reportForm = document.getElementById("reportCreationForm");
     const reportName = document.getElementById("report_name")?.value?.trim();
     const reportSubtype = document.getElementById("reportSubtype")?.value;
+    const comment = document.getElementById("reportCreationComment")?.value?.trim() || "";
+    const reportSide = document.querySelector("input[name='report_side']:checked")?.value === "true";
     const reportFile = document.getElementById("report_file")?.files[0];
 
     // Валидация обязательных полей
@@ -220,6 +312,12 @@ function createReportFromFile() {
 
     // Создаем объект FormData для отправки файла
     const formData = new FormData(reportForm);
+
+    // Добавляем остальные поля вручную
+    formData.append("report_name", reportName);
+    formData.append("report_subtype", reportSubtype);
+    formData.append("comment", comment);
+    formData.append("report_side", reportSide); // булево значение преобразуется автоматически
     
     sendRequest({
         url: "/new_report_creation/create_report_from_file",
@@ -233,9 +331,7 @@ function createReportFromFile() {
 
 
 
-/**
- * Создание протокола на основе нескольких существующих с валидацией
- */
+// Создание протокола на основе нескольких существующих с валидацией
 function createReportFromExistingFew() {
     const reportName = document.getElementById("report_name")?.value?.trim();
     const reportSubtype = document.getElementById("reportSubtype")?.value;
@@ -253,14 +349,12 @@ function createReportFromExistingFew() {
         return;
     }
 
-    const additionalParagraphs = document.getElementById("additional_paragraphs")?.value || 0;
 
     const jsonData = {
         report_name: reportName,
         report_subtype: reportSubtype,
         comment: comment,
         report_side: reportSide,
-        additional_paragraphs: additionalParagraphs,
         selected_reports: selectedReports
     };
 
@@ -273,5 +367,10 @@ function createReportFromExistingFew() {
         }
     });
 }
+
+
+
+
+
 
 

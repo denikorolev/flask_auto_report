@@ -18,3 +18,17 @@
     </div>
 </div>
 {% endmacro %}
+
+
+{% macro share_popup() %}
+<!-- Попап для шаринга отчета по email -->
+<div id="sharePopup" class="share-popup" style="display: none;">
+    <div class="share-popup__content">
+        <h3>Поделиться протоколом</h3>
+        <input type="email" id="shareInput" placeholder="Введите email пользователя" class="share-popup__input">
+        <button class="btn share-popup__btn" id="submitShareButton">Отправить</button>
+        <p id="shareErrorMessage" class="share-popup__error" style="color: red; display: none;"></p>
+        <button class="btn share-popup__btn--close" id="closeSharePopup">Закрыть</button>
+    </div>
+</div>
+{% endmacro %}

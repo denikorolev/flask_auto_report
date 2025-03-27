@@ -81,6 +81,20 @@ document.addEventListener("DOMContentLoaded", function () {
         startReportCheckers(this);
     });
 
+    // Слушатель на кнопку "Поделиться"
+    document.getElementById("shareReportButton").addEventListener("click", function() {
+        shareReport();
+        }
+    );
+
+    // Слушатель на кнопку "Сделать общедоступным"
+    const makePublicButton = document.getElementById("makeReportPublicButton");
+    if (makePublicButton) {
+        makePublicButton.addEventListener("click", function() {
+            makeReportPublic();
+        });
+    }
+
 });
 
 
@@ -307,7 +321,7 @@ function hidePopup() {
 
 // Функция для добавления параграфа
 async function addParagraph(itemFromBuffer) {
-    const reportId = document.getElementById("editReportContainer").getAttribute("data-report-id");
+    const reportId = reportData.id;
     console.log("Добавление нового параграфа в протокол:", reportId);
     const paragraphsList = document.getElementById("editParagraphsList");
 
@@ -358,7 +372,7 @@ function editParagraph(button) {
 async function handleUpdateReportButtonClick() {
 
     data = { report_name: document.getElementById("reportName").value,
-             report_id: document.getElementById("editReportContainer").getAttribute("data-report-id"),
+             report_id: reportData.id,
              report_comment: document.getElementById("reportComment").value,
              report_side: document.querySelector('input[name="report_side"]:checked').value
             };
@@ -401,7 +415,7 @@ function deleteParagraph(button){
 // запуск чекеров. 
 // Обновил но костылями !!!!!!!!!!!!!!!!!!!!!!!
 function startReportCheckers(button) {
-    const reportId = button.getAttribute("data-report-id");
+    const reportId = reportData.id;
     const checksReportUl = document.getElementById("reportCheckList");
 
     if (!checksReportUl) {
@@ -507,6 +521,7 @@ function addGroupDataToBuffer(button, sentenceType) {
 }
 
 
+// Удаление всех дочерних связанных групп предложений
 function deleteSubsidiaries (button) {
     const objectId = button.closest(".control-buttons").getAttribute("data-object-id");
     const objectType = button.closest(".control-buttons").getAttribute("data-object-type");
@@ -535,4 +550,81 @@ function insertFromBuffer(index) {
     console.log("Вставка из буфера:", itemFromBuffer);
     // Создаем новый параграф
     addParagraph(itemFromBuffer);
+}
+
+
+// Функция для того, чтобы поделиться протоколом с конкретным пользователем
+function shareReport() {
+    const sharePopup = document.getElementById("sharePopup");
+    const shareInput = document.getElementById("shareInput");
+    const errorMsg = document.getElementById("shareErrorMessage");
+    const submitButton = document.getElementById("submitShareButton");
+    const closeButton = document.getElementById("closeSharePopup");
+    const reportId = reportData.id;
+
+    // Показ попапа
+    sharePopup.style.display = "block";
+    shareInput.value = "";
+    errorMsg.style.display = "none";
+    errorMsg.textContent = "";
+    shareInput.focus();
+
+    // Закрытие попапа
+    closeButton.onclick = () => {
+        sharePopup.style.display = "none";
+    };
+
+    // Отправка email
+    submitButton.onclick = () => {
+        const email = shareInput.value.trim();
+
+        if (!email) {
+            errorMsg.textContent = "Введите email.";
+            errorMsg.style.display = "block";
+            return;
+        }
+
+        sendRequest({
+            url: "/editing_report/share_report",
+            method: "POST",
+            data: {
+                report_id: reportId,
+                email: email
+            }
+        })
+        .then(response => {
+            if (response.status === "success") {
+                sharePopup.style.display = "none";
+            } else {
+                errorMsg.textContent = response.message || "Ошибка отправки запроса.";
+                errorMsg.style.display = "block";
+            }
+        })
+    
+        .catch(error => {
+            console.error("Ошибка при отправке запроса:", error);
+            errorMsg.textContent = "Ошибка отправки запроса.", error;
+            errorMsg.style.display = "block";
+        });
+    };
+}
+
+
+// Функция для смены статуса протокола на общедоступный
+function makeReportPublic() {
+    const reportId = reportData.id;
+
+    sendRequest({
+        url: "/editing_report/toggle_public_report",
+        method: "PATCH",
+        data: { report_id: reportId }
+    })
+    .then(response => {
+        if (response.status === "success") {
+            window.location.reload();
+        }
+    })
+    .catch(error => {
+        console.error("Ошибка при отправке запроса:", error);
+    });
 }

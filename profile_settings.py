@@ -2,7 +2,7 @@
 
 from flask import Blueprint, render_template, request, redirect, url_for, current_app, session, g, jsonify
 from flask_login import current_user
-from models import UserProfile, db, AppConfig, Paragraph
+from models import User, UserProfile, db, AppConfig, Paragraph, ReportType, ReportShare
 from utils import check_unique_indices
 from profile_constructor import ProfileSettingsManager
 from flask_security.decorators import auth_required
@@ -68,7 +68,7 @@ def profile_settings():
 def choosing_profile():
     # Вот пользователь авторизован и у него либо нет профиля 
     # либо их несколько и нет дефолтного
-    print(f"(route 'choosing_profile') ---------------------------------------------------")
+    logger.info(f"(route 'choosing_profile') --------------------------------------")
     logger.info(f"(route 'choosing_profile') 🚀 Profile settings started and profile in g = {getattr(g,'current_profile', None)}")
     user_profiles = UserProfile.get_user_profiles(current_user.id)
     logger.info(f"(rout 'choosing_profile') User profiles: {user_profiles}")
@@ -89,6 +89,7 @@ def choosing_profile():
             # Синхронизацию файлов пока оставлю здесь, но ее нужно будет перенести
             sync_profile_files(profile.id)
             logger.info(f"(route 'choosing_profile') Profile {profile.id} selected")
+            logger.info(f"(route 'choosing_profile') ✅ Profile settings loaded")
             return redirect(url_for("working_with_reports.choosing_report"))
         else:
             logger.error(f"(route 'choosing_profile') ❌ Profile {profile_id} not found or you do not have permission to access it")
@@ -105,9 +106,10 @@ def choosing_profile():
 @profile_settings_bp.route("/create_profile", methods=["POST"])
 @auth_required()
 def create_profile():
-    print("creating profile started--------")
+    logger.info(f"(route 'create_profile') 🚀 Profile creation started")
     data = request.get_json()
     if not data:
+        logger.error(f"(route 'create_profile') ❌ No data received")
         return jsonify({"status": "error", "message": "No data received."}), 400
     
     profile_name = data.get('profile_name')
@@ -116,7 +118,7 @@ def create_profile():
     
         
     if profile_name:
-        print("creating profile name found")
+        logger.info(f"(route 'create_profile') Profile name: {profile_name}")
         try:
             new_profile = UserProfile.create(
                 current_user.id, 
@@ -124,11 +126,25 @@ def create_profile():
                 description,
                 default_profile=is_default
                 )
-            print(f"new profile created: {new_profile} for user {current_user.id}")
-            print("logic of creating profile settings")
+            logger.info(f"(route 'create_profile') Profile {new_profile.id} created")
             default_settings = dict(current_app.config.get("DEFAULT_PROFILE_SETTINGS", {}))
-            print(f"new settings for new profile: {profile_settings}")
             save_settings = set_profile_settings(new_profile.id, default_settings)
+
+            report_types = []
+            current_user_profiles = UserProfile.get_user_profiles(current_user.id)
+            for profile in current_user_profiles:
+                if profile.id == new_profile.id:
+                    continue
+                r_types = ReportType.find_by_profile(profile.id)
+                for r_type in r_types:
+                    report_types.append(r_type)
+            for r_type in report_types:
+                try:
+                    ReportType.create(r_type.type_text, new_profile.id, r_type.type_index)
+                    logger.debug(f"(route 'create_profile') Report type {r_type.type_text} created for profile {new_profile.id}")
+                except Exception as e:
+                    logger.error(f"(route 'create_profile') ❌ Error creating report type {r_type.type_text} for profile {new_profile.id}: {e}")
+                    return jsonify({"status": "error", "message": str(e)}), 400
     
         except Exception as e:
             print("creating profile end work {e} --------")
@@ -225,6 +241,53 @@ def set_default_profile(profile_id):
     if not set_default:
         return jsonify({"status": "error", "message": "Не получилось установить профиль по умолчанию"}), 400
     return jsonify({"status": "success", "message": "Профиль установлен как дефолтный"}), 200
+
+
+
+# Маршрут чтобы поделиться с конкретным пользователем всеми протоколами данного профиля
+@profile_settings_bp.route("/share_profile", methods=["POST"])
+@auth_required()
+def share_profile():
+    """
+    Поделиться профилем с другим пользователем.
+    """
+    logger.info(f"(route 'share_profile') --------------------------------------")
+    logger.info(f"(route 'share_profile') 🚀 Sharing all reports of this profile started")
+    data = request.get_json()
+    
+    email = data.get("email")
+    logger.info(f"(route 'share_profile') Recipient email: {email}")
+    
+    recipient = User.find_by_email(email)
+    if not recipient:
+        logger.error(f"(route 'share_profile') ❌ User with this email not found")
+        return jsonify({"status": "error", "message": "Пользователь с данным email не найден"}), 400
+    logger.info(f"(route 'share_profile') Recipient found: {recipient.email}")
+    
+    try:
+        user_id = current_user.id
+        profile_id = g.current_profile.id
+        profile = UserProfile.find_by_id_and_user(profile_id, user_id)
+        all_reports = Report.find_by_profile(profile_id)
+    except Exception as e:
+        logger.error(f"(route 'share_profile') ❌ Error getting current user or current profile: {e}")
+        return jsonify({"status": "error", "message": "Не получилось загрузить данные текощего пользователя или текущего профиля"}), 400
+    
+    logger.info(f"(route 'share_profile') ✅ Got all necessary data. Starting sharing...")
+    
+    try:
+        for report in all_reports:
+            try:
+                ReportShare.create(report.id, recipient.id)
+            except Exception as e:
+                logger.error(f"(route 'share_profile') ❌ Error sharing report {report.report_name}: {e}. Skipping...")
+                continue
+        logger.info(f"(route 'share_profile') ✅ All reports shared successfully")
+        return jsonify({"status": "success", "message": "Профиль успешно поделен"}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+
 
 
 # Маршрут для запуска разных чекеров

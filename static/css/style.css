@@ -1133,3 +1133,56 @@ body {
     vertical-align: middle;    
 }
 
+
+/* Блок share-popup */
+
+.share-popup {
+    position: fixed;
+    top: 30%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: white;
+    border: 1px solid #ccc;
+    padding: 20px;
+    z-index: 1000;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    border-radius: 5px;
+}
+
+.share-popup__content {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.share-popup__input {
+    padding: 8px;
+    font-size: 14px;
+}
+
+.share-popup__btn {
+    background-color: #0069d9;
+    color: white;
+    padding: 6px 12px;
+    cursor: pointer;
+    border: none;
+    border-radius: 4px;
+}
+
+.share-popup__btn--close {
+    background-color: #ccc;
+    color: #333;
+}
+
+.share-popup__error {
+    font-size: 14px;
+}
+
+
+/* Стили для report_creation */
+
+.report-creation__container{
+    display: flex;
+    flex-direction: column;
+    width: 50%;
+}

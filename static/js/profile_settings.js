@@ -11,6 +11,12 @@ document.addEventListener("DOMContentLoaded", function(){
     initializeChangeListeners(); // Слушатели изменения для элементов чтобы отправлять только измененные данные
 
     isMainChecker(); // Проверка на наличие ошибок, связанных с главными предложениями в протоколах этого профиля
+
+    // Слушатель на кнопку "Поделиться профилем"
+    document.getElementById("shareProfileButton").addEventListener("click", () => {
+        shareProfileButtonHandler();
+        }
+    );
 });
 
 
@@ -139,6 +145,38 @@ function deleteProfile() {
         });
     });
 }   
+
+
+// Функция включающая видимость поля для ввода email пользователя с которым хотим поделиться профилем
+function shareProfileButtonHandler() {
+    const shareProfileBlock = document.getElementById("shareProfileEmailBlock");
+    shareProfileBlock.style.display = "block";
+    const shareProfileButton = shareProfileBlock.querySelector("#submitShareProfileButton");
+    
+    // Слушатель на кнопку "Поделиться"
+    shareProfileButton.addEventListener("click", () => {
+        const email = shareProfileBlock.querySelector("#shareEmailInput").value.trim();
+        console.log(email);
+        shareAllProfileProtocols(email);
+    }, { once: true });
+}
+
+
+// Функция для того чтобы поделиться всеми протоколами профиля.
+async function shareAllProfileProtocols(email) {
+    const response = await sendRequest({
+        url: `/profile_settings/share_profile`,
+        method: "POST",
+        data: { "email": email },
+    });
+
+    if (response.status === "success") {
+        console.log(response.message || "Profile shared successfully.");
+    }
+}
+
+
+
 
 // Проверка на наличие ошибок, связанных с главными предложениями в протоколах этого профиля
 function isMainChecker(){

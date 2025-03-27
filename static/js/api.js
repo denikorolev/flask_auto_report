@@ -29,11 +29,13 @@ function sendRequest({ url, method = "POST", data = {}, responseType = "json", l
         }
     };
 
-    if (data instanceof FormData) {
-        fetchOptions.body = data;
-    } else {
-        fetchOptions.headers["Content-Type"] = "application/json";
-        fetchOptions.body = JSON.stringify(data);
+    if (method !== "GET" && method !== "HEAD") {
+        if (data instanceof FormData) {
+            fetchOptions.body = data;
+        } else {
+            fetchOptions.headers["Content-Type"] = "application/json";
+            fetchOptions.body = JSON.stringify(data);
+        }
     }
 
     return fetch(url, fetchOptions)
