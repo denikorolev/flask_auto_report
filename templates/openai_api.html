@@ -5,14 +5,27 @@
 
 <input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
 
+<button type="button" id="startOpenAIChat" class="btn report_btn"> Начать новый чат с ИИ </button>
 
-<form>
-    <label for="inputai">Введите запрос</label>
-    <input type="text" id="inputai" name="inputai">
-    <button id="btn" class="btn report_btn"> Отправить </button>
-    <div class="shift"></div>
-    <div id="answer" class="answer"></div>
-</form>
+<div id="AIAnswerBlock" class="ai-conversation__container" style="display: none;">
+    <h3 class="ai-conversation__title">Ответ ИИ</h3>
+    <div id="AIAnswerText" class="">
+        <!-- Здесь будет ответ ИИ заполняю содержимое динамически-->
+    </div>
+</div>
+
+<div class="flex_column ai-conversation__container" id="AIQuestionBlock" style="display: none;">
+    <h3 class="ai-conversation__title">Вопрос к ИИ</h3>
+    <label for="AIQuestionInput" class="flex_column">Введите запрос
+        <textarea id="AIQuestionInput" class="ai-conversation__textarea" placeholder="Введите текст запроса" required>
+        </textarea>
+    </label>
+    <button type="button" id="sentRequestToAI" class="btn report_btn ai-conversation__btn"> Отправить </button>
+    
+    
+</div>
+
+
 
 
 {% endblock container %}

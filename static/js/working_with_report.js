@@ -87,6 +87,11 @@ document.addEventListener("DOMContentLoaded", function() {
     document.getElementById("finishWork").addEventListener("click", function() {
         finishWorkAndSaveSnapShot();
     });
+
+    // Слушатель на кнопку "Проверить протокол ИИ"
+    document.getElementById("aiReportCheck").addEventListener("click", function() {
+        checkReportAI(boxForAiResponse);
+    });
 });
 
 
@@ -326,51 +331,6 @@ function updateCoreAndImpessionParagraphText() {
 }
 
 
-// Собирает данные абзацев и предложений для отправки на сервер. САМОЕ ВАЖНОЕ
-// function collectParagraphsData() {
-//     const coreParagraphLists = document.querySelectorAll(".paragraph__item--core"); // Ищем списки с классом paragraph__item--core
-//     const paragraphsData = [];
-
-//     coreParagraphLists.forEach(paragraphList => {
-//         // Находим элемент абзаца внутри текущего списка (paragraph__item--core)
-//         const paragraphElement = paragraphList.querySelector(".paragraph__item > p");
-//         // Проверяем, что абзац не является дополнительным
-//         const isAdditional = paragraphElement.getAttribute("data-paragraph-additional") === "True";
-//         if (isAdditional) {
-//             console.log("Additional paragraph found. Skipping...");
-//             return;
-//         }
-
-//         // Проверяем, что элемент абзаца существует
-//         if (!paragraphElement) {
-//             console.error("Paragraph element not found in paragraph__item--core.");
-//             return;
-//         }
-
-//         const paragraphId = paragraphElement.getAttribute("data-paragraph-id");
-//         const paragraphText = paragraphElement.innerText.trim();
-//         const sentences = [];
-
-//         // Находим все предложения внутри текущего абзаца
-//         paragraphList.querySelectorAll(".report__sentence").forEach(sentenceElement => {
-//             const sentenceText = cleanSelectText(sentenceElement);
-//             if (sentenceText) {
-//                 sentences.push(sentenceText);
-//             }
-//         });
-
-//         if (sentences.length > 0) {
-//             paragraphsData.push({
-//                 paragraph_id: paragraphId,
-//                 paragraph_text: paragraphText,
-//                 sentences: sentences,
-//             });
-//         }
-//     });
-    
-
-//     return paragraphsData;
-// }
 
 
 // Собирает текст из абзацев на основе указанного класса. САМОЕ ВАЖНОЕ
@@ -788,15 +748,14 @@ function wordButtonLogic(exportButton) {
 function generateImpressionLogic(generateButton, boxForAiResponse) {
     generateButton.addEventListener("click", async function () {
         const textToCopy = collectTextFromParagraphs("paragraph__item--core");
-        const assistantNames = ["airadiologist"];
         boxForAiResponse.textContent = "Ожидаю ответа ИИ...";
 
         try {
-            const aiResponse = await generateImpressionRequest(textToCopy, assistantNames);
-            boxForAiResponse.textContent = aiResponse || "No response received.";
+            const aiResponse = await generateImpressionRequest(textToCopy);
+            boxForAiResponse.textContent = aiResponse || "Ответ ИИ не получен.";
         } catch (error) {
             console.error(error);
-            boxForAiResponse.textContent = "An error occurred. Please try again.";
+            boxForAiResponse.textContent = "Ошибка при получении ответа ИИ.";
         }
     });
 }
@@ -996,11 +955,26 @@ function firstGrammaSentence(sentence) {
 
 
 // Функция для генерации запроса на сервер для получения заключения
-function generateImpressionRequest(text, assistantList) {
+function generateImpressionRequest(text) {
     // Формируем данные для отправки
+    const reportType = reportData.report_type;
+    let modality = reportType
+
+    if (modality === "МРТ") {
+        modality = "MRI";
+    } else if (modality === "КТ") {
+        modality = "CT";
+    } else if (modality === "Рентгенография" || modality === "Рентгеноскопия") {
+        modality = "XRAY";
+    } else {
+        alert("Неизвестный тип исследования: " + reportType);
+        return;
+    }
+
     const jsonData = {
         text: text,
-        assistants: assistantList // передаем список ассистентов
+        modality: modality
+       
     };
 
     // Отправляем запрос на сервер с помощью sendRequest
@@ -1073,5 +1047,28 @@ function finishWorkAndSaveSnapShot() {
         } 
     }).catch(error => {
         console.error("Ошибка сохранения отчета:", error);
+    });
+}
+
+
+// Функция для отправки протокола на проверку ИИ (REDACTOR)
+function checkReportAI(boxForAiResponse){
+    const coreText = collectTextFromParagraphs("paragraph__item--core");
+    const impressionText = collectTextFromParagraphs("paragraph__item--impression");
+
+    const textToCheck = `${coreText}\n\n${impressionText}`.trim();
+    
+    return sendRequest({
+        url: "/openai_api/generate_redactor",
+        method: "POST",
+        data: {
+            text: textToCheck,
+        },
+    }).then(data => {
+        if (data.status === "success") {
+            boxForAiResponse.innerText = data.data || "Ответ ИИ не получен.";
+        } 
+    }).catch(error => {
+        console.error("Ошибка отправки отчета на проверку:", error);
     });
 }

@@ -1186,3 +1186,13 @@ body {
     flex-direction: column;
     width: 50%;
 }
+
+/* Стили для ai */
+.ai-conversation__textarea {
+    width: 70%;
+    height: 100px;
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    margin-bottom: 10px;
+}
