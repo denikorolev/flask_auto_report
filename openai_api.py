@@ -122,9 +122,19 @@ def generate_general():
     
     data = request.get_json()
     text = data.get("text")
-    logger.info(f"Получены данные: {data}")
+    logger.debug(f"Получены данные: {data}")
     new_conversation = data.get("new_conversation", True)
     ai_assistant = current_app.config.get("OPENAI_ASSISTANT_GENERAL")
+    tokens = count_tokens(text)
+    if not text:
+        return jsonify({"status": "error", "message": "Your request is empty"}), 400
+    if not ai_assistant:
+        return jsonify({"status": "error", "message": "Assistant ID is not configured."}), 500
+    if tokens > 1000:
+        return jsonify({"status": "error", "message": f"Текст слишком длинный - { tokens } токенов, попробуйте сократить его."}), 400
+    if tokens < 10:
+        return jsonify({"status": "error", "message": f"Текст слишком короткий - { tokens } токенов, попробуйте добавить больше информации."}), 400
+    
     if new_conversation:
         reset_ai_session(ai_assistant)
     message = _process_openai_request(text, ai_assistant)
@@ -148,10 +158,16 @@ def generate_redactor():
     logger.info("🚀 Начата попытка генерации текста с помощью OpenAI API.")
     data = request.get_json()
     text = data.get("text")
-    logger.info(f"Получены данные: {data}")
+    logger.debug(f"Получены данные: {data}")
     ai_assistant = current_app.config.get("OPENAI_ASSISTANT_REDACTOR")
+    if not text:
+        return jsonify({"status": "error", "message": "Your request is empty"}), 400
+    if not ai_assistant:
+        return jsonify({"status": "error", "message": "Assistant ID is not configured."}), 500
     try:
+        reset_ai_session(ai_assistant)
         message = _process_openai_request(text, ai_assistant)
+        reset_ai_session(ai_assistant)
         
         logger.info("✅ Ответ ассистента получен успешно")
         logger.debug(f"Ответ: {message}")
@@ -174,7 +190,7 @@ def generate_impression():
         data = request.get_json()
         text = data.get("text")
         modality = data.get("modality")
-        logger.info(f"Получены данные: {data}")
+        logger.debug(f"Получены данные: {data}")
 
         if not text:
             return jsonify({"status": "error", "message": "Your request is empty"}), 400
