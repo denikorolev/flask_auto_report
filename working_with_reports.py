@@ -141,12 +141,14 @@ def save_modified_sentences():
             # Проверяем корректность данных
             if not paragraph_id or not nativ_text.strip():
                 missed_count += 1
+                logger.info(f"(Сохранение измененных предложений) ⚠️ Пропускаю некорректные данные: {sentence_data}")
                 continue  # Пропускаем некорректные предложения
             
             before_split_text = preprocess_sentence(nativ_text)
             
             if not before_split_text.strip():
                 missed_count += 1
+                logger.info(f"(Сохранение измененных предложений) ⚠️ Пропускаю некорректные данные: {sentence_data}")
                 continue  # Пропускаем некорректное предложение
             
             # Проверяем текст на наличие нескольких предложений
@@ -155,14 +157,26 @@ def save_modified_sentences():
             if splited_sentences:
                 # Обрабатываем случаи с разделением
                 for idx, splited_sentence in enumerate(splited_sentences):
+                    if splited_sentence.strip() == "":
+                        missed_count += 1
+                        logger.info(f"(Сохранение измененных предложений) ⚠️ Пропускаю пустое предложение: {splited_sentence}")
+                        continue  # Пропускаем пустые предложения
+                    if sentence_type == "body":
+                        new_sentence_type = "body" if idx == 0 else "tail"
+                    else:
+                        new_sentence_type = "tail"
                     processed_sentences.append({
                         "paragraph_id": paragraph_id,
                         "head_sentence_id": head_sentence_id,
-                        "sentence_type": "body" if idx == 0 else "tail",
+                        "sentence_type": new_sentence_type,
                         "text": splited_sentence.strip()
                     })
             else:
                 for unsplited_sentence in unsplited_sentences:
+                    if unsplited_sentence.strip() == "":
+                        missed_count += 1
+                        logger.info(f"(Сохранение измененных предложений) ⚠️ Пропускаю пустое предложение: {unsplited_sentence}")
+                        continue
                     processed_sentences.append({
                         "paragraph_id": paragraph_id,
                         "head_sentence_id": head_sentence_id,
@@ -216,7 +230,7 @@ def save_modified_sentences():
                 saved_count += 1
                 saved_sentences.append({"id": new_sentence.id, "text": new_sentence_text})
             except Exception as e:
-                logger.error(f"(Сохранение измененных предложений) ❌ При попытке сохранения предложения произошла ошибка: {str(e)}. Ошибка добавлена в счётчик")
+                logger.error(f"(Сохранение измененных предложений) ❌ При попытке сохранения предложения ({new_sentence_text}) произошла ошибка: {str(e)}. Ошибка добавлена в счётчик")
                 missed_count += 1
 
         sentences_adding_report = {

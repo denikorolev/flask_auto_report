@@ -81,12 +81,20 @@ document.addEventListener("DOMContentLoaded", function() {
         addImpressionButtonLogic(addImpressionButton);
     }
 
-    addFocusListeners(); // Добавляем логику для автоматической отправки на сервер новых предложений
+
+    // Слушатель на получение и потерю фокуса для всех предложений
+    document.querySelectorAll(".report__sentence").forEach(sentenceElement => {
+        // Attach focus and blur event listeners
+        sentenceElement.addEventListener("focus", handleSentenceFocus);
+        sentenceElement.addEventListener("blur", handleSentenceBlur);
+    }); 
+
 
     // Слушатель на кнопку "Завершить"
     document.getElementById("finishWork").addEventListener("click", function() {
         finishWorkAndSaveSnapShot();
     });
+
 
     // Слушатель на кнопку "Проверить протокол ИИ"
     document.getElementById("aiReportCheck").addEventListener("click", function() {
@@ -187,17 +195,19 @@ function handleSentenceBlur() {
  * Добавляет необходимые атрибуты и привязывает обработчики событий 
  */
 function createEditableSentenceElement(sentenceText, paragraphId) {
+    console.log("i'm creating new sentence element");
     const newSentenceElement = document.createElement("span");
     newSentenceElement.classList.add("report__sentence"); // Добавляем класс для стилизации и идентификации
     newSentenceElement.dataset.paragraphId = paragraphId; // Привязываем к конкретному абзацу
-    newSentenceElement.dataset.index = "0"; // Новое предложение всегда получает индекс 0
     newSentenceElement.dataset.sentenceType = "tail" // Новое предложение всегда получает тип "tail"
-    newSentenceElement.textContent = sentenceText; // Устанавливаем текст предложения
-
+    newSentenceElement.textContent = sentenceText; 
+    newSentenceElement.setAttribute("data-original-text", "new-sentence"); // Устанавливаем атрибут чтобы было понятно что это новое предложение
+    
     // Делаем элемент редактируемым
     newSentenceElement.contentEditable = "true";
-
+    
     // Добавляем обработчики событий для отслеживания изменений
+    
     newSentenceElement.addEventListener("focus", handleSentenceFocus); // Сохраняем исходный текст при фокусе
     newSentenceElement.addEventListener("blur", handleSentenceBlur);   // Проверяем изменения при потере фокуса
 
@@ -459,7 +469,9 @@ function sentenceDoubleClickHandle (){
                 // Передаем функцию, которая заменяет текст предложения
                 showPopupSentences(event.pageX, event.pageY, sentenceElement.linkedSentences, (selectedSentence) => {
                     activeSentence.textContent = selectedSentence.sentence; // Заменяем текст предложения
-                    highlightKeyWords(activeSentence) // Обновляем текст
+                    activeSentence.focus(); // Устанавливаем фокус на предложение
+                    activeSentence.blur(); // Убираем фокус
+                    // highlightKeyWords(activeSentence) // Обновляем текст
                 });
             } else {
                 console.warn("No linked sentences or linked sentences is not an array");
@@ -593,8 +605,10 @@ function addSentenceButtonLogic() {
                     // Логика при выборе предложения из popup
                     const newSentenceElement = createEditableSentenceElement(selectedSentence.sentence, paragraphId);
                     button.parentNode.insertBefore(newSentenceElement, button);
-                    highlightKeyWords(newSentenceElement); // Обновляем текст абзаца после добавления предложения
                     newSentenceElement.focus(); // Устанавливаем фокус на новый элемент
+                    newSentenceElement.blur(); // Убираем фокус
+                    highlightKeyWords(newSentenceElement); // Обновляем текст абзаца после добавления предложения
+
                 });
             } else {
                 console.warn("No sentences available for this paragraph.");
@@ -821,19 +835,6 @@ function normalizeSentence(sentence, keyWordsGroups) {
 }
 
 
-// Добавляет слушатели получения и потери фокуса для всех предложений на странице
-function addFocusListeners() {
-    // Находим все предложения на странице
-    const sentenceElements = document.querySelectorAll(".report__sentence");
-
-    sentenceElements.forEach(sentenceElement => {
-        // Attach focus and blur event listeners
-        sentenceElement.addEventListener("focus", handleSentenceFocus);
-        sentenceElement.addEventListener("blur", handleSentenceBlur);
-    });
-
-}
-
 
 // Отправляет на сервер новые предложения для сохранения
 async function sendModifiedSentencesToServer() {
@@ -918,10 +919,8 @@ function firstGrammaSentence(sentence) {
     if (!sentence) return sentence; // Если пустая строка — ничего не делаем
 
     sentence = sentence.replace(/\.{2,}$/g, ".") // Убираем двойные точки в конце предложения
-    sentence = sentence.replace(/(\d+)\.(?!\d)(?!\s*[A-ZА-ЯЁ])(?!\s*$)/g, "$1)"); // Меняем `1.` → `1)`, если после точки нет цифры
     
     // Ставим точку в конце предложения, если ее нет, это специально 
-    // сделано после скобки после цифры, чтобы не менять автоточку после даты
     if (!/[.!?]$/.test(sentence)) {
         sentence += ".";
     }

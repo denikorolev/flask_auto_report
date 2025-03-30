@@ -303,22 +303,24 @@ def split_sentences_if_needed(text):
     Returns:
         tuple: (list of valid sentences, list of excluded sentences).
     """
+    logger.info(f"(функция split_sentences_if_needed) -----------------------------------------")
+    logger.info(f"(функция split_sentences_if_needed) 🚀 Начато разбиение текста на предложения")
     language = current_app.config.get("PROFILE_SETTINGS", {}).get("APP_LANGUAGE", "ru")
-    print(f"APP_LANGUAGE: {language}")
-    
+    logger.info(f"(функция split_sentences_if_needed) получен текст: {text}")
     # Загружаем модель SpaCy для текущего языка
     try:
         nlp = SpacyModel.get_instance(language)
     except ValueError as e:
-        current_app.logger.error(f"Unsupported language '{language}' for SpaCy model: {e}")
+        logger.error(f"(функция split_sentences_if_needed) ❌ Ошибка загрузки модели SpaCy: {e}")
         return [], []
     
     doc = nlp(text)
     sentences = [sent.text for sent in doc.sents]
     for sentence in sentences:
         if not re.search(r'[a-zA-Zа-яА-ЯёЁ0-9]', sentence):
+            logger.info(f"(функция split_sentences_if_needed) ⚠️ Пропускаю предложение в котором нет букв или цифр: ({sentence})")
             sentences.remove(sentence)
-
+    logger.info(f"(функция split_sentences_if_needed) После разделения предложений мы получили -  ({sentences}) ")
     if len(sentences) > 1:
         # Если найдено более одного предложения, добавляем в исключения
         return [], sentences # Splitted sentences
@@ -437,15 +439,16 @@ def compare_sentences_by_paragraph(new_sentences, report_id):
             - "unique": List of new sentences considered unique.
     """
     logger.info(f"(функция compare_sentences_by_paragraph) 🚀 Начато сравнение новых предложений с существующими в базе данных")
+    logger.debug(f"(функция compare_sentences_by_paragraph) Получены новые предложения - ({new_sentences})")
     similarity_threshold_fuzz = int(current_app.config["PROFILE_SETTINGS"]["SIMILARITY_THRESHOLD_FUZZ"])
     except_words = current_app.config["PROFILE_SETTINGS"]["EXCEPT_WORDS"]
-    logger.info(f"(функция compare_sentences_by_paragraph) Порог схожести: {similarity_threshold_fuzz}")
+    logger.debug(f"(функция compare_sentences_by_paragraph) Порог схожести: {similarity_threshold_fuzz}")
     logger.info(f"(функция compare_sentences_by_paragraph) Исключаемые слова: {except_words}")
     
     existing_paragraphs = Paragraph.query.filter_by(report_id=report_id).all()
     key_words_obj = KeyWord.get_keywords_for_report(g.current_profile.id, report_id)
     key_words = [keyword.key_word for keyword in key_words_obj]
-    logger.info(f"(функция compare_sentences_by_paragraph) Получено {len(key_words)} ключевых слов.")
+    logger.debug(f"(функция compare_sentences_by_paragraph) Получено {len(key_words)} ключевых слов.")
     
     duplicates = []
     unique_sentences = []
@@ -459,6 +462,7 @@ def compare_sentences_by_paragraph(new_sentences, report_id):
         
         if not new_paragraph_id or not new_text.strip():
             errors_count += 1
+            logger.warning(f"(функция compare_sentences_by_paragraph) ⚠️ Пропускаю предложение ({new_sentence}) с пустым текстом или пустым id параграфа")
             continue  # Пропускаем некорректные данные
         
         # Находим соответствующий параграф
@@ -470,26 +474,27 @@ def compare_sentences_by_paragraph(new_sentences, report_id):
         if new_sentence_type == "body":
             head_sentence = HeadSentence.query.get(new_sentence_head_sentence_id)
             if not head_sentence:
-                logger.info(f"(функция compare_sentences_by_paragraph) Главное предложение с id={new_sentence_head_sentence_id} не найдено. Пропускаю предложение")
+                logger.warning(f"(функция compare_sentences_by_paragraph) ⚠️ Главное предложение с id={new_sentence_head_sentence_id} не найдено. Пропускаю предложение ({new_sentence})")
                 errors_count += 1
                 continue
             related_group_id = head_sentence.body_sentence_group_id or None
             existing_sentences = BodySentenceGroup.get_group_sentences(related_group_id) or []
-            logger.info(f"(функция compare_sentences_by_paragraph) {existing_sentences}")
+            logger.debug(f"(функция compare_sentences_by_paragraph) {existing_sentences}")
             existing_sentences.append({"id": head_sentence.id, "sentence": head_sentence.sentence})
             
         else:
             if not paragraph:
-                logger.info(f"(функция compare_sentences_by_paragraph) Параграф с id={new_paragraph_id} не найден. Пропускаю предложение")
+                logger.warning(f"(функция compare_sentences_by_paragraph) ⚠️ Параграф с id={new_paragraph_id} не найден. Пропускаю предложение ({new_sentence})")
                 errors_count += 1
                 continue
             related_group_id = paragraph.tail_sentence_group_id or None
             if not related_group_id:
-                logger.info(f"(функция compare_sentences_by_paragraph) Группа хвостовых предложений не найдена. Добавляю в уникальные")
+                logger.warning(f"(функция compare_sentences_by_paragraph) Группа хвостовых предложений не найдена. Добавляю в уникальные")
                 unique_sentences.append(new_sentence)
                 continue
             existing_sentences = TailSentenceGroup.get_group_sentences(related_group_id)
-            logger.info(f"(функция compare_sentences_by_paragraph) {existing_sentences}")
+            
+            logger.debug(f"(функция compare_sentences_by_paragraph) {existing_sentences}")
         
         # Очищаем существующие предложения
         cleaned_existing = []
@@ -519,6 +524,7 @@ def compare_sentences_by_paragraph(new_sentences, report_id):
                     "similarity_rapidfuzz": similarity_rapidfuzz
                 })
                 is_duplicate = True
+                logger.debug(f"(функция compare_sentences_by_paragraph) 🔄 Найдено дублирующее предложение ({new_sentence}) с существующим ({existing['original_text']}) с похожестью {similarity_rapidfuzz}")
                 break
 
         if not is_duplicate:
@@ -546,9 +552,6 @@ def find_similar_exist_sentence(sentence_text, sentence_type, report_type_id):
         similar_type_sentences = TailSentence.query.filter_by(tags=tags, report_type_id=report_type_id, user_id = user_id).all()
     else:
         raise ValueError(f"Invalid sentence type: {sentence_type}")
-    
-    logger.info(f"(функция find_similar_exist_sentence) Найдено {len(similar_type_sentences)} предложений удовлетворяющих предварительным условиям")    
-    
     
     # Сравниваем входное предложение с каждым из существующих
     for exist_sentence in similar_type_sentences:
