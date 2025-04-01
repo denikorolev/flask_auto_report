@@ -1196,3 +1196,35 @@ body {
     border: 1px solid #ccc;
     margin-bottom: 10px;
 }
+
+
+
+.highlight-token {
+    background-color: #ffdddd;
+    padding: 2px 4px;
+    margin: 1px;
+    border-radius: 3px;
+}
+
+.training-item {
+    margin-bottom: 12px;
+    padding: 6px;
+    border-bottom: 1px solid #ccc;
+}
+
+
+.model-versions {
+    margin-top: 30px;
+    padding: 15px;
+    border: 1px solid #ccc;
+    background-color: #fafafa;
+}
+
+.model-version {
+    margin-bottom: 10px;
+}
+
+.model-version p {
+    font-weight: bold;
+    margin: 0 0 5px;
+}

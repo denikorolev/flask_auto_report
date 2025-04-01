@@ -144,7 +144,29 @@
         </div>
     </div>
     
+
     
+    
+</div>
+
+<div class="model-training__block">
+    <h2>Обучение модели SpaCy</h2>
+    <div class="model-training">
+        <button id="retrainМodelButton" class="btn btn_report" disabled>
+            Переобучить модель (0 / 50)
+        </button>
+    </div>
+    <div class="training-data-block">
+        <button id="show-training-data-btn" class="btn btn_report">🧠 Показать обучающие примеры</button>
+        <div id="training-data-view" class="training-data-view"></div>
+    </div>
+    
+    <div class="model-versions">
+        <h3>🕘 Версии модели SpaCy</h3>
+        <div id="model-versions-list">
+            <!-- Сюда JS вставит кнопки для версий -->
+        </div>
+    </div>
 </div>
 
 
@@ -158,4 +180,5 @@
 
 {% block scripts %}
 <script src="{{ url_for("static", filename="js/admin.js") }}"></script>
+<script src="{{ url_for("static", filename="js/spacy_training_popup.js") }}"></script>
 {% endblock scripts %}

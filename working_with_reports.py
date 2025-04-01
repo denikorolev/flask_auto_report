@@ -1,6 +1,6 @@
 #working_with_reports.py
 
-from flask import Blueprint, render_template, request, jsonify, send_file, g, current_app
+from flask import Blueprint, render_template, request, jsonify, send_file, g, current_app, json
 from flask_security import current_user
 import os
 from models import db, Report, ReportType, KeyWord, TailSentence, BodySentence, ReportTextSnapshot
@@ -9,6 +9,7 @@ from sentence_processing import group_keywords, split_sentences_if_needed, clean
 from utils import ensure_list
 from logger import logger
 from flask_security.decorators import auth_required
+from spacy_manager import SpacyModel
 
 
 working_with_reports_bp = Blueprint('working_with_reports', __name__)
@@ -203,11 +204,12 @@ def save_modified_sentences():
             processed_paragraph_id = sentence["paragraph_id"]
             new_sentence_text = clean_and_normalize_text(sentence["text"])
             sentence_type = sentence["sentence_type"]
+            related_id = processed_paragraph_id if sentence_type == "tail" else head_sentence_id
             try:
                 if sentence_type == "tail":
-                   new_sentence, _ = TailSentence.create(
+                   new_sentence, sent_group = TailSentence.create(
                         sentence=new_sentence_text,
-                        related_id=processed_paragraph_id,
+                        related_id=related_id,
                         user_id=user_id,
                         report_type_id=report_type_id,
                         comment="Added automatically"
@@ -216,9 +218,9 @@ def save_modified_sentences():
                 # для текущего главного предложения
                 else:
                     if sentence["head_sentence_id"]:
-                        new_sentence, _ = BodySentence.create(
+                        new_sentence, sent_group = BodySentence.create(
                         sentence=new_sentence_text,
-                        related_id=head_sentence_id,
+                        related_id=related_id,
                         user_id=user_id,
                         report_type_id=report_type_id,
                         comment="Added automatically",
@@ -228,7 +230,7 @@ def save_modified_sentences():
                         missed_count += 1   
                         continue
                 saved_count += 1
-                saved_sentences.append({"id": new_sentence.id, "text": new_sentence_text})
+                saved_sentences.append({"id": new_sentence.id, "related_id": related_id, "sentence_type": sentence_type, "text": new_sentence_text})
             except Exception as e:
                 logger.error(f"(Сохранение измененных предложений) ❌ При попытке сохранения предложения ({new_sentence_text}) произошла ошибка: {str(e)}. Ошибка добавлена в счётчик")
                 missed_count += 1
@@ -294,6 +296,8 @@ def export_to_word():
         return jsonify({"status": "error", "message": f"Failed to export to Word: {e}"}), 500
 
 
+
+
 @working_with_reports_bp.route("/save_report_snapshot", methods=["POST"])
 @auth_required()
 def save_report_snapshot():
@@ -325,3 +329,64 @@ def save_report_snapshot():
         return jsonify({"status": "error", "message": f"Failed to save report snapshot: {e}"}), 500
     
 
+
+@working_with_reports_bp.route("/train_sentence_boundary", methods=["POST"])
+@auth_required()
+def train_sentence_boundary():
+    """
+    Получает размеченное предложение и сохраняет его для дообучения SpaCy.
+    """
+    data = request.get_json()
+    text = data.get("text")
+    sent_starts = data.get("sent_starts")
+    if not text or not sent_starts:
+        return jsonify({"status": "error", "message": "Missing text or sent_starts"}), 400
+    
+    try:
+        # Сохраняем в jsonl
+        training_example = {
+            "text": text,
+            "sent_starts": sent_starts
+        }
+
+        file_path = os.path.join("spacy_training_data", "sent_boundary.jsonl")
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        with open(file_path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(training_example, ensure_ascii=False) + "\n")
+        
+        return jsonify({"status": "success", "message": "Example saved"}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+    
+    
+    
+    
+@working_with_reports_bp.route("/get_spacy_tokens", methods=["POST"])
+@auth_required()
+def get_spacy_tokens():
+    """
+    Принимает текст и возвращает список токенов от SpaCy с is_sent_start.
+    """
+    
+    language = current_app.config.get("PROFILE_SETTINGS", {}).get("APP_LANGUAGE", "ru")
+
+    data = request.get_json()
+    text = data.get("text", "").strip()
+    if not text:
+        return jsonify({"status": "error", "message": "Текст не передан"}), 400
+
+    try:
+        nlp = SpacyModel.get_instance(language)
+        doc = nlp(text)
+        tokens = [
+            {
+                "text": token.text,
+                "idx": token.idx,
+                "is_sent_start": token.is_sent_start
+            }
+            for token in doc
+        ]
+        return jsonify({"status": "success", "tokens": tokens}), 200
+
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500

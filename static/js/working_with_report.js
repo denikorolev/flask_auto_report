@@ -871,6 +871,7 @@ async function sendModifiedSentencesToServer() {
         });
 
     });
+    console.log(dataToSend);
 
     // Если нет данных для отправки, выводим сообщение и завершаем выполнение
     if (dataToSend.length === 0) {
@@ -904,6 +905,65 @@ async function sendModifiedSentencesToServer() {
                 sentenceElement.removeAttribute("data-sentence-modified");
                 sentenceElement.classList.remove("was-changed-highlighted-sentence");
             });
+
+            // Назначаем обработчик на кнопку "🧠 Учить выбранные"
+            const trainSelectedButton = document.getElementById("trainSelectedSentencesButton");
+            if (trainSelectedButton) {
+                trainSelectedButton.addEventListener("click", () => {
+                    const checkboxes = document.querySelectorAll(".train-sentence__checkbox:checked");
+                    if (checkboxes.length === 0) {
+                        alert("Выберите хотя бы одно предложение.");
+                        return;
+                    }
+
+                    const selectedTexts = Array.from(checkboxes).map(cb => cb.dataset.text);
+                    const combinedText = selectedTexts.join(" ");
+
+                    showTrainingPopup(combinedText, async ({ text, sent_starts }) => {
+                        try {
+                            await sendRequest({
+                                url: "/working_with_reports/train_sentence_boundary",
+                                data: { text, sent_starts },
+                            });
+                            toastr.success("Пример отправлен на дообучение");
+                        } catch (e) {
+                            console.error("Ошибка обучения:", e);
+                            alert("Ошибка отправки обучающего примера");
+                        }
+                    });
+                });
+            }
+            // Назначаем обработчик на кнопку "❌ Удалить"
+            const deleteBadSentenceButton = document.querySelectorAll(".train-sentence__btn--delete");
+            if (deleteBadSentenceButton) {
+                deleteBadSentenceButton.forEach(button => {
+                    button.addEventListener("click", async () => {
+                        const sentenceId = button.getAttribute("data-id");
+                        const sentenceRelatedId = button.getAttribute("data-related-id");
+                        const sentenceType = button.getAttribute("data-sentence-type");
+                        try {
+                            const response = await sendRequest({
+                                url: "/editing_report/delete_sentence",
+                                method: "DELETE",
+                                data: { sentence_id: sentenceId,
+                                        related_id: sentenceRelatedId,
+                                        sentence_type: sentenceType
+                                 },
+                            });
+                            if (response.status === "success") {
+                                console.log("Предложение удалено:", response.message);
+                                button.closest(".train-sentence__item").remove();
+                            } else {
+                                console.error("Ошибка удаления предложения:", response.message);
+                            }
+                        } catch (e) {
+                            console.error("Ошибка удаления предложения:", e);
+                            alert("Ошибка удаления предложения");
+                        }
+                    });
+                });
+            }
+
         }
         
     } catch (error) {
@@ -911,6 +971,14 @@ async function sendModifiedSentencesToServer() {
         console.error("Error saving modified sentences:", error);
     }
 }
+
+
+
+
+
+
+
+
 
 
 // Очищает текст по заданным правилам

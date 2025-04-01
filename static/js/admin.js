@@ -2,7 +2,35 @@
 
 document.addEventListener("DOMContentLoaded", function() {
 
+    // При загрузке страницы сразу загружаем версии моделей spacy, и обновляем логику отката на предыдущие модели spacy
+    fetch("/admin/get_available_models")
+        .then(res => res.json())
+        .then(data => renderModelVersions(data.models))
+        .catch(err => console.error("Ошибка при загрузке версий модели:", err));
+
     const tableCheckboxes = document.querySelectorAll(".admin-filter__checkbox--table");
+
+
+    updateRetrainButton(); // Функция запрашивает с сервера данные о том, 
+    // сколько собрано записей для обучения spacy обновляет текст кнопки 
+    // "Обучить модель" в зависимости от этого и делает кнопку активной 
+    // или неактивной
+
+    
+    // Функция добавляет слушатель на кнопку "Обучить модель"
+    document.getElementById("retrainМodelButton").addEventListener("click", function() {
+        setupRetrainButtonListener(this);
+    });
+
+    // Слушатель для кнопки "Показать данные для обучения"
+    document.getElementById("show-training-data-btn").addEventListener("click", () => {
+        fetch("/admin/get_training_data")
+            .then(res => res.json())
+            .then(data => displayTrainingData(data))
+            .catch(err => console.error("Ошибка загрузки данных:", err));
+    });
+
+
     
     // Добавляем слушатели для чекбоксов таблиц
     tableCheckboxes.forEach(checkbox => {
@@ -148,8 +176,138 @@ function sendSelectedData() {
     });
 }
 
+// Функция для управления кнопкой "Обучить модель"
+function updateRetrainButton() {
+    const button = document.getElementById("retrainМodelButton");
+    if (!button) return;
+
+    fetch("/admin/get_training_count")  // Создадим этот маршрут
+        .then(response => response.json())
+        .then(data => {
+            const count = data.count || 0;
+            button.textContent = `Переобучить модель (${count} / 50)`;
+            button.disabled = count < 3;
+        })
+        .catch(err => {
+            console.error("Ошибка при получении количества примеров для обучения:", err);
+        });
+}
 
 
+// Функция обработки нажатия кнопки "Обучить модель"
+function setupRetrainButtonListener(button) {
+
+    console.log("Запуск переобучения модели...");
+    button.disabled = true;
+    button.textContent = "Обучение...";
+
+    sendRequest({
+        url: "/admin/train_spacy_model",
+    })
+    .then(response => {
+        if (response.status === "success") {
+            toastr.success("✅ Модель успешно переобучена!");
+        } else {
+            toastr.error("❌ Ошибка: " + response.message);
+        }
+        updateRetrainButton();
+    })
+    .catch(error => {
+        console.error("Ошибка при запуске обучения:", error);
+        toastr.error("❌ Ошибка при обучении модели");
+        updateRetrainButton();
+    });
+}
+
+
+function renderModelVersions(models) {
+    const container = document.getElementById("model-versions-list");
+    if (!container) return;
+
+    console.log("Полученные версии моделей:", models);
+
+    container.innerHTML = ""; // очистим
+
+    models.forEach((model, index) => {
+        const block = document.createElement("div");
+        block.classList.add("model-version");
+
+        const title = document.createElement("p");
+        title.textContent = `Версия ${index === 0 ? "активная" : index} — ${model.name} (${model.modified})`;
+
+        const revertButton = document.createElement("button");
+        revertButton.textContent = `Откатить на версию ${index}`;
+        revertButton.disabled = index === 0;  // активную откатывать нельзя
+
+        revertButton.addEventListener("click", () => {
+            if (confirm("Вы точно хотите откатить модель на предыдущую версию?")) {
+                sendRequest({
+                    url: `/admin/revert_model/${index}`,
+                    method: "POST",
+                    csrfToken: csrfToken
+                }).then(res => {
+                    if (res.status === "success") {
+                        toastr.success("✅ Модель откатана!");
+                        updateRetrainButton();
+                        fetchModelVersions();
+                    } else {
+                        toastr.error("❌ Ошибка при откате: " + res.message);
+                    }
+                }).catch(err => {
+                    toastr.error("❌ Ошибка при откате модели");
+                    console.error(err);
+                });
+            }
+        });
+
+        block.appendChild(title);
+        block.appendChild(revertButton);
+        container.appendChild(block);
+    });
+}
+
+
+// Функция для отображения данных для обучения spacy
+
+
+function displayTrainingData(data) {
+    const container = document.getElementById("training-data-view");
+    container.innerHTML = "";  // очищаем
+
+    data.forEach(example => {
+        const { id, text, sent_starts } = example;
+
+        const tokens = text.split(" ");
+        const tokenSpans = tokens.map((token, i) => {
+            const span = document.createElement("span");
+            span.textContent = token + " ";
+            if (sent_starts[i]) {
+                span.classList.add("highlight-token");
+            }
+            return span;
+        });
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "training-item";
+        tokenSpans.forEach(span => wrapper.appendChild(span));
+
+        // Кнопки
+        const deleteBtn = document.createElement("button");
+        deleteBtn.textContent = "🗑";
+        deleteBtn.onclick = () => deleteTrainingExample(id);
+
+        const editBtn = document.createElement("button");
+        editBtn.textContent = "✏️";
+        editBtn.onclick = () => showTrainingPopup(text, updated => {
+            updated.id = id;
+            updateTrainingExample(updated);
+        });
+
+        wrapper.appendChild(editBtn);
+        wrapper.appendChild(deleteBtn);
+        container.appendChild(wrapper);
+    });
+}
 
 
 // Вызываемые функции
@@ -416,6 +574,45 @@ function handleDelete(id, tableName) {
 }
 
 
+// Функция удаляет данные из датасета для обучения spacy
+function deleteTrainingExample(id) {
+    sendRequest({
+        url: `/admin/delete_training_example/${id}`,
+        method: "DELETE",
+    })
+    .then(res => {
+        if (res.status === "success") {
+            toastr.success("Пример удалён");
+            document.getElementById("show-training-data-btn").click(); // перезагрузим список
+        } else {
+            toastr.error("Ошибка при удалении: " + res.message);
+        }
+    })
+    .catch(err => {
+        console.error("Ошибка удаления:", err);
+    });
+}
+
+
+// Функция для отображения попапа редактирования датасета для обучения spacy
+function updateTrainingExample({ id, text, sent_starts }) {
+    sendRequest({
+        url: "/admin/update_training_example",
+        method: "POST",
+        data: { id, text, sent_starts }
+    })
+    .then(res => {
+        if (res.status === "success") {
+            toastr.success("Пример обновлён");
+            document.getElementById("show-training-data-btn").click();
+        } else {
+            toastr.error("Ошибка при обновлении: " + res.message);
+        }
+    })
+    .catch(err => {
+        console.error("Ошибка обновления:", err);
+    });
+}
 
 
 
@@ -443,6 +640,10 @@ function displayDataAfterDeletion(id, tableName) {
 function isPasswordField(columnName) {
     return typeof columnName === "string" && (columnName.toLowerCase().includes("user_pass") || columnName.toLowerCase().includes("hash"));
 }
+
+
+
+
 
 
 

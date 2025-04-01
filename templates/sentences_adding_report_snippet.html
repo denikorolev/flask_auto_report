@@ -15,9 +15,17 @@
         <h4>Сохраненные предложения:</h4>
         <ul>
         {% for sentence in saved_sentences %}
-            <li>{{ sentence.text }} (ID: {{ sentence.id }})</li>
+            <li class="train-sentence__item">
+                <label>
+                    <input type="checkbox" class="train-sentence__checkbox"  data-id="{{ sentence.id }}" data-text="{{ sentence.text }}">
+                    {{ sentence.text }} (ID: {{ sentence.id }}) (ID группы: {{sentence.related_id}}) (Тип предложения: {{ sentence.sentence_type }})<br>
+                    <button class="btn btn_report train-sentence__btn--delete" data-id="{{ sentence.id }}" data-text="{{ sentence.text }}" data-related-id="{{sentence.related_id}}" data-sentence-type="{{ sentence.sentence_type }}">❌ Удалить</button>
+                </label>
+                
+            </li>
         {% endfor %}
         </ul>
+        <button id="trainSelectedSentencesButton" class="train-sentence-btn">🧠 Учить</button>
     {% endif %}
 
     {% if duplicates %}
