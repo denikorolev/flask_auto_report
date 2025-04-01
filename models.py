@@ -15,7 +15,10 @@ from logger import logger
 db = SQLAlchemy()
 
  
-# ✅ быстрее 👉 🔥 📌 ❌ 🚀 😎 🔄 1️⃣ 2️⃣ 3️⃣ ⚠️ 💻 🧠 💥 🙌 🗑 ✏️ 🔙 🕘
+# ✅ быстрее 👉 🔥 📌 ❌ 🚀 😎 🔄 1️⃣ 2️⃣ 3️⃣ ⚠️ 💻 🧠 💥 🙌 🗑 ✏️ 🔙 🕘 ➕
+
+    
+
 
 
 
@@ -1440,6 +1443,26 @@ class BodySentence(SentenceBase):
     )
     
     
+    @staticmethod
+    def increase_weight(sentence_id, group_id):
+        logger.debug(f"(increase_weight) 🚀 Начато увеличение веса предложения ID={sentence_id} в группе ID={group_id}")
+        link_table = body_sentence_group_link
+        try:
+            stmt = (
+                link_table.update()
+                .where(link_table.c.group_id == group_id)
+                .where(link_table.c.body_sentence_id == sentence_id)
+                .values(sentence_weight=link_table.c.sentence_weight + 1)
+            )
+
+            db.session.execute(stmt)
+            db.session.commit()
+            logger.debug(f"(increase_weight) ✅ Вес предложения ID={sentence_id} увеличен на 1 в группе ID={group_id}")
+        except Exception as e:
+            logger.error(f"(increase_weight) ❌ Ошибка при увеличении веса предложения ID={sentence_id} в группе ID={group_id}: {e}")
+            raise ValueError(f"Ошибка при увеличении веса предложения ID={sentence_id} в группе ID={group_id}: {e}")
+    
+    
 
 class TailSentence(SentenceBase):
     __tablename__ = "tail_sentences"
@@ -1449,6 +1472,26 @@ class TailSentence(SentenceBase):
         secondary="tail_sentence_group_link",
         back_populates="tail_sentences"
     )
+    
+    
+    @staticmethod
+    def increase_weight(sentence_id, group_id):
+        logger.debug(f"(increase_weight) 🚀 Начато увеличение веса предложения ID={sentence_id} в группе ID={group_id}")
+        link_table = tail_sentence_group_link
+        try:
+            stmt = (
+                link_table.update()
+                .where(link_table.c.group_id == group_id)
+                .where(link_table.c.tail_sentence_id == sentence_id)
+                .values(sentence_weight=link_table.c.sentence_weight + 1)
+            )
+
+            db.session.execute(stmt)
+            db.session.commit()
+            logger.debug(f"(increase_weight) ✅ Вес предложения ID={sentence_id} увеличен на 1 в группе ID={group_id}")
+        except Exception as e:
+            logger.error(f"(increase_weight) ❌ Ошибка при увеличении веса предложения ID={sentence_id} в группе ID={group_id}: {e}")
+            raise ValueError(f"Ошибка при увеличении веса предложения ID={sentence_id} в группе ID={group_id}: {e}")
     
     
   

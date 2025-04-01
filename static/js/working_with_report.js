@@ -174,7 +174,6 @@ function handleSentenceBlur() {
         normalizeSentence(sentence.sentence, keyWordsGroups) === normalizedCurrent
     );
     if (isDuplicate) {
-        console.log("double")
         return;
     }
 
@@ -195,7 +194,6 @@ function handleSentenceBlur() {
  * Добавляет необходимые атрибуты и привязывает обработчики событий 
  */
 function createEditableSentenceElement(sentenceText, paragraphId) {
-    console.log("i'm creating new sentence element");
     const newSentenceElement = document.createElement("span");
     newSentenceElement.classList.add("report__sentence"); // Добавляем класс для стилизации и идентификации
     newSentenceElement.dataset.paragraphId = paragraphId; // Привязываем к конкретному абзацу
@@ -471,7 +469,16 @@ function sentenceDoubleClickHandle (){
                     activeSentence.textContent = selectedSentence.sentence; // Заменяем текст предложения
                     activeSentence.focus(); // Устанавливаем фокус на предложение
                     activeSentence.blur(); // Убираем фокус
-                    // highlightKeyWords(activeSentence) // Обновляем текст
+
+                    //  Увеличиваем вес предложения
+                    if (selectedSentence.id && selectedSentence.group_id) {
+                        increaseSentenceWeight({
+                            sentence_id: selectedSentence.id,
+                            group_id: selectedSentence.group_id,
+                            sentence_type: "body"
+                        });
+                    }
+                    
                 });
             } else {
                 console.warn("No linked sentences or linked sentences is not an array");
@@ -483,6 +490,30 @@ function sentenceDoubleClickHandle (){
         });
     });
 }
+
+// Отправляет запрос на сервер для увеличения веса предложения
+function increaseSentenceWeight({ sentence_id, group_id, sentence_type }) {
+    fetch("/working_with_reports/increase_sentence_weight", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": csrfToken
+        },
+        body: JSON.stringify({ sentence_id, group_id, sentence_type })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status !== "success") {
+            console.warn("⚠️ Ошибка при увеличении веса:", data.message);
+        } else {
+            console.log("✅ Вес предложения успешно увеличен:");
+        }
+    })
+    .catch(err => {
+        console.error("❌ Не удалось увеличить вес предложения:", err);
+    });
+}
+
 
 // Обрабатывает логику кнопки "Next". Это для работы в рамках логики Word
 function nextButtonLogic(nextReportButton) {
@@ -595,9 +626,7 @@ function addSentenceButtonLogic() {
             newSentenceElement.focus(); // Устанавливаем фокус на новый элемент
             // Получаем данные параграфа по его ID из данных с сервера
             const paragraph = currentReportParagraphsData.find(paragraph => paragraph.id === paragraphId) || null;
-            console.log(paragraph);
             const tailSentences = paragraph.tail_sentences;
-            console.log(tailSentences);
            
             if (tailSentences && tailSentences.length > 0) {
                 // Используем popup для показа предложений
@@ -608,6 +637,14 @@ function addSentenceButtonLogic() {
                     newSentenceElement.focus(); // Устанавливаем фокус на новый элемент
                     newSentenceElement.blur(); // Убираем фокус
                     highlightKeyWords(newSentenceElement); // Обновляем текст абзаца после добавления предложения
+
+                    if (selectedSentence.id && selectedSentence.group_id) {
+                        increaseSentenceWeight({
+                            sentence_id: selectedSentence.id,
+                            group_id: selectedSentence.group_id,
+                            sentence_type: "tail"
+                        });
+                    }
 
                 });
             } else {
@@ -871,7 +908,6 @@ async function sendModifiedSentencesToServer() {
         });
 
     });
-    console.log(dataToSend);
 
     // Если нет данных для отправки, выводим сообщение и завершаем выполнение
     if (dataToSend.length === 0) {

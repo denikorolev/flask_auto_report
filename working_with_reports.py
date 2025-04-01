@@ -390,3 +390,34 @@ def get_spacy_tokens():
 
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
+    
+    
+    
+    
+# editing_report.py
+@working_with_reports_bp.route("/increase_sentence_weight", methods=["POST"])
+@auth_required()
+def increase_sentence_weight():
+    logger.info(f"(Увеличение веса предложения) ------------------------------------")
+    logger.info(f"(Увеличение веса предложения) 🚀 Начинаю обработку запроса на увеличение веса предложения")
+    data = request.get_json()
+    sentence_id = data.get("sentence_id")
+    group_id = data.get("group_id")
+    sentence_type = data.get("sentence_type")
+    
+    logger.info(f"(Увеличение веса предложения) Полученные данные: {data}")
+
+    if not sentence_id or not group_id or sentence_type not in ["body", "tail"]:
+        logger.error(f"(Увеличение веса предложения) ❌ Не хватает данных для увеличения веса предложения")
+        return jsonify({"status": "error", "message": "Недостаточно данных"}), 400
+
+    try:
+        if sentence_type == "body":
+            BodySentence.increase_weight(sentence_id, group_id)
+        else:
+            TailSentence.increase_weight(sentence_id, group_id)
+        logger.info(f"(Увеличение веса предложения) ✅ Вес предложения успешно увеличен")
+        return jsonify({"status": "success", "message": "Вес предложения увеличен"}), 200
+    except Exception as e:
+        logger.error(f"(Увеличение веса предложения) ❌ Ошибка при обновлении веса: {e}")
+        return jsonify({"status": "error", "message": f"Ошибка при обновлении веса: {e}"}), 500
