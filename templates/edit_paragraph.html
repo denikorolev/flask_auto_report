@@ -65,6 +65,7 @@
     <ul class="edit-sentence__list"
         id="editHeadSentenceList"
         data-paragraph-id="{{ paragraph.id }}"
+        data-locked="{{ 'True' if paragraph.has_linked_head else 'False' }}"
         >
         {% if paragraph.head_sentences %}
             {% for sentence in paragraph.head_sentences %}
@@ -99,7 +100,7 @@
 
                 <div class="control-buttons__wrapper">
                     <!-- Кнопки управления из макроса -->
-                    {{ control_buttons(sentence.id, 'sentence', paragraph.id, sentence.sentence, report_type, has_linked_group=paragraph.has_linked_head, sentence_type="head", group_id=sentence.group_id) }}
+                    {{ control_buttons(sentence.id, 'sentence', paragraph.id, sentence.sentence, report_type, sentence_type="head", group_id=sentence.group_id) }}
                     <!-- Блок информационных значков из макроса -->
                     {{ info_icons(sentence.is_linked) }}
                 </div>
@@ -133,6 +134,7 @@
         style="display: block;" 
         id="editTailSentenceList"
         data-paragraph-id="{{ paragraph.id }}"
+        data-locked="{{ 'True' if paragraph.has_linked_tail else 'False' }}"
         >
         {% for sentence in paragraph.tail_sentences %}
             <li class="wrapper__card wrapper__card--tail edit-sentence__item edit-sentence__item--tail" 
@@ -154,7 +156,7 @@
 
                 <div class="control-buttons__wrapper">
                     <!-- Кнопки управления из макроса -->
-                    {{ control_buttons(sentence.id, 'sentence', paragraph.id, sentence.sentence, report_type, has_linked_group=paragraph.has_linked_tail, sentence_type="tail", group_id=sentence.group_id) }}
+                    {{ control_buttons(sentence.id, 'sentence', paragraph.id, sentence.sentence, report_type, sentence_type="tail", group_id=sentence.group_id) }}
                     <!-- Блок информационных значков из макроса -->
                     {{ info_icons(sentence.is_linked) }}
                 </div>

@@ -383,9 +383,10 @@ function initSentencePopupCloseHandlers() {
 
 // Функция редактирования предложения (переход на страницу редактирования)
 function editSentence(button) {
-    const hasLinkedGroup = button.closest(".control-buttons").getAttribute("data-has-linked-group");
+    const sentenceList = document.getElementById("editHeadSentenceList");
+    const isLocked = sentenceList.getAttribute("data-locked") === "True";
     
-    if(hasLinkedGroup === "True") {
+    if(isLocked === "True") {
         const audioKnock = new Audio("/static/audio/dzzz.mp3");
         const sentenceType = button.closest(".control-buttons").getAttribute("data-sentence-type");
         const groupIsLinkedIcon = sentenceType === "head" ? document.getElementById("editSentenceTitleHead").querySelector(".edit-sentence__title-span") : document.getElementById("editSentenceTitleTail").querySelector(".edit-sentence__title-span");
@@ -765,12 +766,9 @@ function unlinkGroup(itemWrapper) {
 
 // Функция для разрешения редактирования предложения (снимает блок вызванный наличием связей у группы предложений)
 function allowEditing(itemWrapper) {
-    // Меняем статус на "разблокировано"
+    // Меняем статус группы на разблокированную
     itemWrapper.setAttribute("data-group-is-linked", "False");
-
-    const groupType = itemWrapper.getAttribute("data-sentence-type");
-    const sentenceTitleElement = itemWrapper.querySelector(".edit-sentence__title");
-    sentenceTitleElement.textContent = "Главные предложения (разблокировано)";
+    itemWrapper.querySelector(".edit-sentence__title").textContent = "Главные предложения (разблокировано)";
 
     // Скрываем иконку замка
     const lockIcon = itemWrapper.querySelector(".edit-sentence__title-span");
@@ -778,14 +776,13 @@ function allowEditing(itemWrapper) {
         lockIcon.style.display = "none";
     }
 
-    // Обновляем data-has-linked-group во всех .control-buttons в пределах соответствующего списка
+    // Находим соответствующий список и снимаем блокировку
+    const groupType = itemWrapper.getAttribute("data-sentence-type");
     const listId = groupType === "head" ? "editHeadSentenceList" : "editTailSentenceList";
     const sentenceList = document.getElementById(listId);
-    const controlButtons = sentenceList.querySelectorAll(".control-buttons");
-    controlButtons.forEach(button => {
-        button.setAttribute("data-has-linked-group", "False");
-    });
+    sentenceList.setAttribute("data-locked", "False");
 }
+
 
 
 // Функция поиска предложений по словам в тексте

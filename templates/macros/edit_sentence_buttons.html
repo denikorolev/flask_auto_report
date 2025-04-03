@@ -1,13 +1,12 @@
 <!--Это макрос с кнопками редактирования предолжений и 
 параграфов в edit_report, edit_paragraph  и edit_head_sentence-->
 
-{% macro control_buttons(object_id, object_type, related_id, text, report_type, has_linked_group=False, sentence_type=None, group_id=None) %}
+{% macro control_buttons(object_id, object_type, related_id, text, report_type, sentence_type=None, group_id=None) %}
     <div class="control-buttons"
         data-object-id="{{ object_id }}"
         data-object-type="{{ object_type }}"
         data-related-id="{{ related_id }}"
         data-text="{{ text }}"
-        data-has-linked-group="{{ has_linked_group }}"
         data-report-type="{{ report_type}}"
         {% if sentence_type %} data-sentence-type="{{ sentence_type }}" {% endif %}
         {% if group_id %} data-group-id="{{ group_id }}" {% endif %}

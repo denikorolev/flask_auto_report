@@ -1778,7 +1778,7 @@ class SentenceGroupBase(BaseModel):
             sentence_data.append(s_data)
 
         # Сортируем по `index_or_weight`
-        sentence_data.sort(key=lambda x: x[f"{index_name}"] or 0, reverse=True)
+        sentence_data.sort(key=lambda x: x[f"{index_name}"] or 0)
 
         logger.debug(f"(get_group_sentences) ✅ Получено {len(sentence_data)} предложений для группы ID={group_id}")
         return sentence_data   

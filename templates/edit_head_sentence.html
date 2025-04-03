@@ -87,7 +87,7 @@
                    
                     <!-- Кнопки управления из макроса -->
                 <div class="control-buttons__wrapper">
-                    {{ control_buttons(sentence.id, 'sentence', head_sentence.id, sentence.sentence, report_type, has_linked_group=head_sentence.has_linked_body, sentence_type="body", group_id=sentence.group_id) }}
+                    {{ control_buttons(sentence.id, 'sentence', head_sentence.id, sentence.sentence, report_type, sentence_type="body", group_id=sentence.group_id) }}
                     <!-- Блок информационных значков из макроса -->
                     {{ info_icons(sentence.is_linked) }}
                 </div>
