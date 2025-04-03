@@ -53,6 +53,7 @@ def edit_paragraph():
     logger.info("(Страница редактирования параграфа /edit_paragraph) 🚀 Начинаю получения данных для формирования страницы.")
     paragraph_id = int(request.args.get("paragraph_id"))
     report_id = int(request.args.get("report_id"))
+    report_type = Report.get_report_type(report_id)
    
     paragraph_data = Paragraph.get_paragraph_data(paragraph_id)
     logger.info(f"(Страница редактирования параграфа /edit_paragraph) ----------------------------------------------")
@@ -61,7 +62,8 @@ def edit_paragraph():
     return render_template('edit_paragraph.html',
                             title=f"Редактирование параграфа {paragraph_data['paragraph']}",
                             paragraph=paragraph_data,
-                            report_id=report_id
+                            report_id=report_id,
+                            report_type=report_type,
                             )
 
 
@@ -75,6 +77,7 @@ def edit_head_sentence():
     sentence_id = request.args.get("sentence_id")
     paragraph_id = request.args.get("paragraph_id")
     report_id = request.args.get("report_id")
+    report_type = Report.get_report_type(report_id)
     
     group_id = Paragraph.get_by_id(paragraph_id).head_sentence_group_id
     if not group_id:
@@ -89,7 +92,8 @@ def edit_head_sentence():
                            title=f"Редактирование главного предложения: {sentence_data['sentence']}",
                            head_sentence=sentence_data,
                            paragraph_id=paragraph_id,
-                           report_id=report_id
+                           report_id=report_id,
+                           report_type=report_type,
                            )
 
 

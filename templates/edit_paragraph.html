@@ -14,7 +14,7 @@
     <button class="btn report__btn" id="backToReportButton" type="button">Вернуться к редактированию протокола</button>
 </div>
 
-<div class="container edit-paragraph" id="editParagraphContainer" data-report-id="{{ report_id }}" data-paragraph-id="{{ paragraph.id }}">
+<div class="container edit-paragraph" id="editParagraphContainer" data-report-id="{{ report_id }}" data-report-type="{{report_type}}" data-paragraph-id="{{ paragraph.id }}">
 
     <!-- Данные параграфа -->
     <div class="flex edit-paragraph__paragraph-data-block">
@@ -99,7 +99,7 @@
 
                 <div class="control-buttons__wrapper">
                     <!-- Кнопки управления из макроса -->
-                    {{ control_buttons(sentence.id, 'sentence', paragraph.id, sentence.sentence, sentence_type="head", group_id=sentence.group_id) }}
+                    {{ control_buttons(sentence.id, 'sentence', paragraph.id, sentence.sentence, report_type, has_linked_group=paragraph.has_linked_head, sentence_type="head", group_id=sentence.group_id) }}
                     <!-- Блок информационных значков из макроса -->
                     {{ info_icons(sentence.is_linked) }}
                 </div>
@@ -136,28 +136,28 @@
         >
         {% for sentence in paragraph.tail_sentences %}
             <li class="wrapper__card wrapper__card--tail edit-sentence__item edit-sentence__item--tail" 
-            data-sentence-id="{{ sentence.id }}"
-            data-paragraph-id="{{ paragraph.id }}"
-            data-sentence-weight="{{ sentence.sentence_weight }}"
-            data-sentence-type="tail"
-            data-sentence-tags="{{ sentence.tags }}"
-            data-sentence-comment="{{ sentence.comment }}"
-            data-sentence-is-linked="{{ sentence.is_linked }}"
-            data-sentence-group-id="{{ sentence.group_id }}"
-            data-sentence-hard-edit="False"
-            >
+                data-sentence-id="{{ sentence.id }}"
+                data-paragraph-id="{{ paragraph.id }}"
+                data-sentence-weight="{{ sentence.sentence_weight }}"
+                data-sentence-type="tail"
+                data-sentence-tags="{{ sentence.tags }}"
+                data-sentence-comment="{{ sentence.comment }}"
+                data-sentence-is-linked="{{ sentence.is_linked }}"
+                data-sentence-group-id="{{ sentence.group_id }}"
+                data-sentence-hard-edit="False"
+                >
 
-            <div class="flex">
-                <div class="drag-handle"> {{sentence.sentence_weight}}</div>
-                <p class="edit-sentence__text">{{ sentence.sentence }}</p>
-            </div>
+                <div class="flex">
+                    <div class="drag-handle"> {{sentence.sentence_weight}}</div>
+                    <p class="edit-sentence__text">{{ sentence.sentence }}</p>
+                </div>
 
-            <div class="control-buttons__wrapper">
-                <!-- Кнопки управления из макроса -->
-                {{ control_buttons(sentence.id, 'sentence', paragraph.id, sentence.sentence, sentence_type="tail", group_id=sentence.group_id) }}
-                <!-- Блок информационных значков из макроса -->
-                {{ info_icons(sentence.is_linked) }}
-            </div>
+                <div class="control-buttons__wrapper">
+                    <!-- Кнопки управления из макроса -->
+                    {{ control_buttons(sentence.id, 'sentence', paragraph.id, sentence.sentence, report_type, has_linked_group=paragraph.has_linked_tail, sentence_type="tail", group_id=sentence.group_id) }}
+                    <!-- Блок информационных значков из макроса -->
+                    {{ info_icons(sentence.is_linked) }}
+                </div>
 
             </li>
         {% endfor %}
@@ -178,9 +178,14 @@
         <button id="sentencePopupEditButton" class="btn report__btn">Редактировать</button>
         <input type="checkbox" id="hardEditCheckbox" class="checkbox">
     </div>
-    <button id="closeSentencePopup" class="btn report__btn">Закрыть</button>
+    <button id="closeSentencePopupButton" class="btn report__btn">Закрыть</button>
 </div>
 
+<!-- Попап для управления связью группы предложении -->
+<div id="lockPopup" class="sentence-popup lock-popup" style="display: none; position: absolute; z-index: 1000;">
+    <button class="btn lock-popup__btn" id="unlinkGroupButton">🔗 Разорвать связь</button>
+    <button class="btn lock-popup__btn" id="allowEditButton">✏️ Разрешить редактирование</button>
+</div>
 
 <!-- Буфер обмена (попап) из макроса -->
 {{ buffer_popup() }}

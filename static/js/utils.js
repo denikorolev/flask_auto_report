@@ -183,3 +183,14 @@ function onTripleClick(element, callback) {
         }
     });
 }
+
+
+/**
+ * Универсальная функция для закрытия попапа.
+ * @param {HTMLElement} popup - элемент попапа, который нужно скрыть.   
+ */
+function hidePopup(popup) {
+    if (popup && popup.style.display === "block") {
+        popup.style.display = "none";
+    }
+}

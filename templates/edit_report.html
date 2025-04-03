@@ -74,7 +74,7 @@
                 <ul class="edit-paragraph__list" id="editParagraphsList">
                     {% for paragraph in report_paragraphs %}
 
-                        {% if paragraph.str_before %}
+                        {% if paragraph.str_before or paragraph.is_impression%}
                             <br>
                         {% endif %}
                         
@@ -120,7 +120,7 @@
                                         style="display: block;"
                                         {% endif %}
                                         >
-                                        <b> {{ paragraph.paragraph }} </b>
+                                        <b class=""> {{ paragraph.paragraph }} </b>
                                     </h3>
                                 
                                         {% for sentence in paragraph.head_sentences %}
@@ -134,7 +134,7 @@
                             
                             <div class="control-buttons__wrapper">
                                 <!-- Кнопки управления из макроса -->
-                                {{ control_buttons(paragraph.id, 'paragraph', report_data.id, paragraph.paragraph) }}
+                                {{ control_buttons(paragraph.id, 'paragraph', report_data.id, paragraph.paragraph, report_data.report_type) }}
                                 
                             </div>
 
@@ -178,7 +178,7 @@
 
 
 <!-- Попап с информацией о предложении -->
-<div id="elementPopup" class="sentence-popup" style="display: none;">
+<div id="paragraphPopup" class="sentence-popup" style="display: none;">
     <div class="sentence-popup__info-box">
         <span class="sentence-popup__info-item"><strong>ID:</strong> <span id="popupElementId"></span></span>
         <span class="sentence-popup__info-item"><strong>Индекс:</strong> <span id="popupElementIndex"></span></span>
@@ -218,10 +218,10 @@
             <input type="checkbox" id="elementIsAdditional" class="sentence-popup__checkbox--additional">
             <label for="elementIsAdditional" class="sentence-popup__checkbox--additional">Дополнительный</label>
         </div>
-        <button id="elementPopupSaveChangesButton" class="btn report__btn">Сохранить</button>
+        <button id="paragraphPopupSaveChangesButton" class="btn report__btn">Сохранить</button>
     </div>
 
-    <button id="closeElementPopup" class="btn report__btn">Закрыть</button>
+    <button id="closeParagraphPopupButton" class="btn report__btn">Закрыть</button>
 </div>
 
 

@@ -33,18 +33,12 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
 
-    // Слушатель на кнопку 🔒 двойной клик
-    document.querySelectorAll(".edit-sentence__title-span").forEach(item => {item.addEventListener("dblclick", function() {
-        const itemWrapper = this.closest(".edit-sentence__title-wrapper");
-        unlinkGroup(itemWrapper);
-        });
-    });
-
-    
-    // Слушатель на кнопку 🔗 одинарный клик
-    document.querySelectorAll(".edit-sentence__title-span").forEach(item => {item.addEventListener("click", function() {
-        const itemWrapper = this.closest(".edit-sentence__title-wrapper");
-        allowEditing(itemWrapper);
+    // Слушатель на кнопку 🔒 (запускает попап для управления связью группы предложений)
+    document.querySelectorAll(".edit-sentence__title-span").forEach(item => {
+        item.addEventListener("click", function (event) {
+            event.stopPropagation();
+            const itemWrapper = this.closest(".edit-sentence__title-wrapper");
+            showLockPopup(itemWrapper, event);
         });
     });
 
@@ -214,6 +208,48 @@ function showBufferPopup(button) {
 
 
 
+function showLockPopup(itemWrapper, event) {
+    const popup = document.getElementById("lockPopup");
+
+    // Сохраняем ссылку на текущий wrapper
+    popup.dataset.targetWrapperId = itemWrapper.getAttribute("data-wrapper-id") || "";
+
+    // Позиционируем попап
+    popup.style.display = "block";
+    popup.style.left = `${event.pageX + 10}px`;
+    popup.style.top = `${event.pageY + 10}px`;
+
+    // Навешиваем слушатели на кнопки внутри попапа
+    const unlinkBtn = document.getElementById("unlinkGroupButton");
+    const allowBtn = document.getElementById("allowEditButton");
+
+    unlinkBtn.onclick = function () {
+        unlinkGroup(itemWrapper);
+        hidePopup(popup);
+    };
+
+    allowBtn.onclick = function () {
+        allowEditing(itemWrapper);
+        hidePopup(popup);
+    };
+
+    // Вешаем временный обработчик клика вне попапа
+    function onClickOutside(event) {
+        if (!popup.contains(event.target)) {
+            hidePopup(popup);
+            document.removeEventListener("click", onClickOutside);
+        }
+    }
+
+    // Чуть отложим, чтобы клик по самой иконке не сразу закрыл
+    setTimeout(() => {
+        document.addEventListener("click", onClickOutside);
+    }, 0);
+
+}
+
+
+
 /**
  * Инициализация обработчика кнопки "Редактировать" в попапе
  */
@@ -254,7 +290,8 @@ function initPopupButtons(sentenceElement, sentenceId) {
         makeSentenceEditable(sentenceElement);
 
         // Закрываем попап
-        hideSentencePopup();
+        const popup = document.getElementById("sentencePopup");
+        hidePopup(popup);
     });
 }
 
@@ -315,7 +352,7 @@ function showSentencePopup(sentenceElement, event) {
  */
 function initSentencePopupCloseHandlers() {
     const popup = document.getElementById("sentencePopup");
-    const closeButton = document.getElementById("closeSentencePopup");
+    const closeButton = popup.querySelector("#closeSentencePopupButton");
 
     if (!popup || !closeButton) {
         console.error("Попап или кнопка закрытия не найдены!");
@@ -323,32 +360,41 @@ function initSentencePopupCloseHandlers() {
     }
 
     // Закрытие по кнопке
-    closeButton.addEventListener("click", hideSentencePopup);
+    closeButton.addEventListener("click", hidePopup(popup));
 
     // Закрытие при клике вне попапа
     document.addEventListener("click", function (event) {
         if (popup.style.display === "block" && !popup.contains(event.target)) {
-            hideSentencePopup();
+            hidePopup(popup);
         }
+    });
+
+    // ❗ Закрытие при начале ввода текста
+    document.querySelectorAll(".edit-sentence__text").forEach(sentence => {
+        sentence.addEventListener("input", function () {
+            if (popup.style.display === "block") {
+                hidePopup(popup);
+            }
+        });
     });
 }
 
 
-/**
- * Hides the sentence popup.
- */
-function hideSentencePopup() {
-    const popup = document.getElementById("sentencePopup");
-    if (popup) {
-        popup.style.display = "none";
-    } else {
-        console.warn("Попап для предложения не найден.");
-    }
-}
-
 
 // Функция редактирования предложения (переход на страницу редактирования)
 function editSentence(button) {
+    const hasLinkedGroup = button.closest(".control-buttons").getAttribute("data-has-linked-group");
+    
+    if(hasLinkedGroup === "True") {
+        const audioKnock = new Audio("/static/audio/dzzz.mp3");
+        const sentenceType = button.closest(".control-buttons").getAttribute("data-sentence-type");
+        const groupIsLinkedIcon = sentenceType === "head" ? document.getElementById("editSentenceTitleHead").querySelector(".edit-sentence__title-span") : document.getElementById("editSentenceTitleTail").querySelector(".edit-sentence__title-span");
+        createRippleAtElement(groupIsLinkedIcon);
+        audioKnock.play();
+        toastr.warning("Нельзя редактировать: связано с дополнительными предложениями");
+        return;
+    }
+    
     const sentenceId = button.closest(".control-buttons").getAttribute("data-object-id");
     const paragraphId = button.closest(".control-buttons").getAttribute("data-related-id");
     const reportId = document.getElementById("editParagraphContainer").getAttribute("data-report-id");
@@ -356,7 +402,6 @@ function editSentence(button) {
     window.location.href = `/editing_report/edit_head_sentence?sentence_id=${sentenceId}&paragraph_id=${paragraphId}&report_id=${reportId}`;
     
 }
-
 
 
 // Функция для добавления нового дополнительного предложения
@@ -446,9 +491,18 @@ async function addTailSentence(itemFromBuffer) {
 // Функция удаления дополнительного предложения
 async function deleteTailSentence(button) {
     const sentenceItem = button.closest(".control-buttons");
+    
+    if (sentenceItem.getAttribute("data-has-linked-group") === "True") {
+        const audioKnock = new Audio("/static/audio/dzzz.mp3");
+        const groupIsLinkedIcon = document.getElementById("editSentenceTitleTail").querySelector(".edit-sentence__title-span");
+        createRippleAtElement(groupIsLinkedIcon);
+        audioKnock.play();
+        toastr.warning("Нельзя удалить: связано с дополнительными предложениями");
+        return;
+    }
+    
     const sentenceId = sentenceItem.getAttribute("data-object-id");
     const paragraphId = sentenceItem.getAttribute("data-related-id");
-    
 
     try {
         const response = await sendRequest({
@@ -471,9 +525,25 @@ async function deleteTailSentence(button) {
 // Функция удаления главного предложения
 async function deleteHeadSentence(button) {
     const sentenceItem = button.closest(".control-buttons");
+    
+    if (sentenceItem.getAttribute("data-has-linked-group") === "True") {
+        const audioKnock = new Audio("/static/audio/dzzz.mp3");
+        const groupIsLinkedIcon = document.getElementById("editSentenceTitleHead").querySelector(".edit-sentence__title-span");
+        createRippleAtElement(groupIsLinkedIcon);
+        audioKnock.play();
+        toastr.warning("Нельзя удалить: связано с дополнительными предложениями");
+        return;
+    }
+    
+    const confirmation = confirm("Вы уверены, что хотите удалить это предложение?");
+    if (!confirmation) {
+        console.log("Удаление отменено пользователем.");
+        return; // Если пользователь отменил, выходим из функции
+    }
+
+
     const sentenceId = sentenceItem.getAttribute("data-object-id");
     const paragraphId = sentenceItem.getAttribute("data-related-id");
-
     try {
         const response = await sendRequest({
             url: "/editing_report/delete_sentence",
@@ -571,6 +641,7 @@ function addSentenceToBuffer(button) {
     const objectText = button.closest(".control-buttons").getAttribute("data-text");
     const sentenceType = button.closest(".control-buttons").getAttribute("data-sentence-type");
     const sentenceGroupId = button.closest(".control-buttons").getAttribute("data-group-id");
+    const reportType = button.closest(".control-buttons").getAttribute("data-report-type");
 
     dataToBuffer = {
         object_id: objectId,
@@ -578,7 +649,8 @@ function addSentenceToBuffer(button) {
         related_id: relatedId,
         object_text: objectText,
         sentence_type: sentenceType,
-        group_id: sentenceGroupId
+        group_id: sentenceGroupId,
+        report_type: reportType
     };
 
     addToBuffer(dataToBuffer);
@@ -589,6 +661,26 @@ function addSentenceToBuffer(button) {
 
 
 function deleteSubsidiaries (button) {
+    const hasLinkedGroup = button.closest(".control-buttons").getAttribute("data-has-linked-group");
+    console.log("Удаление дочерних элементов:", button.closest(".control-buttons"));
+    console.log("hasLinkedGroup:", hasLinkedGroup);
+
+    if (hasLinkedGroup === "True") {
+        const audioKnock = new Audio("/static/audio/dzzz.mp3");
+        const groupIsLinkedIcon = document.getElementById("editSentenceTitleHead").querySelector(".edit-sentence__title-span");
+        createRippleAtElement(groupIsLinkedIcon);
+        audioKnock.play();
+        toastr.warning("Нельзя удалить: связано с дополнительными предложениями");
+        return;
+    }
+
+    const confirmation = confirm("Вы уверены, что хотите удалить дочерние элементы?");
+    if (!confirmation) {
+        console.log("Удаление отменено пользователем.");
+        return; // Если пользователь отменил, выходим из функции
+    }
+
+
     const objectId = button.closest(".control-buttons").getAttribute("data-object-id");
     const objectType = button.closest(".control-buttons").getAttribute("data-object-type");
     const relatedId = button.closest(".control-buttons").getAttribute("data-related-id");
@@ -613,11 +705,18 @@ function deleteSubsidiaries (button) {
 // Функция для вставки предложения из буфера, буду использовать функцию создания нового предложения, но с данными из буфера
 function insertFromBuffer(index) {
     const itemFromBuffer = getFromBuffer(index);
+    const bufferReportType = itemFromBuffer.report_type;
+    const reportType = document.getElementById("editParagraphContainer").getAttribute("data-report-type");
+
     if (!itemFromBuffer) {
         console.error("Элемент из буфера не найден.");
         return;
     }
-    console.log("Вставка из буфера:", itemFromBuffer);
+
+    if (bufferReportType !== reportType) {
+        alert("Нельзя вставить предложение принадлежащее другому типу протокола (например нельзя вставить предложение из протокола с типом КТ в протокол с типом МРТ).");
+        return;
+    }
 
     if (itemFromBuffer.object_type === "paragraph") {
         alert("Нельзя вставить параграф в данной секции.");
@@ -666,22 +765,26 @@ function unlinkGroup(itemWrapper) {
 
 // Функция для разрешения редактирования предложения (снимает блок вызванный наличием связей у группы предложений)
 function allowEditing(itemWrapper) {
-    const groupIsLinked = itemWrapper.getAttribute("data-group-is-linked").toLowerCase();
-    const sentenceTitleElement = itemWrapper.querySelector(".edit-sentence__title");
-    const unblockSentence = "Главные предложения (разблокировано)";
-    const blockSentence = "Главные предложения (заблокировано)";
+    // Меняем статус на "разблокировано"
+    itemWrapper.setAttribute("data-group-is-linked", "False");
 
-    if (groupIsLinked === "true") {
-        itemWrapper.setAttribute("data-group-is-linked", "False");
-        sentenceTitleElement.textContent = unblockSentence;
-        return;
-       
-    } else if (groupIsLinked === "false") {
-        itemWrapper.setAttribute("data-group-is-linked", "True");
-        sentenceTitleElement.textContent = blockSentence;
-        return;
+    const groupType = itemWrapper.getAttribute("data-sentence-type");
+    const sentenceTitleElement = itemWrapper.querySelector(".edit-sentence__title");
+    sentenceTitleElement.textContent = "Главные предложения (разблокировано)";
+
+    // Скрываем иконку замка
+    const lockIcon = itemWrapper.querySelector(".edit-sentence__title-span");
+    if (lockIcon) {
+        lockIcon.style.display = "none";
     }
 
+    // Обновляем data-has-linked-group во всех .control-buttons в пределах соответствующего списка
+    const listId = groupType === "head" ? "editHeadSentenceList" : "editTailSentenceList";
+    const sentenceList = document.getElementById(listId);
+    const controlButtons = sentenceList.querySelectorAll(".control-buttons");
+    controlButtons.forEach(button => {
+        button.setAttribute("data-has-linked-group", "False");
+    });
 }
 
 

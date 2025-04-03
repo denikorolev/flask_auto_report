@@ -7,7 +7,7 @@ document.addEventListener("DOMContentLoaded", function () {
     initParagraphPopupCloseHandlers(); // Инициализация слушателей на закрытие попапа
 
     // Слушатель на кнопку "сохранить" в попапе текста параграфа
-    document.getElementById("elementPopupSaveChangesButton").addEventListener("click", function() {
+    document.getElementById("paragraphPopupSaveChangesButton").addEventListener("click", function() {
         handleSaveChangesButtonClick();
     });
 
@@ -143,7 +143,7 @@ function updateParagraphOrder() {
 
 // Функция для обновления флагов параграфа
 async function handleSaveChangesButtonClick() {
-    const popup = document.getElementById("elementPopup");
+    const popup = document.getElementById("paragraphPopup");
     const paragraphId = popup.getAttribute("data-element-id");
 
     const changedData = { paragraph_id: paragraphId };
@@ -177,7 +177,7 @@ async function handleSaveChangesButtonClick() {
     // Если нет изменений, не отправляем запрос
     if (Object.keys(changedData).length === 1) {
         console.log("Нет изменений для отправки.");
-        hidePopup();
+        hideParagraphPopup();
         return;
     }
     // Отправляем запрос на сервер
@@ -216,7 +216,7 @@ function showBufferPopup(button) {
 
 // Функция показа попапа с информацией о параграфе
 function showParagraphPopup(sentenceElement, event) {
-    const popup = document.getElementById("elementPopup");
+    const popup = document.getElementById("paragraphPopup");
 
     // Получаем данные из атрибутов
     const elementId = sentenceElement.getAttribute("data-paragraph-id");
@@ -284,8 +284,8 @@ function showParagraphPopup(sentenceElement, event) {
 
 // Инициализация слушателей попапа параграфа
 function initParagraphPopupCloseHandlers() {
-    const popup = document.getElementById("elementPopup");
-    const closeButton = document.getElementById("closeElementPopup");
+    const popup = document.getElementById("paragraphPopup");
+    const closeButton = popup.querySelector("#closeParagraphPopupButton");
 
     if (!popup || !closeButton) {
         console.error("Попап или кнопка закрытия не найдены!");
@@ -293,21 +293,31 @@ function initParagraphPopupCloseHandlers() {
     }
 
     // Закрытие по кнопке
-    closeButton.addEventListener("click", hidePopup);
+    closeButton.addEventListener("click", hideParagraphPopup);
 
     // Закрытие при клике вне попапа
     document.addEventListener("click", function (event) {
         if (popup.style.display === "block" && !popup.contains(event.target)) {
-            hidePopup();
+            hideParagraphPopup();
         }
     });
+
+    // ❗ Закрытие при начале ввода текста
+    document.querySelectorAll(".edit-paragraph__title").forEach(paragraph => {
+        paragraph.addEventListener("input", function () {
+            if (popup.style.display === "block") {
+                hideParagraphPopup();
+            }
+        });
+    });
+
 }
 
 
 
 // Функция закрытия попапа параграфа
-function hidePopup() {
-    const popup = document.getElementById("elementPopup");
+function hideParagraphPopup() {
+    const popup = document.getElementById("paragraphPopup");
     if (popup) {
         popup.style.display = "none";
         // Очищаем атрибуты попапа
@@ -400,6 +410,17 @@ async function handleUpdateReportButtonClick() {
 function deleteParagraph(button){
     console.log("Удаление параграфа");
     const paragraphId = button.closest(".control-buttons").getAttribute("data-object-id");
+    if (!paragraphId) {
+        alert("Не найден атрибут data-paragraph-id");
+        console.error("Не найден атрибут data-paragraph-id");
+        return;
+    }
+    const confirmation = confirm("Вы уверены, что хотите удалить этот параграф?");
+    if (!confirmation) {
+        console.log("Удаление отменено пользователем.");
+        return;
+    }
+
         sendRequest({
             url: `/editing_report/delete_paragraph`,
             method: "DELETE",
@@ -507,12 +528,14 @@ function addGroupDataToBuffer(button, sentenceType) {
     const objectType = button.closest(".control-buttons").getAttribute("data-object-type");
     const relatedId = button.closest(".control-buttons").getAttribute("data-related-id");
     const objectText = button.closest(".control-buttons").getAttribute("data-text");
+    const reportType = button.closest(".control-buttons").getAttribute("data-report-type");
 
     dataToBuffer = {
         object_id: objectId,
         object_type: objectType,
         related_id: relatedId,
-        object_text: objectText
+        object_text: objectText,
+        report_type: reportType,
     };
 
     addToBuffer(dataToBuffer);
@@ -541,9 +564,15 @@ function deleteSubsidiaries (button) {
 // Функция для вставки параграфа из буфера, буду использовать функцию создания нового параграфа, но с данными из буфера
 function insertFromBuffer(index) {
     const itemFromBuffer = getFromBuffer(index);
+    const reportType = reportData.report_type;
+    const bufferReportType = itemFromBuffer.report_type;
 
     if (!itemFromBuffer) {
         alert("Элемент не найден в буфере");
+        return;
+    }
+    if (reportType !== bufferReportType) {
+        alert("Нельзя вставить параграф принадлежащий другому типу протокола (например нельзя вставить параграф из протокола с типом КТ в протокол с типом МРТ).");
         return;
     }
 

@@ -43,6 +43,8 @@ def _process_openai_request(text: str, assistant_id: str) -> str:
     Internal helper that sends a user message to OpenAI Assistant and returns the assistant's reply.
     Thread and message state is automatically managed via Flask session.
     """
+    print(f"Start openaiapi function. Assistant ID: {assistant_id}")
+    
     api_key = current_app.config.get("OPENAI_API_KEY")
     client = OpenAI(api_key=api_key)
 
@@ -51,7 +53,9 @@ def _process_openai_request(text: str, assistant_id: str) -> str:
 
     if thread_id:
         thread = client.beta.threads.retrieve(thread_id)
+        print(f"Thread ID: {thread_id}")
     else:
+        print("Creating new thread")
         thread = client.beta.threads.create()
         thread_id = thread.id
         session[assistant_id] = thread_id
@@ -69,6 +73,7 @@ def _process_openai_request(text: str, assistant_id: str) -> str:
 
     while run.status in ["queued", "in_progress"]:
         run = client.beta.threads.runs.retrieve(thread_id=thread_id, run_id=run.id)
+        print(f"Run status: {run.status}")
         time.sleep(1)
 
     after_id = session.get(message_key) or message.id
@@ -77,15 +82,19 @@ def _process_openai_request(text: str, assistant_id: str) -> str:
         order="asc",
         after=after_id
     )
+    
+    print(messages.data)
 
     session[message_key] = message.id
 
     assistant_reply = ""
     assistant_messages = [msg for msg in messages.data if msg.role == "assistant"]
+    print(f"Assistant messages: {assistant_messages}")
 
     if assistant_messages:
         last = assistant_messages[-1]
         for content_block in last.content:
+            print(f"Content block: {content_block}")
             if hasattr(content_block, "text"):
                 assistant_reply += content_block.text.value
 
@@ -132,8 +141,6 @@ def generate_general():
         return jsonify({"status": "error", "message": "Assistant ID is not configured."}), 500
     if tokens > 1000:
         return jsonify({"status": "error", "message": f"Текст слишком длинный - { tokens } токенов, попробуйте сократить его."}), 400
-    if tokens < 10:
-        return jsonify({"status": "error", "message": f"Текст слишком короткий - { tokens } токенов, попробуйте добавить больше информации."}), 400
     
     if new_conversation:
         reset_ai_session(ai_assistant)
@@ -170,7 +177,7 @@ def generate_redactor():
         reset_ai_session(ai_assistant)
         
         logger.info("✅ Ответ ассистента получен успешно")
-        logger.debug(f"Ответ: {message}")
+        logger.info(f"Ответ: {message}")
         logger.info("---------------------------------------------------")
         return jsonify({"status": "success", "data": message}), 200
     except Exception as e:

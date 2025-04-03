@@ -87,7 +87,6 @@ async function addBodySentence(itemFromBuffer) {
     }
 
     console.log("Отправка запроса на добавление нового предложения:", data);
-
     try {
         const response = await sendRequest({
             url: "/editing_report/add_new_sentence",
@@ -281,12 +280,10 @@ function showSentencePopup(sentenceElement, event) {
 }
 
 
-/** 
- * Инициализация обработчиков закрытия попапа предложения
- */
+// Инициализация обработчиков закрытия попапа предложения
 function initSentencePopupCloseHandlers() {
     const popup = document.getElementById("sentencePopup");
-    const closeButton = document.getElementById("closeSentencePopup");
+    const closeButton = popup.querySelector("#closeSentencePopupButton");
 
     if (!popup || !closeButton) {
         console.error("Попап или кнопка закрытия не найдены!");
@@ -307,11 +304,18 @@ function initSentencePopupCloseHandlers() {
             hidePopup();
         }
     });
+
+    // ❗ Закрытие при начале ввода текста
+    document.querySelectorAll(".edit-sentence__text").forEach(sentence => {
+        sentence.addEventListener("input", function () {
+            if (popup.style.display === "block") {
+                hideSentencePopup();
+            }
+        });
+    });
 }
 
-/**
- * Hides the sentence popup.
- */
+// Hides the sentence popup.
 function hideSentencePopup() {
     const popup = document.getElementById("sentencePopup");
     if (popup) {
@@ -389,6 +393,7 @@ function addSentenceDataToBuffer(button) {
     const objectText = button.closest(".control-buttons").getAttribute("data-text");
     const sentenceType = button.closest(".control-buttons").getAttribute("data-sentence-type");
     const sentenceGroupId = button.closest(".control-buttons").getAttribute("data-group-id");
+    const reportType = button.closest(".control-buttons").getAttribute("data-report-type");
 
     dataToBuffer = {
         object_id: objectId,
@@ -396,22 +401,28 @@ function addSentenceDataToBuffer(button) {
         related_id: relatedId,
         object_text: objectText,
         sentence_type: sentenceType,
-        group_id: sentenceGroupId
+        group_id: sentenceGroupId,
+        report_type: reportType
     };
 
     addToBuffer(dataToBuffer);
-    console.log("Добавление в буфер:", dataToBuffer);
 }
 
 
 // Функция для вставки предложения из буфера, буду использовать функцию создания нового предложения, но с данными из буфера
 function insertFromBuffer(index) {
     const itemFromBuffer = getFromBuffer(index);
+    const reportType = document.getElementById("editSentenceContainer").getAttribute("data-report-type");
+    const bufferReportType = itemFromBuffer.report_type;
+    console.log("Данные в буфере:", itemFromBuffer);
     if (!itemFromBuffer) {
         console.error("Элемент из буфера не найден.");
         return;
     }
-    console.log("Вставка из буфера:", itemFromBuffer);
+    if (bufferReportType != reportType) {
+        alert("Нельзя вставить предложение принадлежащее другому типу протокола (например нельзя вставить предложение из протокола с типом КТ в протокол с типом МРТ).");
+        return;
+    }
 
     if (itemFromBuffer.object_type === "paragraph") {
         alert("Нельзя вставить параграф в данной секции.");
