@@ -71,6 +71,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
 // Функция для добавления нового дополнительного предложения
 async function addBodySentence(itemFromBuffer) {
+    // Проверяем, заблокирована ли группа предложений
+    if (isLocked()) return;
+
     const bodySentenceList = document.getElementById("bodySentenceList");
     const headSentenceId = bodySentenceList.getAttribute("data-head-sentence-id");
     const reportId = document.getElementById("editSentenceContainer").getAttribute("data-report-id");
@@ -106,37 +109,22 @@ async function addBodySentence(itemFromBuffer) {
 
 
 function makeSentenceEditable(sentenceElement) {
+    // Проверяем, заблокирована ли группа предложений
+    if (isLocked()) return;
+
     const sentenceItem = sentenceElement.closest(".edit-sentence__item");
-    const sentenceType = sentenceItem.getAttribute("data-sentence-type");
-
-    const sentenceGroupTitle = document.getElementById("editSentenceTitleBody");
-
-    const sentenceGroupIsLinked = sentenceGroupTitle.getAttribute("data-group-is-linked") === "True";
-    const groupIsLinkedIcon = sentenceGroupTitle.querySelector(".edit-sentence__title-span");
 
     const isLinked = sentenceItem.getAttribute("data-sentence-is-linked") === "True";
     const sentenceIsLinkedIcon = sentenceItem.querySelector(".edit-sentence__links-icon--is-linked");   
 
-    const audioLocked = new Audio("/static/audio/dzzz.mp3");
-
-    if(sentenceGroupIsLinked && groupIsLinkedIcon) {
-        audioLocked.play();
-        toastr.warning("Нельзя редактировать - это связанная группа предложений");
-        // Запускаем анимацию вокруг значка 🔗
-        createRippleAtElement(groupIsLinkedIcon);
-        return;
-    }
-
-
     if (isLinked && sentenceIsLinkedIcon) {
+        const audioLocked = new Audio("/static/audio/dzzz.mp3");
         audioLocked.play();
         toastr.warning("Нельзя редактировать - это связанное предложение");
-        // Запускаем анимацию вокруг значка 🔗
         createRippleAtElement(sentenceIsLinkedIcon);
         return;
         
     }
-
 
     // Если уже редактируется — выходим
     if (sentenceElement.getAttribute("contenteditable") === "true") return;
@@ -147,6 +135,26 @@ function makeSentenceEditable(sentenceElement) {
     makeSentenceEditableActions(sentenceElement);
 }
     
+
+
+function isLocked() {
+    console.trace("isLocked вызвана");
+    const sentenceList = document.getElementById("bodySentenceList");
+    const sentenceListTitle = document.getElementById("editSentenceTitleBody");
+    const isLocked = sentenceList.getAttribute("data-locked") === "True";
+    
+    if (isLocked) {
+        const audioKnock = new Audio("/static/audio/dzzz.mp3");
+        const groupIsLinkedIcon = sentenceListTitle.querySelector(".edit-sentence_title-span");
+        createRippleAtElement(groupIsLinkedIcon);
+        audioKnock.play();
+        toastr.warning("Осторожно! Данная группа предложений связана с другими протоколами.");
+        return true;
+    }
+    return false;
+}
+
+
 
 // Вспомогательная функция завершения редактирования вызывается из makeSentenceEditable
 function makeSentenceEditableActions(sentenceElement) {
@@ -224,10 +232,13 @@ function initPopupButtons(sentenceElement, sentenceId) {
 
 // Функция показа попапа с буфером
 function showBufferPopup(button) {
-    const popup = document.getElementById("bufferPopup");
-
-    popup.style.display === "block"
+    // Проверяем, заблокирована ли группа предложений
+    if (!isLocked()) {
+        const popup = document.getElementById("bufferPopup");
+        popup.style.display = "block"
+    }   
 }
+
 
 
 // Функция показа попапа с информацией о предложении
@@ -331,6 +342,9 @@ function hideSentencePopup() {
 
 // Функция удаления дополнительного предложения
 async function deleteBodySentence(button) {
+    // Проверяем, заблокирована ли группа предложений
+    if (isLocked()) return;
+
     const sentenceItem = button.closest(".control-buttons");
     const sentenceId = sentenceItem.getAttribute("data-object-id");
     const headSentenceId = sentenceItem.getAttribute("data-related-id");

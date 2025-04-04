@@ -65,6 +65,7 @@
             id="bodySentenceList" 
             style="display: block;"
             data-head-sentence-id="{{ head_sentence.id }}"
+            data-locked="{{ 'True' if head_sentence.has_linked_body else 'False' }}"
             >
             {% for sentence in head_sentence.body_sentences %}
                 <li class="wrapper__card edit-sentence__item" 

@@ -130,30 +130,17 @@ function makeSentenceEditable(sentenceElement) {
     console.log("Редактирование предложения:", sentenceElement);
     const sentenceItem = sentenceElement.closest(".edit-sentence__item");
     const sentenceType = sentenceItem.getAttribute("data-sentence-type");
-    let sentenceGroupTitle = null;
-    console.log("Тип предложения:", sentenceType);
-    if (sentenceType === "tail") {
-        sentenceGroupTitle = document.getElementById("editSentenceTitleTail");
-    } else {
-        sentenceGroupTitle = document.getElementById("editSentenceTitleHead");
-    }
-    const sentenceGroupIsLinked = sentenceGroupTitle.getAttribute("data-group-is-linked") === "True";
-
-    const isLinked = sentenceItem.getAttribute("data-sentence-is-linked") === "True";
-    const groupIsLinkedIcon = sentenceGroupTitle.querySelector(".edit-sentence__title-span");
-    const sentenceIsLinkedIcon = sentenceItem.querySelector(".edit-sentence__links-icon--is-linked");    
-    const audioKnock = new Audio("/static/audio/dzzz.mp3");
-
-    // Если есть связи с body 
-    if (sentenceGroupIsLinked && groupIsLinkedIcon) {
-        createRippleAtElement(groupIsLinkedIcon);
-        toastr.warning("Нельзя редактировать: связано с дополнительными предложениями");
-        audioKnock.play();
+    
+    if (isLocked(sentenceType)) {
         return;
     }
-
-    // Если связано с другими протоколами
-    if (isLinked) {
+    
+    const isLinked = sentenceItem.getAttribute("data-sentence-is-linked") === "True";
+    const sentenceIsLinkedIcon = sentenceItem.querySelector(".edit-sentence__links-icon--is-linked");   
+    
+    // есть ли другие связи у данного предложения
+    if (isLinked && sentenceIsLinkedIcon) {
+        const audioKnock = new Audio("/static/audio/dzzz.mp3");
         createRippleAtElement(sentenceIsLinkedIcon);
         toastr.warning("Нельзя редактировать: связано с другими протоколами. ");
         audioKnock.play();
@@ -201,6 +188,13 @@ function makeSentenceEditableActions(sentenceElement) {
 
 // Функция показа попапа с буфером
 function showBufferPopup(button) {
+    if (isLocked("head")) {
+        pass;
+    }
+    if (isLocked("tail")) {
+        pass;
+    }
+    
     const popup = document.getElementById("bufferPopup");
 
     popup.style.display === "block"
@@ -383,16 +377,9 @@ function initSentencePopupCloseHandlers() {
 
 // Функция редактирования предложения (переход на страницу редактирования)
 function editSentence(button) {
-    const sentenceList = document.getElementById("editHeadSentenceList");
-    const isLocked = sentenceList.getAttribute("data-locked") === "True";
+    const sentenceType = button.closest(".edit-sentence__item").getAttribute("data-sentence-type");
     
-    if(isLocked === "True") {
-        const audioKnock = new Audio("/static/audio/dzzz.mp3");
-        const sentenceType = button.closest(".control-buttons").getAttribute("data-sentence-type");
-        const groupIsLinkedIcon = sentenceType === "head" ? document.getElementById("editSentenceTitleHead").querySelector(".edit-sentence__title-span") : document.getElementById("editSentenceTitleTail").querySelector(".edit-sentence__title-span");
-        createRippleAtElement(groupIsLinkedIcon);
-        audioKnock.play();
-        toastr.warning("Нельзя редактировать: связано с дополнительными предложениями");
+    if (isLocked(sentenceType)) {
         return;
     }
     
@@ -407,6 +394,12 @@ function editSentence(button) {
 
 // Функция для добавления нового дополнительного предложения
 async function addHeadSentence(itemFromBuffer) {
+    // Проверяю не заблокирована ли данная группа предложений
+    const sentenceType = "head";
+    if (isLocked(sentenceType)) {
+        return;
+    }
+    
     const headSentenceList = document.getElementById("editHeadSentenceList");
     const paragraphId = parseInt(headSentenceList.getAttribute("data-paragraph-id"));
     const reportId = document.getElementById("editParagraphContainer").getAttribute("data-report-id");
@@ -450,6 +443,13 @@ async function addHeadSentence(itemFromBuffer) {
 
 // Функция для добавления нового дополнительного предложения
 async function addTailSentence(itemFromBuffer) {
+    // Проверяю не заблокирована ли данная группа предложений
+    const sentenceType = "tail";
+    if (isLocked(sentenceType)) {
+        return;
+    }
+
+
     const tailSentenceList = document.getElementById("editTailSentenceList");
     const paragraphId = tailSentenceList.getAttribute("data-paragraph-id");
     const reportId = document.getElementById("editParagraphContainer").getAttribute("data-report-id");
@@ -488,17 +488,30 @@ async function addTailSentence(itemFromBuffer) {
     }
 }
 
+function isLocked(sentenceType) {
+    const listId = sentenceType === "head" ? "editHeadSentenceList" : "editTailSentenceList";
+    const titleListId = sentenceType === "head" ? "editSentenceTitleHead" : "editSentenceTitleTail";
+    const sentenceList = document.getElementById(listId);
+    const sentenceListTitle = document.getElementById(titleListId);
+    const isLocked = sentenceList.getAttribute("data-locked") === "True";
+    
+    if (isLocked) {
+        const audioKnock = new Audio("/static/audio/dzzz.mp3");
+        const groupIsLinkedIcon = sentenceListTitle.querySelector(".edit-sentence__title-span");
+        createRippleAtElement(groupIsLinkedIcon);
+        audioKnock.play();
+        toastr.warning("Осторожно! Данная группа предложений связана с другими протоколами.");
+        return true;
+    }
+    return false;
+}
+
 
 // Функция удаления дополнительного предложения
 async function deleteTailSentence(button) {
-    const sentenceItem = button.closest(".control-buttons");
+    const sentenceType = button.closest(".edit-sentence__item").getAttribute("data-sentence-type");
     
-    if (sentenceItem.getAttribute("data-has-linked-group") === "True") {
-        const audioKnock = new Audio("/static/audio/dzzz.mp3");
-        const groupIsLinkedIcon = document.getElementById("editSentenceTitleTail").querySelector(".edit-sentence__title-span");
-        createRippleAtElement(groupIsLinkedIcon);
-        audioKnock.play();
-        toastr.warning("Нельзя удалить: связано с дополнительными предложениями");
+    if (isLocked(sentenceType)) {
         return;
     }
     
@@ -525,14 +538,9 @@ async function deleteTailSentence(button) {
 
 // Функция удаления главного предложения
 async function deleteHeadSentence(button) {
-    const sentenceItem = button.closest(".control-buttons");
+    const sentenceType = button.closest(".edit-sentence__item").getAttribute("data-sentence-type");
     
-    if (sentenceItem.getAttribute("data-has-linked-group") === "True") {
-        const audioKnock = new Audio("/static/audio/dzzz.mp3");
-        const groupIsLinkedIcon = document.getElementById("editSentenceTitleHead").querySelector(".edit-sentence__title-span");
-        createRippleAtElement(groupIsLinkedIcon);
-        audioKnock.play();
-        toastr.warning("Нельзя удалить: связано с дополнительными предложениями");
+    if (isLocked(sentenceType)) {
         return;
     }
     
@@ -662,16 +670,9 @@ function addSentenceToBuffer(button) {
 
 
 function deleteSubsidiaries (button) {
-    const hasLinkedGroup = button.closest(".control-buttons").getAttribute("data-has-linked-group");
-    console.log("Удаление дочерних элементов:", button.closest(".control-buttons"));
-    console.log("hasLinkedGroup:", hasLinkedGroup);
-
-    if (hasLinkedGroup === "True") {
-        const audioKnock = new Audio("/static/audio/dzzz.mp3");
-        const groupIsLinkedIcon = document.getElementById("editSentenceTitleHead").querySelector(".edit-sentence__title-span");
-        createRippleAtElement(groupIsLinkedIcon);
-        audioKnock.play();
-        toastr.warning("Нельзя удалить: связано с дополнительными предложениями");
+    const sentenceType = button.closest(".edit-sentence__item").getAttribute("data-sentence-type");
+    
+    if (isLocked(sentenceType)) {
         return;
     }
 
@@ -685,7 +686,6 @@ function deleteSubsidiaries (button) {
     const objectId = button.closest(".control-buttons").getAttribute("data-object-id");
     const objectType = button.closest(".control-buttons").getAttribute("data-object-type");
     const relatedId = button.closest(".control-buttons").getAttribute("data-related-id");
-    const sentenceType = button.closest(".control-buttons").getAttribute("data-sentence-type");
     const sentenceGroupId = button.closest(".control-buttons").getAttribute("data-group-id");
 
     sendRequest({
