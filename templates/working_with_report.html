@@ -78,7 +78,7 @@
                         >
                         
                         <!-- Вставляю строку если есть соответствующий флаг -->
-                        {% if paragraph.str_before %}
+                        {% if paragraph.str_before or paragraph.is_impression%}
                             <br>
                         {% endif %}
 

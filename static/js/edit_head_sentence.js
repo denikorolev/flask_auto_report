@@ -7,6 +7,15 @@ document.addEventListener("DOMContentLoaded", function () {
     document.getElementById("sentenceSearch").addEventListener("input", filterSentencesByText); // Слушатель на поиск предложений по тексту
 
 
+    // Слушатель на кнопку 🔒 (запускает попап для управления связью группы предложений)
+    document.querySelectorAll(".edit-sentence__title-span").forEach(item => {
+        item.addEventListener("click", function (event) {
+            event.stopPropagation();
+            const itemWrapper = this.closest(".edit-sentence__title-wrapper");
+            showLockPopup(itemWrapper, event);
+        });
+    });
+
 
     // Инициализация слушателей двойного клика на предложения для показа попапа
     document.querySelectorAll(".edit-sentence__text").forEach(sentence => {
@@ -145,7 +154,7 @@ function isLocked() {
     
     if (isLocked) {
         const audioKnock = new Audio("/static/audio/dzzz.mp3");
-        const groupIsLinkedIcon = sentenceListTitle.querySelector(".edit-sentence_title-span");
+        const groupIsLinkedIcon = sentenceListTitle.querySelector(".edit-sentence__title-span");
         createRippleAtElement(groupIsLinkedIcon);
         audioKnock.play();
         toastr.warning("Осторожно! Данная группа предложений связана с другими протоколами.");
@@ -183,6 +192,51 @@ function makeSentenceEditableActions(sentenceElement) {
 
     sentenceElement.addEventListener("keydown", onEnterPress);
 }
+
+
+
+
+function showLockPopup(itemWrapper, event) {
+    const popup = document.getElementById("lockPopup");
+
+    // Сохраняем ссылку на текущий wrapper
+    popup.dataset.targetWrapperId = itemWrapper.getAttribute("data-wrapper-id") || "";
+
+    // Позиционируем попап
+    popup.style.display = "block";
+    popup.style.left = `${event.pageX + 10}px`;
+    popup.style.top = `${event.pageY + 10}px`;
+
+    // Навешиваем слушатели на кнопки внутри попапа
+    const unlinkBtn = document.getElementById("unlinkGroupButton");
+    const allowBtn = document.getElementById("allowEditButton");
+
+    unlinkBtn.onclick = function () {
+        unlinkGroup(itemWrapper);
+        hidePopup(popup);
+    };
+
+    allowBtn.onclick = function () {
+        allowEditing(itemWrapper);
+        hidePopup(popup);
+    };
+
+    // Вешаем временный обработчик клика вне попапа
+    function onClickOutside(event) {
+        if (!popup.contains(event.target)) {
+            hidePopup(popup);
+            document.removeEventListener("click", onClickOutside);
+        }
+    }
+
+    // Чуть отложим, чтобы клик по самой иконке не сразу закрыл
+    setTimeout(() => {
+        document.addEventListener("click", onClickOutside);
+    }, 0);
+
+}
+
+
 
 
 /**
@@ -462,4 +516,49 @@ function filterSentencesByText() {
         const isMatch = searchWords.every(word => sentenceText.includes(word));
         item.style.display = isMatch ? "flex" : "none";
     });
+}
+
+
+// Функция для отсоединения группы предложений
+function unlinkGroup(itemWrapper) {
+    const groupId = itemWrapper.getAttribute("data-group-id");
+    const sentenceType = itemWrapper.getAttribute("data-sentence-type");
+    const relatedId = itemWrapper.getAttribute("data-related-id");
+    
+
+    sendRequest({
+        url: "/editing_report/unlink_group",
+        method: "PATCH",
+        data: { group_id: groupId,
+                sentence_type: sentenceType,
+                related_id: relatedId
+            }
+    }).then(response => {
+        if (response.status === "success") {
+            window.location.reload();
+        } else {
+            console.error("Ошибка при отсоединении группы:", response.message);
+        }
+    }
+    ).catch(error => {
+        console.error("Ошибка при отсоединении группы:", error);
+    });
+}
+
+
+// Функция для разрешения редактирования предложения (снимает блок вызванный наличием связей у группы предложений)
+function allowEditing(itemWrapper) {
+    // Меняем статус группы на разблокированную
+    itemWrapper.setAttribute("data-group-is-linked", "False");
+    itemWrapper.querySelector(".edit-sentence__title").textContent = "Главные предложения (разблокировано)";
+
+    // Скрываем иконку замка
+    const lockIcon = itemWrapper.querySelector(".edit-sentence__title-span");
+    if (lockIcon) {
+        lockIcon.style.display = "none";
+    }
+
+    // Находим соответствующий список и снимаем блокировку
+    const sentenceList = document.getElementById("bodySentenceList");
+    sentenceList.setAttribute("data-locked", "False");
 }

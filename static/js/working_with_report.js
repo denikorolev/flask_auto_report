@@ -1012,11 +1012,6 @@ async function sendModifiedSentencesToServer() {
 
 
 
-
-
-
-
-
 // Очищает текст по заданным правилам
 function firstGrammaSentence(sentence) {
     sentence = sentence.trim();
@@ -1170,7 +1165,6 @@ function checkReportAI(boxForAiResponse){
     }).then(data => {
         if (data.status === "success") {
             boxForAiResponse.innerText = data.data || "Ответ ИИ не получен.";
-            console.log("Ответ ИИ:", data.data);
         } 
     }).catch(error => {
         console.error("Ошибка отправки отчета на проверку:", error);

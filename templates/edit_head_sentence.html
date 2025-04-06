@@ -4,7 +4,7 @@
 
 {% block container %}
 {% from "macros/edit_sentence_buttons.html" import control_buttons, info_icons %}
-{% from "macros/buffer_popup.html" import buffer_popup %}
+{% from "macros/all_popups.html" import buffer_popup, unlink_group_popup %}
 {% from "macros/buttons.html" import buffer_open_button %}
 {{ super() }}
 <input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
@@ -53,10 +53,13 @@
     <input type="text" id="sentenceSearch" class="input" placeholder="🔍 Найти предложение...">
     <hr>
 
-    <div class="flex edit-sentence_title-wrapper" id="editSentenceTitleBody" data-group-is-linked="{{ head_sentence.has_linked_body }}">
+    <div class="flex edit-sentence__title-wrapper" 
+        id="editSentenceTitleBody" 
+        data-group-is-linked="{{ head_sentence.has_linked_body }}"
+        >
         <h3 class="edit-sentence__title" >Дополнительные предложение для главного предложения</h3>
         {% if head_sentence.has_linked_body %}
-            <span class="edit-sentence_title-span">🔒</span>
+            <span class="edit-sentence__title-span">🔒</span>
         {% endif %}
     </div>
 
@@ -120,6 +123,8 @@
 
 <!-- Буфер обмена (попап) из макроса -->
 {{ buffer_popup() }}
+<!-- Попап для управления связью группы предложении -->
+{{ unlink_group_popup() }}
 
 {% endblock container %}
 

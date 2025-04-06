@@ -4,7 +4,7 @@
 
 {% block container %}
 {% from "macros/edit_sentence_buttons.html" import control_buttons, info_icons %}
-{% from "macros/buffer_popup.html" import buffer_popup %}
+{% from "macros/all_popups.html" import buffer_popup, unlink_group_popup %}
 {% from "macros/buttons.html" import buffer_open_button %}
 {{ super() }}
 <input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
@@ -184,10 +184,7 @@
 </div>
 
 <!-- Попап для управления связью группы предложении -->
-<div id="lockPopup" class="sentence-popup lock-popup" style="display: none; position: absolute; z-index: 1000;">
-    <button class="btn lock-popup__btn" id="unlinkGroupButton">🔗 Разорвать связь</button>
-    <button class="btn lock-popup__btn" id="allowEditButton">✏️ Разрешить редактирование</button>
-</div>
+{{ unlink_group_popup() }}
 
 <!-- Буфер обмена (попап) из макроса -->
 {{ buffer_popup() }}

@@ -1,3 +1,5 @@
+<!--all_popups.html-->
+
 {% macro buffer_popup() %}
 <div id="bufferPopup" class="buffer-popup" style="display: none;">
     <div class="buffer-popup__header">
@@ -20,6 +22,7 @@
 {% endmacro %}
 
 
+
 {% macro share_popup() %}
 <!-- Попап для шаринга отчета по email -->
 <div id="sharePopup" class="share-popup" style="display: none;">
@@ -30,5 +33,14 @@
         <p id="shareErrorMessage" class="share-popup__error" style="color: red; display: none;"></p>
         <button class="btn share-popup__btn--close" id="closeSharePopup">Закрыть</button>
     </div>
+</div>
+{% endmacro %}
+
+
+{% macro unlink_group_popup() %}
+<!-- Попап для управления связью группы предложении -->
+<div id="lockPopup" class="sentence-popup lock-popup" style="display: none; position: absolute; z-index: 1000;">
+    <button class="btn lock-popup__btn" id="unlinkGroupButton">🔗 Разорвать связь</button>
+    <button class="btn lock-popup__btn" id="allowEditButton">✏️ Разрешить редактирование</button>
 </div>
 {% endmacro %}
