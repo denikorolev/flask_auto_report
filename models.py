@@ -4,7 +4,7 @@
 from flask_sqlalchemy import SQLAlchemy
 from flask_security import UserMixin, RoleMixin, current_user
 from sqlalchemy.dialects.postgresql import ENUM
-from sqlalchemy import Index, event, func
+from sqlalchemy import Index, event, func, cast, Date
 from utils import ensure_list
 from datetime import datetime, timezone  # Добавим для временных меток
 import json
@@ -2054,6 +2054,30 @@ class ReportTextSnapshot(BaseModel):
             raise ValueError(f"Ошибка при создании снапшота: {e}")
 
 
+
+    @classmethod
+    def find_by_date_and_type(cls, user_id, date, report_type):
+        """
+        Ищет снапшоты по пользователю, дате и типу протокола.
+        Args:
+            user_id (int): ID пользователя.
+            date (datetime.date): Дата создания снапшота.
+            report_type (int): Тип протокола.
+        Returns:
+            list[ReportTextSnapshot]: Список найденных снапшотов.
+        """
+        
+
+        return (
+            cls.query
+            .filter(
+                cls.user_id == user_id,
+                cast(cls.created_at, Date) == date,
+                cls.report_type == report_type
+            )
+            .order_by(cls.created_at.desc())
+            .all()
+        )
 
 
 

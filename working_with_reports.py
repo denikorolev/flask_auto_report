@@ -10,6 +10,8 @@ from utils import ensure_list
 from logger import logger
 from flask_security.decorators import auth_required
 from spacy_manager import SpacyModel
+from datetime import datetime
+
 
 
 working_with_reports_bp = Blueprint('working_with_reports', __name__)
@@ -101,6 +103,65 @@ def working_with_reports():
         key_words_groups=key_words_groups,
     )
 
+
+# Маршрут для просмотра сохраненных снапшотов (нужно будет потом убрать его в отдельный блюпринт)
+@working_with_reports_bp.route("/snapshots", methods=["GET"])
+@auth_required()
+def snapshots():
+    logger.info(f"(Просмотр сохраненных снапшотов) ------------------------------------")
+    logger.info(f"(Просмотр сохраненных снапшотов) 🚀 Начинаю обработку запроса на получение сохраненных снапшотов")
+    
+    user_id = current_user.id
+    current_profile = g.current_profile
+
+    date_str = request.args.get("date")
+    report_type = request.args.get("report_type")
+
+    snapshots = []
+    if date_str and report_type:
+        try:
+            date_obj = datetime.strptime(date_str, "%Y-%m-%d").date()
+            report_type_int = int(report_type)
+            snapshots = ReportTextSnapshot.find_by_date_and_type(user_id, date_obj, report_type_int)
+        except Exception as e:
+            logger.error(f"[report_snapshots] ❌ Ошибка фильтрации снапшотов: {e}")
+
+    report_types = ReportType.find_by_profile(current_profile.id)
+
+    return render_template(
+        "snapshots.html",
+        snapshots=snapshots,
+        report_types=report_types
+    )
+
+
+
+@working_with_reports_bp.route("/snapshots_json", methods=["POST"])
+@auth_required()
+def snapshots_json():
+    logger.info(f"(snapshots_json) ------------------------------------")
+    logger.info(f"(snapshots_json) 🚀 Получен запрос на фильтрацию снапшотов")
+    logger.info(f"(snapshots_json) Полученные данные: {request.get_json()}")
+    try:
+        data = request.get_json()
+        date_str = data.get("date")
+        report_type = int(data.get("report_type"))
+        user_id = current_user.id
+
+        date_obj = datetime.strptime(date_str, "%Y-%m-%d").date()
+        snapshots = ReportTextSnapshot.find_by_date_and_type(user_id, date_obj, report_type)
+        logger.info(f"(snapshots_json) ✅ Найдено {len(snapshots)} снапшотов для даты {date_str} и типа {report_type}")
+
+        data = render_template("partials/snapshot_results_snippet.html", snapshots=snapshots)
+        logger.info(f"(snapshots_json) ✅ Данные для снапшотов успешно отрендерены")
+        logger.info(f"(snapshots_json) ------------------------------------")
+        return jsonify({"status": "success", "data": data}), 200
+
+    except Exception as e:
+        logger.error(f"(snapshots_json) ❌ Ошибка при фильтрации снапшотов: {e}")
+        return jsonify({"status": "error", "message": "Ошибка при загрузке снапшотов"}), 500
+    
+    
 
 @working_with_reports_bp.route("/save_modified_sentences", methods=["POST"])
 @auth_required()

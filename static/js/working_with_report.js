@@ -1012,6 +1012,10 @@ async function sendModifiedSentencesToServer() {
 
 
 
+
+
+
+
 // Очищает текст по заданным правилам
 function firstGrammaSentence(sentence) {
     sentence = sentence.trim();

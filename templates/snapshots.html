@@ -1,0 +1,33 @@
+<!-- snapshots.html-->
+{% extends "base.html" %}
+
+{% block container %}
+<input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
+
+<h2>История снапшотов</h2>
+
+<div class="flex" style="gap: 10px; margin-bottom: 20px;">
+    <label for="date">Дата:</label>
+    <input type="date" name="date" id="snapshotDate">
+
+    <label for="report_type">Тип отчета:</label>
+    <select name="report_type" id="snapshotReportType">
+        <option value="">-- выбери тип --</option>
+        {% for rt in report_types %}
+            <option value="{{ rt.id }}">{{ rt.type_text }}</option>
+        {% endfor %}
+    </select>
+
+    <button type="button" id="findSnapshotButton">Найти</button>
+</div>
+
+<div id="snapshotResults">
+    <!-- сюда будет загружаться результат -->
+</div>
+
+
+{% endblock %}
+
+{% block scripts %} 
+    <script src="{{ url_for('static', filename='js/snapshots.js') }}"></script>
+{% endblock scripts %}
