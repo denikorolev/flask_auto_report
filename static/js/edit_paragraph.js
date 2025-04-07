@@ -510,13 +510,14 @@ function isLocked(sentenceType) {
 // Функция удаления дополнительного предложения
 async function deleteTailSentence(button) {
     const sentenceType = button.closest(".edit-sentence__item").getAttribute("data-sentence-type");
+    const sentenceItem = button.closest(".edit-sentence__item");
     
     if (isLocked(sentenceType)) {
         return;
     }
     
-    const sentenceId = sentenceItem.getAttribute("data-object-id");
-    const paragraphId = sentenceItem.getAttribute("data-related-id");
+    const sentenceId = sentenceItem.getAttribute("data-sentence-id");
+    const paragraphId = sentenceItem.getAttribute("data-paragraph-id");
 
     try {
         const response = await sendRequest({
@@ -539,6 +540,7 @@ async function deleteTailSentence(button) {
 // Функция удаления главного предложения
 async function deleteHeadSentence(button) {
     const sentenceType = button.closest(".edit-sentence__item").getAttribute("data-sentence-type");
+    const sentenceItem = button.closest(".edit-sentence__item");
     
     if (isLocked(sentenceType)) {
         return;
@@ -551,8 +553,8 @@ async function deleteHeadSentence(button) {
     }
 
 
-    const sentenceId = sentenceItem.getAttribute("data-object-id");
-    const paragraphId = sentenceItem.getAttribute("data-related-id");
+    const sentenceId = sentenceItem.getAttribute("data-sentence-id");
+    const paragraphId = sentenceItem.getAttribute("data-paragraph-id");
     try {
         const response = await sendRequest({
             url: "/editing_report/delete_sentence",

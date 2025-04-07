@@ -399,9 +399,9 @@ async function deleteBodySentence(button) {
     // Проверяем, заблокирована ли группа предложений
     if (isLocked()) return;
 
-    const sentenceItem = button.closest(".control-buttons");
-    const sentenceId = sentenceItem.getAttribute("data-object-id");
-    const headSentenceId = sentenceItem.getAttribute("data-related-id");
+    const sentenceItem = button.closest(".edit-sentence__item");
+    const sentenceId = sentenceItem.getAttribute("data-sentence-id");
+    const headSentenceId = sentenceItem.getAttribute("data-head-sentence-id");
 
     try {
         const response = await sendRequest({

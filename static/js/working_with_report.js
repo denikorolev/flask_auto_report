@@ -469,6 +469,7 @@ function sentenceDoubleClickHandle (){
                     activeSentence.textContent = selectedSentence.sentence; // Заменяем текст предложения
                     activeSentence.focus(); // Устанавливаем фокус на предложение
                     activeSentence.blur(); // Убираем фокус
+                    highlightKeyWords(activeSentence); // Обновляем текст абзаца после добавления предложения
 
                     //  Увеличиваем вес предложения
                     if (selectedSentence.id && selectedSentence.group_id) {
