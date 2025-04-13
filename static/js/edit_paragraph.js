@@ -131,7 +131,7 @@ function makeSentenceEditable(sentenceElement) {
     const sentenceItem = sentenceElement.closest(".edit-sentence__item");
     const sentenceType = sentenceItem.getAttribute("data-sentence-type");
     
-    if (isLocked(sentenceType)) {
+    if (groupIsLocked(sentenceType)) {
         return;
     }
     
@@ -188,11 +188,11 @@ function makeSentenceEditableActions(sentenceElement) {
 
 // Функция показа попапа с буфером
 function showBufferPopup(button) {
-    if (isLocked("head")) {
-        pass;
+    if (groupIsLocked("head")) {
+        return;
     }
-    if (isLocked("tail")) {
-        pass;
+    if (groupIsLocked("tail")) {
+        return;
     }
     
     const popup = document.getElementById("bufferPopup");
@@ -379,7 +379,7 @@ function initSentencePopupCloseHandlers() {
 function editSentence(button) {
     const sentenceType = button.closest(".edit-sentence__item").getAttribute("data-sentence-type");
     
-    if (isLocked(sentenceType)) {
+    if (groupIsLocked(sentenceType)) {
         return;
     }
     
@@ -396,7 +396,7 @@ function editSentence(button) {
 async function addHeadSentence(itemFromBuffer) {
     // Проверяю не заблокирована ли данная группа предложений
     const sentenceType = "head";
-    if (isLocked(sentenceType)) {
+    if (groupIsLocked(sentenceType)) {
         return;
     }
     
@@ -445,7 +445,7 @@ async function addHeadSentence(itemFromBuffer) {
 async function addTailSentence(itemFromBuffer) {
     // Проверяю не заблокирована ли данная группа предложений
     const sentenceType = "tail";
-    if (isLocked(sentenceType)) {
+    if (groupIsLocked(sentenceType)) {
         return;
     }
 
@@ -488,14 +488,14 @@ async function addTailSentence(itemFromBuffer) {
     }
 }
 
-function isLocked(sentenceType) {
+function groupIsLocked(sentenceType) {
     const listId = sentenceType === "head" ? "editHeadSentenceList" : "editTailSentenceList";
     const titleListId = sentenceType === "head" ? "editSentenceTitleHead" : "editSentenceTitleTail";
     const sentenceList = document.getElementById(listId);
     const sentenceListTitle = document.getElementById(titleListId);
-    const isLocked = sentenceList.getAttribute("data-locked") === "True";
+    const groupIsLocked = sentenceList.getAttribute("data-locked") === "True";
     
-    if (isLocked) {
+    if (groupIsLocked) {
         const audioKnock = new Audio("/static/audio/dzzz.mp3");
         const groupIsLinkedIcon = sentenceListTitle.querySelector(".edit-sentence__title-span");
         createRippleAtElement(groupIsLinkedIcon);
@@ -506,13 +506,17 @@ function isLocked(sentenceType) {
     return false;
 }
 
+function sentenceIsLocked(sentenceType) {
+
+}
+
 
 // Функция удаления дополнительного предложения
 async function deleteTailSentence(button) {
     const sentenceType = button.closest(".edit-sentence__item").getAttribute("data-sentence-type");
     const sentenceItem = button.closest(".edit-sentence__item");
     
-    if (isLocked(sentenceType)) {
+    if (groupIsLocked(sentenceType)) {
         return;
     }
     
@@ -542,7 +546,7 @@ async function deleteHeadSentence(button) {
     const sentenceType = button.closest(".edit-sentence__item").getAttribute("data-sentence-type");
     const sentenceItem = button.closest(".edit-sentence__item");
     
-    if (isLocked(sentenceType)) {
+    if (groupIsLocked(sentenceType)) {
         return;
     }
     
@@ -674,7 +678,7 @@ function addSentenceToBuffer(button) {
 function deleteSubsidiaries (button) {
     const sentenceType = button.closest(".edit-sentence__item").getAttribute("data-sentence-type");
     
-    if (isLocked(sentenceType)) {
+    if (groupIsLocked(sentenceType)) {
         return;
     }
 

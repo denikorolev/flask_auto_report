@@ -523,7 +523,7 @@ function filterSentencesByText() {
 function unlinkGroup(itemWrapper) {
     const groupId = itemWrapper.getAttribute("data-group-id");
     const sentenceType = itemWrapper.getAttribute("data-sentence-type");
-    const relatedId = itemWrapper.getAttribute("data-related-id");
+    const relatedId = itemWrapper.getAttribute("data-head-sentence-id");
     
 
     sendRequest({

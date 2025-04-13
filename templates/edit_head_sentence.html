@@ -56,6 +56,9 @@
     <div class="flex edit-sentence__title-wrapper" 
         id="editSentenceTitleBody" 
         data-group-is-linked="{{ head_sentence.has_linked_body }}"
+        data-head-sentence-id="{{ head_sentence.id }}"
+        data-group-id="{{ head_sentence.body_sentence_group_id }}"
+        data-sentence-type="body"
         >
         <h3 class="edit-sentence__title" >Дополнительные предложение для главного предложения</h3>
         {% if head_sentence.has_linked_body %}
