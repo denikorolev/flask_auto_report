@@ -24,8 +24,6 @@ function addToBuffer(item) {
     localStorage.setItem(BUFFER_KEY, JSON.stringify(buffer));
     localStorage.setItem(TIMESTAMP_KEY, Date.now().toString());
 
-    console.log("Элемент добавлен в буфер:", item);
-    logBuffer();
 }
 
 // Взять элемент из буфера по индексу
@@ -46,7 +44,6 @@ function getBuffer() {
     // Если прошло больше TTL — очистить буфер
     if (isNaN(timestamp) || now - timestamp > BUFFER_TTL) {
         clearBuffer();
-        console.log("Буфер очищен по истечению времени");
         return [];
     }
 
@@ -62,7 +59,6 @@ function getBuffer() {
 function clearBuffer() {
     localStorage.removeItem(BUFFER_KEY);
     localStorage.removeItem(TIMESTAMP_KEY);
-    console.log("Буфер полностью очищен");
 }
 
 
@@ -76,7 +72,6 @@ function removeFromBuffer(index) {
     if (index >= 0 && index < buffer.length) {
         const removed = buffer.splice(index, 1); // Удаляем элемент
         localStorage.setItem(BUFFER_KEY, JSON.stringify(buffer)); // Обновляем хранилище
-        console.log("Удален элемент из буфера:", removed);
     } else {
         console.warn("Индекс вне диапазона буфера:", index);
     }
@@ -92,10 +87,3 @@ function isBufferNotEmpty() {
     return buffer.length > 0;
 }
 
-
-/**
- * Вывести буфер в консоль (для дебага).
- */
-function logBuffer() {
-    console.log("Текущий буфер:", getBuffer());
-}

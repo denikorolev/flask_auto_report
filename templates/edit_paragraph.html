@@ -9,7 +9,6 @@
 {{ super() }}
 <input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
 
-<p>Редактирование параграфа {{ paragraph.id}} из протокола {{ report_id }} </p>
 <div class="flex">
     <button class="btn report__btn" id="backToReportButton" type="button">Вернуться к редактированию протокола</button>
 </div>
@@ -31,14 +30,7 @@
                 <label>Вес:</label>
                 <input type="number" id="paragraph_weight" value="{{ paragraph.paragraph_weight }}" class="input">
             </div>
-            <div>
-                <label>Количество связей у группы главных предложений:</label>
-                <p> {{ paragraph.head_group_links}} </p>
-            </div>
-            <div>
-                <label>Количество связей у группы дополнительных предложений:</label>
-                <p> {{ paragraph.tail_group_links}} </p>
-            </div>
+           
         </div>
         <!-- Кнопка сохранения -->
         <button class="btn report__btn edit-paragraph__btn--save-paragraph-data" id="saveParagraphDataButton">Сохранить изменения</button>
@@ -183,8 +175,8 @@
     const paragraphData = {{ paragraph | tojson | safe }};
 </script>
 
-<script src="{{ url_for('static', filename='js/buffer_popup.js') }}"></script>
 <script src="{{ url_for('static', filename='js/sentence_buffer.js') }}"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
 <script src="{{ url_for('static', filename='js/edit_paragraph.js') }}"></script>
+<script src="{{ url_for('static', filename='js/buffer_popup.js') }}"></script>
 {% endblock scripts %}

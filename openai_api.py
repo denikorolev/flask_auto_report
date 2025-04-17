@@ -174,7 +174,6 @@ def generate_redactor():
     try:
         reset_ai_session(ai_assistant)
         message = _process_openai_request(text, ai_assistant)
-        reset_ai_session(ai_assistant)
         
         logger.info("✅ Ответ ассистента получен успешно")
         logger.info(f"Ответ: {message}")
@@ -218,8 +217,8 @@ def generate_impression():
             return jsonify({"status": "error", "message": "Assistant ID is not configured."}), 500
 
         # Обработка запроса
-        assistant_reply = _process_openai_request(text, assistant_id)
         reset_ai_session(assistant_id)
+        assistant_reply = _process_openai_request(text, assistant_id)
 
         logger.info("✅ Ответ ассистента получен успешно")
         logger.debug(f"Ответ: {assistant_reply}")

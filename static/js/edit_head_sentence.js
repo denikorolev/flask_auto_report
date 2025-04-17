@@ -52,13 +52,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Слушатель на кнопку "Вернуться к редактированию параграфа"
     document.getElementById("backToParagraphButton").addEventListener("click", function () {
-        console.log("Back to paragraph button clicked");
         window.history.back();
     });
 
     // Слушатель на кнопку "Вернуться к редактированию протокола"
     document.getElementById("backToReportButton").addEventListener("click", function () {
-        console.log("Back to report button clicked");
         window.history.go(-2);
     });
 
@@ -120,7 +118,6 @@ async function addBodySentence(itemFromBuffer) {
         data.sentence_id = itemFromBuffer.object_id;
     }
 
-    console.log("Отправка запроса на добавление нового предложения:", data);
     try {
         const response = await sendRequest({
             url: "/editing_report/add_new_sentence",
@@ -169,7 +166,6 @@ function makeSentenceEditable(sentenceElement) {
 
 
 function isLocked() {
-    console.trace("isLocked вызвана");
     const sentenceList = document.getElementById("editBodySentenceList");
     const sentenceListTitle = document.getElementById("editSentenceTitleBody");
     const isLocked = sentenceList.getAttribute("data-locked") === "True";
@@ -335,6 +331,10 @@ function initPopupButtons(sentenceElement, sentenceId) {
 function showBufferPopup(button) {
     // Проверяем, заблокирована ли группа предложений
     if (!isLocked()) {
+        
+        bufferPopupListeners(); // Инициализация слушателей для буфера
+        refreshBufferPopup(); // Обновляем содержимое попапа
+
         const popup = document.getElementById("bufferPopup");
         popup.style.display = "block"
     }   
@@ -491,7 +491,6 @@ async function updateSentence(sentenceElement) {
             }
         });
 
-        console.log("Предложение обновлено:", response);
     } catch (error) {
         console.error("Ошибка обновления предложения:", error);
     }
@@ -527,7 +526,7 @@ function insertFromBuffer(index) {
     const itemFromBuffer = getFromBuffer(index);
     const reportType = document.getElementById("editSentenceContainer").getAttribute("data-report-type");
     const bufferReportType = itemFromBuffer.report_type;
-    console.log("Данные в буфере:", itemFromBuffer);
+
     if (!itemFromBuffer) {
         console.error("Элемент из буфера не найден.");
         return;
@@ -650,15 +649,12 @@ function saveBodySentencesOrder(evt) {
 
     // Ищем предыдущий элемент в списке
     const prevItem = movedItem.nextElementSibling;
-    console.log("Предыдущий элемент:", prevItem);
 
 
     if (prevItem && prevItem.hasAttribute("data-sentence-weight")) {
         const prevWeight = parseInt(prevItem.getAttribute("data-sentence-weight")) || 0;
         newWeight = prevWeight + 1;
     }
-
-    console.log("Обновляем вес предложения:", sentenceId, "→", newWeight);
 
     sendRequest({
         url: "/editing_report/update_sentence_weight",

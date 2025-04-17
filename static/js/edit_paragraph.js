@@ -54,7 +54,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Слушатель на кнопку "Вернуться к редактированию протокола"
     document.getElementById("backToReportButton").addEventListener("click", function () {
-        console.log("Back to report button clicked");
         window.history.back();
     });
     
@@ -146,7 +145,6 @@ function initSortableTailSentences() {
 
 // Функция для редактирования предложений
 function makeSentenceEditable(sentenceElement) {
-    console.log("Редактирование предложения:", sentenceElement);
     const sentenceItem = sentenceElement.closest(".edit-sentence__item");
     const sentenceType = sentenceItem.getAttribute("data-sentence-type");
     
@@ -213,10 +211,11 @@ function showBufferPopup(button) {
     if (groupIsLocked("tail")) {
         return;
     }
+    bufferPopupListeners(); // Инициализируем слушатели на кнопки попапа
+    refreshBufferPopup(); // Перед открытием — обновить содержимое
     
     const popup = document.getElementById("bufferPopup");
-
-    popup.style.display === "block"
+    popup.style.display = "block"
 }
 
 
@@ -392,8 +391,6 @@ function showSentencePopup(sentenceElement, event) {
 function initSentencePopupCloseHandlers() {
     const popup = document.getElementById("sentencePopup");
     const closeButton = popup.querySelector("#closeSentencePopupButton");
-    console.log("Попап предложения:", popup);
-    console.log("Кнопка закрытия:", closeButton);
 
     if (!popup) {
         console.error("Попап или кнопка закрытия не найдены!");
@@ -599,8 +596,7 @@ async function deleteHeadSentence(button) {
     
     const confirmation = confirm("Вы уверены, что хотите удалить это предложение?");
     if (!confirmation) {
-        console.log("Удаление отменено пользователем.");
-        return; // Если пользователь отменил, выходим из функции
+        return; 
     }
 
 
@@ -634,7 +630,6 @@ function saveHeadSentencesOrder() {
     const updatedOrder = [];
     const paragraphId = document.getElementById("editParagraphContainer").getAttribute("data-paragraph-id");
 
-    console.log("Параграф ID:", paragraphId);
     sentences.forEach((sentence, newIndex) => {
         const sentenceId = sentence.getAttribute("data-sentence-id");
         updatedOrder.push({
@@ -652,7 +647,6 @@ function saveHeadSentencesOrder() {
     }).then(response => {
         if (response.status === "success") {
             window.location.reload();
-            console.log("Порядок главных предложений успешно сохранен");
         } else {
             console.error("Ошибка при сохранении порядка:", response.message);
         }
@@ -670,15 +664,12 @@ function saveTailSentencesOrder(evt) {
 
     // Ищем предыдущий элемент в списке
     const prevItem = movedItem.nextElementSibling;
-    console.log("Предыдущий элемент:", prevItem);
 
 
     if (prevItem && prevItem.hasAttribute("data-sentence-weight")) {
         const prevWeight = parseInt(prevItem.getAttribute("data-sentence-weight")) || 0;
         newWeight = prevWeight + 1;
     }
-
-    console.log("Обновляем вес предложения:", sentenceId, "→", newWeight);
 
     sendRequest({
         url: "/editing_report/update_sentence_weight",
@@ -710,8 +701,6 @@ async function updateSentence(sentenceElement) {
     const sentenceText = sentenceElement.textContent.trim();
     const related_id = sentenceElement.closest("li").getAttribute("data-paragraph-id");
 
-    console.log("Отправка обновленного предложения:", sentenceText);
-
     try {
         const response = await sendRequest({
             url: "/editing_report/update_sentence_text",
@@ -725,7 +714,6 @@ async function updateSentence(sentenceElement) {
             }
         });
 
-        console.log("Предложение обновлено:", response);
     } catch (error) {
         console.error("Ошибка обновления предложения:", error);
     }
@@ -754,7 +742,6 @@ function addSentenceToBuffer(button) {
     };
 
     addToBuffer(dataToBuffer);
-    console.log("Добавление в буфер:", dataToBuffer);
 
 }
 
@@ -769,8 +756,7 @@ function deleteSubsidiaries (button) {
 
     const confirmation = confirm("Вы уверены, что хотите удалить дочерние элементы?");
     if (!confirmation) {
-        console.log("Удаление отменено пользователем.");
-        return; // Если пользователь отменил, выходим из функции
+        return;
     }
 
 

@@ -10,7 +10,6 @@
 <input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
 
 
-<p>Редактирование главного предложения {{ head_sentence.id}}, параграфа {{ paragraph_id}} из протокола {{ report_id }} </p>
 <div class="flex">
     <button class="btn report__btn" id="backToParagraphButton" type="button">Вернуться к редактированию параграфа</button>
     <button class="btn report__btn" id="backToReportButton" type="button">Вернуться к редактированию протокола</button>
@@ -31,16 +30,6 @@
                 <label>Теги:</label>
                 <input type="text" id="sentence_tags" value="{{ head_sentence.tags }}" class="input">
             </div>
-            <div>
-                <label>Количество связей у группы дополнительных предложений:</label>
-                <p> {{ head_sentence.body_group_links }} </p>
-            </div>
-            {% if head_sentence.body_sentence_group_id %}
-                <div>
-                    <label>Привязанная группа body предложений:</label>
-                    <p> {{ head_sentence.body_sentence_group_id }} </p>
-                </div>
-            {% endif %}
 
             <button class="btn report__btn edit-sentence__btn--save-sentence-data" id="saveSentenceDataButton">Сохранить изменения</button>
             <!-- Кнопка для вызова попапа буфера -->
