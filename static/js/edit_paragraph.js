@@ -2,7 +2,9 @@
 
 document.addEventListener("DOMContentLoaded", function () {
 
-    initSortableHeadSentences(); // Инициализация Sortable для главных предложений (изменение индекса перетаскиванием)
+    initSortableHeadSentences(); // Инициализация Sortable для head предложений (изменение индекса перетаскиванием)
+
+    initSortableTailSentences(); // Инициализация Sortable для tail предложений (изменение индекса перетаскиванием)
 
     initSentencePopupCloseHandlers(); // Инициализация слушателей на закрытие попапа
 
@@ -107,7 +109,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 // Инициализация Sortable для главных предложений
 function initSortableHeadSentences() {
-    const headSentencesList = document.querySelector(".edit-sentence__list");
+    const headSentencesList = document.querySelector("#editHeadSentenceList");
 
     if (!headSentencesList) {
         console.warn("Список главных предложений не найден.");
@@ -123,6 +125,23 @@ function initSortableHeadSentences() {
     });
 }
 
+// Инициализация Sortable для tail предложений
+function initSortableTailSentences() {
+    const tailSentencesList = document.querySelector("#editTailSentenceList");
+
+    if (!tailSentencesList) {
+        console.warn("Список дополнительных предложений не найден.");
+        return;
+    }
+
+    new Sortable(tailSentencesList, {
+        handle: ".drag-handle", // Захват только за "хваталку"
+        animation: 150,
+        onEnd: function (evt) {
+            saveTailSentencesOrder(evt);
+        }
+    });
+}
 
 
 // Функция для редактирования предложений
@@ -640,6 +659,46 @@ function saveHeadSentencesOrder() {
     });
 }
 
+// Функция для сохранения порядка tail предложений (меняет вес предложения на вес предыдущего + 1)
+function saveTailSentencesOrder(evt) {
+    const movedItem = evt.item;
+    const sentenceId = movedItem.getAttribute("data-sentence-id");
+    const groupId = movedItem.getAttribute("data-sentence-group-id");
+    const sentenceType = movedItem.getAttribute("data-sentence-type");
+
+    let newWeight = 1; // значение по умолчанию
+
+    // Ищем предыдущий элемент в списке
+    const prevItem = movedItem.nextElementSibling;
+    console.log("Предыдущий элемент:", prevItem);
+
+
+    if (prevItem && prevItem.hasAttribute("data-sentence-weight")) {
+        const prevWeight = parseInt(prevItem.getAttribute("data-sentence-weight")) || 0;
+        newWeight = prevWeight + 1;
+    }
+
+    console.log("Обновляем вес предложения:", sentenceId, "→", newWeight);
+
+    sendRequest({
+        url: "/editing_report/update_sentence_weight",
+        method: "PATCH",
+        data: {
+            sentence_id: sentenceId,
+            group_id: groupId,
+            sentence_weight: newWeight,
+            sentence_type: sentenceType
+        }
+    }).then(response => {
+        if (response.status === "success") {
+            window.location.reload();
+        } else {
+            console.error("Ошибка при обновлении веса:", response.message);
+        }
+    }).catch(error => {
+        console.error("Ошибка запроса:", error);
+    });
+}
 
 
 

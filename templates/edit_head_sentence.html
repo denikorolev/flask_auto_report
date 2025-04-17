@@ -68,7 +68,7 @@
 
     <div class="edit-sentence__sentence">
         <ul class="edit-sentence__list" 
-            id="bodySentenceList" 
+            id="editBodySentenceList" 
             style="display: block;"
             data-head-sentence-id="{{ head_sentence.id }}"
             data-locked="{{ 'True' if head_sentence.has_linked_body else 'False' }}"
@@ -127,5 +127,6 @@
 
 <script src="{{ url_for('static', filename='js/buffer_popup.js') }}"></script>
 <script src="{{ url_for('static', filename='js/sentence_buffer.js') }}"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
 <script src="{{ url_for('static', filename='js/edit_head_sentence.js') }}"></script>
 {% endblock scripts %}

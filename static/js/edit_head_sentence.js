@@ -2,6 +2,8 @@
 
 document.addEventListener("DOMContentLoaded", function () {
 
+    initSortableBodySentences(); // Инициализация Sortable для head предложений (изменение индекса перетаскиванием)
+
     initSentencePopupCloseHandlers(); // Инициализация слушателей на закрытие попапа
 
     document.getElementById("sentenceSearch").addEventListener("input", filterSentencesByText); // Слушатель на поиск предложений по тексту
@@ -78,12 +80,32 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 
+// Инициализация Sortable для tail предложений
+function initSortableBodySentences() {
+    const bodySentencesList = document.querySelector("#editBodySentenceList");
+
+    if (!bodySentencesList) {
+        console.warn("Список дополнительных предложений не найден.");
+        return;
+    }
+
+    new Sortable(bodySentencesList, {
+        handle: ".drag-handle", // Захват только за "хваталку"
+        animation: 150,
+        onEnd: function (evt) {
+            saveBodySentencesOrder(evt);
+        }
+    });
+}
+
+
+
 // Функция для добавления нового дополнительного предложения
 async function addBodySentence(itemFromBuffer) {
     // Проверяем, заблокирована ли группа предложений
     if (isLocked()) return;
 
-    const bodySentenceList = document.getElementById("bodySentenceList");
+    const bodySentenceList = document.getElementById("editBodySentenceList");
     const headSentenceId = bodySentenceList.getAttribute("data-head-sentence-id");
     const reportId = document.getElementById("editSentenceContainer").getAttribute("data-report-id");
 
@@ -148,7 +170,7 @@ function makeSentenceEditable(sentenceElement) {
 
 function isLocked() {
     console.trace("isLocked вызвана");
-    const sentenceList = document.getElementById("bodySentenceList");
+    const sentenceList = document.getElementById("editBodySentenceList");
     const sentenceListTitle = document.getElementById("editSentenceTitleBody");
     const isLocked = sentenceList.getAttribute("data-locked") === "True";
     
@@ -244,8 +266,14 @@ function showLockPopup(itemWrapper, event) {
  */
 function initPopupButtons(sentenceElement, sentenceId) {
     const editButton = document.getElementById("sentencePopupEditButton");
+    const unlinkButton = document.getElementById("sentencePopupUnlinkButton");
     if (!editButton) {
         console.error("Кнопка 'Редактировать' в попапе не найдена!");
+        return;
+    }
+
+    if (!unlinkButton) {
+        console.error("Кнопка 'Отвязать' в попапе не найдена!");
         return;
     }
 
@@ -274,6 +302,31 @@ function initPopupButtons(sentenceElement, sentenceId) {
 
         // Закрываем попап
         hideSentencePopup();
+    });
+
+    unlinkButton.addEventListener("click", function () {
+        // Находим элемент предложения
+        const sentenceItem = document.querySelector(`.edit-sentence__item[data-sentence-id="${sentenceId}"]`);
+
+        if (!sentenceItem || !sentenceElement) {
+            console.error(`Предложение с ID=${sentenceId} не найдено!`);
+            return;
+        }
+
+        // Разблокируем редактирование: убираем атрибуты связанности
+        sentenceItem.setAttribute("data-sentence-is-linked", "False");
+        
+
+        // Меняем иконки замков и линков
+        const linkedIcon = sentenceItem.querySelector(".edit-sentence__links-icon--is-linked");
+        if (linkedIcon) linkedIcon.remove(); // Удаляем иконку связи
+
+        // Отвязываем предложение путем создания нового предложения
+        unlinkSentence(sentenceItem);
+
+        // Закрываем попап
+        const popup = document.getElementById("sentencePopup");
+        hidePopup(popup);
     });
 }
 
@@ -542,7 +595,7 @@ function unlinkGroup(itemWrapper) {
 function allowEditing(itemWrapper) {
     // Меняем статус группы на разблокированную
     itemWrapper.setAttribute("data-group-is-linked", "False");
-    itemWrapper.querySelector(".edit-sentence__title").textContent = "Главные предложения (разблокировано)";
+    itemWrapper.querySelector(".edit-sentence__title").textContent = "Дополнительные предложения (разблокировано)";
 
     // Скрываем иконку замка
     const lockIcon = itemWrapper.querySelector(".edit-sentence__title-span");
@@ -551,6 +604,78 @@ function allowEditing(itemWrapper) {
     }
 
     // Находим соответствующий список и снимаем блокировку
-    const sentenceList = document.getElementById("bodySentenceList");
+    const sentenceList = document.getElementById("editBodySentenceList");
     sentenceList.setAttribute("data-locked", "False");
+}
+
+
+// Функция для удаления связей предолжений путем создания нового предложения
+function unlinkSentence(sentenceItem) {
+    const sentenceId = sentenceItem.getAttribute("data-sentence-id");
+    const sentenceType = sentenceItem.getAttribute("data-sentence-type");
+    const related_id = sentenceItem.getAttribute("data-head-sentence-id");
+    const sentenceIndex = sentenceType === "head" ? sentenceItem.getAttribute("data-sentence-index") : sentenceItem.getAttribute("data-sentence-weight");
+    const groupId = sentenceItem.getAttribute("data-sentence-group-id");
+
+    sendRequest({
+        url: "/editing_report/unlink_sentence",
+        method: "POST",
+        data: {
+            sentence_id: sentenceId,
+            sentence_type: sentenceType,
+            related_id: related_id,
+            sentence_index: sentenceIndex,
+            group_id: groupId
+        }
+    }).then(response => {
+        if (response.status === "success") {
+            window.location.reload();
+        } else {
+            console.error("Ошибка при удалении связи предложения:", response.message);
+        }
+    }).catch(error => {
+        console.error("Ошибка удаления связи предложения:", error);
+    });
+}
+
+
+// Функция для сохранения порядка tail предложений (меняет вес предложения на вес предыдущего + 1)
+function saveBodySentencesOrder(evt) {
+    const movedItem = evt.item;
+    const sentenceId = movedItem.getAttribute("data-sentence-id");
+    const groupId = movedItem.getAttribute("data-sentence-group-id");
+    const sentenceType = movedItem.getAttribute("data-sentence-type");
+
+    let newWeight = 1; // значение по умолчанию
+
+    // Ищем предыдущий элемент в списке
+    const prevItem = movedItem.nextElementSibling;
+    console.log("Предыдущий элемент:", prevItem);
+
+
+    if (prevItem && prevItem.hasAttribute("data-sentence-weight")) {
+        const prevWeight = parseInt(prevItem.getAttribute("data-sentence-weight")) || 0;
+        newWeight = prevWeight + 1;
+    }
+
+    console.log("Обновляем вес предложения:", sentenceId, "→", newWeight);
+
+    sendRequest({
+        url: "/editing_report/update_sentence_weight",
+        method: "PATCH",
+        data: {
+            sentence_id: sentenceId,
+            group_id: groupId,
+            sentence_weight: newWeight,
+            sentence_type: sentenceType
+        }
+    }).then(response => {
+        if (response.status === "success") {
+            window.location.reload();
+        } else {
+            console.error("Ошибка при обновлении веса:", response.message);
+        }
+    }).catch(error => {
+        console.error("Ошибка запроса:", error);
+    });
 }
