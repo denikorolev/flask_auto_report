@@ -39,8 +39,28 @@
 
 {% macro unlink_group_popup() %}
 <!-- Попап для управления связью группы предложении -->
-<div id="lockPopup" class="sentence-popup lock-popup" style="display: none; position: absolute; z-index: 1000;">
-    <button class="btn lock-popup__btn" id="unlinkGroupButton">🔗 Разорвать связь</button>
-    <button class="btn lock-popup__btn" id="allowEditButton">✏️ Разрешить редактирование</button>
+<div id="lockPopup" class="sentence-popup lock-popup" 
+    style="display: none; position: absolute; z-index: 1000;"
+    >
+    <p class="popup-str-button" id="unlinkGroupButton">🔗 Разорвать связь</p>
+    <p class="popup-str-button" id="allowEditButton">✏️ Разрешить редактирование</p>
 </div>
 {% endmacro %}
+
+
+{% macro sentence_popup() %}
+    <!-- Попап с информацией о предложении -->
+    <div id="sentencePopup" class="sentence-popup" style="display: none;">
+        <div class="sentence-popup__info-box">
+            <span class="sentence-popup__info-item"><strong>ID:</strong> <span id="popupSentenceId"></span></span>
+            <span class="sentence-popup__info-item"><strong>Индекс:</strong> <span id="popupSentenceIndex"></span></span>
+            <span class="sentence-popup__info-item"><strong>Комментарий:</strong> <span id="popupSentenceComment"></span></span>
+            <span class="sentence-popup__info-item"><strong>Теги:</strong> <span id="popupSentenceTags"></span></span>
+        </div>
+
+            <p id="sentencePopupEditButton" class="popup-str-button">Редактировать</p>
+            <p id="sentencePopupUnlinkButton" class="popup-str-button">Разорвать связь</p>
+
+        <p id="closeSentencePopupButton" class="popup-str-button">Закрыть</p>
+    </div>
+{% endmacro%}

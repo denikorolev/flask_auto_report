@@ -1228,3 +1228,14 @@ body {
     font-weight: bold;
     margin: 0 0 5px;
 }
+
+
+.popup-str-button {
+    cursor: pointer;
+    margin-bottom: 10px;
+}
+
+.popup-str-button:hover {
+    background-color: #007bff;
+    color: white;
+}

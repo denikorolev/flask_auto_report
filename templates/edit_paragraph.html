@@ -4,7 +4,7 @@
 
 {% block container %}
 {% from "macros/edit_sentence_buttons.html" import control_buttons, info_icons %}
-{% from "macros/all_popups.html" import buffer_popup, unlink_group_popup %}
+{% from "macros/all_popups.html" import buffer_popup, unlink_group_popup, sentence_popup %}
 {% from "macros/buttons.html" import buffer_open_button %}
 {{ super() }}
 <input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
@@ -83,7 +83,6 @@
                 data-sentence-is-linked="{{ sentence.is_linked }}"
                 data-sentence-has-linked-body="{{ sentence.has_linked_body}}"
                 data-sentence-group-id="{{ sentence.group_id }}"
-                data-sentence-hard-edit="False"
                 >
 
                 <div class="flex">
@@ -146,7 +145,6 @@
                 data-sentence-comment="{{ sentence.comment }}"
                 data-sentence-is-linked="{{ sentence.is_linked }}"
                 data-sentence-group-id="{{ sentence.group_id }}"
-                data-sentence-hard-edit="False"
                 >
 
                 <div class="flex">
@@ -169,19 +167,7 @@
 </div>
 
 <!-- Попап с информацией о предложении -->
-<div id="sentencePopup" class="sentence-popup" style="display: none;">
-    <div class="sentence-popup__info-box">
-        <span class="sentence-popup__info-item"><strong>ID:</strong> <span id="popupSentenceId"></span></span>
-        <span class="sentence-popup__info-item"><strong>Индекс:</strong> <span id="popupSentenceIndex"></span></span>
-        <span class="sentence-popup__info-item"><strong>Комментарий:</strong> <span id="popupSentenceComment"></span></span>
-        <span class="sentence-popup__info-item"><strong>Теги:</strong> <span id="popupSentenceTags"></span></span>
-    </div>
-    <div class="sentence-popup__edit-button-group">
-        <button id="sentencePopupEditButton" class="btn report__btn">Редактировать</button>
-        <input type="checkbox" id="hardEditCheckbox" class="checkbox">
-    </div>
-    <button id="closeSentencePopupButton" class="btn report__btn">Закрыть</button>
-</div>
+{{ sentence_popup() }}
 
 <!-- Попап для управления связью группы предложении -->
 {{ unlink_group_popup() }}

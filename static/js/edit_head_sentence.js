@@ -244,7 +244,6 @@ function showLockPopup(itemWrapper, event) {
  */
 function initPopupButtons(sentenceElement, sentenceId) {
     const editButton = document.getElementById("sentencePopupEditButton");
-    const hardEditCheckbox = document.getElementById("hardEditCheckbox");
     if (!editButton) {
         console.error("Кнопка 'Редактировать' в попапе не найдена!");
         return;
@@ -262,11 +261,6 @@ function initPopupButtons(sentenceElement, sentenceId) {
         // Разблокируем редактирование: убираем атрибуты связанности
         sentenceItem.setAttribute("data-sentence-is-linked", "False");
         sentenceItem.setAttribute("data-sentence-has-linked-body", "False");
-
-        // Если чекбокс "жесткое редактирование" отмечен — устанавливаем флаг
-        if (hardEditCheckbox.checked) {
-            sentenceItem.setAttribute("data-sentence-hard-edit", "True");
-        }
 
         // Меняем иконки замков и линков
         const linkedIcon = sentenceItem.querySelector(".edit-sentence__links-icon--is-linked");
@@ -429,7 +423,6 @@ async function updateSentence(sentenceElement) {
     const groupId = sentenceElement.closest("li").getAttribute("data-sentence-group-id"); // id группы через параграф
     const sentenceText = sentenceElement.textContent.trim();
     const related_id = sentenceElement.closest("li").getAttribute("data-head-sentence-id");
-    const hardEdit = sentenceElement.closest("li").getAttribute("data-sentence-hard-edit");
 
 
     try {
@@ -442,7 +435,6 @@ async function updateSentence(sentenceElement) {
                 group_id: groupId,
                 sentence_text: sentenceText,
                 related_id: related_id,
-                hard_edit: hardEdit
             }
         });
 

@@ -249,9 +249,14 @@ function showLockPopup(itemWrapper, event) {
  */
 function initPopupButtons(sentenceElement, sentenceId) {
     const editButton = document.getElementById("sentencePopupEditButton");
-    const hardEditCheckbox = document.getElementById("hardEditCheckbox");
+    const unlinkButton = document.getElementById("sentencePopupUnlinkButton");
     if (!editButton) {
         console.error("Кнопка 'Редактировать' в попапе не найдена!");
+        return;
+    }
+
+    if (!unlinkButton) {
+        console.error("Кнопка 'Разорвать связь' в попапе не найдена!");
         return;
     }
 
@@ -268,10 +273,6 @@ function initPopupButtons(sentenceElement, sentenceId) {
         sentenceItem.setAttribute("data-sentence-is-linked", "False");
         sentenceItem.setAttribute("data-sentence-has-linked-body", "False");
 
-        // Если чекбокс "жесткое редактирование" отмечен — устанавливаем флаг
-        if (hardEditCheckbox.checked) {
-            sentenceItem.setAttribute("data-sentence-hard-edit", "True");
-        }
 
         // Меняем иконки замков и линков
         const linkedIcon = sentenceItem.querySelector(".edit-sentence__links-icon--is-linked");
@@ -282,6 +283,31 @@ function initPopupButtons(sentenceElement, sentenceId) {
 
         // Запускаем редактирование предложения
         makeSentenceEditable(sentenceElement);
+
+        // Закрываем попап
+        const popup = document.getElementById("sentencePopup");
+        hidePopup(popup);
+    });
+
+    unlinkButton.addEventListener("click", function () {
+        // Находим элемент предложения
+        const sentenceItem = document.querySelector(`.edit-sentence__item[data-sentence-id="${sentenceId}"]`);
+
+        if (!sentenceItem || !sentenceElement) {
+            console.error(`Предложение с ID=${sentenceId} не найдено!`);
+            return;
+        }
+
+        // Разблокируем редактирование: убираем атрибуты связанности
+        sentenceItem.setAttribute("data-sentence-is-linked", "False");
+        
+
+        // Меняем иконки замков и линков
+        const linkedIcon = sentenceItem.querySelector(".edit-sentence__links-icon--is-linked");
+        if (linkedIcon) linkedIcon.remove(); // Удаляем иконку связи
+
+        // Отвязываем предложение путем создания нового предложения
+        unlinkSentence(sentenceItem);
 
         // Закрываем попап
         const popup = document.getElementById("sentencePopup");
@@ -347,14 +373,16 @@ function showSentencePopup(sentenceElement, event) {
 function initSentencePopupCloseHandlers() {
     const popup = document.getElementById("sentencePopup");
     const closeButton = popup.querySelector("#closeSentencePopupButton");
+    console.log("Попап предложения:", popup);
+    console.log("Кнопка закрытия:", closeButton);
 
-    if (!popup || !closeButton) {
+    if (!popup) {
         console.error("Попап или кнопка закрытия не найдены!");
         return;
     }
 
     // Закрытие по кнопке
-    closeButton.addEventListener("click", hidePopup(popup));
+    closeButton.addEventListener("click", () => hidePopup(popup));
 
     // Закрытие при клике вне попапа
     document.addEventListener("click", function (event) {
@@ -622,7 +650,6 @@ async function updateSentence(sentenceElement) {
     const groupId = sentenceElement.closest("li").getAttribute("data-sentence-group-id"); // id группы через параграф
     const sentenceText = sentenceElement.textContent.trim();
     const related_id = sentenceElement.closest("li").getAttribute("data-paragraph-id");
-    const hardEdit = sentenceElement.closest("li").getAttribute("data-sentence-hard-edit");
 
     console.log("Отправка обновленного предложения:", sentenceText);
 
@@ -636,7 +663,6 @@ async function updateSentence(sentenceElement) {
                 group_id: groupId,
                 sentence_text: sentenceText,
                 related_id: related_id,
-                hard_edit: hardEdit
             }
         });
 
@@ -801,5 +827,35 @@ function filterSentencesByText() {
         const sentenceText = item.querySelector(".edit-sentence__text").textContent.toLowerCase();
         const isMatch = searchWords.every(word => sentenceText.includes(word));
         item.style.display = isMatch ? "flex" : "none";
+    });
+}
+
+
+// Функция для удаления связей предолжений путем создания нового предложения
+function unlinkSentence(sentenceItem) {
+    const sentenceId = sentenceItem.getAttribute("data-sentence-id");
+    const sentenceType = sentenceItem.getAttribute("data-sentence-type");
+    const related_id = sentenceItem.getAttribute("data-paragraph-id");
+    const sentenceIndex = sentenceType === "head" ? sentenceItem.getAttribute("data-sentence-index") : sentenceItem.getAttribute("data-sentence-weight");
+    const groupId = sentenceItem.getAttribute("data-sentence-group-id");
+
+    sendRequest({
+        url: "/editing_report/unlink_sentence",
+        method: "POST",
+        data: {
+            sentence_id: sentenceId,
+            sentence_type: sentenceType,
+            related_id: related_id,
+            sentence_index: sentenceIndex,
+            group_id: groupId
+        }
+    }).then(response => {
+        if (response.status === "success") {
+            window.location.reload();
+        } else {
+            console.error("Ошибка при удалении связи предложения:", response.message);
+        }
+    }).catch(error => {
+        console.error("Ошибка удаления связи предложения:", error);
     });
 }

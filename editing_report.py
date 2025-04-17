@@ -261,7 +261,6 @@ def update_sentence_text():
     sentence_type = data.get("sentence_type")
     group_id = data.get("group_id")
     related_id = data.get("related_id")
-    hard_edit = data.get("hard_edit") == "True"
 
     # Проверка типа предложения
     if sentence_type not in ["head", "body", "tail"]:
@@ -276,7 +275,6 @@ def update_sentence_text():
                                      group_id=group_id,
                                      related_id=related_id,
                                      new_text=sentence_text,
-                                     hard_edit=hard_edit
                                      )
         logger.info(f"(Обновление текста предложения /update_sentence_text) ✅ Текст предложения успешно обновлен")
         logger.info("(Обновление текста предложения /update_sentence_text) ------------------------------------------------------")
@@ -742,3 +740,67 @@ def toggle_public_report():
             "status": "error",
             "message": f"Ошибка при переключении статуса: {str(e)}"
         }), 500
+        
+        
+        
+        
+@editing_report_bp.route('/unlink_sentence', methods=["POST"])
+@auth_required()
+def unlink_sentence():
+    """Отвязывает предложение от группы."""
+    logger.info(f"(Отвязка предложения) --------------------------------------------")
+    logger.info(f"(Отвязка предложения) 🚀 Начинаю отвязывать предложение от группы")
+    data = request.get_json()
+    
+    sentence_id = data.get("sentence_id")
+    sentence_type = data.get("sentence_type")
+    related_id = data.get("related_id") 
+    group_id = data.get("group_id")
+    sentence_index = data.get("sentence_index")
+    logger.info(f"(Отвязка предложения) Получены данные для отвязки предложения: {data}")
+    
+    if not sentence_id or not related_id: 
+        logger.error(f"(Отвязка предложения) ❌ Не указаны необходимые данные для отвязки предложения от группы")
+        return jsonify({"status": "error", "message": "Не указаны необходимые данные для отвязки предложения от группы"}), 400
+    
+    if sentence_type == "head":
+        sentence_class = HeadSentence
+    elif sentence_type == "tail":
+        sentence_class = TailSentence
+    elif sentence_type == "body":
+        sentence_class = BodySentence
+    else:
+        logger.error(f"(Отвязка предложения) ❌ Неизвестный тип предложения")
+        return jsonify({"status": "error", "message": "Неизвестный тип предложения"}), 400
+    
+    sentence = sentence_class.get_by_id(sentence_id)
+    if not sentence:
+        logger.error(f"(Отвязка предложения) ❌ Предложение не найдено")
+        return jsonify({"status": "error", "message": "Предложение не найдено"}), 404
+    
+    new_sentence_data = {
+        "user_id": current_user.id,
+        "report_type_id": sentence.report_type_id,
+        "sentence": sentence.sentence,
+        "related_id": related_id,
+        "sentence_index": sentence_index if sentence_type == "head" else None,
+        "tags": sentence.tags,
+        "comment": sentence.comment,
+        "sentence_weight": None if sentence_type == "head" else sentence_index,
+        "unique": True,
+    }
+    try:
+        new_sentence, new_group = sentence_class.create(**new_sentence_data)
+        if sentence_type == "head":
+            new_sentence.body_sentence_group_id = sentence.body_sentence_group_id
+            db.session.commit()
+            logger.info(f"(Отвязка предложения) ✅ Успешно отвязано предложение с id={sentence.id} от группы")
+        # Так как данное предложение имеет другие связи, то метод не удалит его а только отвяжет от текущей группы
+        sentence_class.delete_sentence(sentence_id, group_id)
+    except Exception as e:
+        logger.error(f"(Отвязка предложения) ❌ Ошибка при создании нового предложения: {str(e)}")
+        return jsonify({"status": "error", "message": f"Ошибка при создании нового предложения: {str(e)}"}), 500
+    
+    logger.info(f"(Отвязка предложения) ✅ Предложение успешно отвязано от группы")
+    logger.info(f"(Отвязка предложения) --------------------------------------------")
+    return jsonify({"status": "success", "message": "Предложение успешно отвязано от группы"}), 200
