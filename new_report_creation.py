@@ -60,7 +60,13 @@ def create_report_from_existing(report_name, report_subtype, comment, report_sid
                 title_paragraph=paragraph.title_paragraph,
                 bold_paragraph=paragraph.bold_paragraph,
                 head_sentence_group_id=paragraph.head_sentence_group_id or None,
-                tail_sentence_group_id=paragraph.tail_sentence_group_id or None
+                tail_sentence_group_id=paragraph.tail_sentence_group_id or None,
+                is_impression=False,
+                is_additional=paragraph.is_additional,
+                str_after=paragraph.str_after,
+                str_before=paragraph.str_before,
+                is_active=paragraph.is_active,
+                
             )
             paragraph_index += 1
 
@@ -74,7 +80,11 @@ def create_report_from_existing(report_name, report_subtype, comment, report_sid
             title_paragraph=paragraph.title_paragraph,
             bold_paragraph=paragraph.bold_paragraph,
             head_sentence_group_id=paragraph.head_sentence_group_id or None,
-            tail_sentence_group_id=paragraph.tail_sentence_group_id or None
+            tail_sentence_group_id=paragraph.tail_sentence_group_id or None,
+            is_additional=False,
+            is_active=paragraph.is_active,
+            str_after=paragraph.str_after,
+            str_before=paragraph.str_before,
         )
 
     return new_report
@@ -332,7 +342,7 @@ def create_report_from_file():
 
     
     
-# Создание нового отчета на основе одного или нескольких существующих
+# Создание нового протокола на основе одного или нескольких существующих
 @new_report_creation_bp.route('/create_report_from_existing_few', methods=['POST'])
 @auth_required()
 def create_report_from_existing_few():
