@@ -5,7 +5,6 @@
 {% block container %}
 {% from "macros/edit_sentence_buttons.html" import control_buttons, info_icons %}
 {% from "macros/all_popups.html" import buffer_popup, unlink_group_popup, sentence_popup %}
-{% from "macros/buttons.html" import buffer_open_button %}
 {{ super() }}
 <input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
 
@@ -35,7 +34,9 @@
         <!-- Кнопка сохранения -->
         <button class="btn report__btn edit-paragraph__btn--save-paragraph-data" id="saveParagraphDataButton">Сохранить изменения</button>
         <!-- Кнопка для вызова попапа буфера -->
-        {{ buffer_open_button() }}
+        <button type="button" id="openBufferPopupButton" class="btn btn-icon btn-open-buffer" title="Открыть буфер обмена">
+            📋 Буфер обмена
+        </button>
     </div>
     <input type="text" id="sentenceSearch" class="input" placeholder="🔍 Найти предложение...">
     <hr>

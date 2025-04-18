@@ -3,7 +3,6 @@
 {% extends "base.html" %}
 {% from "macros/edit_sentence_buttons.html" import control_buttons, info_icons %}
 {% from "macros/all_popups.html" import buffer_popup, share_popup %}
-{% from "macros/buttons.html" import buffer_open_button %}
 
 
 {% block container %}
@@ -44,7 +43,9 @@
             
             <button class="btn report__btn" type="button" id="updateReportButton">Сохранить изменения</button>
             <!-- Кнопка для вызова попапа буфера -->
-            {{ buffer_open_button() }}
+            <button type="button" id="openBufferPopupButton" class="btn btn-icon btn-open-buffer" title="Открыть буфер обмена">
+                📋 Буфер обмена
+            </button>
             <!-- Кнопка для шаринга протокола -->
             <button class="btn report__btn" type="button" id="shareReportButton">Поделиться</button>
 

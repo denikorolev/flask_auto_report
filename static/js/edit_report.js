@@ -207,7 +207,10 @@ async function handleSaveChangesButtonClick() {
 function showBufferPopup(button) {
     const popup = document.getElementById("bufferPopup");
 
-    popup.style.display === "block"
+    bufferPopupListeners(); // Инициализируем слушатели на кнопки попапа
+    refreshBufferPopup(); // Перед открытием — обновить содержимое
+
+    popup.style.display = "block"
 }
 
 
