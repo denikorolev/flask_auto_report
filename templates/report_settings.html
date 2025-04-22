@@ -5,68 +5,58 @@
 
 <input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
 
-<!-- Types -->
-<div class="flex type-subtype__container">
+
+<div class="flex report-settings__container">
     <section class="section report-settings__section report-settings__section--types">
-        <form class="report-settings__form" id="type-form" method="POST">
+        <!-- Добавление нового типа протокола -->
+        <div class="flex report-settings__box" id="newTypeForm">
+            <label for="newTypeInput" class="label report-settings__label">New Type:</label>
+            <input class="input report-settings__input" type="text" id="newTypeInput" name="new_type">
+            <button class="btn report__btn report-settings__btn" id="newTypeButton" type="button">Добавить новый тип</button>
+        </div>
     
-            <div class="flex">
-                <label for="new_type" class="report-settings__label">New Type:</label>
-                <input class="report-settings__input" type="text" id="new_type" name="new_type">
-                <button class="btn report__btn report-settings__btn" type="submit" name="add_new_type_button">Add Type</button>
-            </div>
-        </form>
-    
-        <div class="report_borderline"></div>
-    
-        <ul class="report-settings__list" id="types-list">
-            <li report-settings__list-item>
-                <div class="type_list">
-                    <label class="report_label__item" for="type_type">Edit Types:</label>
-                    <ul id="types-list" class="report-settings__list">
-                        {% for type in user_types %}
-                            <li class="report-settings__list">
-                                <input class="report-settings__input--type" type="text" id="type_type" name="type_type" value="{{ type.type_text }}">
-                                <button class="btn report__btn report-settings__btn--delete" type="button" name="delete_type_button" data-type-id="{{ type.id }}">Delete Type</button>
-                                <button class="btn report__btn report-settings__btn--edit" type="button" name="edit_type_button" data-type-id="{{ type.id }}">Edit Type</button>
-                            </li>
-                        {% endfor %}
-                    </ul>
-                </div>
-                <div class="report_borderline"></div>
-            </li>
-        </ul>
+        <!--Список типов-->
+        <div class="report-settings__box">
+            <label class="report_label__item" for="type_type">Типы протоколов:</label>
+            <ul id="types-list" class="report-settings__types-list">
+                {% for type in types_subtypes %}
+                    <li class="flex report-settings__list">
+                        <input class="input report-settings__input report-settings__input--type" type="text" value="{{ type.type_text }}">
+                        <button class="btn report__btn report-settings__btn report-settings__btn--delete-type" type="button" name="delete_type_button" data-type-id="{{ type.type_id }}">Удалить</button>
+                        <button class="btn report__btn report-settings__btn report-settings__btn--edit-type" type="button" name="edit_type_button" data-type-id="{{ type.type_id }}">Сохранить изменения</button>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+           
     </section>
     
-    <!-- Subtypes -->
     <section class="section report-settings__section report-settings__section--subtypes">
-        <form id="subtype-form" method="POST" class="flex">
-    
+        <!-- Добавление нового подтипа протокола -->
+        <div class="flex">
             <label class="report_label__item" for="report_subtype_type">New Subtype:</label>
-            <select class="report__select report-settings__select" id="report_subtype_type" name="report_subtype_type" required>
-                {% for type in user_types %}
-                    <option value="{{ type.id }}">{{ type.type_text }}</option>
+            <select class="select report__select report-settings__select" id="reportTypes" required>
+                {% for type in types_subtypes %}
+                    <option value="{{ type.type_id }}">{{ type.type_text }}</option>
                 {% endfor %}
             </select>
-            <label for="new_subtype" class="report-settings__label">New Subtype:</label>
-            <input class="report-settings__input" type="text" id="new_subtype" name="new_subtype">
-            <button class="btn report__btn report-settings__btn" type="submit">Add Subtype</button>
-        </form>
-        <div class="report_borderline"></div>
-    
+            <label for="new_subtype" class="report-settings__label">Новый подтип:</label>
+            <input class="input report-settings__input" type="text" id="newSubtypeInput">
+            <button class="btn report__btn report-settings__btn" id="newSubtypeButton" type="button">Добавить</button>
+        </div>
+        
+        <!--Список подтипов-->
         <ul id="subtypes-list" class="report-settings__list">
-            {% for subtype in user_subtypes %}
+            {% for type in types_subtypes %}
+                {% for subtype in type.subtypes  %}
                     <li class="flex report-settings__list-item">
-    
-                        <input class="report_input__item" type="text" id="subtype_type" name="subtype_type" value="{{ subtype.subtype_to_type.type_text }}" readonly>
-                        <input class="report_input__item subtype-input" type="text" id="subtype_subtype" name="subtype_subtype" value="{{ subtype.subtype_text }}">
-                        <button class="btn report__btn delete-subtype-btn" type="submit" name="delete_subtype_button" data-subtype-id="{{ subtype.id }}">Delete Subtype</button>
-                        <button class="btn report__btn edit-subtype-btn" type="submit" name="edit_subtype_button" data-subtype-id="{{ subtype.id }}">Edit Subtype</button>
+                        <input class="input report_input__item" type="text" value="{{ type.type_text }}" readonly>
+                        <input class="input report_input__item report-settings__input--subtype" type="text" value="{{ subtype.subtype_text }}">
+                        <button class="btn report__btn report-settings__btn--delete-subtype" type="button" data-subtype-id="{{ subtype.subtype_id }}">Удалить</button>
+                        <button class="btn report__btn report-settings__btn--edit-subtype" type="button" data-subtype-id="{{ subtype.subtype_id }}">Сохранить</button>
                     </li>
+                {% endfor %}
             {% endfor %}
-    
-            <div class="report_borderline"></div>
-    
         </ul>
     </section>
 </div>

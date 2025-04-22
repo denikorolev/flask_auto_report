@@ -1,12 +1,14 @@
 # openai_api.py
 
-from flask import request, jsonify, current_app, Blueprint, render_template, session
+from flask import request, jsonify, current_app, Blueprint, render_template, session, g
 from openai import OpenAI
 import tiktoken
 import time
 from flask_security.decorators import auth_required, roles_required
 from logger import logger
 from flask_security import current_user
+from models import FileMetadata
+import re
 
 openai_api_bp = Blueprint("openai_api", __name__)
 
@@ -38,38 +40,45 @@ def count_tokens(text: str) -> int:
 
 
 # Функция для обработки запроса к OpenAI
-def _process_openai_request(text: str, assistant_id: str) -> str:
+def _process_openai_request(text: str, assistant_id: str, file_id: str = None) -> str:
     """
     Internal helper that sends a user message to OpenAI Assistant and returns the assistant's reply.
     Thread and message state is automatically managed via Flask session.
     """
-    print(f"Start openaiapi function. Assistant ID: {assistant_id}")
+    logger.info(f"Processing OpenAI request for assistant ID: {assistant_id}")
     
     api_key = current_app.config.get("OPENAI_API_KEY")
     client = OpenAI(api_key=api_key)
 
     thread_id = session.get(assistant_id)
     message_key = f"{assistant_id}_last_msg"
+    
 
     if thread_id:
         thread = client.beta.threads.retrieve(thread_id)
-        print(f"Thread ID: {thread_id}")
+        logger.info(f"Thread ID: {thread_id}")
     else:
-        print("Creating new thread")
+        logger.info("Creating new thread")
         thread = client.beta.threads.create()
         thread_id = thread.id
         session[assistant_id] = thread_id
+        
+    print(f"file_id: {file_id}")
+    attachments = [{"file_id": file_id, "tools": [{"type": "file_search"}]}] if file_id else None
 
     message = client.beta.threads.messages.create(
         thread_id=thread_id,
         role="user",
-        content=text
+        content=text,
+        attachments=attachments
     )
-
-    run = client.beta.threads.runs.create(
-        thread_id=thread_id,
-        assistant_id=assistant_id
-    )
+    
+    run_args = {
+        "thread_id": thread_id,
+        "assistant_id": assistant_id,
+    }
+    
+    run = client.beta.threads.runs.create(**run_args)
 
     while run.status in ["queued", "in_progress"]:
         run = client.beta.threads.runs.retrieve(thread_id=thread_id, run_id=run.id)
@@ -83,22 +92,23 @@ def _process_openai_request(text: str, assistant_id: str) -> str:
         after=after_id
     )
     
-    print(messages.data)
-
     session[message_key] = message.id
 
     assistant_reply = ""
     assistant_messages = [msg for msg in messages.data if msg.role == "assistant"]
-    print(f"Assistant messages: {assistant_messages}")
+    logger.info(f"Assistant messages: {assistant_messages}")
 
     if assistant_messages:
         last = assistant_messages[-1]
         for content_block in last.content:
-            print(f"Content block: {content_block}")
+            logger.debug(f"Content block: {content_block}")
             if hasattr(content_block, "text"):
                 assistant_reply += content_block.text.value
-
-    return assistant_reply or "Ответ ассистента не получен."
+                
+    # Очистка ответа от цитаты загруженного файла       
+    clean_reply = re.sub(r"【.*?】", "", assistant_reply)
+    logger.debug(f"Cleaned reply: {clean_reply}")
+    return clean_reply or "Ответ ассистента не получен."
 
 
 
@@ -203,6 +213,10 @@ def generate_impression():
         if not modality:
             return jsonify({"status": "error", "message": "Modality is missing"}), 400
 
+        file_id = session.get("impression_file_ids", {}).get(modality)
+        if not file_id:
+            logger.error({f"No impression file ID found in session for modality: {modality}"}), 400
+    
         # Получение assistant_id по modality
         if modality == "MRI":
             assistant_id = current_app.config.get("OPENAI_ASSISTANT_MRI")
@@ -218,7 +232,7 @@ def generate_impression():
 
         # Обработка запроса
         reset_ai_session(assistant_id)
-        assistant_reply = _process_openai_request(text, assistant_id)
+        assistant_reply = _process_openai_request(text, assistant_id, file_id)
 
         logger.info("✅ Ответ ассистента получен успешно")
         logger.debug(f"Ответ: {assistant_reply}")

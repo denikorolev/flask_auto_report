@@ -359,7 +359,7 @@ async function addParagraph(itemFromBuffer) {
 
         
         if (response.status === "success") {
-            window.location.reload();
+            console.log("Параграф добавлен:", response.message);
         } 
     } catch (error) {
         console.error("Ошибка запроса:", error);

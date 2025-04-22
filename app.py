@@ -1,7 +1,7 @@
 # app.py
 
 from flask import Flask, redirect, url_for, render_template, request, session, g
-from flask_login import current_user
+from flask_security import logout_user, current_user
 import logging
 from config import get_config
 from flask_migrate import Migrate
@@ -11,6 +11,7 @@ from profile_constructor import ProfileSettingsManager
 from db_processing import sync_all_profiles_settings
 from logger import logger
 import os
+from file_processing import prepare_impression_snippets
 
 from flask_wtf.csrf import CSRFProtect
 from flask_security import Security, SQLAlchemyUserDatastore
@@ -28,7 +29,7 @@ from openai_api import openai_api_bp
 from key_words import key_words_bp
 from admin import admin_bp
 
-version = "0.9.4.9"
+version = "0.9.5.0"
 
 app = Flask(__name__)
 app.config.from_object(get_config()) # Load configuration from file config.py
@@ -198,7 +199,14 @@ def one_time_sync_tasks():
         return  # Если пользователь не вошел — ничего не делаем
 
     if not session.get("synced"):  # Проверяем, была ли уже выполнена синхронизация
+        logger.info("Синхронизация настроек профилей")
         sync_all_profiles_settings(current_user.id)
+        try:
+            # Запуск полной подготовки файлов (удаление старых + генерация новых + загрузка в OpenAI)
+            prepare_impression_snippets(g.current_profile.id)
+            logger.info(f"📂 Impression snippets успешно подготовлены для профиля {g.current_profile.id}")
+        except Exception as e:
+            logger.warning(f"⚠️ Ошибка при подготовке impression snippets: {e}")
         logger.debug("Synced profile settings")
         session["synced"] = True  # Помечаем, что синхронизация выполнена
 
@@ -208,6 +216,16 @@ def one_time_sync_tasks():
 def index():
     return render_template("index.html", title="Главная страница")
                            
+
+@app.route("/custom_logout", methods=["POST", "GET"])
+def custom_logout():
+    print("inside logout route")
+    session.clear()
+    print("session cleared")
+    logout_user()
+    print("user logged out")
+    return redirect(url_for("index"))
+
 
 
 @app.route("/error", methods=["POST", "GET"])

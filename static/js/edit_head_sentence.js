@@ -126,7 +126,7 @@ async function addBodySentence(itemFromBuffer) {
         });
 
         if (response.status === "success") {
-            window.location.reload();
+            console.log("Предложение успешно добавлено:", response.data);
         } 
             
     } catch (error) {

@@ -1,6 +1,6 @@
 # file_processing.py
 
-from flask import g
+from flask import g, current_app, session
 from flask_login import current_user
 from werkzeug.datastructures import FileStorage
 from docx import Document
@@ -12,7 +12,10 @@ from docx.shared import Pt, Inches
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from docx.enum.table import WD_ALIGN_VERTICAL
 from config import get_config, Config
-from models import db, FileMetadata
+from models import db, FileMetadata, Report, Paragraph, HeadSentenceGroup, TailSentenceGroup, BodySentenceGroup, KeyWord, ReportSubtype
+from sentence_processing import clean_text_with_keywords, _add_if_unique
+from openai import OpenAI
+from logger import logger
 
 
 # Проверка допустимости расширения загружаемого файла
@@ -23,6 +26,8 @@ def allowed_file(file_name, file_type):
         return '.' in file_name and file_name.rsplit('.', 1)[1].lower() in {"xlsx"}
     elif file_type == "jpg":
         return '.' in file_name and file_name.rsplit('.', 1)[1].lower() in {"jpg", "jpeg", "png"}
+    elif file_type == "json":
+        return '.' in file_name and file_name.rsplit('.', 1)[1].lower() in {"json"}
     else:
         return False
 
@@ -111,6 +116,11 @@ def file_uploader(file, file_type, folder_name, file_name=None, file_description
     
     :return: сообщение об успехе или ошибке и путь к файлу.
     """
+    print(f"file_uploader: {file}")
+    print(f"file_type: {file_type}")
+    print(f"folder_name: {folder_name}")
+    print(f"file_name: {file_name}")
+    print(f"file_description: {file_description}")
     # Проверяем, является ли file строкой, если да, то это путь к файлу
     if isinstance(file, str):
         file = create_filestorage_from_path(file)
@@ -323,4 +333,162 @@ def save_to_word(text, name, subtype, report_type, birthdate, reportnumber, scan
         raise Exception(f"Error in save_to_word: {e}")
 
 
+# Генерация JSON-файлов с уникальными заключениями для всех модальностей, функция 
+# вызывается при загрузке сессии и создает файлы и загружает их 
+# в OpenAI, кроме того вычищает отовсюду старые файлы старые файлы
+def prepare_impression_snippets(profile_id):
+    """
+    Генерирует новые impression JSON файлы для всех модальностей, 
+    удаляет старые файлы (локально, из БД и из OpenAI),
+    загружает новые файлы в OpenAI и сохраняет file_ids в session.
+    """
+    logger.info(f"🚀 Запущена подготовка impression snippets для профиля {profile_id}")
 
+    client = OpenAI(api_key=current_app.config.get("OPENAI_API_KEY"))
+    modalities = ["CT", "MRI", "XRAY"]
+    session["impression_file_ids"] = {}
+
+    for modality in modalities:
+        try:
+            logger.info(f"🔄 Работаем с модальностью: {modality}")
+
+            # 1. Удаляем старые файлы
+            old_files = FileMetadata.query.filter_by(
+                profile_id=profile_id,
+                file_description=f"impressions_snippets_{modality}"
+            ).all()
+
+            for old_file in old_files:
+                if old_file.ai_file_id:
+                    try:
+                        client.files.delete(old_file.ai_file_id)
+                        logger.info(f"🗑 Удалён файл из OpenAI: {old_file.ai_file_id}")
+                    except Exception as e:
+                        logger.warning(f"⚠️ Не удалось удалить файл {old_file.ai_file_id} из OpenAI: {e}")
+                if os.path.exists(old_file.file_path):
+                    os.remove(old_file.file_path)
+                    logger.info(f"🗑 Удалён локальный файл: {old_file.file_path}")
+                db.session.delete(old_file)
+            db.session.commit()
+
+            # 2. Генерируем новый JSON файл
+            new_file_path = generate_impression_json(modality)
+
+            # 3. Загружаем в OpenAI
+            with open(new_file_path, "rb") as f:
+                upload = client.files.create(file=f, purpose="assistants")
+                new_file_id = upload.id
+
+            # 4. Сохраняем в FileMetadata + session
+            new_file_meta = FileMetadata.query.filter_by(
+                profile_id=profile_id,
+                file_path=new_file_path
+            ).first()
+            if new_file_meta:
+                new_file_meta.ai_file_id = new_file_id
+                db.session.commit()
+
+            session["impression_file_ids"][modality] = new_file_id
+            logger.info(f"✅ Загружен и сохранён файл для {modality}: {new_file_id}")
+
+        except Exception as e:
+            logger.error(f"❌ Ошибка при обработке модальности {modality}: {e}")
+            db.session.rollback()
+
+    logger.info(f"🎉 Подготовка impression snippets завершена для профиля {profile_id}")
+
+
+
+# Генерация JSON-файла с уникальными заключениями (использую для индивидуализации ИИ)
+def generate_impression_json(modality="CT"):
+    """
+    Сбор уникальных заключений (head/body/tail) для заданной модальности и профиля.
+    Сохраняет результат в JSON-файл и возвращает путь к нему.
+
+    Args:
+        profile_id (int): ID профиля пользователя.
+        modality (str): Тип исследования (например, "CT", "MRI", "XRAY").
+    
+    Returns:
+    
+        str: Путь к JSON-файлу с уникальными заключениями.
+    """
+    similarity_threshold = 95
+    profile_id = g.current_profile.id  # временно для file_uploader
+    unique_sentences = set()
+    cleaned_sentences = []
+    
+    report_type_id = {"CT": "15", "MRI": "14", "XRAY": "18"}.get(modality.upper(), None)
+    
+    if not report_type_id:
+            raise Exception(f"Unknown modality: {modality}")
+        
+    subtypes = ReportSubtype.find_by_report_type(report_type_id)
+    if not subtypes:
+        raise Exception(f"No subtypes found for report type {report_type_id}.")
+    subtype_ids = [subtype.id for subtype in subtypes]
+        
+    reports = Report.query.filter(
+        Report.profile_id == profile_id,
+        Report.report_subtype.in_(subtype_ids)
+    ).all()
+    
+    if not reports:
+        logger.warning(f"No reports found for profile ID {profile_id}.")
+        pass
+    
+    except_words = current_app.config["PROFILE_SETTINGS"].get("EXCEPT_WORDS", [])
+
+    for report in reports:
+        key_words_for_report = KeyWord.get_keywords_for_report(profile_id, report.id)
+        key_words = [keyword.key_word for keyword in key_words_for_report]
+
+        for paragraph in report.report_to_paragraphs:
+            if not paragraph.is_impression:
+                continue
+
+            head_group = paragraph.head_sentence_group
+            tail_group = paragraph.tail_sentence_group
+
+            if head_group:
+                for head in HeadSentenceGroup.get_group_sentences(head_group.id):
+                    _add_if_unique(head["sentence"], key_words, except_words, cleaned_sentences, unique_sentences, similarity_threshold)
+
+            if tail_group:
+                for tail in TailSentenceGroup.get_group_sentences(tail_group.id):
+                    _add_if_unique(tail["sentence"], key_words, except_words, cleaned_sentences, unique_sentences, similarity_threshold)
+
+            # body из head-группы
+            if head_group:
+                for head in HeadSentenceGroup.get_group_sentences(head_group.id):
+                    body_group_id = head.get("body_sentence_group_id")
+                    if body_group_id:
+                        for body in BodySentenceGroup.get_group_sentences(body_group_id):
+                            _add_if_unique(body["sentence"], key_words, except_words, cleaned_sentences, unique_sentences, similarity_threshold)
+
+    # Финальный JSON
+    data = {
+        "profile_id": profile_id,
+        "modality": modality,
+        "impressions": sorted(list(unique_sentences))
+    }
+
+    # Сохраняем файл
+    import json
+    import tempfile
+    with tempfile.NamedTemporaryFile("w+", suffix=".json", delete=False, encoding="utf-8") as tmp_file:
+        json.dump(data, tmp_file, indent=2, ensure_ascii=False)
+        tmp_file_path = tmp_file.name
+
+    # Загружаем через file_uploader
+    result, saved_path = file_uploader(
+        tmp_file_path,
+        file_type="json",  # json нет, пусть будет doc (иначе file_uploader не пропустит)
+        folder_name="impression_snippets",
+        file_name=f"{modality.lower()}_impressions_user_{profile_id}",
+        file_description=f"impressions_snippets_{modality}"
+    )
+    print(f"File upload result: {result}")
+    print(f"Saved path: {saved_path}")
+
+    return saved_path

@@ -477,7 +477,7 @@ async function addHeadSentence(itemFromBuffer) {
         });
 
         if (response.status === "success") {
-            window.location.reload();
+            console.log("Успешно добавлено новое предложение:", response);
         } 
     } catch (error) {
         console.error("Ошибка запроса:", error);
@@ -525,7 +525,7 @@ async function addTailSentence(itemFromBuffer) {
 
         
         if (response.status === "success") {
-            window.location.reload();
+            console.log("Успешно добавлено новое предложение:", response);
         } 
     } catch (error) {
         console.error("Ошибка запроса:", error);

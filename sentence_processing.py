@@ -53,8 +53,8 @@ def extract_keywords_from_doc(file_path):
 
     return keywords
 
-
-def process_keywords(key_word_input):
+# Функция для обработки строки ключевых слов, разделенных запятой
+def process_keywords(key_word_input: str) -> list:
     """Обрабатываем строку ключевых слов, разделенных запятой, 
     и возвращаем список"""
     
@@ -422,7 +422,8 @@ def group_keywords(keywords, with_index=False, with_report=False):
     return list(grouped_keywords.values())
 
 
-# Сравниваю 2 предложения. Используется в working_with_report/save_modified_sentences %
+# Сравниваю 2 предложения. Используется в working_with_report/save_modified_sentences. 
+# Ищет совпадения с заданным порогом, также очищает текст от чисел и ключевых слов
 def compare_sentences_by_paragraph(new_sentences, report_id):    
     """
     Compares new sentences with existing sentences in their respective paragraphs to determine uniqueness.
@@ -533,8 +534,32 @@ def compare_sentences_by_paragraph(new_sentences, report_id):
     return {"duplicates": duplicates, "unique": unique_sentences, "errors_count": errors_count}
 
 
+# Функция проверяет предложение на уникальность и добавляет его 
+# в результат, если оно уникально. Работает со списком по ссылке, 
+# ничего не возвращает, просто меняет предоставленные список и множество
+def _add_if_unique(raw_text, key_words, except_words, cleaned_list, result_set, threshold):
+    """
+    Проверяет, является ли предложение уникальным, и добавляет его в результат.
 
-# Функция для поиска существующих аналогичных предложений того же типа в базе данных использую в models.py
+    Args:
+        raw_text (str): Оригинальный текст.
+        key_words (list): Ключевые слова для очистки.
+        except_words (list): Слова-исключения.
+        cleaned_list (list): Уже очищенные тексты.
+        result_set (set): Уникальные предложения (результат).
+        threshold (int): Порог схожести.
+    """
+    cleaned = clean_text_with_keywords(raw_text, key_words, except_words)
+    for existing in cleaned_list:
+        if fuzz.ratio(cleaned, existing) >= threshold:
+            return
+    cleaned_list.append(cleaned)
+    result_set.add(raw_text)
+   
+
+
+# Функция для поиска существующих аналогичных предложений того же типа в базе данных 
+# использую в models.py. Ищет 100% совпадения
 def find_similar_exist_sentence(sentence_text, sentence_type, report_type_id):
     """
     Ищет похожие предложения в базе данных.

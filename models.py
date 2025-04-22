@@ -436,7 +436,7 @@ class ReportSubtype(BaseModel):
     
     @classmethod
     def find_by_report_type(cls, type_id):
-        """Возвращает все подтипы, связанные с профилем."""
+        """Возвращает все подтипы, заданного типа."""
         return cls.query.filter_by(type_id=type_id).all()
 
 
@@ -1929,16 +1929,18 @@ class FileMetadata(BaseModel):
     file_type = db.Column(db.String(50), nullable=False)  # Тип файла (например, "docx", "jpg")
     uploaded_at = db.Column(db.DateTime, default=db.func.now(), nullable=False)  # Время загрузки файла
     file_description = db.Column(db.String(500), nullable=False)
+    ai_file_id = db.Column(db.String(100), nullable=True)
     
 
     @classmethod
-    def create(cls, profile_id, file_name, file_path, file_type, file_description):
+    def create(cls, profile_id, file_name, file_path, file_type, file_description, ai_file_id=None):
         new_file = cls(
             profile_id=profile_id,
             file_name=file_name,
             file_path=file_path,
             file_type=file_type,
-            file_description=file_description
+            file_description=file_description,
+            ai_file_id=ai_file_id
         )
         db.session.add(new_file)
         db.session.commit()

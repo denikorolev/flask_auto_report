@@ -2,230 +2,207 @@
 
 
 document.addEventListener("DOMContentLoaded", function(){
-    
-    // Вызываем логику добавления типов отчетов
-    initAddTypeListener(); 
-    // Вызываем логику удаления типов отчетов
-    initDeleteTypeListener();
-    // Вызываем логику редактирования типов отчетов
-    initEditTypeListener();
-    
-    // Вызываем логику добавления подтипов отчетов
-    initAddSubtypeListener();
-    // Вызываем логику удаления подтипов отчетов
-    initDeleteSubtypeListener();
-    // Вызываем логику редактирования подтипов отчетов
-    initEditSubtypeListener();
 
+    // Слушатель для кнопки "Добавить тип отчета"
+    document.getElementById('newTypeButton').addEventListener('click', function() {
+       addNewType();
+    });
+    
+    // Слушатели для кнопок Удалить тип отчета
+    document.querySelectorAll('.report-settings__btn--delete-type').forEach(button => {
+        button.addEventListener("click", function(){
+            deleteType(this);
+        })
+    });
+
+    // Слушатели для кнопок Редактировать тип отчета
+    document.querySelectorAll('.report-settings__btn--edit-type').forEach(button => {
+        button.addEventListener("click", function(){
+            editType(this);
+        });
+    })
+
+    // Слушатель для кнопки "Добавить подтип отчета"
+    document.getElementById('newSubtypeButton').addEventListener('click', function() {
+        addSubtype();
+    });
+
+    // Слушатели для кнопок Удалить подтип
+    document.querySelectorAll(".report-settings__btn--delete-subtype").forEach(button => {
+        button.addEventListener("click", function() {
+            deleteSubtype(this);
+        });
+    });
+
+    // Слушатели для кнопок Редактировать подтип
+    document.querySelectorAll(".report-settings__btn--edit-subtype").forEach(button => {
+        button.addEventListener("click", function() {
+            editSubtype(this);
+        });
+    });
+    
+    
      // Вызываем логику загрузки файлов шаблона Word и росписи
     initFileUploadListener();
 });
 
 // Функция для добавления нового типа отчета
-function initAddTypeListener() {
-    const typeForm = document.getElementById('type-form');
-    if (!typeForm) return; // Проверяем, есть ли форма на странице
+async function addNewType() {
+    const newTypeInput = document.getElementById('newTypeInput');
+    if (!newTypeInput) return; // Проверяем, есть ли форма на странице
+       
+    const newType = newTypeInput.value.trim();
 
-    typeForm.addEventListener('submit', async function(event) {
-        event.preventDefault(); // Предотвращаем отправку формы и перезагрузку страницы
+    if (!newType) {
+        toastr.error('Поле с именем нового типа не должно быть пустым.');
+        return;
+    }
 
-        const input = document.getElementById('new_type');
-        const newTypeName = input.value.trim();
+    try {
+        const response = await sendRequest({
+            url: '/report_settings/add_type',  // URL для добавления нового типа
+            data: { new_type: newType },
+        });
 
-        if (!newTypeName) {
-            toastr.error('Type name cannot be empty.');
-            return;
+        // Если запрос успешен, обновляем список типов на странице
+        if (response.status === 'success') {
+            window.location.reload(); 
+        } else {
+            console.error('Ошибка при добавлении типа протокола:', response.message);
         }
-
-        try {
-            const response = await sendRequest({
-                url: '/report_settings/add_type',  // URL для добавления нового типа
-                method: 'POST',
-                data: { new_type: newTypeName },
-                csrfToken: csrfToken
-            });
-
-            // Если запрос успешен, обновляем список типов на странице
-            if (response.status === 'success') {
-                const typesList = document.getElementById('types-list');
-                const newListItem = document.createElement('li');
-                newListItem.textContent = newTypeName;
-                typesList.appendChild(newListItem);
-
-                input.value = ''; // Очищаем поле ввода
-                toastr.success(response.message);
-            } else {
-                alert(response.message);
-            }
-        } catch (error) {
-            alert(error.message || 'An error occurred while adding the type.');
-        }
-    });
+    } catch (error) {
+        alert(error.message || 'Ошибка при добавлении типа протокола.');
+    }
 }
 
+
 // Логика для удаления типа отчета
-function initDeleteTypeListener() {
-    const deleteButtons = document.querySelectorAll('.report-settings__btn--delete');
-    deleteButtons.forEach(button => {
-        button.addEventListener('click', async function(event) {
-            event.preventDefault();
-            
-            const typeId = this.dataset.typeId;
+async function deleteType(button) {
+    const typeId = button.getAttribute('data-type-id');
+    if (!typeId) {
+        toastr.error('Не найден ID типа.');
+        return;
+    }
+    const confirmation = confirm('Вы уверены что хотите удалить этот тип протокола? Будут автоматически удалены ВСЕ подтипы и ВСЕ связанные с ними протоколы.');
+    if (!confirmation) return;
 
-            if (!typeId) {
-                toastr.error('Type ID is missing.');
-                return;
-            }
-
-            const confirmation = confirm('Are you sure you want to delete this type?');
-            if (!confirmation) return;
-            try {
-                const response = await sendRequest({
-                    url: '/report_settings/delete_type',  // Маршрут для удаления типа
-                    data: { type_id: typeId },
-                    csrfToken: csrfToken
-                });
-
-                if (response.status === 'success') {
-                    // Удаляем элемент типа из DOM
-                    this.closest('li').remove();
-                } 
-            } catch (error) {
-                console.log('An error occurred while deleting the type.');
-            }
+    try {
+        const response = await sendRequest({
+            url: '/report_settings/delete_type',  // Маршрут для удаления типа
+            data: { type_id: typeId },
         });
-    });
+
+        if (response.status === 'success') {
+            window.location.reload();  // Перезагружаем страницу для обновления списка типов
+        } 
+    } catch (error) {
+        console.log(error.message || 'Ошибка при удалении типа протокола.');
+    }
 }
 
 
 // Логика для редактирования типа отчета
-function initEditTypeListener() {
-    const editButtons = document.querySelectorAll('.report-settings__btn--edit');
-    editButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            const typeId = this.dataset.typeId;
-            const typeInput = this.closest('li').querySelector('.report-settings__input--type');  // Найти поле ввода для редактирования
-            const newTypeName = typeInput.value.trim();
+async function editType(button) {
+    const typeId = button.getAttribute('data-type-id');
+    const typeInput = button.closest('li').querySelector('.report-settings__input--type');  // Найти поле ввода для редактирования
+    const newTypeName = typeInput.value.trim();
 
-            if (!newTypeName) {
-                toastr.error('Type name cannot be empty.');
-                return;
-            }
+    if (!newTypeName) {
+        toastr.error('Поле с именем типа не должно быть пустым.');
+        return;
+    }
 
-            sendRequest({
-                url: '/report_settings/edit_type',  
-                data: { type_id: typeId, new_type_name: newTypeName },
-                csrfToken: csrfToken
-            })
-            .catch(error => {
-                console.log('An error occurred while editing the type.');
-            });
+    try {
+        const response = await sendRequest({
+            url: '/report_settings/edit_type',  
+            data: { type_id: typeId, new_type_name: newTypeName },
         });
-    });
+
+        if (response.status === 'success') {
+            // Обновляем текст типа на странице
+            window.location.reload();
+        } else {
+            console.error('Ошибка при редактировании типа протокола:', response.message);
+        }
+    } catch (error) {
+        console.log(error.message || 'Ошибка при редактировании типа протокола.');
+    }
+    
 }
 
 
 // Логика для добавления нового подтипа отчета
-function initAddSubtypeListener() {
-    const subtypeForm = document.getElementById('subtype-form');
-    if (!subtypeForm) return;  // Проверяем наличие формы на странице
+async function addSubtype() {
+    const typeSelect = document.getElementById('reportTypes');
+    const newSubtypeInput = document.getElementById('newSubtypeInput');
+    const reportTypeId = typeSelect.value;
+    const newSubtypeName = newSubtypeInput.value.trim();
 
-    subtypeForm.addEventListener('submit', async function(event) {
-        event.preventDefault();  // Предотвращаем стандартную отправку формы
+    if (!newSubtypeName || !reportTypeId) {
+        toastr.error('Поле с именем нового подтипа не должно быть пустым и должен быть выбран тип протокола.');
+        return;
+    }
 
-        const typeSelect = document.getElementById('report_subtype_type');
-        const newSubtypeInput = document.getElementById('new_subtype');
-        const reportTypeId = typeSelect.value;
-        const newSubtypeName = newSubtypeInput.value.trim();
+    try {
+        const response = await sendRequest({
+            url: '/report_settings/add_subtype',  
+            data: { report_type_id: reportTypeId, new_subtype_name: newSubtypeName },
+        });
 
-        if (!newSubtypeName) {
-            toastr.error('Subtype name cannot be empty.');
-            return;
-        }
-
-        try {
-            const response = await sendRequest({
-                url: '/report_settings/add_subtype',  
-                data: { report_type_id: reportTypeId, new_subtype_name: newSubtypeName },
-                csrfToken: csrfToken
-            });
-
-            if (response.status === 'success') {
-                // Обновляем список подтипов на странице
-                const subtypesList = document.getElementById('subtypes-list');
-                const newListItem = document.createElement('li');
-                newListItem.textContent = `${newSubtypeName} (Type ID: ${reportTypeId})`;
-                subtypesList.appendChild(newListItem);
-
-                newSubtypeInput.value = '';  // Очищаем поле ввода
-                
-            } 
-        } catch (error) {
-            console.log('An error occurred while adding the subtype.');
-        }
-    });
+        if (response.status === 'success') {
+            // Обновляем список подтипов на странице
+            window.location.reload();
+        } 
+    } catch (error) {
+        console.log(error.message || 'Ошибка при добавлении подтипа протокола.');
+    }
 }
 
 
 // Логика для удаления подтипа отчета
-function initDeleteSubtypeListener() {
-    const deleteButtons = document.querySelectorAll('.delete-subtype-btn');
-    deleteButtons.forEach(button => {
-        button.addEventListener('click', async function(event) {
-            event.preventDefault();
+async function deleteSubtype(button) {
+    const subtypeId = button.getAttribute('data-subtype-id');
 
-            const subtypeId = this.dataset.subtypeId;
+    if (!subtypeId) {
+        toastr.error('Не найден ID подтипа.');
+        return;     
+    }
 
-            if (!subtypeId) {
-                toastr.error('Subtype ID is missing.');
-                return;
-            }
+    const confirmation = confirm('Вы уверены что хотите удалить этот подтип? Будут автоматически удалены ВСЕ связанные с ним протоколы.');
+    if (!confirmation) return;
 
-            const confirmation = confirm('Are you sure you want to delete this subtype?');
-            if (!confirmation) return;
-
-            try {
-                const response = await sendRequest({
-                    url: '/report_settings/delete_subtype',
-                    data: { subtype_id: subtypeId },
-                    csrfToken: csrfToken
-                });
-
-                if (response.status === 'success') {
-                    // Удаляем элемент подтипа из DOM
-                    this.closest('li').remove();
-                } 
-            } catch (error) {
-                console.log('An error occurred while deleting the subtype.');
-            }
+    try {
+        const response = await sendRequest({
+            url: '/report_settings/delete_subtype',
+            data: { subtype_id: subtypeId },
         });
-    });
+
+        if (response.status === 'success') {
+            window.location.reload();
+        } 
+    } catch (error) {
+        console.log(error.message || 'Ошибка при удалении подтипа протокола.');
+    }
 }
 
 
 // Логика для редактирования подтипа отчета
-function initEditSubtypeListener() {
-    const editButtons = document.querySelectorAll('.edit-subtype-btn');
-    editButtons.forEach(button => {
-        button.addEventListener('click', async function() {
-            const subtypeId = this.dataset.subtypeId;
-            const subtypeInput = this.closest('li').querySelector('.subtype-input');  // Найти поле ввода для редактирования
-            const newSubtypeName = subtypeInput.value.trim();
-            if (!newSubtypeName) {
-                toastr.error('Subtype name cannot be empty.');
-                return;
-            }
-            try {
-                await sendRequest({
-                    url: '/report_settings/edit_subtype',
-                    data: { subtype_id: subtypeId, new_subtype_name: newSubtypeName },
-                    csrfToken: csrfToken
-                });
-            } catch (error) {
-                console.log('An error occurred while editing the subtype.');
-            }
+async function editSubtype(button) {
+    const subtypeId = button.getAttribute('data-subtype-id');
+    const subtypeInput = button.closest('li').querySelector('.report-settings__input--subtype'); 
+    const newSubtypeName = subtypeInput.value.trim();
+    if (!newSubtypeName) {
+        toastr.error('Имя подтипа не должно быть пустым.');
+        return;
+    }
+    try {
+        await sendRequest({
+            url: '/report_settings/edit_subtype',
+            data: { subtype_id: subtypeId, new_subtype_name: newSubtypeName },
         });
-    });
+    } catch (error) {
+        console.log(error.message || 'Ошибка при редактировании подтипа протокола.');
+    }
 }
 
 

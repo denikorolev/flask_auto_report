@@ -23,6 +23,7 @@ function bufferPopupListeners() {
     // Закрыть попап
     closeBufferBtn?.addEventListener("click", function () {
         bufferPopup.style.display = "none";
+        window.location.reload(); // Перезагрузить страницу при закрытии
     });
 
     // Очистить буфер
@@ -69,6 +70,8 @@ function refreshBufferPopup() {
             refreshBufferPopup(); // Обновляем после удаления
         });
     });
+
+    // Навешиваем слушатели на кнопки вставки
     bufferList.querySelectorAll(".buffer-popup__btn--insert").forEach(button => {
         button.addEventListener("click", function () {
             const indexToInsert = parseInt(this.getAttribute("data-index"));

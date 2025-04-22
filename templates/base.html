@@ -49,7 +49,7 @@
 
             <!-- Сообщение о текущем юзере -->
             <p class="header__paragraph" id="userNameHeader" data-user-name="{{ current_user.user_name }}">Привет, {{ current_user.roles[0].name }}, {{ current_user.user_name }}!</p>
-            <a class="header__link" href="{{ url_for("security.logout") }}">Выйти</a>
+            <a class="header__link" href="{{ url_for("custom_logout") }}">Выйти</a>
         </div>
 
         <div class="flash-message-panel">
