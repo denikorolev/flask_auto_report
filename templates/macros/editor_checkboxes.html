@@ -1,0 +1,11 @@
+<!--editor_checkboxes-->
+{% macro editor_checkboxes() %}
+<div class="flex">
+    <label class="report_label__item" for="grammaAiChecker">Включить проверку AI:</label>
+    <input type="checkbox" id="grammaAiChecker" class="form-check-input" checked>
+    <label for="firstGrammaSentence" class="report_label__item">Включить автоисправление в браузере</label>
+    <input type="checkbox" id="firstGrammaSentence" class="form-check-input" checked>
+    <label class="report_label__item" for="useDuplicate">Включить поиск дубликатов:</label>
+    <input type="checkbox" id="useDuplicate" class="form-check-input" checked>
+</div>
+{% endmacro %}

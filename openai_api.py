@@ -121,6 +121,37 @@ def reset_ai_session(assistant_id: str):
     session.pop(f"{assistant_id}_last_msg", None)
 
 
+def gramma_correction_ai(text):
+    logger.info("(функция gramma_correction_ai) --------------------------------------")
+    logger.info("🚀 Начата попытка проверки текста с помощью OpenAI API.")
+
+    try:
+        language = session.get("lang", "ru")
+    
+        # Получение assistant_id по modality
+        if language == "ru":
+            assistant_id = current_app.config.get("OPENAI_ASSISTANT_GRAMMA_CORRECTOR_RU")
+        else:
+            raise ValueError(f"Unsupported language: {language}")
+
+        if not assistant_id:
+            raise ValueError("Assistant ID is not configured.")
+
+        # Обработка запроса
+        reset_ai_session(assistant_id)
+        assistant_reply = _process_openai_request(text, assistant_id)
+
+        logger.info("(функция gramma_correction_ai) ✅ Ответ ассистента получен успешно")
+        logger.debug(f"(функция gramma_correction_ai) Ответ: {assistant_reply}")
+        logger.info("---------------------------------------------------")
+        return assistant_reply
+
+    except Exception as e:
+        logger.exception(f"(функция gramma_correction_ai) ❌ Unexpected error: {str(e)}")
+        raise ValueError(f"Ошибка при обращении к ИИ: error {e}")
+  
+  
+  
 # Routs
 
 @openai_api_bp.route("/start_openai_api", methods=["POST", "GET"])
@@ -149,7 +180,7 @@ def generate_general():
         return jsonify({"status": "error", "message": "Your request is empty"}), 400
     if not ai_assistant:
         return jsonify({"status": "error", "message": "Assistant ID is not configured."}), 500
-    if tokens > 1000:
+    if tokens > 4000:
         return jsonify({"status": "error", "message": f"Текст слишком длинный - { tokens } токенов, попробуйте сократить его."}), 400
     
     if new_conversation:
@@ -241,7 +272,10 @@ def generate_impression():
 
     except Exception as e:
         logger.exception(f"❌ Unexpected error: {str(e)}")
-        return jsonify({"status": "error", "message": f"Ошибка при обращении к ИИ"}), 500
+        return jsonify({"status": "error", "message": f"Ошибка при обращении к ИИ: error {e}" }), 500
+
+
+  
 
 
     

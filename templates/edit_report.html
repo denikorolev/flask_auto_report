@@ -3,6 +3,7 @@
 {% extends "base.html" %}
 {% from "macros/edit_sentence_buttons.html" import control_buttons, info_icons %}
 {% from "macros/all_popups.html" import buffer_popup, share_popup %}
+{% from "macros/editor_checkboxes.html" import editor_checkboxes%}
 
 
 {% block container %}
@@ -35,11 +36,14 @@
                 <label class="report_label__item">Учитывать сторону:</label> <!-- Подпись для радиокнопок -->
                 <div class="flex_row">
                     <input type="radio" name="report_side" value="True" class="form-check-input" {% if report_data.report_side == True %}checked{% endif %}> 
-                    <label for="report_side_yes" class="form-check-label">Да</label>
+                    <label for="report_side_yes" class="report_label__item">Да</label>
                     <input type="radio" name="report_side" value="False" class="form-check-input" {% if report_data.report_side == False %}checked{% endif %}> 
-                    <label for="report_side_no" class="form-check-label">Нет</label>
+                    <label for="report_side_no" class="report_label__item">Нет</label>
                 </div>
             </div>
+            <!-- Отключение проверок -->
+            {{editor_checkboxes()}}
+
             
             <button class="btn report__btn" type="button" id="updateReportButton">Сохранить изменения</button>
             <!-- Кнопка для вызова попапа буфера -->
@@ -151,8 +155,8 @@
             <hr class="sentence-separator">
             <br>
             <div class="">
-                <label class="label edit-paragraph__label" for="new_paragraph">Добавить новый параграф</label> <!--Нужно еще сделать логику js-->
-                <button class="btn report__btn edit-paragraph__button" type="button" id="addParagraphButton" name="new_paragraph">Добавить</button>
+                <label class="label edit-paragraph__label" for="new_paragraph">Добавить новый параграф</label> 
+                <button class="btn report__btn edit-paragraph__button" type="button" id="addParagraphButton">Добавить</button>
             </div>
     </div>
     

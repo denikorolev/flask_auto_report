@@ -181,9 +181,11 @@ function makeSentenceEditableActions(sentenceElement) {
     function finishEditing() {
         sentenceElement.setAttribute("contenteditable", "false");
         sentenceElement.removeEventListener("keydown", onEnterPress);
+        const firstGrammaSentenceCheckBox = document.getElementById("firstGrammaSentence").checked;
 
-        const newText = sentenceElement.textContent.trim();
+        const newText = firstGrammaSentenceCheckBox ? firstGrammaSentence(sentenceElement.textContent.trim()) : sentenceElement.textContent.trim();
         if (newText !== oldText) {
+            sentenceElement.textContent = newText; // Обновляем текст элемента
             updateSentence(sentenceElement); // Вызов твоей функции обновления
         }
     }
@@ -450,6 +452,7 @@ async function addHeadSentence(itemFromBuffer) {
     const sentences = paragraphData.head_sentences;
     const sentenceIndexes = sentences.map(sentence => sentence.sentence_index);
     const maxIndex = findMaxIndex(sentenceIndexes);
+    const uniqueSentence = !document.getElementById("useDuplicate").checked;
     
     if (itemFromBuffer) {
         data = {
@@ -458,14 +461,17 @@ async function addHeadSentence(itemFromBuffer) {
             sentence_type: "head",
             related_id: paragraphId,
             report_id: reportId,
-            sentence_index: maxIndex + 1
+            sentence_index: maxIndex + 1,
+            unique: false,
+            
         }; 
     } else {
             data = {
                 related_id: paragraphId,
                 report_id: reportId,
                 sentence_index: maxIndex + 1,
-                sentence_type: "head"
+                sentence_type: "head",
+                unique: uniqueSentence
             }
     };
 
@@ -478,6 +484,7 @@ async function addHeadSentence(itemFromBuffer) {
 
         if (response.status === "success") {
             console.log("Успешно добавлено новое предложение:", response);
+            window.location.reload();
         } 
     } catch (error) {
         console.error("Ошибка запроса:", error);
@@ -497,6 +504,7 @@ async function addTailSentence(itemFromBuffer) {
     const tailSentenceList = document.getElementById("editTailSentenceList");
     const paragraphId = tailSentenceList.getAttribute("data-paragraph-id");
     const reportId = document.getElementById("editParagraphContainer").getAttribute("data-report-id");
+    const uniqueSentence = !document.getElementById("useDuplicate").checked;
 
     if (itemFromBuffer) {
         data = {
@@ -504,14 +512,16 @@ async function addTailSentence(itemFromBuffer) {
             sentence_text: itemFromBuffer.object_text,
             sentence_type: "tail",
             related_id: paragraphId,
-            report_id: reportId
+            report_id: reportId,
+            unique: false,
         }; 
     }
     else {
         data = {
             related_id: paragraphId,
             report_id: reportId,
-            sentence_type: "tail"
+            sentence_type: "tail",
+            unique: uniqueSentence
         };
     }
 
@@ -526,6 +536,7 @@ async function addTailSentence(itemFromBuffer) {
         
         if (response.status === "success") {
             console.log("Успешно добавлено новое предложение:", response);
+            window.location.reload();
         } 
     } catch (error) {
         console.error("Ошибка запроса:", error);
@@ -700,7 +711,8 @@ async function updateSentence(sentenceElement) {
     const groupId = sentenceElement.closest("li").getAttribute("data-sentence-group-id"); // id группы через параграф
     const sentenceText = sentenceElement.textContent.trim();
     const related_id = sentenceElement.closest("li").getAttribute("data-paragraph-id");
-
+    const aiGrammaCheck = document.getElementById("grammaAiChecker").checked;
+    const useDublicate = document.getElementById("useDuplicate").checked;
     try {
         const response = await sendRequest({
             url: "/editing_report/update_sentence_text",
@@ -711,8 +723,14 @@ async function updateSentence(sentenceElement) {
                 group_id: groupId,
                 sentence_text: sentenceText,
                 related_id: related_id,
+                ai_gramma_check: aiGrammaCheck,
+                use_dublicate: useDublicate
             }
         });
+
+        if (response.status === "success" && aiGrammaCheck) {
+            window.location.reload();
+        }
 
     } catch (error) {
         console.error("Ошибка обновления предложения:", error);
@@ -742,6 +760,7 @@ function addSentenceToBuffer(button) {
     };
 
     addToBuffer(dataToBuffer);
+    toastr.success("Предложение добавлено в буфер", "Успех")
 
 }
 

@@ -6,6 +6,7 @@
 {% block container %}
 
 <input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
+
 <!-- Работа с ключевыми словами -->
 <section class="key-word">
     <form class="key-word__form key-word__form--add" id="keywords-form">
@@ -37,15 +38,6 @@
         </div>
         <button type="submit" class="btn report__btn key-word__btn key-word__btn--submit">Add Key Words Group</button>
     </form>
-
-    <div class="key-word__upload-section">
-        <h3>Upload Word File with Key Words</h3>
-        <form class="key-word__form key-word__form--upload" id="upload-word-form">
-            
-            <input class="key-word__input-file" type="file" id="word-file-input" name="file" accept=".doc,.docx">
-            <button class="key-word__btn key-word__btn--upload" type="button" id="upload-word-btn" class="btn report__btn">Upload</button>
-        </form>
-    </div>
 
     <div class="key-word__container">
 

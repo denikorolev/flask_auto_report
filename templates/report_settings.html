@@ -18,9 +18,9 @@
         <!--Список типов-->
         <div class="report-settings__box">
             <label class="report_label__item" for="type_type">Типы протоколов:</label>
-            <ul id="types-list" class="report-settings__types-list">
+            <ul id="types-list" class="report-settings__list--types">
                 {% for type in types_subtypes %}
-                    <li class="flex report-settings__list">
+                    <li class="flex report-settings__item report-settings__item--type" data-type-id="{{ type.type_id }}">
                         <input class="input report-settings__input report-settings__input--type" type="text" value="{{ type.type_text }}">
                         <button class="btn report__btn report-settings__btn report-settings__btn--delete-type" type="button" name="delete_type_button" data-type-id="{{ type.type_id }}">Удалить</button>
                         <button class="btn report__btn report-settings__btn report-settings__btn--edit-type" type="button" name="edit_type_button" data-type-id="{{ type.type_id }}">Сохранить изменения</button>
@@ -46,10 +46,10 @@
         </div>
         
         <!--Список подтипов-->
-        <ul id="subtypes-list" class="report-settings__list">
+        <ul id="subtypes-list" class="report-settings__list--types_subtypes">
             {% for type in types_subtypes %}
                 {% for subtype in type.subtypes  %}
-                    <li class="flex report-settings__list-item">
+                    <li class="flex report-settings__item report-settings__item--subtype" style="display: none;" data-type-id="{{ type.type_id }}">
                         <input class="input report_input__item" type="text" value="{{ type.type_text }}" readonly>
                         <input class="input report_input__item report-settings__input--subtype" type="text" value="{{ subtype.subtype_text }}">
                         <button class="btn report__btn report-settings__btn--delete-subtype" type="button" data-subtype-id="{{ subtype.subtype_id }}">Удалить</button>

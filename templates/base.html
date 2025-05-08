@@ -104,6 +104,7 @@
     document.addEventListener("DOMContentLoaded", function(){
         window.csrfToken = document.getElementById("csrf_token").value;
     })
+    const userSettings = {{ user_settings | tojson | safe }};
 </script>
 
 <script src="{{ url_for("static", filename='js/jquery.js') }}"></script>

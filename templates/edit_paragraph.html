@@ -5,7 +5,9 @@
 {% block container %}
 {% from "macros/edit_sentence_buttons.html" import control_buttons, info_icons %}
 {% from "macros/all_popups.html" import buffer_popup, unlink_group_popup, sentence_popup %}
+{% from "macros/editor_checkboxes.html" import editor_checkboxes%}
 {{ super() }}
+
 <input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
 
 <div class="flex">
@@ -31,6 +33,10 @@
             </div>
            
         </div>
+
+        <!-- Отключение проверок -->
+        {{editor_checkboxes()}}
+
         <!-- Кнопка сохранения -->
         <button class="btn report__btn edit-paragraph__btn--save-paragraph-data" id="saveParagraphDataButton">Сохранить изменения</button>
         <!-- Кнопка для вызова попапа буфера -->
@@ -83,7 +89,6 @@
                     
                     <div>
                         <p class="edit-sentence__text">{{ sentence.sentence }}</p>
-                        <p>has_linked_body: {{ sentence.has_linked_body }}</p>
                         {% if not sentence.body_sentences %}
                             <p class="edit-paragraph__title--invisible">У данного главного предложения нет дополнительных предложений</p>
                         {% endif %}

@@ -7,6 +7,7 @@ from utils import get_max_index, check_unique_indices, normalize_paragraph_indic
 from flask_security.decorators import auth_required
 from decorators import require_role_rank
 from logger import logger
+from openai_api import gramma_correction_ai
 
 
 editing_report_bp = Blueprint('editing_report', __name__)
@@ -201,9 +202,12 @@ def update_paragraph_text():
         return jsonify({"status": "error", "message": "Параграф не найден или не соответствует профилю"}), 403
     
     new_paragraph_text = data.get("paragraph_text")
-    logger.info(f"(Обновление текста параграфа) Получены данные для обновления текста параграфа: {new_paragraph_text}")
+    ai_gramma_check = data.get("ai_gramma_check", False)
+    logger.info(f"(Обновление текста параграфа) Получены данные для обновления текста параграфа: {new_paragraph_text}, проверка грамматики: {ai_gramma_check}")
     
     try:
+        if ai_gramma_check:
+            new_paragraph_text = gramma_correction_ai(new_paragraph_text)
         paragraph.update(paragraph=new_paragraph_text)
         logger.info(f"(Обновление текста параграфа) ✅ Текст параграфа успешно обновлен")
         logger.info("(Обновление текста параграфа) -----------------------------------------------")
@@ -261,6 +265,8 @@ def update_sentence_text():
     sentence_type = data.get("sentence_type")
     group_id = data.get("group_id")
     related_id = data.get("related_id")
+    ai_gramma_check = data.get("ai_gramma_check", False)
+    use_dublicate = data.get("use_dublicate", False)
 
     # Проверка типа предложения
     if sentence_type not in ["head", "body", "tail"]:
@@ -269,12 +275,20 @@ def update_sentence_text():
 
     # Выбор модели по типу
     sentence_class = {"head": HeadSentence, "body": BodySentence, "tail": TailSentence}.get(sentence_type)
-    logger.info(f"(Обновление текста предложения /update_sentence_text)(тип предложения {sentence_class}) Получены данные для обновления текста предложения: {data}")
+    logger.info(f"(Обновление текста предложения /update_sentence_text)(тип предложения {sentence_class}) Получены данные для обновления текста предложения: {data}. Проверка грамматики: {ai_gramma_check}. Использовать дубликат: {use_dublicate}")
+    if ai_gramma_check:
+        logger.info(f"(Обновление текста предложения /update_sentence_text) Проверка грамматики через ИИ")
+        try:
+            sentence_text = gramma_correction_ai(sentence_text)
+        except Exception as e:
+            logger.error(f"(Обновление текста предложения /update_sentence_text) ❌ Ошибка при проверке грамматики через ИИ: {str(e)} текс остается прежним")
+            pass
     try:
         sentence_class.edit_sentence(sentence_id=sentence_id,
                                      group_id=group_id,
                                      related_id=related_id,
                                      new_text=sentence_text,
+                                     use_dublicate=use_dublicate,
                                      )
         logger.info(f"(Обновление текста предложения /update_sentence_text) ✅ Текст предложения успешно обновлен")
         logger.info("(Обновление текста предложения /update_sentence_text) ------------------------------------------------------")
@@ -371,9 +385,10 @@ def add_new_sentence():
         logger.error("(Создание нового предложения) ❌ Отсутствуют данные для создания нового предложения")
         return jsonify({"status": "error", "message": "Отсутствуют данные для создания нового предложения"}), 400
     
-    logger.info(f"(Создание нового предложения) Получены данные для создания нового предложения: {data}")
+    logger.info(f"(Создание нового предложения) Получены данные для создания нового предложения: {data}. Использовать дубликат: {data.get('use_dublicate', True)}")
     
     sentence_type = data.get("sentence_type")
+    unique = data.get("unique", False)
     
     if sentence_type == "head":
         class_type = HeadSentence
@@ -398,7 +413,8 @@ def add_new_sentence():
             "report_type_id": report_type_id,
             "sentence": "Введите текст предложения",
             "related_id": related_id,
-            "sentence_index": sentence_index
+            "sentence_index": sentence_index,
+            "unique": unique,
         }
     
     if sentence_id:
@@ -423,11 +439,7 @@ def add_new_sentence():
         
         return jsonify({
             "status": "success",
-            "id": new_sentence.id,
-            "weight": class_type.get_sentence_index_or_weight(new_sentence.id, new_sentence_group.id),
-            "sentence": new_sentence.sentence,
-            "tags": new_sentence.tags,
-            "comment": new_sentence.comment
+            "message": f"Успешно создано новое {sentence_type} предложение",
         }), 201
 
     except Exception as e:
@@ -492,7 +504,6 @@ def delete_paragraph():
     except Exception as e:
         logger.error(f"Error deleting paragraph: {str(e)}")
         return jsonify({"status": "error", "message": f"Не удалось удалить параграф. Ошибка: {e}"}), 400
-
 
     
 @editing_report_bp.route('/delete_sentence', methods=['DELETE'])

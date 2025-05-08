@@ -13,8 +13,7 @@ document.addEventListener("DOMContentLoaded", function(){
     setupLinkReportsCheckboxListener();
     // Добавляем слушатель для формы добавления новой группы ключевых слов
     setupKeywordsFormListener();
-    // Добавляем слушатель для кнопки загрузки файла с ключевыми словами
-    setupUploadWordButtonListener();
+    
 });
 
 
@@ -229,45 +228,6 @@ function setupDeleteKeywordsListener() {
 }
 
 
-/**
- * Устанавливает слушатель для кнопки загрузки файла с ключевыми словами и обрабатывает отправку файла на сервер.
- */
-function setupUploadWordButtonListener() {
-    const uploadWordButton = document.getElementById('upload-word-btn');
-
-    uploadWordButton.addEventListener('click', function(event) {
-        event.preventDefault(); 
-        const ignoreUniqueCheck = document.getElementById("ignore_unique_check").checked ? "true" : "false";
-
-        // Получаем файл из input
-        const fileInput = document.getElementById('word-file-input');
-        const file = fileInput.files[0];
-
-        if (!file) {
-            alert('Please select a file.');
-            return;
-        }
-
-        // Создаем объект FormData для отправки файла
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('ignore_unique_check', ignoreUniqueCheck);
-        formData.append("csrf_token", csrfToken)
-
-        // Отправляем данные на сервер
-        sendRequest({
-            url: "/key_words/upload_keywords_from_word",  
-            data: formData,
-            csrfToken: csrfToken
-        })
-        .then(() => {
-            location.reload(); 
-        })
-        .catch(error => {
-            console.error("Error:", error);
-        });
-    });
-}
 
 
 

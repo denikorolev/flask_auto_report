@@ -21,7 +21,7 @@ from logger import logger
 # Проверка допустимости расширения загружаемого файла
 def allowed_file(file_name, file_type):
     if file_type == "doc":
-        return '.' in file_name and file_name.rsplit('.', 1)[1].lower() in {'docx', "doc"}
+        return '.' in file_name and file_name.rsplit('.', 1)[1].lower() in {'docx', "doc", "odt"}
     elif file_type == "tab":
         return '.' in file_name and file_name.rsplit('.', 1)[1].lower() in {"xlsx"}
     elif file_type == "jpg":

@@ -5,6 +5,7 @@
 {% block container %}
 {% from "macros/edit_sentence_buttons.html" import control_buttons, info_icons %}
 {% from "macros/all_popups.html" import buffer_popup, unlink_group_popup, sentence_popup %}
+{% from "macros/editor_checkboxes.html" import editor_checkboxes%}
 {{ super() }}
 <input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
 
@@ -29,6 +30,9 @@
                 <label>Теги:</label>
                 <input type="text" id="sentence_tags" value="{{ head_sentence.tags }}" class="input">
             </div>
+
+            <!-- Отключение проверок -->
+            {{editor_checkboxes()}}
 
             <button class="btn report__btn edit-sentence__btn--save-sentence-data" id="saveSentenceDataButton">Сохранить изменения</button>
             <!-- Кнопка для вызова попапа буфера -->

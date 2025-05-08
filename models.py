@@ -919,6 +919,7 @@ class SentenceBase(BaseModel):
                       new_text=None, 
                       new_tags=None, 
                       new_comment=None, 
+                      use_dublicate=True,
                       ):
         """
         Универсальный метод редактирования предложений (Head, Body, Tail).
@@ -958,9 +959,11 @@ class SentenceBase(BaseModel):
             "sentence_type": sentence_type,
             "report_type_id": sentence.report_type_id
             }
-        
-        similar_sentence = find_similar_exist_sentence(**new_sentence_data)
-        if similar_sentence:
+        similar_sentence = None
+        if use_dublicate:
+            similar_sentence = find_similar_exist_sentence(**new_sentence_data)
+            
+        if similar_sentence and similar_sentence.id != int(sentence_id):
             logger.debug(f"(метод edit_sentence класса SentenceBase) 🧩 Предложение уже существует в базе данных. Привязываю найденное предложение.")
             index_or_weight = cls.get_sentence_index_or_weight(sentence_id, group_id)
             cls.link_to_group(similar_sentence.id, group_id, sentence_weight=index_or_weight, sentence_index=index_or_weight)
@@ -992,7 +995,8 @@ class SentenceBase(BaseModel):
                tags=None, 
                comment=None, 
                sentence_weight=1,
-               unique=False):
+               unique=False,
+        ):
         """
         Универсальный метод создания предложений (head, body, tail).
 

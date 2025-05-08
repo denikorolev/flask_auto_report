@@ -44,6 +44,17 @@ document.addEventListener("DOMContentLoaded", function(){
     
      // Вызываем логику загрузки файлов шаблона Word и росписи
     initFileUploadListener();
+
+    // Слушатель на селект для выбора типа отчета
+    document.getElementById('reportTypes').addEventListener('change', function() {
+        showSelectedType(this);
+    });
+
+    // Инициализация отображения выбранного типа отчета через эмуляцию события
+    const reportTypeSelect = document.getElementById('reportTypes');
+    const event = new Event('change');
+    reportTypeSelect.dispatchEvent(event);
+       
 });
 
 // Функция для добавления нового типа отчета
@@ -158,6 +169,21 @@ async function addSubtype() {
     }
 }
 
+// Логика для отображения выбранного типа отчета
+function showSelectedType(select) {
+    const selectedTypeId = select.value;
+    const reportTypes = document.querySelectorAll('.report-settings__item--subtype');
+
+    reportTypes.forEach(type => {
+        if (type.getAttribute('data-type-id') === selectedTypeId) {
+            console.log('show');
+            type.style.display = 'flex';
+        } else {
+            console.log('hide');
+            type.style.display = 'none';
+        }
+    });
+}
 
 // Логика для удаления подтипа отчета
 async function deleteSubtype(button) {

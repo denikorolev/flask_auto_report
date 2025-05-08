@@ -106,16 +106,19 @@ async function addBodySentence(itemFromBuffer) {
     const bodySentenceList = document.getElementById("editBodySentenceList");
     const headSentenceId = bodySentenceList.getAttribute("data-head-sentence-id");
     const reportId = document.getElementById("editSentenceContainer").getAttribute("data-report-id");
+    const uniqueSentence = !document.getElementById("useDuplicate").checked;
 
     data = {
         related_id: headSentenceId,
         report_id: reportId,
-        sentence_type: "body"
+        sentence_type: "body",
+        unique: uniqueSentence
     }
 
     if (itemFromBuffer) {
         // Если есть данные из буфера, используем их
         data.sentence_id = itemFromBuffer.object_id;
+        data.unique = false;
     }
 
     try {
@@ -127,6 +130,7 @@ async function addBodySentence(itemFromBuffer) {
 
         if (response.status === "success") {
             console.log("Предложение успешно добавлено:", response.data);
+            window.location.reload();
         } 
             
     } catch (error) {
@@ -190,9 +194,11 @@ function makeSentenceEditableActions(sentenceElement) {
     function finishEditing() {
         sentenceElement.setAttribute("contenteditable", "false");
         sentenceElement.removeEventListener("keydown", onEnterPress);
+        const firstGrammaSentenceCheckBox = document.getElementById("firstGrammaSentence").checked;
 
-        const newText = sentenceElement.textContent.trim();
+        const newText = firstGrammaSentenceCheckBox ? firstGrammaSentence(sentenceElement.textContent.trim()) : sentenceElement.textContent.trim();
         if (newText !== oldText) {
+            sentenceElement.textContent = newText; // Обновляем текст в элементе
             updateSentence(sentenceElement); // Вызов твоей функции обновления
         }
     }
@@ -476,6 +482,7 @@ async function updateSentence(sentenceElement) {
     const groupId = sentenceElement.closest("li").getAttribute("data-sentence-group-id"); // id группы через параграф
     const sentenceText = sentenceElement.textContent.trim();
     const related_id = sentenceElement.closest("li").getAttribute("data-head-sentence-id");
+    const aiGrammaCheck = document.getElementById("grammaAiChecker").checked;
 
 
     try {
@@ -488,9 +495,13 @@ async function updateSentence(sentenceElement) {
                 group_id: groupId,
                 sentence_text: sentenceText,
                 related_id: related_id,
+                ai_gramma_check: aiGrammaCheck
             }
         });
 
+        if (response.status === "success" && aiGrammaCheck) {
+            window.location.reload();
+        }
     } catch (error) {
         console.error("Ошибка обновления предложения:", error);
     }
@@ -518,6 +529,7 @@ function addSentenceDataToBuffer(button) {
     };
 
     addToBuffer(dataToBuffer);
+    toastr.success("Предложение добавлено в буфер", "Успех")
 }
 
 

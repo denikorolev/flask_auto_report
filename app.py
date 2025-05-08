@@ -29,7 +29,7 @@ from openai_api import openai_api_bp
 from key_words import key_words_bp
 from admin import admin_bp
 
-version = "0.9.5.0"
+version = "0.9.5.2"
 
 app = Flask(__name__)
 app.config.from_object(get_config()) # Load configuration from file config.py
@@ -201,6 +201,12 @@ def one_time_sync_tasks():
     if not session.get("synced"):  # Проверяем, была ли уже выполнена синхронизация
         logger.info("Синхронизация настроек профилей")
         sync_all_profiles_settings(current_user.id)
+        try:
+            # Установка настройки языка в зависимости от профиля
+            session["lang"] = app.config.get("PROFILE_SETTINGS", {}).get("APP_LANGUAGE", "ru")
+            print(f"Установлен язык: {session['lang']}")
+        except Exception as e: 
+            logger.warning(f"⚠️ Ошибка при установке языка: {e}")
         try:
             # Запуск полной подготовки файлов (удаление старых + генерация новых + загрузка в OpenAI)
             prepare_impression_snippets(g.current_profile.id)

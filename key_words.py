@@ -5,7 +5,7 @@ from flask_login import current_user
 from models import db, KeyWord, Report
 from itertools import chain
 from file_processing import file_uploader
-from sentence_processing import group_keywords, sort_key_words_group, process_keywords, check_existing_keywords, extract_keywords_from_doc
+from sentence_processing import group_keywords, sort_key_words_group, process_keywords, check_existing_keywords
 from errors_processing import print_object_structure
 from utils import ensure_list
 from db_processing import add_keywords_to_db
@@ -17,7 +17,6 @@ key_words_bp = Blueprint("key_words", __name__)
 @key_words_bp.route("/key_words", methods=["POST","GET"])
 @auth_required()
 def key_words():
-    # menu=current_app.config["MENU"]
     current_profile_reports=Report.find_by_profile(g.current_profile.id)
     
     # Prepare global key words
@@ -34,7 +33,6 @@ def key_words():
     
     return render_template("/key_words.html",
                            title="Key words",
-                        #    menu=menu,
                            user_reports=current_profile_reports,
                            global_key_words=global_key_words,
                            report_key_words=report_key_words)
@@ -76,52 +74,6 @@ def add_keywords():
 
     return {"status": "success"}, 200
 
-
-# Маршрут для добавления групп ключевых слов из файла word
-@auth_required()
-@key_words_bp.route('/upload_keywords_from_word', methods=['POST'])
-def upload_keywords_from_word():
-    
-    # Логика загрузки файла
-    if 'file' not in request.files:
-        return jsonify({"status": "error", "message": "No file part"}), 400
-    file = request.files['file']
-    folder_name = "keywords_from_word"
-    if file.filename == '':
-        return jsonify({"status": "error", "message": "No selected file"}), 400
-    # Загружаем файл с помощью функции file_uploader и получаем сразу 2 переменные ответ и путь
-    upload_result, file_path = file_uploader(file, "doc", folder_name)
-    if "successfully" not in upload_result:
-        return jsonify({"status": "error", "message": upload_result}), 400
-    if not file_path:
-        return jsonify({"status": "error", "message": "File upload failed. No valid file path."}), 400
-
-    # Остальная логика
-    ignore_unique_check = request.form.get('ignore_unique_check', 'false').lower() == 'true'
-    # Извлекаем ключевые слова из документа
-    keywords = extract_keywords_from_doc(file_path)
-
-    all_keywords = []
-    for group in keywords:
-        all_keywords.extend(group['key_words'])
-        
-    # Если флаг игнорирования уникальности не установлен, выполняем проверку
-    if not ignore_unique_check:
-        # Проверяем, какие ключевые слова уже существуют у пользователя
-        existing_keywords_message = check_existing_keywords(all_keywords)
-
-        # Если есть дублирующиеся ключевые слова, возвращаем сообщение об ошибке
-        if existing_keywords_message:
-            return jsonify({"status": "error", "message": existing_keywords_message}), 400
-
-    # Добавляем ключевые слова в базу данных
-    for group in keywords:
-        report_ids = ensure_list(group['report_id'])
-        key_words = group['key_words']
-
-        add_keywords_to_db(key_words, report_ids)
-
-    return jsonify({"status": "success", "message": "Keywords from Word document successfully uploaded"}), 200
 
 
 # Маршрут для добавления одного или нескольких ключевых слов в уже существующую группу

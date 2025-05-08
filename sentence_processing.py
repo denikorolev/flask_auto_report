@@ -12,47 +12,6 @@ from collections import defaultdict
 
 
 
-def extract_keywords_from_doc(file_path):
-    """
-    Извлекает ключевые слова из Word документа, группируя их по протоколам или глобально.
-    
-    Каждая строка в документе соответствует группе ключевых слов, а ключевые слова в строке разделены запятыми.
-    Жирный текст в документе указывает на привязку ключевых слов к протоколу. Если текст жирным не совпадает с именем 
-    протокола, ключевые слова считаются глобальными.
-    
-    Args:
-        file_path (str): Путь к файлу документа Word.
-
-    Returns:
-        list: Список словарей, где каждый словарь содержит 'report_id' (ID протокола или None для глобальных ключевых слов) 
-              и 'key_words' (список ключевых слов).
-    """
-    doc = Document(file_path)
-    keywords = []
-    current_protocol = None  # Текущий протокол (если жирным текстом обозначено имя протокола)
-    current_profile_reports = Report.find_by_profile(g.current_profile.id)
-    # Получаем имена всех протоколов пользователя
-    report_names = {report.report_name: report.id for report in current_profile_reports}
-
-    for para in doc.paragraphs:
-        if para.runs and para.runs[0].bold:  # Если параграф содержит жирный текст
-            potential_report_name = para.text.strip()
-            if potential_report_name in report_names:
-                current_protocol = report_names[potential_report_name]  # Запоминаем ID протокола
-            else:
-                current_protocol = None  # Сброс, так как это глобальные ключевые слова
-
-        else:
-            # Разделяем ключевые слова по запятой
-            key_words = process_keywords(para.text)
-            if key_words:
-                keywords.append({
-                    'report_id': current_protocol,  # Если current_protocol = None, это глобальные ключевые слова
-                    'key_words': key_words
-                })
-
-    return keywords
-
 # Функция для обработки строки ключевых слов, разделенных запятой
 def process_keywords(key_word_input: str) -> list:
     """Обрабатываем строку ключевых слов, разделенных запятой, 
@@ -427,17 +386,6 @@ def group_keywords(keywords, with_index=False, with_report=False):
 def compare_sentences_by_paragraph(new_sentences, report_id):    
     """
     Compares new sentences with existing sentences in their respective paragraphs to determine uniqueness.
-
-    Args:
-        existing_paragraphs (list[Paragraph]): List of Paragraph objects with related sentences.
-        new_sentences (list[dict]): List of new sentences to be added.
-            Each dictionary should have the structure {"paragraph_id": int, "text": str}.
-        key_words (list[str]): List of key words to remove during cleaning.
-
-    Returns:
-        dict: Contains "duplicates" and "unique" lists:
-            - "duplicates": List of new sentences that match existing ones.
-            - "unique": List of new sentences considered unique.
     """
     logger.info(f"(функция compare_sentences_by_paragraph) 🚀 Начато сравнение новых предложений с существующими в базе данных")
     logger.debug(f"(функция compare_sentences_by_paragraph) Получены новые предложения - ({new_sentences})")

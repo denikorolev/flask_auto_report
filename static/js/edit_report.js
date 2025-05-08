@@ -360,6 +360,7 @@ async function addParagraph(itemFromBuffer) {
         
         if (response.status === "success") {
             console.log("Параграф добавлен:", response.message);
+            window.location.reload();
         } 
     } catch (error) {
         console.error("Ошибка запроса:", error);
@@ -478,9 +479,12 @@ function makeEditable(paragraphElement) {
     function finishEditing() {
         paragraphElement.setAttribute("contenteditable", "false"); // Заканчиваем редактирование
         paragraphElement.removeEventListener("keydown", onEnterPress); // Удаляем обработчик Enter
+        const firstGrammaSentenceCheckBox = document.getElementById("firstGrammaSentence").checked; // проверяем включена ли автопроверка текста
+        const newText = firstGrammaSentenceCheckBox ? firstGrammaSentence(paragraphElement.textContent.trim()) : paragraphElement.textContent.trim(); 
 
-        const newText = paragraphElement.textContent.trim();
+
         if (newText !== oldText) {
+            paragraphElement.textContent = newText; // Обновляем текст параграфа
             updateParagraph(paragraphElement); // Отправляем на сервер только если текст изменился
         }
     }
@@ -505,7 +509,7 @@ function makeEditable(paragraphElement) {
 async function updateParagraph(paragraphElement) {
     const paragraphId = paragraphElement.getAttribute("data-paragraph-id");
     const paragraphText = paragraphElement.textContent.trim();
-    console.log("Отправка обновленного текста:", paragraphText);
+    const aiGrammaCheck = document.getElementById("grammaAiChecker").checked;
 
     try {
         const response = await sendRequest({
@@ -513,11 +517,15 @@ async function updateParagraph(paragraphElement) {
             method: "PATCH",
             data: {
                 paragraph_id: paragraphId,
-                paragraph_text: paragraphText
+                paragraph_text: paragraphText,
+                ai_gramma_check: aiGrammaCheck
+
             }
         });
 
-        console.log("Параграф обновлен:", response);
+        if (response.status === "success" && aiGrammaCheck) {
+            window.location.reload();
+        }   
     } catch (error) {
         console.error("Ошибка обновления параграфа:", error);
     }
@@ -542,6 +550,7 @@ function addGroupDataToBuffer(button, sentenceType) {
     };
 
     addToBuffer(dataToBuffer);
+    toastr.success("Параграф добавлен в буфер", "Успех")
     console.log("Добавление в буфер:", dataToBuffer);
 
 }
