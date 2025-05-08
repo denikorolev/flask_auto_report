@@ -17,8 +17,7 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     });
 
-    // // Триггерим для начальной настройки(имитируем нажатие от пользователя, чтобы запустить логику выбора)
-    // document.getElementById("reportCreationActionGroup").dispatchEvent(new Event("change")); 
+    
     // Вешаем функцию обработчик на кнопку "Создать протокол"
     document.getElementById("createReportButton")?.addEventListener("click", handleCreateReportClick);
     // Вешаем обработчик на чекбоксы существующих отчетов
@@ -133,9 +132,11 @@ function handleCreateReportClick() {
             createReportFromFile();
             break;
         case "existing_few":
+            createReportFromExistingFew();
+            break;
         case "shared":
         case "public":
-            createReportFromExistingFew();
+            createReportFromPublic();
             break;
         default:
             alert("Пожалуйста, выберите способ создания протокола.");
@@ -235,10 +236,10 @@ async function loadPublicReports() {
             response.reports.forEach(report => {
                 const li = document.createElement("li");
                 li.setAttribute("data-report-type", report.report_type);
-                li.classList.add("existing-fewreports__item");
+                li.classList.add("public-reports__item");
                 li.innerHTML = `
                     <label>
-                        <input type="checkbox" value="${report.id}" />
+                        <input type="radio" name="public_report_radio" value="${report.id}">
                         ${report.report_name} - ${report.report_type}
                     </label>
                 `;
@@ -360,6 +361,41 @@ function createReportFromExistingFew() {
 
     sendRequest({
         url: "/new_report_creation/create_report_from_existing_few",
+        data: jsonData
+    }).then(response => {
+        if (response?.status === "success") {
+            window.location.href = `/editing_report/edit_report?report_id=${response.report_id}`;
+        }
+    });
+}
+
+function createReportFromPublic() {
+    const reportName = document.getElementById("report_name")?.value?.trim();
+    const reportSubtype = document.getElementById("reportSubtype")?.value;
+    const comment = document.getElementById("reportCreationComment")?.value?.trim() || "";
+    const reportSide = document.querySelector("input[name='report_side']:checked")?.value === "true";
+    const selectedReport = document.querySelector("input[name='public_report_radio']:checked");
+    const selectedReportId = selectedReport?.value;
+    
+
+    if (!selectedReportId) {
+        alert("Выберите хотя бы один существующий отчет!");
+        return;
+    }
+
+    if (!reportName || !reportSubtype) {
+        alert("Заполните все обязательные поля: название протокола и его подтип!");
+        return;
+    }
+    const jsonData = {
+        report_name: reportName,
+        report_subtype: reportSubtype,
+        comment: comment,
+        report_side: reportSide,
+        selected_report_id: selectedReportId
+    };
+    sendRequest({
+        url: "/new_report_creation/create_report_from_public",
         data: jsonData
     }).then(response => {
         if (response?.status === "success") {

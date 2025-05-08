@@ -2,7 +2,7 @@
 
 from flask import Blueprint, render_template, request, g, jsonify
 from flask_login import current_user
-from models import db, Report, ReportType, Paragraph, HeadSentence, BodySentence, ReportShare
+from models import db, Report, ReportType, ReportSubtype, Paragraph, HeadSentence, BodySentence, ReportShare, HeadSentenceGroup
 from sentence_processing import extract_paragraphs_and_sentences
 from file_processing import allowed_file
 from utils import ensure_list
@@ -154,11 +154,12 @@ def get_shared_reports():
 def get_public_reports():
     logger.info("(Маршрут: get_public_reports)------------------------")
     logger.info("(Маршрут: get_public_reports) 🚀 Запрос общедоступных протоколов")
-    
     try:
         public_reports = Report.query.filter(
             Report.public == True,
         ).all()
+        
+        print("public_reports", public_reports)
 
         if not public_reports:
             return jsonify({
@@ -166,10 +167,9 @@ def get_public_reports():
                 "message": "Нет общедоступных протоколов",
                 "reports": []
             })
-
-        public_reports = []
+        public_reports_data = []
         for report in public_reports:
-            public_reports.append({
+            public_reports_data.append({
                 "id": report.id,
                 "report_name": report.report_name,
                 "report_type": report.report_to_subtype.subtype_to_type.type_text
@@ -178,7 +178,7 @@ def get_public_reports():
         logger.info(f"(Маршрут: get_public_reports) ✅ Найдено {len(public_reports)} общедоступных протоколов")
         return jsonify({
             "status": "success",
-            "reports": public_reports
+            "reports": public_reports_data
         })
 
     except Exception as e:
@@ -386,6 +386,97 @@ def create_report_from_existing_few():
 
 
 
+# Создание нового протокола на основе одного или нескольких существующих
+@new_report_creation_bp.route('/create_report_from_public', methods=['POST'])
+@auth_required()
+def create_report_from_public():
+    logger.info(f"(Маршрут: создание протокола из публичного)------------------------")
+    logger.info(f"(Маршрут: создание протокола из публичного) 🚀 Начато создание протокола")
+    try:
+        data = request.get_json()
+        logger.debug(f"(Маршрут: создание протокола из публичного) Получены данные: {data}")
+
+        report_name = data.get("report_name")
+        report_subtype = int(data.get("report_subtype"))
+        comment = data.get("comment", "")
+        report_side = data.get("report_side", False)
+        public_report = Report.get_by_id(data.get("selected_report_id"))
+        report_type_id = ReportSubtype.get_by_id(report_subtype).subtype_to_type.id
+        
+        if not public_report or not public_report.public:
+            return jsonify({
+                "status": "error", 
+                "message": "Выбранный протокол не является общедоступным"
+            }), 400
+
+        new_report_data = {
+            "profile_id": g.current_profile.id,
+            "report_subtype": report_subtype,
+            "report_name": report_name,
+            "user_id": current_user.id,
+            "comment": comment,
+            "public": False,
+            "report_side": report_side
+        }
+        try:
+            new_report = Report.create(**new_report_data)
+            logger.info(f"(Маршрут: создание протокола из публичного) ✅ Протокол создан успешно. ID: {new_report.id}")
+        except Exception as e:
+            logger.error(f"(Маршрут: создание протокола из публичного) ❌ Ошибка при создании нового протокола: {str(e)}")
+            return jsonify({
+                "status": "error",
+                "message": f"Ошибка при создании нового протокола."
+            }), 500
+            
+       
+        # Копируем параграфы и предложения из публичного протокола
+        try:
+            for paragraph in public_report.report_to_paragraphs:
+                public_head_sentences = HeadSentenceGroup.get_group_sentences(paragraph.head_sentence_group_id)
+                new_paragraph = Paragraph.create(
+                    report_id=new_report.id,
+                    paragraph_index=paragraph.paragraph_index,
+                    paragraph=paragraph.paragraph,
+                    paragraph_visible=paragraph.paragraph_visible,
+                    title_paragraph=paragraph.title_paragraph,
+                    bold_paragraph=paragraph.bold_paragraph,
+                    head_sentence_group_id=None,
+                    tail_sentence_group_id=None,
+                    is_impression=False,
+                    is_additional=paragraph.is_additional,
+                    str_after=paragraph.str_after,
+                    str_before=paragraph.str_before,
+                    is_active=paragraph.is_active
+                )
+                # Копируем предложения
+                for sentence in public_head_sentences:
+                    HeadSentence.create(
+                        user_id=current_user.id,
+                        report_type_id=report_type_id,
+                        sentence=sentence["sentence"],
+                        related_id=new_paragraph.id,
+                        sentence_index=sentence["sentence_index"],
+                        tags=sentence["tags"],
+                        comment=sentence["comment"]
+                    )
+            logger.info(f"(Маршрут: создание протокола из публичного) ✅ Параграфы и предложения успешно скопированы.")
+            return jsonify({
+                "status": "success",
+                "message": "Протокол успешно создан",
+                "report_id": new_report.id
+            }), 200
+        except Exception as e:
+            logger.error(f"(Маршрут: создание протокола из публичного) ❌ Ошибка при копировании параграфов и предложений: {str(e)}")
+            return jsonify({
+                "status": "error",
+                "message": f"Ошибка при копировании параграфов и предложений: {str(e)}"
+            }), 500
+    except Exception as e:
+        logger.error(f"(Маршрут: создание протокола из публичного) ❌ Ошибка при создании протокола: {str(e)}")
+        return jsonify({
+            "status": "error",
+            "message": f"Ошибка при создании протокола. Не удалось создать протокол."
+        }), 500
 
 
    
