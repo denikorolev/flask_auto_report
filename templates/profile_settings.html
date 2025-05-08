@@ -40,7 +40,7 @@
     <!-- Блок настроек для сохранения настроек профиля в БД -->
      <!-- Имя инпута должно обязательно совпадать с ключом настройки 
       в DEFAULT_PROFILE_SETTINGS в config.py  -->
-    {% if user_max_rank == 4 %}
+    {% if user_max_rank > 3 %}
     <div class="flex container">
         <div class="settings-block">
             <h3 class="settings-block__title">Настройки</h3>
@@ -56,7 +56,7 @@
                         {% if user_settings.USE_SENTENCE_AUTOSAVE %} checked {% endif %}>
                 </li>
                 <li class="settings-block__item">
-                    <label class="settings-block__label" for="appLanguage">Theme:</label>
+                    <label class="settings-block__label" for="appLanguage">Язык приложения:</label>
                     <select class="settings-block__select" id="appLanguage" name="APP_LANGUAGE">
                         <option value="ru" {% if user_settings.APP_LANGUAGE == 'ru' %}selected{% endif %}>русский</option>
                         <option value="eng" {% if user_settings.APP_LANGUAGE == 'eng' %}selected{% endif %}>английский</option>
@@ -70,30 +70,37 @@
                     </select>
                 </li>
                 <li class="settings-block__item">
-                    <label class="settings-block__label" for="similarityThesholdFuzz">Порог схожести предложений:</label>
+                    <label class="settings-block__label" for="similarityThesholdFuzz">Порог схождения для поиска дубликатов предложений:</label>
                     <input class="settings-block__select" id="similarityThesholdFuzz" name="SIMILARITY_THRESHOLD_FUZZ" value="{{ user_settings.SIMILARITY_THRESHOLD_FUZZ }}">
                     
                 </li>
                 <li class="settings-block__item">
                     <label class="settings-block__label" for="exceptWords">Слова исключения для фильтрации текста:</label>
-                    <!--<div class="settings-block__block" id="exceptWords">
-                        {% for word in user_settings.EXCEPT_WORDS  %}
-                        <span>{{ word }}  </span>
-                        {% endfor %}
-                    </div>-->
                     <input class="settings-block__input" id="exceptWords" name="EXCEPT_WORDS" value="{{ user_settings.EXCEPT_WORDS }}">
                    
                 </li>
                 <li class="settings-block__item">
                     <label class="settings-block__label" for="exceptionsAfterPunctuation">Слова исключения аббревиатуры:</label>
-                    <!--<div class="settings-block__block" id="exceptionsAfterPunctuation">
-                        {% for word in user_settings.EXCEPT_WORDS  %}
-                        <span>{{ word }}  </span>
-                        {% endfor %} 
-                    </div>-->
-                    
                     <input class="settings-block__input" id="exceptionsAfterPunctuation" name="EXCEPTIONS_AFTER_PUNCTUATION" value="{{ user_settings.EXCEPTIONS_AFTER_PUNCTUATION }}">
                     
+                </li>
+                <li class="settings-block__item">
+                    <label class="settings-block__label" for="useSentenceAICheckDefault">Использовать AI проверку предложений по умолчанию</label>
+                    <input class="settings-block__input" type="checkbox" id="useSentenceAICheckDefault" name="USE_SENTENCE_AI_CHECK_DEFAULT"
+                        {% if user_settings.USE_SENTENCE_AI_CHECK_DEFAULT %} checked {% endif %}>
+                        
+                </li>
+                <li class="settings-block__item">
+                    <label class="settings-block__label" for="useFirstGrammaSentenceDefault">Использовать автоматическую проверку предложений в браузере по умолчанию</label>
+                    <input class="settings-block__input" type="checkbox" id="useFirstGrammaSentenceDefault" name="USE_FIRST_GRAMMA_SENTENCE_DEFAULT"
+                        {% if user_settings.USE_FIRST_GRAMMA_SENTENCE_DEFAULT %} checked {% endif %}>
+                        
+                </li>
+                <li class="settings-block__item">
+                    <label class="settings-block__label" for="useDublicateSearchDefault">Использовать поиск дубликатов по умолчанию</label>
+                    <input class="settings-block__input" type="checkbox" id="useDublicateSearchDefault" name="USE_DUBLICATE_SEARCH_DEFAULT"
+                        {% if user_settings.USE_DUBLICATE_SEARCH_DEFAULT %} checked {% endif %}>
+                        
                 </li>
             </ul>
             <br>

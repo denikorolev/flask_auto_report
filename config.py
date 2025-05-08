@@ -96,7 +96,10 @@ class Config:
                                 "APP_THEME": "light",
                                 "SIMILARITY_THRESHOLD_FUZZ": 95,
                                 "EXCEPT_WORDS": ["мм", "см"],
-                                "EXCEPTIONS_AFTER_PUNCTUATION": ["МРТ", "КТ", "УЗИ", "РКТ", "ПЭТ", "ПЭТ-КТ", "МСКТ", "РГ", "ЭКГ", "ФГДС"]
+                                "EXCEPTIONS_AFTER_PUNCTUATION": ["МРТ", "КТ", "УЗИ", "РКТ", "ПЭТ", "ПЭТ-КТ", "МСКТ", "РГ", "ЭКГ", "ФГДС"],
+                                "USE_SENTENCE_AI_CHECK_DEFAULT": True,
+                                "USE_FIRST_GRAMMA_SENTENCE_DEFAULT": True,
+                                "USE_DUBLICATE_SEARCH_DEFAULT": True,
                                 }
     
     @staticmethod
