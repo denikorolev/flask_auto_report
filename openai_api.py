@@ -12,12 +12,6 @@ import re
 
 openai_api_bp = Blueprint("openai_api", __name__)
 
-# Запрещалка для доступа к API OpenAI
-@openai_api_bp.before_request
-@roles_required("superadmin")  
-def restrict_to_superadmin():
-    pass
-
 # Функция для подсчета токенов в тексте
 def count_tokens(text: str) -> int:
     """

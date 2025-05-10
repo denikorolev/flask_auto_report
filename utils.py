@@ -87,38 +87,6 @@ def normalize_head_sentence_indices(paragraph_id):
         raise ValueError(f"Ошибка при исправлении индексов: {str(e)}")
 
 
-# Проверка уникальности индексов у параграфов и главных предложений
-def check_unique_indices(paragraphs):
-    """
-    Проверяет, уникальны ли индексы параграфов и главных предложений.
-    Args:
-        paragraphs (list): Список параграфов.
-    Raises:
-        ValueError: Если обнаружены дублирующиеся индексы параграфов или главных предложений.
-    """
-    paragraph_indices = set()
-
-    for paragraph in paragraphs:
-        paragraph_index = paragraph["paragraph_index"]
-
-        # Проверяем дубликаты параграфов
-        if paragraph_index in paragraph_indices:
-            raise ValueError(f"Дубликат индекса параграфа: {paragraph_index}")
-        paragraph_indices.add(paragraph_index)
-
-        # Проверяем дубликаты в head_sentences
-        head_sentence_indices = set()
-        for sentence in paragraph["head_sentences"]:
-            sentence_index = sentence["index"]
-
-            if sentence_index in head_sentence_indices:
-                raise ValueError(
-                    f"Дубликат индекса главного предложения: {sentence_index} в параграфе {paragraph_index}"
-                )
-            head_sentence_indices.add(sentence_index)
-
-    return True
-
 
 
         

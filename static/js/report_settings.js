@@ -3,6 +3,16 @@
 
 document.addEventListener("DOMContentLoaded", function(){
 
+    // Слушатель на селект для выбора типа отчета
+    document.getElementById('reportTypesDefault').addEventListener('change', function() {
+        reportTypesSelect(this);
+    });
+
+    // Слушатель на селект для выбора подтипа отчета
+    document.getElementById('reportSubtypesDefault').addEventListener('change', function() {
+        reportSubtypesSelect(this);
+    });
+
     // Слушатель для кнопки "Добавить тип отчета"
     document.getElementById('newTypeButton').addEventListener('click', function() {
        addNewType();
@@ -57,14 +67,47 @@ document.addEventListener("DOMContentLoaded", function(){
        
 });
 
+
+// Функция для обработки выбора типа отчета
+function reportTypesSelect(select) {
+    const selectedType = select.value;
+    const newTypeInput = document.getElementById('newTypeLabel');
+
+    if (selectedType === 'new_type') {
+        newTypeInput.style.display = 'block'; // Показываем поле для ввода нового типа
+    }
+    else {
+        newTypeInput.style.display = 'none'; // Скрываем поле для ввода нового типа
+    }
+}
+
+// Функция для обработки выбора подтипа отчета
+function reportSubtypesSelect(select) {
+    const selectedSubtype = select.value;
+    const newSubtypeInput = document.getElementById('newSubtypeLabel');
+    
+    if (selectedSubtype === 'new_subtype') {
+        newSubtypeInput.style.display = 'block'; // Показываем поле для ввода нового подтипа
+    }
+    else {
+        newSubtypeInput.style.display = 'none'; // Скрываем поле для ввода нового подтипа
+    }
+}
+
+
 // Функция для добавления нового типа отчета
 async function addNewType() {
+    const newTypeLabel = document.getElementById('newTypeLabel');
     const newTypeInput = document.getElementById('newTypeInput');
-    if (!newTypeInput) return; // Проверяем, есть ли форма на странице
-       
-    const newType = newTypeInput.value.trim();
+    const newTypeSelect = document.getElementById('reportTypesDefault');
 
-    if (!newType) {
+    let newTypeForRequest = newTypeSelect.value;
+    if (newTypeForRequest === 'new_type') {
+        newTypeForRequest = newTypeInput.value.trim();
+    }
+       
+
+    if (!newTypeForRequest) {
         toastr.error('Поле с именем нового типа не должно быть пустым.');
         return;
     }
@@ -72,7 +115,7 @@ async function addNewType() {
     try {
         const response = await sendRequest({
             url: '/report_settings/add_type',  // URL для добавления нового типа
-            data: { new_type: newType },
+            data: { new_type: newTypeForRequest },
         });
 
         // Если запрос успешен, обновляем список типов на странице
@@ -147,9 +190,16 @@ async function addSubtype() {
     const typeSelect = document.getElementById('reportTypes');
     const newSubtypeInput = document.getElementById('newSubtypeInput');
     const reportTypeId = typeSelect.value;
-    const newSubtypeName = newSubtypeInput.value.trim();
+    const subtypeDefault = document.getElementById('reportSubtypesDefault');
 
-    if (!newSubtypeName || !reportTypeId) {
+    let newSubtypeForRequest = subtypeDefault.value;
+
+    if (newSubtypeForRequest === 'new_subtype') {
+        newSubtypeForRequest = newSubtypeInput.value.trim();
+    }
+
+
+    if (!newSubtypeForRequest || !reportTypeId) {
         toastr.error('Поле с именем нового подтипа не должно быть пустым и должен быть выбран тип протокола.');
         return;
     }
@@ -157,7 +207,7 @@ async function addSubtype() {
     try {
         const response = await sendRequest({
             url: '/report_settings/add_subtype',  
-            data: { report_type_id: reportTypeId, new_subtype_name: newSubtypeName },
+            data: { report_type_id: reportTypeId, new_subtype_name: newSubtypeForRequest },
         });
 
         if (response.status === 'success') {

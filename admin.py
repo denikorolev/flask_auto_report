@@ -62,7 +62,8 @@ def admin():
     return render_template("admin.html",
                            title="Admin",
                            all_models=all_models,
-                           association_tables=association_tables)
+                           association_tables=association_tables,
+                           )
 
 
 @admin_bp.route("/fetch_data", methods=["POST"])

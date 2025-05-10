@@ -1239,3 +1239,15 @@ body {
     background-color: #007bff;
     color: white;
 }
+
+
+/* help-block */
+
+.help-text {
+    max-width: 80%;
+    font-size: 16px;
+    color: #434141; /* нейтрально-серый */
+    line-height: 1.2;
+    margin-top: 8px;
+    margin-bottom: 12px;
+}

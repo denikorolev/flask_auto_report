@@ -28,6 +28,7 @@ def choosing_report():
     current_profile = g.current_profile
     report_types_and_subtypes = ReportType.get_types_with_subtypes(current_profile.id) 
     current_profile_reports = Report.find_by_profile(current_profile.id)
+    default_report_types = current_app.config.get("REPORT_TYPES_DEFAULT_RU", [])
 
     if request.method == "POST":
         logger.info("(Выбор шаблона протокола) Получен POST-запрос на выбор шаблона протокола.")
@@ -53,7 +54,8 @@ def choosing_report():
         "choose_report.html",
         title="Выбор шаблона протокола",
         user_reports=current_profile_reports,
-        report_types_and_subtypes=report_types_and_subtypes
+        report_types_and_subtypes=report_types_and_subtypes,
+        default_report_types=default_report_types,
     )
 
 

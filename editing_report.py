@@ -3,7 +3,7 @@
 from flask import Blueprint, render_template, request, current_app, jsonify, g
 from flask_security import current_user
 from models import db, User, Report, Paragraph, HeadSentence, BodySentence, TailSentence, HeadSentenceGroup, TailSentenceGroup, BodySentenceGroup, ReportShare
-from utils import get_max_index, check_unique_indices, normalize_paragraph_indices
+from utils import get_max_index, normalize_paragraph_indices
 from flask_security.decorators import auth_required
 from decorators import require_role_rank
 from logger import logger
@@ -615,22 +615,6 @@ def delete_subsidiaries():
         return jsonify({"status": "error", "message": "Неизвестный тип объекта"}), 400
         
     
-# проверяет уникальность индексов параграфов и главных предложений
-@editing_report_bp.route('/report_checkers', methods=['POST'])
-@auth_required()
-def report_checkers():
-    data = request.get_json()
-    logger.debug(f"Получены данные для запуска проверок: {data}")
-    report_id = data.get("report_id")
-    if not report_id:
-        logger.error(f"Не указан id отчета")
-        return jsonify({"status": "error", "message": "Отчет не найден"}), 404
-    paragraphs_by_type = Report.get_report_paragraphs(report_id)
-    try:
-        check_unique_indices(paragraphs_by_type)
-        return jsonify({"status": "success", "message": "Индексы параграфов и главных предложений уникальны"}), 200
-    except ValueError as e:
-        return jsonify({"status": "error", "message": f"В протоколе присутствует ошибка: {str(e)}"}), 400
 
 
 # Создает новую группу предложений и заменяет ей старую

@@ -76,6 +76,8 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False # Отключает события SQLAlchemy что бережет память и избавляет от сообщения об ошибках в терминале.
     BASE_UPLOAD_FOLDER = os.getenv("UPLOAD_FOLDER", "/uploads")
     SESSION_TYPE = "filesystem"
+    REPORT_TYPES_DEFAULT_RU = ["МРТ", "КТ", "Рентгенография", "ПЭТ-КТ", "Сцинтиграфия", "УЗИ"]
+    REPORT_SUBTYPES_DEFAULT_RU = ["Голова и шея", "Органы грудной клетки", "Органы брюшной полости", "Органы малого таза", "Верхние конечности", "Нижние конечности", "Позвоночник", "Сердечно-сосудистая система", "Опорно-двигательный аппарат", "Мягкие ткани", "Суставы", "Комбинированные протоколы", "Педиатрия", "Прочее" ]
     
     # OpenAI API configuration
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")

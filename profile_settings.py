@@ -3,7 +3,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, current_app, session, g, jsonify
 from flask_login import current_user
 from models import User, UserProfile, db, AppConfig, Paragraph, ReportType, ReportShare
-from utils import check_unique_indices
 from profile_constructor import ProfileSettingsManager
 from flask_security.decorators import auth_required
 from file_processing import sync_profile_files
@@ -13,6 +12,7 @@ from logger import logger
 profile_settings_bp = Blueprint('profile_settings', __name__)
 
 # Functions
+
 def set_profile_settings(profile_id, settings):
     """
     Сохраняет настройки профиля пользователя.
@@ -46,19 +46,27 @@ def set_profile_as_default(profile_id):
     logger.info(f"set_profile_as_default end work successfull")
     return True
     
+# Routes
 
 # Маршрут для загрузки страницы настроек профиля 
 @profile_settings_bp.route("/profile_settings", methods=["GET"])
 @auth_required()
 def profile_settings():
-    profile = g.current_profile
+    logger.info(f"(route 'profile_settings') --------------------------------------")
+    logger.info(f"(route 'profile_settings') 🚀 Profile settings started")
     
-    if profile:
+    profile = g.current_profile
+    profile_data = profile.get_profile_data()
+    logger.debug(f"(route 'profile_settings') Profile data: {profile_data}")
+    
+    if profile_data:
+        logger.info(f"(route 'profile_settings') ✅ Profile settings loaded")
+        logger.info(f"(route 'profile_settings') -----------------------------")
         return render_template('profile_settings.html', 
                                title="Настройки профиля", 
-                               profile=profile)
+                               profile=profile_data)
     else:
-        print('Profile not found.', 'danger')
+        logger.error(f"(route 'profile_settings') ❌ Profile not found")
         return redirect(url_for('index'))
 
 
@@ -165,24 +173,31 @@ def create_profile():
 @profile_settings_bp.route('/update_profile_settings', methods=['POST'])
 @auth_required()
 def update_profile_settings():
+    logger.info(f"(route 'update_profile_settings') --------------------------------------")
+    logger.info(f"(route 'update_profile_settings') 🚀 Profile settings update started")
+    
     data = request.get_json()
     profile_id = data.get("profile_id")
     new_name = data.get("profile_name")
     new_description = data.get("description")
     is_default = data.get("is_default")
-    print(f"this profile default = {is_default}")
+    user_name = data.get("user_name")
+    
     profile = UserProfile.find_by_id_and_user(profile_id, current_user.id)
     
     if profile:
+        current_user.user_name = user_name
+        current_user.save()
         profile.profile_name = new_name
         profile.description = new_description
         profile.save()
         if is_default:
             set_default = set_profile_as_default(profile_id)
-            print(f"Профиль установлен как дефолтный = {set_default}")
             if not set_default:
+                logger.error(f"(route 'update_profile_settings') ❌ Error setting profile {profile_id} as default")
                 notification_message = ["не получилось установить профиль по умолчанию"]
                 return jsonify({"status": "succuss","notifications": notification_message, "message": "Изменения сохранены, но"}), 400
+        
         return jsonify({"status": "success", "message": "Данные профиля успешно обновлены!"}), 200
     else:
         return jsonify({"status": "error", "message": "Profile not found or you do not have permission to update it."}), 400
@@ -289,75 +304,4 @@ def share_profile():
 
 
 
-
-# Маршрут для запуска разных чекеров
-@profile_settings_bp.route("/run_checker", methods=["POST"])
-@auth_required()
-def run_checker():
-    """
-    Запускает различные чекеры для проверки настроек профиля.
-    """
-    
-    profile_id = session.get("profile_id")
-    if not profile_id:
-        return jsonify({"status": "error", "message": "Profile not selected"}), 400
-
-    checker = request.json.get("checker")
-    
-    reports = Report.find_by_profile(profile_id)
-    if checker == "main_sentences":
-        global_errors = []
-        for report in reports:
-            paragraphs = Report.get_report_paragraphs(report.id)
-            try:
-                check_unique_indices(paragraphs)
-            except ValueError as e:
-                error = {"report": report.report_name, "error": str(e)}
-                global_errors.append(error)
-    
-            try:
-                check_unique_indices(paragraphs)
-            except ValueError as e:
-                error = {"report": report.report_name, "error": str(e)}
-                global_errors.append(error)
-        
-        return jsonify({"status": "success", "message": "Проверка выявила следующие ошибки", "errors": global_errors}), 200
-       
-    else:
-        return jsonify({"status": "error", "message": "Неизвестный чекер"}), 400
-
-
-# Маршрут для запуска разных чекеров
-@profile_settings_bp.route("/fix_indices", methods=["POST"])
-@auth_required()
-def fix_indices():
-    """
-    Запускает функцию исправления индексов.
-    """
-    reports = Report.find_by_profile(g.current_profile.id)  # Получаем все отчеты пользователя
-        
-    try:
-        for report in reports:
-            print(f"Исправление индексов для отчета {report.report_name}")
-            paragraphs = Paragraph.query.filter_by(report_id=report.id).order_by(Paragraph.paragraph_index).all()
-            
-            # Обновляем индексы параграфов
-            for new_index, paragraph in enumerate(paragraphs):
-                paragraph.paragraph_index = new_index
-
-                # Обновляем индексы главных предложений в этом параграфе
-                if paragraph.head_sentence_group:
-                    head_sentences = sorted(paragraph.head_sentence_group.head_sentences, key=lambda s: s.sentence_index)
-                    for new_sentence_index, sentence in enumerate(head_sentences):
-                        sentence.sentence_index = new_sentence_index
-            
-            db.session.commit()  # Сохраняем изменения для всех параграфов и предложений
-        logger.info(f"Индексы успешно исправлены")
-        return jsonify({"status": "success", "message": "Индексы успешно исправлены"}), 200
-    
-    except Exception as e:
-        db.session.rollback()
-        logger.error(f"Ошибка при исправлении индексов {e}")
-        return jsonify({"status": "error", "message": "Ошибка при исправлении индексов"}), 400
-   
 

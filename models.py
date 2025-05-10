@@ -277,7 +277,19 @@ class UserProfile(BaseModel):
     profile_to_report_types = db.relationship("ReportType", lazy=True, backref=db.backref("report_type_to_profile"), cascade="all, delete-orphan")
     
     def __repr__(self):
-        return f"<UserProfile {self.profile_name}>"
+        return f"<UserProfile - {self.profile_name}>"
+
+    def get_profile_data(self):
+        user = self.profile_to_user
+        return {
+            "id": self.id,
+            "profile_name": self.profile_name,
+            "description": self.description,
+            "default_profile": self.default_profile,
+            "user_name": user.user_name if user else "No data",
+            "email": user.email if user else "No data",
+            "login_count": user.login_count if user else "No data"
+        }
 
     @classmethod
     def create(cls, user_id, profile_name, description=None, default_profile=False):
@@ -323,6 +335,7 @@ class UserProfile(BaseModel):
         """Возвращает все профили, принадлежащие пользователю."""
         return cls.query.filter_by(user_id=user_id).all()
     
+    
     @classmethod
     def find_by_id_and_user(cls, profile_id, user_id):
         """Ищет профиль по его ID и ID пользователя."""
@@ -337,19 +350,17 @@ class ReportType(BaseModel):
     
     type_to_subtypes = db.relationship("ReportSubtype", lazy=True, backref=db.backref("subtype_to_type"), cascade="all, delete-orphan")
     
+    
+    def __repr__(self):
+        return f"<ReportType - {self.type_text}>"
+        
+     
     @classmethod
     def create(cls, type_text, profile_id, type_index=None):
-        """
-        Creates a new report type.
-        
-        Args:
-            type (str): The type of the report.
-            profile_id (int): The ID of the user creating the report type.
-            type_index (int, optional): The index of the type. If not provided, it will be set automatically.
-
-        Returns:
-            ReportType: The newly created report type object.
-        """
+        existing_type = cls.query.filter_by(type_text=type_text, profile_id=profile_id).first()
+        if existing_type:
+            logger.warning(f"(create) ❌ Тип {type_text} уже существует для профиля {profile_id}.")
+            return existing_type
         # If type_index is not provided, set it to the next available index
         if type_index is None:
             max_index = db.session.query(db.func.max(cls.type_index)).scalar() or 0
@@ -358,7 +369,7 @@ class ReportType(BaseModel):
         new_type = cls(
             type_text=type_text,
             profile_id=profile_id,
-            type_index=type_index
+            type_index=type_index,
         )
         db.session.add(new_type)
         db.session.commit()

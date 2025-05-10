@@ -19,6 +19,10 @@ def report_settings():
     logger.info(f"(Report_settings) 🚀 Начато получение настроек протоколов")
     try:
         profile_types_with_subtypes = ReportType.get_types_with_subtypes(g.current_profile.id)
+        print(profile_types_with_subtypes)
+        default_report_types = current_app.config.get("REPORT_TYPES_DEFAULT_RU")
+        default_report_subtypes = current_app.config.get("REPORT_SUBTYPES_DEFAULT_RU")
+        has_subtypes = any(t["subtypes"] for t in profile_types_with_subtypes)
     except Exception as e:
         logger.error(f"(Report_settings) ❌ Ошибка: Не удалось получить типы и подтипы протоколов - {e}")
         return jsonify({"status": "error", "message": "Не удалось получить типы и подтипы протоколов"}), 400
@@ -28,6 +32,9 @@ def report_settings():
     return render_template('report_settings.html', 
                            title = "Настройки протоколов",
                            types_subtypes=profile_types_with_subtypes,
+                           default_report_types=default_report_types,
+                           default_report_subtypes=default_report_subtypes,
+                           has_subtypes=has_subtypes,
                            )
 
 

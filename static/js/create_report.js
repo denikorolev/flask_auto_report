@@ -135,6 +135,7 @@ function handleCreateReportClick() {
             createReportFromExistingFew();
             break;
         case "shared":
+            createReportFromShared();
         case "public":
             createReportFromPublic();
             break;
@@ -207,7 +208,7 @@ async function loadSharedReports() {
                 li.classList.add("existing-fewreports__item");
                 li.innerHTML = `
                     <label>
-                        <input type="checkbox" value="${report.id}" />
+                        <input type="radio" name="shared_report_radio" value="${report.id}" />
                         ${report.report_name} - ${report.report_type}  (${report.shared_by_email})
                     </label>
                 `;
@@ -374,8 +375,7 @@ function createReportFromPublic() {
     const reportSubtype = document.getElementById("reportSubtype")?.value;
     const comment = document.getElementById("reportCreationComment")?.value?.trim() || "";
     const reportSide = document.querySelector("input[name='report_side']:checked")?.value === "true";
-    const selectedReport = document.querySelector("input[name='public_report_radio']:checked");
-    const selectedReportId = selectedReport?.value;
+    const selectedReportId = document.querySelector("input[name='public_report_radio']:checked").value;
     
 
     if (!selectedReportId) {
@@ -404,6 +404,41 @@ function createReportFromPublic() {
     });
 }
 
+// Создание протокола на протоколов, которые были поделены с пользователем
+function createReportFromShared() {
+    const reportName = document.getElementById("report_name")?.value?.trim();
+    const reportSubtype = document.getElementById("reportSubtype")?.value;
+    const comment = document.getElementById("reportCreationComment")?.value?.trim() || "";
+    const reportSide = document.querySelector("input[name='report_side']:checked")?.value === "true";
+    const selectedReport = document.querySelector("input[name='shared_report_radio']:checked");
+    const selectedReportId = selectedReport?.value;
+
+    if (!selectedReportId) {
+        alert("Выберите хотя бы один существующий отчет!");
+        return;
+    }
+
+    if (!reportName || !reportSubtype) {
+        alert("Заполните все обязательные поля: название протокола и его подтип!");
+        return;
+    }
+    const jsonData = {
+        report_name: reportName,
+        report_subtype: reportSubtype,
+        comment: comment,
+        report_side: reportSide,
+        selected_report_id: selectedReportId,
+        is_shared: true
+    };
+    sendRequest({
+        url: "/new_report_creation/create_report_from_public",
+        data: jsonData
+    }).then(response => {
+        if (response?.status === "success") {
+            window.location.href = `/editing_report/edit_report?report_id=${response.report_id}`;
+        }
+    });
+}
 
 
 

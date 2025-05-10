@@ -386,7 +386,7 @@ def create_report_from_existing_few():
 
 
 
-# Создание нового протокола на основе одного или нескольких существующих
+# Создание нового протокола на основе публичного или расшаренного
 @new_report_creation_bp.route('/create_report_from_public', methods=['POST'])
 @auth_required()
 def create_report_from_public():
@@ -400,14 +400,29 @@ def create_report_from_public():
         report_subtype = int(data.get("report_subtype"))
         comment = data.get("comment", "")
         report_side = data.get("report_side", False)
-        public_report = Report.get_by_id(data.get("selected_report_id"))
+        is_shared = data.get("is_shared", False)
+        public_report_id = int(data.get("selected_report_id"))
+        public_report = Report.get_by_id(public_report_id)
         report_type_id = ReportSubtype.get_by_id(report_subtype).subtype_to_type.id
         
-        if not public_report or not public_report.public:
-            return jsonify({
-                "status": "error", 
-                "message": "Выбранный протокол не является общедоступным"
-            }), 400
+        if not is_shared:
+            if not public_report or not public_report.public:
+                return jsonify({
+                    "status": "error", 
+                    "message": "Выбранный протокол не является общедоступным"
+                }), 400
+        else:
+            shared_report = ReportShare.query.filter_by(report_id=public_report_id, shared_with_user_id=current_user.id).first()
+            logger.info(f"(Маршрут: создание протокола из публичного) shared_report: {shared_report}")
+            print(f"current_user.id: {current_user.id}")
+            print(f"shared_report.shared_with_user_id: {shared_report.shared_with_user_id}")
+            print(f"shared_report.shared_by_user_id: {shared_report.shared_by_user_id}")
+            if not shared_report:
+                logger.info(f"(Маршрут: создание протокола из публичного) ❌ Протокол не найден")
+                return jsonify({
+                    "status": "error", 
+                    "message": "Выбранный протокол не найден"
+                }), 400
 
         new_report_data = {
             "profile_id": g.current_profile.id,

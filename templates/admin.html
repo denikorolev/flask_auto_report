@@ -5,65 +5,64 @@
 <input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
 <h1>Welcome to Admin panel</h1>
 
- <!-- Блок с поиском и правкой пользователя -->
-
-    <div class="user-management">
-        <h2 class="user-management__title">Управление пользователями</h2>
-        
-        <!-- Поиск пользователя -->
-        <div class="user-management__search">
-            <label for="search-user" class="user-management__label">Поиск пользователя:</label>
-            <input type="text" id="search-user" class="user-management__input user-management__input--search" 
-                placeholder="Введите имя или email или ID" required>
-            <button type="button" id="search-user-button" class="btn btn_report user-management__button user-management__button--search">
-                Найти
-            </button>
-        </div>
-        <!-- Результаты поиска -->
-        <div class="user-management__results" id="user-results" style="display: none;">
-            <h3>Результаты поиска</h3>
-            <table class="user-management__table">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Имя</th>
-                        <th>Email</th>
-                        <th>Текущая роль</th>
-                        <th>Действие</th>
-                    </tr>
-                </thead>
-                <tbody id="user-results-body">
-                    <!-- Динамически заполняется -->
-                </tbody>
-            </table>
-        </div>
-
-        <!-- Детали выбранного пользователя -->
-        <div class="user-management__details" id="user-details" style="display: none;">
-            <h3>Детали пользователя</h3>
-            <form>
-                <input type="hidden" id="user-id">
-                <div>
-                    <label for="user-name">Имя:</label>
-                    <input type="text" id="user-name">
-                </div>
-                <div>
-                    <label for="user-email">Email:</label>
-                    <input type="email" id="user-email">
-                </div>
-                <div>
-                    <label for="user-role">Роль:</label>
-                    <select id="user-role"></select>
-                </div>
-                <button type="button" id="save-user-button" class="btn">Сохранить изменения</button>
-            </form>
-        </div>
-                </div>
-
+<!-- Блок с поиском и правкой пользователя -->
+<div class="user-management">
+    <h2 class="user-management__title">Управление пользователями</h2>
+    
+    <!-- Поиск пользователя -->
+    <div class="user-management__search">
+        <label for="search-user" class="user-management__label">Поиск пользователя:</label>
+        <input type="text" id="search-user" class="user-management__input user-management__input--search" 
+            placeholder="Введите имя или email или ID" required>
+        <button type="button" id="search-user-button" class="btn btn_report user-management__button user-management__button--search">
+            Найти
+        </button>
+    </div>
+    <!-- Результаты поиска -->
+    <div class="user-management__results" id="user-results" style="display: none;">
+        <h3>Результаты поиска</h3>
+        <table class="user-management__table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Имя</th>
+                    <th>Email</th>
+                    <th>Текущая роль</th>
+                    <th>Действие</th>
+                </tr>
+            </thead>
+            <tbody id="user-results-body">
+                <!-- Динамически заполняется -->
+            </tbody>
+        </table>
     </div>
 
+    <!-- Детали выбранного пользователя -->
+    <div class="user-management__details" id="user-details" style="display: none;">
+        <h3>Детали пользователя</h3>
+        <form>
+            <input type="hidden" id="user-id">
+            <div>
+                <label for="user-name">Имя:</label>
+                <input type="text" id="user-name">
+            </div>
+            <div>
+                <label for="user-email">Email:</label>
+                <input type="email" id="user-email">
+            </div>
+            <div>
+                <label for="user-role">Роль:</label>
+                <select id="user-role"></select>
+            </div>
+            <button type="button" id="save-user-button" class="btn">Сохранить изменения</button>
+        </form>
+    </div>
+            </div>
 
- <!-- Блок с таблицами -->
+</div>
+
+
+ <!-- Блок с таблицами базы данных-->
 <div class="container flex">
     <div class="box admin-filters">
         <h2>Панель фильтров</h2>
@@ -149,6 +148,7 @@
     
 </div>
 
+<!-- Блок с обучением модели SpaCy -->
 <div class="model-training__block">
     <h2>Обучение модели SpaCy</h2>
     <div class="model-training">
@@ -168,6 +168,8 @@
         </div>
     </div>
 </div>
+
+
 
 
 
