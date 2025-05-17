@@ -5,7 +5,7 @@ from flask_login import current_user
 from models import db, Report, ReportType, ReportSubtype, Paragraph, HeadSentence, BodySentence, ReportShare, HeadSentenceGroup
 from sentence_processing import extract_paragraphs_and_sentences
 from file_processing import allowed_file
-from utils import ensure_list
+from utils.common import ensure_list
 from werkzeug.utils import secure_filename
 from logger import logger
 import os

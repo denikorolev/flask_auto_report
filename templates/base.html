@@ -48,7 +48,7 @@
             
 
             <!-- Сообщение о текущем юзере -->
-            <p class="header__paragraph" id="userNameHeader" data-user-name="{{ current_user.user_name }}">Привет, {{ current_user.roles[0].name }}, {{ current_user.user_name }}!</p>
+            <p class="header__paragraph" id="userNameHeader" data-user-name="{{ current_user.username }}">Привет, {{ current_user.roles[0].name }}, {{ current_user.username }}!</p>
             <a class="header__link" href="{{ url_for("custom_logout") }}">Выйти</a>
         </div>
 
@@ -91,8 +91,7 @@
             <p class="footer__paragraph">&copy; 2023-2025 Radiologary</p>
             <!-- Сообщение о версии программы -->
             {% if app_info %}
-                <span class="header__paragraph header__paragraph--version">v.{{ app_info.version }}</span>
-                <span class="header__paragraph header__paragraph--author">author: {{ app_info.author }}</span>
+                <span class="header__paragraph header__paragraph--version">version.{{ app_info.version }}</span>
             {% endif %}
         </div>
     </footer>

@@ -3,7 +3,6 @@
 {% block container %}
 {{ super() }}
 
-{% if user_max_rank == 4 %}
     <div class="auth_register">
         <h1 class="title auth_register__title" id="signupForm">Создать аккаунт</h1>
         <form class="flex_column auth_register__form" action="/register" method="post" name="register_user_form">
@@ -11,27 +10,24 @@
         
             <ul class="auth-register__list">
                 <li class="wrapper auth-register__item">
-                    <label class="label auth-register__label" for="email">Email:</label>
+                    <label class="label auth-register__label">Введите email:
                     <input class="input auth-register__input" type="email" id="email" name="email" required type="email" autocomplete="email">
+                    </label>
+                    <p>На этот email будет выслано письмо со ссылкой для активации аккаунта (если вы не видите письмо во "входящих", проверьте пожалуйста папку "спам").</p>
                 </li>
                 <li class="wrapper auth-register__item">
-                    <label class="label auth-register__label" for="password">Password:</label>
+                    <label class="label auth-register__label" for="password">Придумайте пароль:</label>
                     <input class="input auth-register__input" type="password" id="password" name="password" autocomplete="new-password">
                 </li>
                 <li class="wrapper auth-register__item">
-                    <label class="label auth-register__label" for="password_confirm">Password:</label>
-                    <input class="input auth-register__input" type="password" id="password_confirm" name="password_confirm" autocomplete="new-password">
+                    <label class="label auth-register__label" for="username">Имя пользователя:</label>
+                    <input class="input auth-register__input" type="text" id="username" name="username" autocomplete="new-password">
                 </li>
             </ul>
         
             <button id="signupSubmit" class="btn btn_report auth-register__btn" type="submit" value="Register">Создать</button>
         </form>
     </div>
-{% else %}
-    <div class="auth-register">
-        <p>Программа сейчас находится в режиме тестирования и подключение новых пользователей невозможно</p>
-    </div>
-{% endif %}
 
 
 {% if register_user_form.errors %}

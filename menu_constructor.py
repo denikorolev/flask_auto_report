@@ -11,7 +11,6 @@ def build_menu():
     Формирует меню на основе текущего профиля.
     """
     menu = [
-        
         {"name": "Протокол", "url": url_for("working_with_reports.choosing_report"), "min_rank": 1},
         {"name": "Список протоколов", "url": url_for("my_reports.reports_list"), "min_rank": 1},
         {"name": "Новый протокол", "url": url_for("new_report_creation.create_report"), "min_rank": 1},

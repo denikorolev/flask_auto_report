@@ -7,7 +7,7 @@ from itertools import chain
 from file_processing import file_uploader
 from sentence_processing import group_keywords, sort_key_words_group, process_keywords, check_existing_keywords
 from errors_processing import print_object_structure
-from utils import ensure_list
+from utils.common import ensure_list
 from db_processing import add_keywords_to_db
 from flask_security.decorators import auth_required
 

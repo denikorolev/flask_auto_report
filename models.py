@@ -5,7 +5,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_security import UserMixin, RoleMixin, current_user
 from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy import Index, event, func, cast, Date
-from utils import ensure_list
+from utils.common import ensure_list
 from datetime import datetime, timezone  # Добавим для временных меток
 import json
 from logger import logger
@@ -15,7 +15,7 @@ from logger import logger
 db = SQLAlchemy()
 
  
-# ✅ быстрее 👉 🔥 📌 ❌ 🚀 😎 🔄 1️⃣ 2️⃣ 3️⃣ ⚠️ 💻 🧠 💥 🙌 🗑 ✏️ 🔙 🕘 ➕
+# ✅ быстрее 👉 🔥 📌 ❌ 🚀 😎 🔄 1️⃣ 2️⃣ 3️⃣ ⚠️ 💻 🧠 💥 🙌 🗑 ✏️ 🔙 🕘 ➕ 📨
 
     
 
@@ -212,7 +212,7 @@ class Role(db.Model, RoleMixin):
 class User(BaseModel, db.Model, UserMixin):
     __tablename__ = 'users'
     id = db.Column(db.BigInteger, primary_key=True)
-    user_name = db.Column(db.String, nullable=False, default="User")
+    username = db.Column(db.String(80), nullable=False)
     password = db.Column(db.String, nullable=False)
     user_bio = db.Column(db.Text, nullable=True)
     user_avatar = db.Column(db.LargeBinary, nullable=True)
@@ -286,7 +286,7 @@ class UserProfile(BaseModel):
             "profile_name": self.profile_name,
             "description": self.description,
             "default_profile": self.default_profile,
-            "user_name": user.user_name if user else "No data",
+            "username": user.username if user else "No data",
             "email": user.email if user else "No data",
             "login_count": user.login_count if user else "No data"
         }

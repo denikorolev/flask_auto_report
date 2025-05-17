@@ -220,12 +220,12 @@ def search_user():
         if search_value.isdigit():
             users = User.query.filter(
                 (User.id == int(search_value)) |
-                (User.user_name.ilike(f"%{search_value}%"))
+                (User.username.ilike(f"%{search_value}%"))
             ).all()
         else:
             users = User.query.filter(
                 (User.email.ilike(f"%{search_value}%")) |
-                (User.user_name.ilike(f"%{search_value}%"))
+                (User.username.ilike(f"%{search_value}%"))
             ).all()
 
         if not users:
@@ -237,7 +237,7 @@ def search_user():
         for user in users:
             users_data.append({
                 "id": user.id,
-                "user_name": user.user_name,
+                "username": user.username,
                 "email": user.email,
                 "all_roles": [role.name for role in all_roles],
                 "current_role": user.roles[0].name if user.roles else None
@@ -266,7 +266,7 @@ def update_user(user_id):
             return jsonify({"status": "error", "message": "Пользователь не найден."}), 404
 
         # Обновление имени и email
-        user.user_name = data.get("user_name", user.user_name).strip()
+        user.username = data.get("username", user.username).strip()
         user.email = data.get("email", user.email).strip()
 
         # Обновление роли

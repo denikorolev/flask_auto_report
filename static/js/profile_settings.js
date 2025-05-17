@@ -44,7 +44,7 @@ function profileGlobalSettingsSave() {
         profile_name: profileSettingBlock.querySelector("#profileName").value,
         description: profileSettingBlock.querySelector("#profileDescription").value,
         is_default: profileSettingBlock.querySelector("#isDefauleProfile").checked,
-        user_name: profileSettingBlock.querySelector("#userName").value,
+        username: profileSettingBlock.querySelector("#userName").value,
     };
 
     // Отправляем данные на сервер

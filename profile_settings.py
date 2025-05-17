@@ -181,12 +181,12 @@ def update_profile_settings():
     new_name = data.get("profile_name")
     new_description = data.get("description")
     is_default = data.get("is_default")
-    user_name = data.get("user_name")
+    username = data.get("username")
     
     profile = UserProfile.find_by_id_and_user(profile_id, current_user.id)
     
     if profile:
-        current_user.user_name = user_name
+        current_user.username = username
         current_user.save()
         profile.profile_name = new_name
         profile.description = new_description

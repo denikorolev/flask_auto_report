@@ -3,16 +3,19 @@
 from flask import Flask, redirect, url_for, render_template, request, session, g
 from flask_security import logout_user, current_user
 import logging
+from datetime import datetime
 from config import get_config
 from flask_migrate import Migrate
 from models import db, User, UserProfile, Role
 from menu_constructor import build_menu
 from profile_constructor import ProfileSettingsManager
 from db_processing import sync_all_profiles_settings
+from utils.mail_helpers import send_email_via_zeptomail
+from werkzeug.middleware.proxy_fix import ProxyFix
 from logger import logger
 import os
 from file_processing import prepare_impression_snippets
-
+from utils.mail_helpers import CustomMailUtil
 from flask_wtf.csrf import CSRFProtect
 from flask_security import Security, SQLAlchemyUserDatastore
 from flask_security.decorators import auth_required, roles_required
@@ -29,7 +32,7 @@ from openai_api import openai_api_bp
 from key_words import key_words_bp
 from admin import admin_bp
 
-version = "0.9.5.5"
+version = "0.9.5.7"
 
 app = Flask(__name__)
 app.config.from_object(get_config()) # Load configuration from file config.py
@@ -42,7 +45,7 @@ migrate = Migrate(app, db)
 
 # Инициализирую Flask-security-too
 user_datastore = SQLAlchemyUserDatastore(db, User, Role)
-security = Security(app, user_datastore)
+security = Security(app, user_datastore, mail_util_cls=CustomMailUtil)
 
 # Инициализация CSRF-защиты
 csrf = CSRFProtect(app)
@@ -57,6 +60,12 @@ def assign_default_role(sender, user, **extra):
     if default_role:
         user.roles.append(default_role)  # Добавляем роль
     db.session.commit()  # Сохраняем изменения
+    # send_welcome_email(user)
+    # Временный вывод подтверждающей ссылки в лог
+    # from flask_security.utils import generate_confirmation_token
+    # token = generate_confirmation_token(user)
+    # confirm_url = url_for('security.confirm_email', token=token, _external=True)
+    # logger.warning(f"📬 Подтверждающая ссылка: {confirm_url}")
 
 # Register Blueprints
 app.register_blueprint(working_with_reports_bp, url_prefix="/working_with_reports")
@@ -85,7 +94,7 @@ def inject_menu():
 @app.context_processor
 def inject_user_settings():
     """Добавляет все настройки профиля в глобальный контекст Jinja."""
-    excluded_endpoints = {"error", "security.login", "security.logout", "index", "profile_settings.create_profile"}
+    excluded_endpoints = {"error", "security.login", "security.logout", "custom_logout", "index", "profile_settings.create_profile"}
     if request.endpoint in excluded_endpoints:
         return {}
     
@@ -122,7 +131,7 @@ def inject_user_rank():
 def load_current_profile():
     # Исключения для статических файлов и маршрутов, которые не требуют профиля
     if request.path.startswith('/static/') or request.endpoint in [
-        "security.login", "security.logout", "security.register", 
+        "security.login", "security.logout", "security.register", "custom_logout",
         "security.forgot_password", "security.reset_password", 
         "security.change_password","profile_settings.choosing_profile", 
         "error", "index", "profile_settings.create_profile", "profile_settings.set_default_profile"
@@ -199,6 +208,7 @@ def one_time_sync_tasks():
         return  # Если пользователь не вошел — ничего не делаем
 
     if not session.get("synced"):  # Проверяем, была ли уже выполнена синхронизация
+        
         logger.info("Синхронизация настроек профилей")
         sync_all_profiles_settings(current_user.id)
         try:
@@ -263,6 +273,10 @@ def close_db(error):
 @auth_required()
 @roles_required("superadmin")
 def playground():
+    logger.info("Playground route accessed")
+    if request.method == "POST":
+        logger.info("Playground POST request received")
+       
     
     return render_template(
         "playground.html",

@@ -6,7 +6,7 @@ import os
 from models import db, Report, ReportType, KeyWord, TailSentence, BodySentence, ReportTextSnapshot
 from file_processing import save_to_word
 from sentence_processing import group_keywords, split_sentences_if_needed, clean_and_normalize_text, compare_sentences_by_paragraph, preprocess_sentence
-from utils import ensure_list
+from utils.common import ensure_list
 from logger import logger
 from flask_security.decorators import auth_required
 from spacy_manager import SpacyModel

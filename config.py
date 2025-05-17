@@ -50,11 +50,16 @@ class Config:
     SECURITY_PASSWORD_SALT = os.getenv("SECURITY_PASSWORD_SALT", "$$1")
     SECURITY_PASSWORD_HASH = "bcrypt"  # Алгоритм хэширования паролей
     SECURITY_REGISTERABLE = True       # Разрешить регистрацию
-    SECURITY_CONFIRMABLE = False        # Требовать подтверждения email
+    
+    SECURITY_CONFIRMABLE = True        # Требовать подтверждения email
+    SECURITY_SEND_REGISTER_EMAIL = True
+    SECURITY_CONFIRM_EMAIL_WITHIN = '5 days'  # Срок действия ссылки
+    
+    SECURITY_USERNAME_ENABLE = True  # Разрешить вход по имени пользователя
+    SECURITY_PASSWORD_CONFIRM_REQUIRED = False  # Не требовать подтверждение пароля при регистрации
     SECURITY_RECOVERABLE = False        # Включить восстановление пароля
     SECURITY_TRACKABLE = True          # Включить отслеживание входов
     SECURITY_CHANGEABLE = False         # Включить изменение пароля
-    SECURITY_SEND_REGISTER_EMAIL = False  # Отключить отправку писем при регистрации
     SECURITY_SEND_PASSWORD_CHANGE_EMAIL = False  # Отключить отправку писем при изменении пароля
     SECURITY_SEND_PASSWORD_RESET_EMAIL = False
     SECURITY_POST_LOGIN_VIEW = "/working_with_reports/choosing_report"  # URL после успешного входа
@@ -69,13 +74,22 @@ class Config:
     SECURITY_LOG_LEVEL = logging.DEBUG   # Включение логирования Flask-Security
     SECURITY_FLASH_MESSAGES = True # Включает flash сообщения
     SECURITY_RETURN_GENERIC_RESPONSES = False
-
+    SECURITY_AUTO_LOGIN_AFTER_CONFIRM = True  # Автоматический вход после подтверждения email
+    SECURITY_EMAIL_SUBJECT_REGISTER = "Добро пожаловать в Radiologary"
+    SECURITY_EMAIL_SUBJECT_CONFIRM = "Пожалуйста подтвердите ваш email"
+    SECURITY_SEND_CONFIRMATION_TEMPLATE = "security/send_confirmation.html"
     
     
     SECRET_KEY = os.getenv("SECRET_KEY")
     SQLALCHEMY_TRACK_MODIFICATIONS = False # Отключает события SQLAlchemy что бережет память и избавляет от сообщения об ошибках в терминале.
     BASE_UPLOAD_FOLDER = os.getenv("UPLOAD_FOLDER", "/uploads")
     SESSION_TYPE = "filesystem"
+    ZEPTOMAIL_API_TOKEN = os.getenv("ZEPTOMAIL_API_TOKEN")
+    NOREPLY_EMAIL = "noreply@radiologary.com"
+    SUPPORT_EMAIL = "support@radiologary.com"
+    CEO_EMAIL = "korolev.denis@radiologary.com"
+
+
     REPORT_TYPES_DEFAULT_RU = ["МРТ", "КТ", "Рентгенография", "ПЭТ-КТ", "Сцинтиграфия", "УЗИ"]
     REPORT_SUBTYPES_DEFAULT_RU = ["Голова и шея", "Органы грудной клетки", "Органы брюшной полости", "Органы малого таза", "Верхние конечности", "Нижние конечности", "Позвоночник", "Сердечно-сосудистая система", "Опорно-двигательный аппарат", "Мягкие ткани", "Суставы", "Комбинированные протоколы", "Педиатрия", "Прочее" ]
     

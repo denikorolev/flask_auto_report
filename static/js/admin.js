@@ -91,7 +91,7 @@ function searchUser() {
 function saveUserChanges() {
     const userId = document.getElementById("user-id").value.trim();
     const updatedData = {
-        user_name: document.getElementById("user-name").value.trim(),
+        username: document.getElementById("user-name").value.trim(),
         email: document.getElementById("user-email").value.trim(),
         role: document.getElementById("user-role").value
     };
@@ -331,7 +331,7 @@ function displayUserResults(users) {
 
         row.innerHTML = `
             <td>${user.id}</td>
-            <td>${user.user_name}</td>
+            <td>${user.username}</td>
             <td>${user.email}</td>
             <td>${user.current_role || "Не указана"}</td>
             <td><button class="btn btn-select-user" data-user-id="${user.id}">Выбрать</button></td>
@@ -383,7 +383,7 @@ function populateUserDetails(userData) {
     const userDetailsSection = document.getElementById("user-details");
 
     document.getElementById("user-id").value = userData.id;
-    document.getElementById("user-name").value = userData.user_name;
+    document.getElementById("user-name").value = userData.username;
     document.getElementById("user-email").value = userData.email;
 
     // Заполняем выпадающий список ролей
