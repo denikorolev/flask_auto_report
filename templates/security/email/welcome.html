@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Добро пожаловать в Radiologary</title>
+  </head>
+  <body>
+    <h2>Здравствуйте, Пользователь!</h2>
+    <p>Добро пожаловать в сервис <b>Radiologary</b>.</p>
+    <p>Вы успешно зарегистрировались с email <b>{{ user.email }}</b>.</p>
+
+    <p>
+      {% if confirmation_link %}
+        Для подтверждения вашего адреса электронной почты перейдите по ссылке:<br>
+        <a href="{{ confirmation_link }}">{{ confirmation_link }}</a>
+      {% endif %}
+    </p>
+
+    <p>
+      Если вы не регистрировались — просто проигнорируйте это письмо.
+    </p>
+    <hr>
+    <p style="color: #888; font-size: 13px;">
+      С уважением, команда Radiologary.<br>
+      support@radiologary.com
+    </p>
+  </body>
+</html>

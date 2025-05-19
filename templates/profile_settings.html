@@ -8,36 +8,52 @@
     <!-- Блок глобальных настроек самого профиля -->
     <div class="profile-settings-block">
         <h3 class="profile-settings-block__title">Настройки профиля</h3>
-            <div class="profile-settings-block__container">
-                <ul class="profile-settings-block__list" data-profile-id="{{ profile.id }}" id="profileSettingBlock">
-                    <li class="profile-settings-block__item">
-                        <label class="profile-settings-block__label" for="profile_name">Название профиля:</label>
-                        <input class="profile-settings-block__input" type="text" id="profileName" name="profile_name" value="{{ profile.profile_name }}" required>
-                    </li>
-                    <li class="profile-settings-block__item">
-                        <label class="profile-settings-block__label" for="description">Описание профиля:</label>
-                        <textarea class="profile-settings-block__textarea" id="profileDescription" name="description">{{ profile.description }}</textarea>
-                    </li>
-                    <li class="profile-settings-block__item">
-                        <label class="profile-settings-block__label" for="userName">Имя пользователя:</label>
-                        <input type="text" class="profile-settings-block__select" id="userName" value="{{ profile.username }}" name="userName">
-                    </li>
-                    <br>
-                    <li class="profile-settings-block__item">
-                        <label class="profile-settings-block__label" for="default_profile">Профиль по умолчанию:</label>
-                        <input class="profile-settings-block__input" type="checkbox" id="isDefauleProfile" name="default_profile" {% if profile.default_profile %} checked {% endif %}>
-                    </li>
-                </ul>
-                <div class="profile-setting-block__wrapper--buttons">
-                    <button class="btn report__btn profile-settings-block__btn" id="saveSettingProfile" type="button">Сохранить изменения</button>
-                    <button class="btn report__btn profile-settings-block__btn" id="deleteProfile" type="button">Удалить профиль</button>
-                    <button class="btn report__btn profile-settings-block__btn" id="shareProfileButton" type="button">Поделиться профилем</button>
-                    <div class="profile-settings-block__share-email-block" id="shareProfileEmailBlock" style="display: none;">
-                        <input type="email" id="shareEmailInput" placeholder="Введите email" class="share-popup__input">
-                        <button class="btn profile-settings-block__btn" type="button" id="submitShareProfileButton">Отправить</button>
-                    </div>
+        <div class="profile-settings-block__container">
+            <ul class="profile-settings-block__list" data-profile-id="{{ profile.id }}" id="profileSettingBlock">
+                <li class="profile-settings-block__item">
+                    <label class="profile-settings-block__label" for="profile_name">Название профиля:</label>
+                    <input class="profile-settings-block__input" type="text" id="profileName" name="profile_name" value="{{ profile.profile_name }}" required>
+                </li>
+                <li class="profile-settings-block__item">
+                    <label class="profile-settings-block__label" for="description">Описание профиля:</label>
+                    <textarea class="profile-settings-block__textarea" id="profileDescription" name="description">{{ profile.description }}</textarea>
+                </li>
+                <li class="profile-settings-block__item">
+                    <label class="profile-settings-block__label" for="userName">Имя пользователя:</label>
+                    <input type="text" class="profile-settings-block__select" id="userName" value="{{ profile.username }}" name="userName">
+                </li>
+                <br>
+                <li class="profile-settings-block__item">
+                    <label class="profile-settings-block__label" for="userEmail">Электронная почта:</label>
+                    <input
+                        type="email"
+                        class="profile-settings-block__select"
+                        id="userEmail"
+                        value="{{ current_user.email }}"
+                        name="userEmail"
+                        readonly
+                        style="background:#f3f3f3;"
+                    >
+                    <a href="/change-email" class="btn report__btn" id="changeEmailBtn" style="margin-left: 10px;">
+                        Изменить
+                    </a>
+                </li>
+                <br>
+                <li class="profile-settings-block__item">
+                    <label class="profile-settings-block__label" for="default_profile">Профиль по умолчанию:</label>
+                    <input class="profile-settings-block__input" type="checkbox" id="isDefauleProfile" name="default_profile" {% if profile.default_profile %} checked {% endif %}>
+                </li>
+            </ul>
+            <div class="profile-setting-block__wrapper--buttons">
+                <button class="btn report__btn profile-settings-block__btn" id="saveSettingProfile" type="button">Сохранить изменения</button>
+                <button class="btn report__btn profile-settings-block__btn" id="deleteProfile" type="button">Удалить профиль</button>
+                <button class="btn report__btn profile-settings-block__btn" id="shareProfileButton" type="button">Поделиться профилем</button>
+                <div class="profile-settings-block__share-email-block" id="shareProfileEmailBlock" style="display: none;">
+                    <input type="email" id="shareEmailInput" placeholder="Введите email" class="share-popup__input">
+                    <button class="btn profile-settings-block__btn" type="button" id="submitShareProfileButton">Отправить</button>
                 </div>
             </div>
+        </div>
     </div>
     
 

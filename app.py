@@ -15,7 +15,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from logger import logger
 import os
 from file_processing import prepare_impression_snippets
-from utils.mail_helpers import CustomMailUtil
+from utils.mail_helpers import CustomMailUtil, ExtendedRegisterForm
 from flask_wtf.csrf import CSRFProtect
 from flask_security import Security, SQLAlchemyUserDatastore
 from flask_security.decorators import auth_required, roles_required
@@ -32,7 +32,7 @@ from openai_api import openai_api_bp
 from key_words import key_words_bp
 from admin import admin_bp
 
-version = "0.9.5.7"
+version = "0.9.5.9"
 
 app = Flask(__name__)
 app.config.from_object(get_config()) # Load configuration from file config.py
@@ -45,7 +45,7 @@ migrate = Migrate(app, db)
 
 # Инициализирую Flask-security-too
 user_datastore = SQLAlchemyUserDatastore(db, User, Role)
-security = Security(app, user_datastore, mail_util_cls=CustomMailUtil)
+security = Security(app, user_datastore, mail_util_cls=CustomMailUtil, register_form=ExtendedRegisterForm)
 
 # Инициализация CSRF-защиты
 csrf = CSRFProtect(app)

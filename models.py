@@ -1,4 +1,12 @@
 # models.py
+# Я сделал так, что при удалении пользовате 
+# его предложения остаются в базе данных. Сделал я это 
+# чтобы иметь возможность анализировать и возможно переиспользовать 
+# их в будущем. Однако этот функционал не реальизван. Нужно будет либо 
+# его реализовать либо сделать ondelete cascade и вычистить базу данных 
+# от старых "осиротевших" предложений. Кроме того нужно подумать 
+# относительно того, чтобы не удалять не только предложения, 
+# но и отчеты и параграфы.
 
 
 from flask_sqlalchemy import SQLAlchemy
@@ -212,7 +220,7 @@ class Role(db.Model, RoleMixin):
 class User(BaseModel, db.Model, UserMixin):
     __tablename__ = 'users'
     id = db.Column(db.BigInteger, primary_key=True)
-    username = db.Column(db.String(80), nullable=False)
+    username = db.Column(db.String(80), nullable=True, default='User')
     password = db.Column(db.String, nullable=False)
     user_bio = db.Column(db.Text, nullable=True)
     user_avatar = db.Column(db.LargeBinary, nullable=True)
@@ -799,7 +807,7 @@ class SentenceBase(BaseModel):
     __abstract__ = True  
     
     report_type_id = db.Column(db.SmallInteger, nullable=True)  
-    user_id = db.Column(db.BigInteger, db.ForeignKey("users.id"), nullable=True)
+    user_id = db.Column(db.BigInteger, db.ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     sentence = db.Column(db.String(600), nullable=False)
     tags = db.Column(db.String(100), nullable=True)
     comment = db.Column(db.String(255), nullable=True) 

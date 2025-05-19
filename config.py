@@ -55,13 +55,16 @@ class Config:
     SECURITY_SEND_REGISTER_EMAIL = True
     SECURITY_CONFIRM_EMAIL_WITHIN = '5 days'  # Срок действия ссылки
     
-    SECURITY_USERNAME_ENABLE = True  # Разрешить вход по имени пользователя
+    SECURITY_USERNAME_ENABLE = False  # Разрешить вход по имени пользователя
+    SECURITY_USERNAME_REQUIRED = False  # Требовать имя пользователя при регистрации
     SECURITY_PASSWORD_CONFIRM_REQUIRED = False  # Не требовать подтверждение пароля при регистрации
-    SECURITY_RECOVERABLE = False        # Включить восстановление пароля
+    SECURITY_RECOVERABLE = True        # Включить восстановление пароля
     SECURITY_TRACKABLE = True          # Включить отслеживание входов
-    SECURITY_CHANGEABLE = False         # Включить изменение пароля
-    SECURITY_SEND_PASSWORD_CHANGE_EMAIL = False  # Отключить отправку писем при изменении пароля
-    SECURITY_SEND_PASSWORD_RESET_EMAIL = False
+    SECURITY_CHANGEABLE = True    
+    SECURITY_CHANGE_EMAIL = True  # Разрешить изменение email
+    SECURITY_SEND_CONFIRM_EMAIL = True  # Отправлять email для подтверждения
+    SECURITY_SEND_PASSWORD_CHANGE_EMAIL = True  # Отправлять email при изменении пароля
+    SECURITY_SEND_PASSWORD_RESET_EMAIL = True  # Отправлять email при сбросе пароля
     SECURITY_POST_LOGIN_VIEW = "/working_with_reports/choosing_report"  # URL после успешного входа
     SECURITY_POST_LOGOUT_VIEW = "/" # URL после выхода
     REMEMBER_COOKIE_DURATION = 3600 * 24 * 7  # Продолжительность в секундах (7 дней)
@@ -72,12 +75,14 @@ class Config:
     WTF_CSRF_SECRET_KEY = os.getenv("WTF_CSRF_SECRET_KEY")
     WTF_CSRF_TIME_LIMIT = 3600 * 12 # Время жизни токена (опционально)
     SECURITY_LOG_LEVEL = logging.DEBUG   # Включение логирования Flask-Security
-    SECURITY_FLASH_MESSAGES = True # Включает flash сообщения
+    SECURITY_FLASH_MESSAGES = False # Отключает всплывающие сообщения Flask-Security
     SECURITY_RETURN_GENERIC_RESPONSES = False
     SECURITY_AUTO_LOGIN_AFTER_CONFIRM = True  # Автоматический вход после подтверждения email
     SECURITY_EMAIL_SUBJECT_REGISTER = "Добро пожаловать в Radiologary"
     SECURITY_EMAIL_SUBJECT_CONFIRM = "Пожалуйста подтвердите ваш email"
-    SECURITY_SEND_CONFIRMATION_TEMPLATE = "security/send_confirmation.html"
+    SECURITY_CHANGE_EMAIL_SUBJECT = "Подтверждение изменения email"
+    SECURITY_EMAIL_SUBJECT_PASSWORD_CHANGE_NOTICE = "Пароль успешно изменён"
+    SECURITY_EMAIL_SUBJECT_PASSWORD_RESET = "Сброс пароля Radiologary"
     
     
     SECRET_KEY = os.getenv("SECRET_KEY")

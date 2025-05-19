@@ -4,6 +4,9 @@ import requests
 from flask import current_app
 from logger import logger
 from flask_security.mail_util import MailUtil
+from flask_security.forms import RegisterForm
+from wtforms import StringField
+from wtforms.validators import DataRequired
 
 def send_email_via_zeptomail(to_email, subject, html_content, token, from_email="noreply@radiologary.com"):
     """
@@ -65,3 +68,6 @@ class CustomMailUtil(MailUtil):
             token=token,
             from_email=from_email
         )
+        
+class ExtendedRegisterForm(RegisterForm):
+    username = StringField('Имя пользователя', validators=[DataRequired()])

@@ -22,12 +22,12 @@ document.addEventListener("DOMContentLoaded", function(){
     });
 
 
-    isMainChecker(); // Проверка на наличие ошибок, связанных с главными предложениями в протоколах этого профиля
-
     // Слушатель на кнопку "Поделиться профилем"
     document.getElementById("shareProfileButton").addEventListener("click", () => {
         shareProfileButtonHandler();
     });
+
+    
 });
 
 
@@ -178,5 +178,6 @@ async function shareAllProfileProtocols(email) {
         console.log(response.message || "Profile shared successfully.");
     }
 }
+
 
 
