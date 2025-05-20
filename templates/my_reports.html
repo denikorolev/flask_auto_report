@@ -54,8 +54,8 @@
                     </li>
                     <!-- Чекбоксы для связывания протоколов -->
                     <li class="flex report-card__item report-card__item--button-group" data-report-type="{{ report.report_to_subtype.subtype_to_type.id }}">
-                        <button class="btn report__btn my-report-list__button my-report-list__button--delete" type="button" data-report-id="{{ report.id }}" name="report_delete">Удалить</button>
-                        <a class="btn report__btn my-report-list__button my-report-list__button--edit" href="{{ url_for("editing_report.edit_report", report_id=report.id) }}">Изменить</a>
+                        <button class="btn  my-report-list__button my-report-list__button--delete" type="button" data-report-id="{{ report.id }}" name="report_delete">Удалить</button>
+                        <a class="btn  my-report-list__button my-report-list__button--edit" href="{{ url_for("editing_report.edit_report", report_id=report.id) }}">Изменить</a>
                     </li>
                 </ul>
             </li>

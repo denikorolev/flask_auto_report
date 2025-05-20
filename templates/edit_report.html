@@ -45,17 +45,17 @@
             {{editor_checkboxes(user_settings, report_level=True)}}
 
             
-            <button class="btn report__btn" type="button" id="updateReportButton">Сохранить изменения</button>
+            <button class="btn " type="button" id="updateReportButton">Сохранить изменения</button>
             <!-- Кнопка для вызова попапа буфера -->
             <button type="button" id="openBufferPopupButton" class="btn btn-icon btn-open-buffer" title="Открыть буфер обмена">
                 📋 Буфер обмена
             </button>
             <!-- Кнопка для шаринга протокола -->
-            <button class="btn report__btn" type="button" id="shareReportButton">Поделиться</button>
+            <button class="btn " type="button" id="shareReportButton">Поделиться</button>
 
             <!-- Кнопка для того чтобы сделать протокол общедоступным, видна только суперадмину -->
             {% if user_max_rank == 4 %}
-                <button class="btn report__btn" type="button" id="makeReportPublicButton" data-report-public="report_data.report_public">
+                <button class="btn " type="button" id="makeReportPublicButton" data-report-public="report_data.report_public">
                     {% if not report_data.report_public %}
                         Сделать общедоступным
                     {% else %}
@@ -156,7 +156,7 @@
             <br>
             <div class="">
                 <label class="label edit-paragraph__label" for="new_paragraph">Добавить новый параграф</label> 
-                <button class="btn report__btn edit-paragraph__button" type="button" id="addParagraphButton">Добавить</button>
+                <button class="btn  edit-paragraph__button" type="button" id="addParagraphButton">Добавить</button>
             </div>
     </div>
     
@@ -170,7 +170,7 @@
 <div class="report-checks">
     <div class="report-checks__buttons-block">
         <h3 class="report-checks_title">Возможные проверки для данного протокола</h3>
-        <button class"btn report__btn report-checks__btn" 
+        <button class"btn  report-checks__btn" 
             id="startCheckersButton" 
             > Запуск проверки 
         </button>
@@ -223,10 +223,10 @@
             <input type="checkbox" id="elementIsAdditional" class="sentence-popup__checkbox--additional">
             <label for="elementIsAdditional" class="sentence-popup__checkbox--additional">Дополнительный</label>
         </div>
-        <button id="paragraphPopupSaveChangesButton" class="btn report__btn">Сохранить</button>
+        <button id="paragraphPopupSaveChangesButton" class="btn ">Сохранить</button>
     </div>
 
-    <button id="closeParagraphPopupButton" class="btn report__btn">Закрыть</button>
+    <button id="closeParagraphPopupButton" class="btn ">Закрыть</button>
 </div>
 
 

@@ -43,13 +43,13 @@
         </button>
 
         <!-- Кнопка "Add Report" -->
-        <button class="btn report__btn icon-btn--add-report" id="addReportButton" type="button"
+        <button class="btn  icon-btn--add-report" id="addReportButton" type="button"
         title="Add Report">
         + протокол
         </button>
 
         <!-- Кнопка "Next" -->
-        <button class="btn report__btn icon-btn--next-report" id="nextPatientButton" type="button" 
+        <button class="btn  icon-btn--next-report" id="nextPatientButton" type="button" 
         title="При нажатии на эту кнопку данные из формы будут отправлены на сервер и загружен следующий пациент">
             следующий пациент
         </button>
@@ -59,7 +59,7 @@
 <!-- Сам протокол -->
 <div class="flex">
     <!-- Основной блок с отчетом -->
-    <div class="report container">
+    <div class="container left-side-container">
         {% if paragraphs_data %}
             <!-- Уровень параграфа -->
             <ul class="paragraph__list">
@@ -164,7 +164,7 @@
     <div class="flex_column right-side-container report-controlpanel">
 
         <!-- Кнопка для перехода к настройке текущего параграфа -->
-        <a href="/editing_report/edit_report?report_id={{ report_data.id }}" target="_blank" class="btn report__btn push-down"
+        <a href="/editing_report/edit_report?report_id={{ report_data.id }}" target="_blank" class="btn  push-down"
             title="Открывает этот протокол в новом окне">
             Редактировать протокол
         </a>
@@ -190,11 +190,11 @@
 
         <!-- Кнопки экспорта в Word копирования текста и генерации ИИ заключения -->
         <div class="flex_column">
-            <button class="btn report__btn" id="copyButton">Копировать текст</button>
+            <button class="btn " id="copyButton">Копировать текст</button>
             {% if user_settings.USE_WORD_REPORTS %}
-                <button class="btn report__btn" id="exportButton">Экспорт в Word</button>
+                <button class="btn " id="exportButton">Экспорт в Word</button>
             {% endif %}
-            <button class="btn report__btn push-down" id="generateImpression">ИИ заключение</button>
+            <button class="btn  push-down" id="generateImpression">ИИ заключение</button>
             
         </div>
 
@@ -204,9 +204,9 @@
         <div class="flex_column">
             <p>Ответ ИИ</p>
             <p contenteditable="true" class="" id="aiResponse"></p>
-            <button class="btn report__btn" id="addImpressionToReportButton">Вставить заключение</button>
-            <button class="btn report__btn" id="finishWork">Завершить</button>
-            <button class="btn report__btn" id="aiReportCheck">Проверить протокол ИИ</button>
+            <button class="btn " id="addImpressionToReportButton">Вставить заключение</button>
+            <button class="btn " id="finishWork">Завершить</button>
+            <button class="btn " id="aiReportCheck">Проверить протокол ИИ</button>
         </div>
 
 

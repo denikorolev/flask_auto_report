@@ -3,7 +3,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <link rel="icon" href="{{ url_for("static", filename="pic/favi2.png")}}">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <link rel="stylesheet" type="text/css" href="{{ url_for("static", filename="css/normalize.css")}}">
     <link rel="stylesheet" type="text/css" href="{{ url_for("static", filename='css/toastr.min.css') }}">
     <link rel="stylesheet" type="text/css" href="{{ url_for("static", filename='css/style.css') }}">
@@ -19,7 +19,7 @@
     <header class="header">
         <div class="container container--header">
             <a href="{{ url_for("index")}}" class="header__logo--link">
-                <img class="header__logo" src="{{ url_for("static", filename="pic/favi2.png")}}" alt="logo ">
+                <img class="header__logo" src="{{ url_for("static", filename="pic/logo_dark1.svg")}}" alt="logo ">
             </a>
             
             <nav class="header__nav">
@@ -27,7 +27,7 @@
                     {% if g.current_profile %}
                         {% for m in menu %}
                             <li class="header__menu-item">
-                                <a class="header__menu-link" href="{{ m.url }}">{{ m.name }}</a>
+                                <a class="header__menu-link" href="{{ m.url }}" title="{{ m.title }}">{{ m.name }}</a>
                             </li>
                         {% endfor %}
                     {% endif %}
@@ -37,35 +37,23 @@
             
             
             <!-- Сообщение о текущем профиле -->
-            
-                {% if g.current_profile %}
-                    <a href="{{ url_for("profile_settings.choosing_profile") }}">
-                        <p class="header__paragraph">Профиль: {{ g.current_profile.profile_name }}</p>
-                    </a>
-                {% else %}
-                    <p class="header__paragraph">Профиль не выбран</p>
-                {% endif %}
-            
+            {% if g.current_profile %}
+                <a href="{{ url_for("profile_settings.choosing_profile") }}" class="header__user-box" title="Здесь можно сменить профиль">
+                    <p class="header__paragraph">Профиль:</p>
+                    <p class="header__paragraph header__paragraph--data">{{ g.current_profile.profile_name }}</p>
+                </a>
+            {% else %}
+                <p class="header__paragraph">Профиль не выбран</p>
+            {% endif %}
 
             <!-- Сообщение о текущем юзере -->
-            <p class="header__paragraph" id="userNameHeader" data-user-name="{{ current_user.username }}">Привет, {{ current_user.roles[0].name }}, {{ current_user.username }}!</p>
-            <a class="header__link" href="{{ url_for("custom_logout") }}">Выйти</a>
+            <a href="{{ url_for("profile_settings.profile_settings") }}" title="Роль пользователя: {{ current_user.roles[0].name }}. При нажатии отроются настройки текущего профиля" class="header__user-box">
+                <p class="header__paragraph" id="userNameHeader" data-user-name="{{ current_user.username }}">Пользователь:</p>
+                <p class="header__paragraph header__paragraph--data">{{ current_user.username }}</p>
+            </a>
+            <a class="header__exit" href="{{ url_for("custom_logout") }}">Выйти</a>
         </div>
 
-        <div class="flash-message-panel">
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    <ul class="flash-messages">
-                        {% for category, message in messages %}
-                            <li class="flash-message {{ category }}">
-                                [Категория: {{ category }}] Сообщение: {{ message }}
-                            </li>
-                        {% endfor %}
-                    </ul>
-                {% endif %}
-                
-            {% endwith %}
-        </div>
     
     </header>
     {% endblock menu %}
@@ -88,7 +76,7 @@
 
     <footer class="footer">
         <div class="container">
-            <p class="footer__paragraph">&copy; 2023-2025 Radiologary</p>
+            <p class="footer__paragraph">&copy; 2025 Radiologary</p>
             <!-- Сообщение о версии программы -->
             {% if app_info %}
                 <span class="header__paragraph header__paragraph--version">version.{{ app_info.version }}</span>

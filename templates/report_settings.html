@@ -25,7 +25,7 @@
                     Новый тип:
                     <input class="input report-settings__input" type="text" id="newTypeInput">
                 </label>
-                <button class="btn report__btn report-settings__btn" id="newTypeButton" type="button">Добавить новый тип</button>
+                <button class="btn  report-settings__btn" id="newTypeButton" type="button">Добавить новый тип</button>
             </div>
         </div>
         
@@ -37,8 +37,8 @@
                 {% for type in types_subtypes %}
                     <li class="flex report-settings__item report-settings__item--type" data-type-id="{{ type.type_id }}">
                         <input class="input report-settings__input report-settings__input--type" type="text" value="{{ type.type_text }}">
-                        <button class="btn report__btn report-settings__btn report-settings__btn--delete-type" type="button" name="delete_type_button" data-type-id="{{ type.type_id }}">Удалить</button>
-                        <button class="btn report__btn report-settings__btn report-settings__btn--edit-type" type="button" name="edit_type_button" data-type-id="{{ type.type_id }}">Сохранить изменения</button>
+                        <button class="btn  report-settings__btn report-settings__btn--delete-type" type="button" name="delete_type_button" data-type-id="{{ type.type_id }}">Удалить</button>
+                        <button class="btn  report-settings__btn report-settings__btn--edit-type" type="button" name="edit_type_button" data-type-id="{{ type.type_id }}">Сохранить изменения</button>
                     </li>
                 {% endfor %}
             </ul>
@@ -88,7 +88,7 @@
                     <input class="input report-settings__input" type="text" id="newSubtypeInput">
                 </label>
             </div>
-            <button class="btn report__btn report-settings__btn" id="newSubtypeButton" type="button">Добавить</button>
+            <button class="btn  report-settings__btn" id="newSubtypeButton" type="button">Добавить</button>
         </div>
         
         {% if has_subtypes %}
@@ -99,8 +99,8 @@
                             <li class="flex report-settings__item report-settings__item--subtype" style="display: none;" data-type-id="{{ type.type_id }}">
                                 <input class="input report_input__item" type="text" value="{{ type.type_text }}" readonly>
                                 <input class="input report_input__item report-settings__input--subtype" type="text" value="{{ subtype.subtype_text }}">
-                                <button class="btn report__btn report-settings__btn--delete-subtype" type="button" data-subtype-id="{{ subtype.subtype_id }}">Удалить</button>
-                                <button class="btn report__btn report-settings__btn--edit-subtype" type="button" data-subtype-id="{{ subtype.subtype_id }}">Сохранить</button>
+                                <button class="btn  report-settings__btn--delete-subtype" type="button" data-subtype-id="{{ subtype.subtype_id }}">Удалить</button>
+                                <button class="btn  report-settings__btn--edit-subtype" type="button" data-subtype-id="{{ subtype.subtype_id }}">Сохранить</button>
                             </li>
                     {% endfor %}
                 {% endfor %}

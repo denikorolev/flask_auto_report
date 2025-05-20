@@ -1,4 +1,4 @@
-{% extends "login_base.html" %}
+{% extends "security/base_login.html" %}
 
 {% block container %}
 {{ super() }}
@@ -6,48 +6,54 @@
 
 <div class="auth-register">
     <h1 class="title auth-register__title">Авторизация</h1>
-    <form action="{{ url_for('security.login') }}" method="POST" class="flex_column" id="loginForm" name="login_form">
+    <form action="{{ url_for('security.login') }}" method="POST" class="auth-register__form" id="loginForm" name="login_form">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     
         <ul class="auth-register__list">
-            <li class="wrapper auth-register__item">
-                <label class="label auth-register__label" for="email">E-mail:</label>
-                <input class="input auth-register__input" type="email" id="email" name="email" required autocomplete="email"><br>
+            <li class=" auth-register__item">
+                <label class="label" for="authRegisterEmail">Электронная почта:</label>
+                    <input class="input auth-register__input" type="email" id="authRegisterEmail" name="email" required autocomplete="email">
             </li>
-            <li class="wrapper auth-register__item">
-                <label class="label auth-register__label" for="password">Password:</label>
-                <input class="input auth-register__input" type="password" id="password" name="password" required autocomplete="current-password"><br>
+            <li class=" auth-register__item">
+                <label class="label" for="authRegisterPassword">Пароль:</label>
+                    <input class="input auth-register__input" type="password" id="authRegisterPassword" name="password" required autocomplete="current-password">
             </li>
-            <li class="wrapper auth-register__item" id="remember">
-                <label class="label auth-register__label" for="remember">Remember Me</label>
-                <input class="checkbox auth-register__checkbox" id="remember" name="remember" type="checkbox" value="y">
+            <li class=" auth-register__item">
+                <label class="label label--checkbox">Запомнить меня:
+                    <input class="checkbox" id="authRegisterRemember" name="remember" type="checkbox" value="y">
+                </label>
+            </li>
+            <li class="auth-register__item">
+                <a class="auth-register__link" href="{{ url_for('security.forgot_password') }}">Забыли пароль?</a>
+            </li>
+            <li class="auth-register__item">
+                <button class="btn auth-register__btn" type="submit">Войти</button>
             </li>
         </ul>
-    
-        <button class="btn btn_report auth-register__btn" type="submit">Войти</button>
     </form>
+    <div class="auth-register__errors--container">
+        {% if login_user_form.errors %}
+            <ul class="auth-register__errors">
+            {% for field, errors in login_user_form.errors.items() %}
+                {% for error in errors %}
+                    <li class="auth-register__error">
+                        <p>В поле {{ field }}</p>
+                        <p>ошибка:  {{ error }}</p>
+                    </li>
+                {% endfor %}
+            {% endfor %}
+            </ul>
+        {% endif %}
+        <a class="auth-register__link" href="{{ url_for('security.register') }}">Зарегистрироваться</a> <br>
+        <a class="auth-register__link" href="{{ url_for('index') }}">На главную страницу</a>
+       
+        
+    </div>
 </div>
 
-{% if login_user_form.errors %}
-    <ul class="auth-register__errors-list">
-    {% for field, errors in login_user_form.errors.items() %}
-        {% for error in errors %}
-            <li class="auth-register__error">
-                <p>В поле {{ field }}</p> 
-                <p>ошибка:  {{ error }}</p>
-            </li>
-        {% endfor %}
-    {% endfor %}
-    </ul>
-{% endif %}
 
-<p>Нет аккаунта? 
-    <a class="auth-register__link" href="{{ url_for('security.register') }}">Создать</a> <br>
-    <a class="auth-register__link" href="{{ url_for('index') }}">На главную</a>
-</p>
-<p>
-    <a class="auth-register__link" href="{{ url_for('security.forgot_password') }}">Забыли пароль?</a>
-</p>
+
+
 
 
 

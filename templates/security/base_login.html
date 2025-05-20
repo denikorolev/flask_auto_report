@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" href="{{ url_for("static", filename="pic/favi2.png")}}">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <link rel="stylesheet" type="text/css" href="{{ url_for("static", filename="css/normalize.css")}}">
     <link rel="stylesheet" type="text/css" href="{{ url_for("static", filename='css/style.css') }}">
     <title> {{ title }} </title>
@@ -12,7 +12,7 @@
 <body>
 
 <div class="main-auth">
-    <div class="card card-auth">
+    <div class="main-auth__card">
         {% block container %}
         {% endblock container %}
     </div>

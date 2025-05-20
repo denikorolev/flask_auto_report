@@ -36,7 +36,7 @@
                 {% endfor %}
             </div>
         </div>
-        <button type="submit" class="btn report__btn key-word__btn key-word__btn--submit">Add Key Words Group</button>
+        <button type="submit" class="btn  key-word__btn key-word__btn--submit">Add Key Words Group</button>
     </form>
 
     <div class="key-word__container">
@@ -59,9 +59,9 @@
 
                         <!-- Кнопки для редактирования и добавления глобальных ключевых слов -->
                          <div class="key-word__actions">
-                            <button class="btn report__btn key-word__btn key-word__btn--delete" data-group="{{ group.group_index }}">Delete</button>
-                            <button class="btn report__btn key-word__btn key-word__btn--edit" data-group="{{ group.group_index }}">Edit</button>
-                            <button class="btn report__btn key-word__btn--add" data-group="{{ group.group_index }}">Add Word</button>
+                            <button class="btn  key-word__btn key-word__btn--delete" data-group="{{ group.group_index }}">Delete</button>
+                            <button class="btn  key-word__btn key-word__btn--edit" data-group="{{ group.group_index }}">Edit</button>
+                            <button class="btn  key-word__btn--add" data-group="{{ group.group_index }}">Add Word</button>
                         </div>
                     </div>
                 {% endfor %}
@@ -99,10 +99,10 @@
 
                                 <!-- Кнопки для редактирования и добавления ключевых слов привязанных к отчетам -->
                                 <div class="key-word__actions">
-                                    <button class="btn report__btn key-word__btn key-word__btn--delete" data-report="{{ report.report_id }}" data-group="{{ report.group_index }}">Delete</button>
-                                    <button class="btn report__btn key-word__btn key-word__btn--edit-plus-report" data-report="{{ report.report_id }}" data-group="{{ report.group_index }}">Edit</button>
-                                    <button class="btn report__btn key-word__btn key-word__btn--unlink" data-report="{{ report.report_id }}" data-group="{{ report.group_index }}">Unlink</button>
-                                    <button class="btn report__btn key-word__btn key-word__btn--add" data-report="{{ report.report_id }}" data-group="{{ report.group_index }}">Add Word</button>
+                                    <button class="btn  key-word__btn key-word__btn--delete" data-report="{{ report.report_id }}" data-group="{{ report.group_index }}">Delete</button>
+                                    <button class="btn  key-word__btn key-word__btn--edit-plus-report" data-report="{{ report.report_id }}" data-group="{{ report.group_index }}">Edit</button>
+                                    <button class="btn  key-word__btn key-word__btn--unlink" data-report="{{ report.report_id }}" data-group="{{ report.group_index }}">Unlink</button>
+                                    <button class="btn  key-word__btn key-word__btn--add" data-report="{{ report.report_id }}" data-group="{{ report.group_index }}">Add Word</button>
                                 </div>
                             </div>
                         </div>

@@ -1,4 +1,4 @@
-{% extends "login_base.html" %}  
+{% extends "security/base_login.html" %}  
 
 {% block container %}
 {{ super() }}
@@ -9,26 +9,26 @@
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         
             <ul class="auth-register__list">
-                <li class="wrapper auth-register__item">
+                <li class=" auth-register__item">
                     <label class="label auth-register__label">Введите email:
-                    <input class="input auth-register__input" type="email" id="email" name="email" required type="email" autocomplete="email">
+                    <input class="input " type="email" id="email" name="email" required type="email" autocomplete="email">
                     </label>
                     <p>На этот email будет выслано письмо со ссылкой для активации аккаунта (если вы не видите письмо во "входящих", проверьте пожалуйста папку "спам").</p>
                 </li>
-                <li class="wrapper auth-register__item">
+                <li class=" auth-register__item">
                     <label class="label auth-register__label" for="password">Придумайте пароль:</label>
-                    <input class="input auth-register__input" type="password" id="password" name="password" autocomplete="new-password" required>
+                    <input class="input " type="password" id="password" name="password" autocomplete="new-password" required>
                 </li>
                 
             </ul>
         
-            <button id="signupSubmit" class="btn btn_report auth-register__btn" type="submit" value="Register">Создать</button>
+            <button id="signupSubmit" class="btn  auth-register__btn" type="submit" value="Register">Создать</button>
         </form>
     </div>
 
 
 {% if register_user_form.errors %}
-    <ul class="auth-register__errors-list">
+    <ul class="auth-register__errors">
     {% for field, errors in register_user_form.errors.items() %}
         {% for error in errors %}
             <li class="auth-register__error">

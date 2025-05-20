@@ -14,7 +14,7 @@
         <label for="search-user" class="user-management__label">Поиск пользователя:</label>
         <input type="text" id="search-user" class="user-management__input user-management__input--search" 
             placeholder="Введите имя или email или ID" required>
-        <button type="button" id="search-user-button" class="btn btn_report user-management__button user-management__button--search">
+        <button type="button" id="search-user-button" class="btn  user-management__button user-management__button--search">
             Найти
         </button>
     </div>
@@ -130,7 +130,7 @@
             <p>Нет данных для ассоциативных таблиц</p>
         {% endif %}
 
-        <button type="button" class="btn btn_report admin-filters__submit" id="sendSelectedData">Получить данные</button>
+        <button type="button" class="btn  admin-filters__submit" id="sendSelectedData">Получить данные</button>
 
     </div>
     
@@ -152,12 +152,12 @@
 <div class="model-training__block">
     <h2>Обучение модели SpaCy</h2>
     <div class="model-training">
-        <button id="retrainМodelButton" class="btn btn_report" disabled>
+        <button id="retrainМodelButton" class="btn " disabled>
             Переобучить модель (0 / 50)
         </button>
     </div>
     <div class="training-data-block">
-        <button id="show-training-data-btn" class="btn btn_report">🧠 Показать обучающие примеры</button>
+        <button id="show-training-data-btn" class="btn ">🧠 Показать обучающие примеры</button>
         <div id="training-data-view" class="training-data-view"></div>
     </div>
     

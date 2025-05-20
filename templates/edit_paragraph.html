@@ -11,7 +11,7 @@
 <input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
 
 <div class="flex">
-    <button class="btn report__btn" id="backToReportButton" type="button">Вернуться к редактированию протокола</button>
+    <button class="btn " id="backToReportButton" type="button">Вернуться к редактированию протокола</button>
 </div>
 
 <div class="container edit-paragraph" id="editParagraphContainer" data-report-id="{{ report_id }}" data-report-type="{{report_type}}" data-paragraph-id="{{ paragraph.id }}">
@@ -38,7 +38,7 @@
         {{editor_checkboxes(user_settings)}}
 
         <!-- Кнопка сохранения -->
-        <button class="btn report__btn edit-paragraph__btn--save-paragraph-data" id="saveParagraphDataButton">Сохранить изменения</button>
+        <button class="btn  edit-paragraph__btn--save-paragraph-data" id="saveParagraphDataButton">Сохранить изменения</button>
         <!-- Кнопка для вызова попапа буфера -->
         <button type="button" id="openBufferPopupButton" class="btn btn-icon btn-open-buffer" title="Открыть буфер обмена">
             📋 Буфер обмена
@@ -110,7 +110,7 @@
     </ul>
     <hr>
 
-    <button class="btn report__btn" id="addHeadSentenceButton">Добавить главное предложение</button>
+    <button class="btn " id="addHeadSentenceButton">Добавить главное предложение</button>
 
     <hr>
     <!-- Дополнительные предложения -->
@@ -160,7 +160,7 @@
             </li>
         {% endfor %}
         <hr>
-        <button class="btn report__btn" id="addTailSentenceButton">Добавить дополнительное предложение</button>
+        <button class="btn " id="addTailSentenceButton">Добавить дополнительное предложение</button>
     </ul>
 </div>
 

@@ -32,7 +32,7 @@ from openai_api import openai_api_bp
 from key_words import key_words_bp
 from admin import admin_bp
 
-version = "0.9.5.9"
+version = "0.9.6.0"
 
 app = Flask(__name__)
 app.config.from_object(get_config()) # Load configuration from file config.py
@@ -253,11 +253,14 @@ def error():
 
 
 # Обработка ошибок
+@app.errorhandler(404)
+def page_not_found(e):
+    return render_template('404.html'), 404
+
 @app.errorhandler(Exception)
 def handle_exception(e):
     app.logger.error(f"Errorhandler: {str(e)}")
-    er = str(e)
-    return f"Internal Server Error {er}", 500
+    return f"Internal Server Error {str(e)}", 500
 
 
 # Это обязательная часть для разрыва сессии базы данных после каждого обращения
@@ -305,11 +308,6 @@ if os.getenv("FLASK_ENV") == "local":
         """Фильтр для исключения заголовков запросов из логов."""
         def filter(self, record):
             return not record.getMessage().startswith("Headers:")
-    
-    class IgnoreFaviconFilter(logging.Filter):
-        """Исключает запросы к favicon.ico из логов."""
-        def filter(self, record):
-            return not record.getMessage().startswith("GET /favicon.ico")
         
     
     
@@ -317,7 +315,6 @@ if os.getenv("FLASK_ENV") == "local":
     app.logger.addFilter(StaticFilter())
     app.logger.addFilter(DebugToolbarFilter())
     app.logger.addFilter(RemoveHeadersFilter())
-    app.logger.addFilter(IgnoreFaviconFilter())
    
 
     # Подключаем фильтры к логгеру Werkzeug
@@ -326,7 +323,6 @@ if os.getenv("FLASK_ENV") == "local":
     werkzeug_logger.addFilter(StaticFilter())
     werkzeug_logger.addFilter(DebugToolbarFilter())
     werkzeug_logger.addFilter(RemoveHeadersFilter())
-    werkzeug_logger.addFilter(IgnoreFaviconFilter())
 
 
 

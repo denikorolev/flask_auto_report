@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Страница не найдена</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/css_landing.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="notfound-container">
+        <div class="notfound-title">404</div>
+        <div class="notfound-subtitle">Страница не найдена</div>
+        <a href="{{ url_for('index') }}" class="notfound-btn">На главную</a>
+    </div>
+</body>
+</html>
