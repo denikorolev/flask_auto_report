@@ -203,8 +203,8 @@ function firstGrammaSentence(sentence) {
 
     sentence = sentence.replace(/\.{2,}$/g, ".") // Убираем двойные точки в конце предложения
     
-    // Ставим точку в конце предложения, если ее нет, это специально 
-    if (!/[.!?]$/.test(sentence)) {
+    // Ставим точку в конце предложения, если ее нет 
+    if (!/[.!?:,]$/.test(sentence)) {
         sentence += ".";
     }
 

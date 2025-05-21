@@ -3,46 +3,51 @@
 {% block container %}
 {{ super() }}
 
-    <div class="auth_register">
-        <h1 class="title auth_register__title" id="signupForm">Создать аккаунт</h1>
-        <form class="flex_column auth_register__form" action="/register" method="post" name="register_user_form">
+    <div class="auth-register">
+        <h1 class="title auth-register__title" id="signupForm">Регистрация</h1>
+        <form class="auth-register__form" action="/register" method="post" name="register_form">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         
             <ul class="auth-register__list">
-                <li class=" auth-register__item">
-                    <label class="label auth-register__label">Введите email:
-                    <input class="input " type="email" id="email" name="email" required type="email" autocomplete="email">
-                    </label>
-                    <p>На этот email будет выслано письмо со ссылкой для активации аккаунта (если вы не видите письмо во "входящих", проверьте пожалуйста папку "спам").</p>
+                <li class="auth-register__item">
+                    <label class="label" for="authRegisterEmail">Введите email:</label>
+                    <input class="input auth-register__input" type="email" id="authRegisterEmail" name="email" required autocomplete="email">
                 </li>
-                <li class=" auth-register__item">
-                    <label class="label auth-register__label" for="password">Придумайте пароль:</label>
-                    <input class="input " type="password" id="password" name="password" autocomplete="new-password" required>
+                <li class="auth-register__item">
+                    <label class="label" for="authRegisterPassword">Придумайте пароль:</label>
+                    <input class="input auth-register__input" type="password" id="authRegisterPassword" name="password" autocomplete="new-password" required>
                 </li>
-                
+                <li class="auth-register__item">
+                    <button id="signupSubmit" class="btn  auth-register__btn" type="submit" value="Register">Создать</button>
+                </li>
             </ul>
-        
-            <button id="signupSubmit" class="btn  auth-register__btn" type="submit" value="Register">Создать</button>
         </form>
+
+        {% if register_user_form.errors %}
+            <ul class="auth-register__errors">
+            {% for field, errors in register_user_form.errors.items() %}
+                {% for error in errors %}
+                    <li class="auth-register__error">
+                        <p>В поле {{ field }}</p> 
+                        <p>ошибка:  {{ error }}</p>
+                    </li>
+                {% endfor %}
+            {% endfor %}
+            </ul>
+        {% endif %}
+
+        <div class="auth-register__links">
+            <p>Уже есть аккаунт?
+                <a class="auth-register__link" href="{{ url_for('security.login') }}">Войти</a>
+            </p>
+                <a class="auth-register__link" href="{{ url_for('index') }}">На главную</a>
+        </div>
+        
     </div>
 
 
-{% if register_user_form.errors %}
-    <ul class="auth-register__errors">
-    {% for field, errors in register_user_form.errors.items() %}
-        {% for error in errors %}
-            <li class="auth-register__error">
-                <p>В поле {{ field }}</p> 
-                <p>ошибка:  {{ error }}</p>
-            </li>
-        {% endfor %}
-    {% endfor %}
-    </ul>
-{% endif %}
 
-<p>Уже есть аккаунт? 
-    <a class="auth-register__link" href="{{ url_for('security.login') }}">Войти</a><br>
-    <a class="auth-register__link" href="{{ url_for('index') }}">На главную</a>
-</p>
+
+
 {% endblock container %}
 

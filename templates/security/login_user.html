@@ -31,24 +31,23 @@
             </li>
         </ul>
     </form>
-    <div class="auth-register__errors--container">
-        {% if login_user_form.errors %}
-            <ul class="auth-register__errors">
-            {% for field, errors in login_user_form.errors.items() %}
-                {% for error in errors %}
-                    <li class="auth-register__error">
-                        <p>В поле {{ field }}</p>
-                        <p>ошибка:  {{ error }}</p>
-                    </li>
-                {% endfor %}
+    {% if login_user_form.errors %}
+        <ul class="auth-register__errors">
+        {% for field, errors in login_user_form.errors.items() %}
+            {% for error in errors %}
+                <li class="auth-register__error">
+                    <p>В поле {{ field }}</p>
+                    <p>ошибка:  {{ error }}</p>
+                </li>
             {% endfor %}
-            </ul>
-        {% endif %}
-        <a class="auth-register__link" href="{{ url_for('security.register') }}">Зарегистрироваться</a> <br>
-        <a class="auth-register__link" href="{{ url_for('index') }}">На главную страницу</a>
-       
+        {% endfor %}
+        </ul>
+    {% endif %}
+    <p>Еще нет аккаунта? 
+        <a class="auth-register__link" href="{{ url_for('security.register') }}">Зарегистрироваться</a> 
+    </p>
+    <a class="auth-register__link" href="{{ url_for('index') }}">На главную страницу</a>
         
-    </div>
 </div>
 
 
