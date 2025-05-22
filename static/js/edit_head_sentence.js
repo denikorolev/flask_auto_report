@@ -193,9 +193,12 @@ function makeSentenceEditableActions(sentenceElement) {
 
     function finishEditing() {
         sentenceElement.setAttribute("contenteditable", "false");
-        sentenceElement.removeEventListener("keydown", onEnterPress);
+        // Удаляем универсальный обработчик Enter (если нужно)
+        if (sentenceElement._onEnterHandler) {
+            sentenceElement.removeEventListener("keydown", sentenceElement._onEnterHandler);
+            delete sentenceElement._onEnterHandler;
+        }
         const firstGrammaSentenceCheckBox = document.getElementById("firstGrammaSentence").checked;
-
         const newText = firstGrammaSentenceCheckBox ? firstGrammaSentence(sentenceElement.textContent.trim()) : sentenceElement.textContent.trim();
         if (newText !== oldText) {
             sentenceElement.textContent = newText; // Обновляем текст в элементе
@@ -206,15 +209,13 @@ function makeSentenceEditableActions(sentenceElement) {
     // Потеря фокуса
     sentenceElement.addEventListener("blur", finishEditing, { once: true });
 
-    // Enter для сохранения
-    function onEnterPress(event) {
-        if (event.key === "Enter") {
-            event.preventDefault();
-            sentenceElement.blur();
-        }
-    }
-
-    sentenceElement.addEventListener("keydown", onEnterPress);
+    // Универсальный обработчик Enter
+    const handleEnter = function(e, el) {
+        e.preventDefault();
+        el.blur();
+    };
+    sentenceElement._onEnterHandler = handleEnter;
+    onEnter(sentenceElement, handleEnter, true);
 }
 
 

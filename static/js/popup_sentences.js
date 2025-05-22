@@ -96,13 +96,18 @@ function showPopupSentences(x, y, sentenceList, onSelect) {
                 hidePopupSentences();
             }
         }
-
-        if (event.key === "Enter" && filterInput.value.trim()) {
-            event.preventDefault();
-            const newText = filterInput.value.trim();
-            const customSentence = { sentence: newText };
-            onSelect(customSentence);  // Вставляем текст в целевой элемент
-            hidePopupSentences();
+        // Не даём навешивать обработчик Enter повторно
+        // Обработка нажатия Enter, onEnter в utils.js
+        if (!filterInput._onEnterHandler) {
+            filterInput._onEnterHandler = function(e, el) {
+                const newText = el.value.trim();
+                if (newText) {
+                    const customSentence = { sentence: newText };
+                    onSelect(customSentence);
+                    hidePopupSentences();
+                }
+            };
+            onEnter(filterInput, filterInput._onEnterHandler);
         }
         
     });

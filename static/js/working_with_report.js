@@ -13,7 +13,8 @@ document.addEventListener("DOMContentLoaded", function() {
     const editButton = document.getElementById("editFormButton"); // Для обращения к кнопке Edit Form
     const addReportButton = document.getElementById("addReportButton"); // Для обращения к кнопке Add Report
     const generateButton = document.getElementById("generateImpression"); // Для обращения к кнопке Generate Impression
-    const boxForAiResponse = document.getElementById("aiResponse");     // Для обращения к блоку с ответом от AI
+    const boxForAiImpressionResponse = document.getElementById("aiImpressionResponseBlock");
+    const boxForAiRedactorResponse = document.getElementById("aiRedactorResponseBlock");
     const addImpressionButton = document.getElementById("addImpressionToReportButton"); // Для обращения к кнопке "Вставить заключение"
     
 
@@ -74,11 +75,15 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     if (generateButton) {
-        generateImpressionLogic(generateButton, boxForAiResponse);
+        generateButton.addEventListener("click", async function() {
+            await generateImpressionLogic(boxForAiImpressionResponse, boxForAiRedactorResponse);
+        });
     }
 
     if (addImpressionButton) {
-        addImpressionButtonLogic(addImpressionButton);
+        addImpressionButton.addEventListener("click", function() {
+            addImpressionButtonLogic(boxForAiImpressionResponse);
+        });
     }
 
 
@@ -98,7 +103,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // Слушатель на кнопку "Проверить протокол ИИ"
     document.getElementById("aiReportCheck").addEventListener("click", function() {
-        checkReportAI(boxForAiResponse);
+        checkReportAI(boxForAiRedactorResponse, boxForAiImpressionResponse);
     });
 });
 
@@ -187,6 +192,13 @@ function handleSentenceBlur() {
         this.setAttribute("data-sentence-modified", "true");
         this.classList.add("was-changed-highlighted-sentence");
     }
+
+    // Находим все ключевые слова в данном предложении и меняем их цвет на более светлый
+    const keywords = this.querySelectorAll(".keyword-highlighted");
+    keywords.forEach(keyword => {
+        keyword.classList.add("keyword-highlighted--light");
+    });
+
 }
 
 /**
@@ -208,14 +220,6 @@ function createEditableSentenceElement(sentenceText, paragraphId) {
     
     newSentenceElement.addEventListener("focus", handleSentenceFocus); // Сохраняем исходный текст при фокусе
     newSentenceElement.addEventListener("blur", handleSentenceBlur);   // Проверяем изменения при потере фокуса
-
-    // Слушатель на энтер для потери фокуса при его нажатии
-    newSentenceElement.addEventListener("keydown", function(e) {
-        if (e.key === "Enter") {
-            e.preventDefault();
-            this.blur();
-        }
-    });
 
     return newSentenceElement;
 }
@@ -438,20 +442,13 @@ function linkSentences() {
         const currentHeadSentence = paragraphData.head_sentences.find(sentence => sentence.id === sentenceId) || null;
         const bodySentences = currentHeadSentence.body_sentences;
 
-            // Связываем видимое предложение с отфильтрованными предложениями из reportData
-            sentenceElement.linkedSentences = bodySentences;
+        // Связываем видимое предложение с отфильтрованными предложениями из reportData
+        sentenceElement.linkedSentences = bodySentences;
 
-            // Если есть связанные предложения, выделяем цветом текущее предложение
-            if (sentenceElement.linkedSentences.length > 0) {
-                sentenceElement.classList.add("has-linked-sentences-highlighted-sentence");
-            }
-            // Слушатель на enter для потери фокуса при его нажатии
-            sentenceElement.addEventListener("keydown", function(e) {
-                if (e.key === "Enter") {
-                    e.preventDefault();
-                    this.blur();
-                }
-            });
+        // Если есть связанные предложения, выделяем цветом текущее предложение
+        if (sentenceElement.linkedSentences.length > 0) {
+            sentenceElement.classList.add("has-linked-sentences-highlighted-sentence");
+        }
     });
 }
 
@@ -797,28 +794,55 @@ function wordButtonLogic(exportButton) {
 
 
 // Логика для кнопки "Generate Impression". Возможно нужно объединить с логикой generateImpressionRequest   
-function generateImpressionLogic(generateButton, boxForAiResponse) {
-    generateButton.addEventListener("click", async function () {
-        const textToCopy = collectTextFromParagraphs("paragraph__item--core");
-        boxForAiResponse.textContent = "Ожидаю ответа ИИ...";
+async function generateImpressionLogic(boxForAiResponse, responseForDelete) {
+    const textToCopy = collectTextFromParagraphs("paragraph__item--core");
+    boxForAiResponse.textContent = "Ожидаю ответа ИИ...";
 
-        try {
-            const aiResponse = await generateImpressionRequest(textToCopy);
-            boxForAiResponse.textContent = aiResponse || "Ответ ИИ не получен.";
-        } catch (error) {
-            console.error(error);
-            boxForAiResponse.textContent = "Ошибка при получении ответа ИИ.";
+    if (boxForAiResponse) {
+        boxForAiResponse.innerText = "";
+        boxForAiResponse.style.display = "block";
+    }
+
+    if (responseForDelete) {
+        console.log("я стер блок", responseForDelete);
+        responseForDelete.innerText = "";
+        responseForDelete.style.display = "none";
+    }
+
+    try {
+        const aiResponse = await generateImpressionRequest(textToCopy);
+        console.log("Ответ ИИ:", aiResponse);
+        boxForAiResponse.textContent = aiResponse || "Ответ ИИ не получен.";
+        // Делаем видимой кнопку "Add Impression"
+        const addImpressionButton = document.getElementById("addImpressionToReportButton");
+
+        if (aiResponse) {
+            addImpressionButton.style.display = "block";
         }
-    });
+
+
+        // --- Вот тут надёжная проверка ---
+        if (!boxForAiResponse._onEnterHandler) {
+            boxForAiResponse._onEnterHandler = function(e, el) {
+                addImpressionButtonLogic(boxForAiResponse);
+            };
+            onEnter(boxForAiResponse, boxForAiResponse._onEnterHandler, true);
+        }
+
+
+    } catch (error) {
+        console.error(error);
+        boxForAiResponse.textContent = "Ошибка при получении ответа ИИ.";
+    }
 }
 
 
 
 // Логика для кнопки "Add Impression".
-function addImpressionButtonLogic(addImpressionButton) {
-    addImpressionButton.addEventListener("click", function() {
+function addImpressionButtonLogic(aiImpressionBox) {
         // Получаем текст ответа ИИ
-        const aiResponseText = document.getElementById("aiResponse")?.innerText.trim();
+        const aiResponseText = aiImpressionBox?.innerText.trim();
+        console.log("aiResponseText", aiResponseText);
 
         if (!aiResponseText) {
             alert("Ответ ИИ пуст. Пожалуйста, сначала сгенерируйте заключение.");
@@ -840,7 +864,12 @@ function addImpressionButtonLogic(addImpressionButton) {
         if (!foundVisibleSentence) {
             alert("Не найдено видимых предложений для заключения.");
         }
-    });
+
+        // После вставки заключения — снимаем обработчик onEnter с aiImpressionBox
+        if (aiImpressionBox && aiImpressionBox._onEnterHandler) {
+            aiImpressionBox.removeEventListener("keydown", aiImpressionBox._onEnterHandler);
+            delete aiImpressionBox._onEnterHandler;
+        }
 }
 
 
@@ -890,7 +919,7 @@ async function sendModifiedSentencesToServer() {
         const paragraphId = sentenceElement.getAttribute("data-paragraph-id");
         const isAdditionalParagraph = sentenceElement.getAttribute("data-paragraph-additional") === "True";
         if (isAdditionalParagraph) {
-            console.log("Additional paragraph found. Skipping...");
+            console.log("Дополнительный параграф найден, пропускаем");
             return;
         }
         const sentenceType = sentenceElement.getAttribute("data-sentence-type") === "head" ? "body" : "tail";
@@ -1014,12 +1043,6 @@ async function sendModifiedSentencesToServer() {
 
 
 
-
-
-
-
-
-
 // Функция для генерации запроса на сервер для получения заключения
 function generateImpressionRequest(text) {
     // Формируем данные для отправки
@@ -1118,9 +1141,20 @@ function finishWorkAndSaveSnapShot() {
 
 
 // Функция для отправки протокола на проверку ИИ (REDACTOR)
-function checkReportAI(boxForAiResponse){
+function checkReportAI(boxForAiResponse, responseForDelete){
     const coreText = collectTextFromParagraphs("paragraph__item--core");
     const impressionText = collectTextFromParagraphs("paragraph__item--impression");
+
+    if (boxForAiResponse) {
+        boxForAiResponse.innerText = "";
+        boxForAiResponse.style.display = "block";
+    }
+
+    if (responseForDelete) {
+        responseForDelete.innerText = "";
+        responseForDelete.style.display = "none";
+    }
+    
 
     const textToCheck = `${coreText}\n\n${impressionText}`.trim();
     
@@ -1132,6 +1166,7 @@ function checkReportAI(boxForAiResponse){
         },
     }).then(data => {
         if (data.status === "success") {
+            console.log("Ответ ИИ:", data.data);
             boxForAiResponse.innerText = data.data || "Ответ ИИ не получен.";
         } 
     }).catch(error => {

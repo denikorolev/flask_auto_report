@@ -234,3 +234,23 @@ function firstGrammaSentence(sentence) {
 
     return sentence.trim();
 }
+
+
+/**
+ * Навешивает обработчик нажатия Enter на указанный элемент.
+ * @param {Element|string} element - DOM-элемент или его id.
+ * @param {Function} callback - Функция, которая будет вызвана при нажатии Enter.
+ * @param {boolean} [preventDefault=true] - Нужно ли отменять стандартное действие.
+ */
+function onEnter(element, callback, preventDefault = true) {
+    if (typeof element === "string") {
+        element = document.getElementById(element);
+    }
+    if (!element) return;
+    element.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") {
+            if (preventDefault) e.preventDefault();
+            callback(e, element);
+        }
+    });
+}

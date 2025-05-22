@@ -121,7 +121,7 @@ function setupAddKeywordsListener() {
                 const newKeywords = inputElement.value.trim();
 
                 if (!newKeywords) {
-                    alert("Please enter at least one keyword.");
+                    alert("Пожалуйте, введите хотя бы одно ключевое слово");
                     return;
                 }
 
@@ -155,7 +155,7 @@ function setupAddKeywordsListener() {
         const input = document.createElement("input");
         input.classList.add("key-word__input--add");
         input.type = "text";
-        input.placeholder = "Enter new keyword(s)";
+        input.placeholder = "Введите ключевые слова через запятую";
 
         container.appendChild(input);
         return container;

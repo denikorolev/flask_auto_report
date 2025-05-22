@@ -478,7 +478,11 @@ function makeEditable(paragraphElement) {
     // Функция для завершения редактирования
     function finishEditing() {
         paragraphElement.setAttribute("contenteditable", "false"); // Заканчиваем редактирование
-        paragraphElement.removeEventListener("keydown", onEnterPress); // Удаляем обработчик Enter
+        // Удаляем обработчик Enter, если нужно
+        if (paragraphElement._onEnterHandler) {
+            paragraphElement.removeEventListener("keydown", paragraphElement._onEnterHandler);
+            delete paragraphElement._onEnterHandler;
+        }
         const firstGrammaSentenceCheckBox = document.getElementById("firstGrammaSentence").checked; // проверяем включена ли автопроверка текста
         const newText = firstGrammaSentenceCheckBox ? firstGrammaSentence(paragraphElement.textContent.trim()) : paragraphElement.textContent.trim(); 
 
@@ -492,16 +496,13 @@ function makeEditable(paragraphElement) {
     // Обработчик потери фокуса (сохранение изменений)
     paragraphElement.addEventListener("blur", finishEditing, { once: true });
 
-    // Обработчик нажатия Enter
-    function onEnterPress(event) {
-        if (event.key === "Enter") {
-            console.log("Нажат Enter (Return на Mac)");
-            event.preventDefault(); // Отменяем перенос строки
-            paragraphElement.blur(); // Симулируем потерю фокуса
-        }
-    }
+    // Универсальный обработчик Enter (через onEnter)
+    const handleEnter = function(e, el) {
+        el.blur(); // Симулируем потерю фокуса
+    };
+    paragraphElement._onEnterHandler = handleEnter; // Сохраняем ссылку, чтобы удалить
 
-    paragraphElement.addEventListener("keydown", onEnterPress);
+    onEnter(paragraphElement, handleEnter, true); // Привязываем обработчик нажатия Enter
 }
 
 

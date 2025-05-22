@@ -37,7 +37,7 @@
 
 <!-- Группа управления для выбора протокола -->
  {% if report_types_and_subtypes %}
-    <div class="choosing-report-block">
+    <div class="container choosing-report-block">
         <h3 class="choosing-report-block__title">Выбор шаблона протокола для работы</h3>
 
         <form class="flex" id="reportForm" method="POST">
@@ -68,21 +68,23 @@
         </div>
     </div>
 {% else %}
-    <h3>У вас пока не задано ни одного <span class="highlighted_text">типа</span> или <span class="highlighted_text">подтипа</span> протокола в этом профиле. </h3>
-    <p class="help-text">Типы протоколов обычно определяют к какой модальности относится протокол.</p> 
-    <p class="help-text">По умолчанию это один из следующих типов: 
-        {% for type in default_report_types %}
-            <span class="report__sentence">"{{ type }}"{% if not loop.last %}, {% endif %}</span>
-        {% endfor %}
-    </p> 
-    <p class="help-text"><span class="highlighted_text">Подтипы</span> протоколов обычно определяют область исследования, например Тип протокола "МРТ", <span class="highlighted_text">подтип</span> "голова и шея".</p>
-    <p class="help-text">Хотя по умолчанию и подразумевается, что это будет модальность и область исследования, Вы можете придумать свою логику создания типов и подтипов протокола, которая может быть абсолютно любой. </p>
-    
-    <p class="help-text">Для перехода к созданию типов и подтипов перейдите в 
-        <a href="{{ url_for('report_settings.report_settings') }}" class="choosing-report-block__link" style="color: blue">
-            настройки протоколов.
-        </a>
-    </p class="help-text">
+    <div class="container">
+        <h3>У вас пока не задано ни одного <span class="highlighted_text">типа</span> или <span class="highlighted_text">подтипа</span> протокола в этом профиле. </h3>
+        <p class="help-text">Типы протоколов обычно определяют к какой модальности относится протокол.</p>
+        <p class="help-text">По умолчанию это один из следующих типов:
+            {% for type in default_report_types %}
+                <span class="report__sentence">"{{ type }}"{% if not loop.last %}, {% endif %}</span>
+            {% endfor %}
+        </p>
+        <p class="help-text"><span class="highlighted_text">Подтипы</span> протоколов обычно определяют область исследования, например Тип протокола "МРТ", <span class="highlighted_text">подтип</span> "голова и шея".</p>
+        <p class="help-text">Хотя по умолчанию и подразумевается, что это будет модальность и область исследования, Вы можете придумать свою логику создания типов и подтипов протокола, которая может быть абсолютно любой. </p>
+        
+        <p class="help-text">Для перехода к созданию типов и подтипов перейдите в
+            <a href="{{ url_for('report_settings.report_settings') }}" class="choosing-report-block__link" style="color: blue">
+                настройки протоколов.
+            </a>
+        </p class="help-text">
+    </div>
  {% endif %}
 
 

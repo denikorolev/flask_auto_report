@@ -164,51 +164,53 @@
     <div class="flex_column right-side-container report-controlpanel">
 
         <!-- Кнопка для перехода к настройке текущего параграфа -->
-        <a href="/editing_report/edit_report?report_id={{ report_data.id }}" target="_blank" class="btn  push-down"
+        <a href="/editing_report/edit_report?report_id={{ report_data.id }}" target="_blank" class="btn"
             title="Открывает этот протокол в новом окне">
             Редактировать протокол
         </a>
-
+        <br>
        
-            <ul class="report-controlpanel__inactive-paragraphs-list" id="inactiveParagraphsList">
-                <h3>Неактивные параграфы:</h3>
-                <p>Параграфы, которые не участвуют в формировании заключения. Можно активировать нажав на имя параграфа</p>
-                <br>
-                <br>
-                {% for paragraph in paragraphs_data  %}
-                    {% if not paragraph.is_active %}
-                    <li class="report-controlpanel__inactive-paragraphs-item" data-paragraph-id="{{ paragraph.id }}"> 
-                        <span><b>{{ paragraph.paragraph }}</b></span> 
-                        <span>({{ paragraph.comment }})</span> 
-                    </li>
-                    {% endif %}       
-                {% endfor %}
-                <br>
-                <br>
-            </ul>
+        <ul class="report-controlpanel__inactive-paragraphs-list" id="inactiveParagraphsList">
+            <h3 title="Параграфы, которые не участвуют в формировании заключения. Можно активировать нажав на имя параграфа">
+                Неактивные параграфы:
+            </h3>
+            <br>
+            <br>
+            {% for paragraph in paragraphs_data  %}
+                {% if not paragraph.is_active %}
+                <li class="report-controlpanel__inactive-paragraphs-item" data-paragraph-id="{{ paragraph.id }}"> 
+                    <span><b>{{ paragraph.paragraph }}</b></span> 
+                    <span>({{ paragraph.comment }})</span> 
+                </li>
+                {% endif %}       
+            {% endfor %}
+            <br>
+            <br>
+        </ul>
        
-
         <!-- Кнопки экспорта в Word копирования текста и генерации ИИ заключения -->
         <div class="flex_column">
             <button class="btn " id="copyButton">Копировать текст</button>
             {% if user_settings.USE_WORD_REPORTS %}
                 <button class="btn " id="exportButton">Экспорт в Word</button>
             {% endif %}
-            <button class="btn  push-down" id="generateImpression">ИИ заключение</button>
-            
+            <button class="btn" id="generateImpression">ИИ заключение</button>
+            <br>
+            <br>
         </div>
 
 
         <!-- Место вывода ответа ИИ -->
         
         <div class="flex_column">
-            <p>Ответ ИИ</p>
-            <p contenteditable="true" class="" id="aiResponse"></p>
-            <button class="btn " id="addImpressionToReportButton">Вставить заключение</button>
-            <button class="btn " id="finishWork">Завершить</button>
-            <button class="btn " id="aiReportCheck">Проверить протокол ИИ</button>
+            <p contenteditable="true" class="" id="aiImpressionResponseBlock"></p>
+            <p class="" id="aiRedactorResponseBlock"></p>
+            
+            <button class="btn " id="addImpressionToReportButton" style="display: none;">Вставить заключение</button>
         </div>
-
+        
+        <button class="btn " id="aiReportCheck">Проверить протокол ИИ</button>
+        <button class="btn " id="finishWork">Завершить</button>
 
     </div>
 </div>
