@@ -151,6 +151,14 @@ function handleSentenceFocus() {
     if (!this.hasAttribute("data-original-text")) {
         this.setAttribute("data-original-text", this.textContent.trim());
     }
+    console.log(this)
+    // --- Вот тут надёжная проверка ---
+    if (!this._onEnterHandler) {
+        this._onEnterHandler = function(e, el) {
+        el.blur()
+        };
+        onEnter(this, this._onEnterHandler, true);
+    }
 }
 
 
@@ -198,6 +206,12 @@ function handleSentenceBlur() {
     keywords.forEach(keyword => {
         keyword.classList.add("keyword-highlighted--light");
     });
+
+    // Снимаем слушатель нажатия Enter если он навешен на элемент
+    if(this._onEnterHandler) {
+        this.removeEventListener("keydown", this._onEnterHandler);
+        delete this._onEnterHandler;
+    }
 
 }
 
