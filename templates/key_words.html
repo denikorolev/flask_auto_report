@@ -10,23 +10,23 @@
 <!-- Работа с ключевыми словами -->
 <section class="key-word">
     <form class="key-word__form key-word__form--add" id="keywords-form">
-        <label for="key_word_input" class="report_label__item key-word-label">New Key Words (comma-separated):</label>
+        <label for="key_word_input" class="label key-word-label">New Key Words (comma-separated):</label>
         <input class="key-word__input" type="text" id="key_word_input" name="key_word_input" required>
         <!-- Чекбокс для привязки к отчету -->
         <div>
-            <label for="link_reports_checkbox" class="report_label__item key-word__label">Link to Reports:</label>
+            <label for="link_reports_checkbox" class="label key-word__label">Link to Reports:</label>
             <input class="key-word__input-checkbox" type="checkbox" id="link_reports_checkbox" name="link_reports_checkbox">
         </div>
 
         <!-- Чекбокс для игнорирования проверки на уникальность -->
         <div class="key-word__checkbox-container">
-            <label for="ignore_unique_check" class="report_label__item key-word__label">Ignore uniqueness check:</label>
+            <label for="ignore_unique_check" class="label key-word__label">Ignore uniqueness check:</label>
             <input class="key-word__input-checkbox" type="checkbox" id="ignore_unique_check" name="ignore_unique_check">
         </div>
 
         <!-- Список reports пользователя -->
         <div class="key-word__report-list" id="report-checkboxes-container" style="display: none;">
-            <label class="report_label__item key-word__label">Select Reports:</label>
+            <label class="label key-word__label">Select Reports:</label>
             <div>
                 {% for report in user_reports %}
                     <label>

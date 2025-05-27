@@ -6,39 +6,44 @@
 <input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
 
 
-<div class="flex report-settings__container">
+<div class="container flex report-settings__container">
      <!-- Добавление нового типа протокола -->
     <section class="section report-settings__section report-settings__section--types">
         
-        <div class="flex report-settings__box" id="newTypeForm">
-            <div class="flex_column">
-                <label class="label report-settings__label">
-                    Выберите тип для добавления:
-                    <select class="select report__select report-settings__select" id="reportTypesDefault">
-                        {% for type in default_report_types %}
-                            <option value="{{ type }}">{{ type }}</option>
-                        {% endfor %}
-                        <option value="new_type">Создать новый тип</option>
-                    </select>
-                </label>    
-                <label class="report-settings__label" id="newTypeLabel" style="display: none;">
-                    Новый тип:
-                    <input class="input report-settings__input" type="text" id="newTypeInput">
-                </label>
+        <div class="report-settings__card" id="newTypeForm">
+            <h3 class="report-settings__title">Добавление нового типа протокола</h3>
+            <div class="report-settings__box">
+                <div class="flex_column">
+                    <div class="report-settings__wrapper">
+                        <label class="label" for="reportTypesDefault"> Выберите тип для добавления:</label>
+                        <select class="select" id="reportTypesDefault">
+                            {% for type in default_report_types %}
+                                <option value="{{ type }}">{{ type }}</option>
+                            {% endfor %}
+                            <option value="new_type">Создать новый тип</option>
+                        </select>
+                    </div>
+                    <div class="report-settings__wrapper" style="display: none;" id="newTypeInputForm">
+                        <label class="label" id="newTypeLabel" >Новый тип:</label>
+                        <input class="input report-settings__input" type="text" id="newTypeInput">
+                    </div>
+                </div>
                 <button class="btn  report-settings__btn" id="newTypeButton" type="button">Добавить новый тип</button>
             </div>
         </div>
         
         {% if types_subtypes %}
-        <div class="report-settings__box">
+        <div class="report-settings__card">
             <h3 class="" >Типы протоколов текущего профиля:</h3>
-            <br>
-            <ul id="types-list" class="report-settings__list--types">
+            
+            <ul id="types-list" class="flex_column">
                 {% for type in types_subtypes %}
-                    <li class="flex report-settings__item report-settings__item--type" data-type-id="{{ type.type_id }}">
+                    <li class="flex report-settings__box report-settings__item report-settings__item--type" data-type-id="{{ type.type_id }}">
                         <input class="input report-settings__input report-settings__input--type" type="text" value="{{ type.type_text }}">
-                        <button class="btn  report-settings__btn report-settings__btn--delete-type" type="button" name="delete_type_button" data-type-id="{{ type.type_id }}">Удалить</button>
-                        <button class="btn  report-settings__btn report-settings__btn--edit-type" type="button" name="edit_type_button" data-type-id="{{ type.type_id }}">Сохранить изменения</button>
+                        <div class="flex">
+                            <button class="btn  report-settings__btn report-settings__btn--delete-type" type="button" name="delete_type_button" data-type-id="{{ type.type_id }}">Удалить</button>
+                            <button class="btn  report-settings__btn report-settings__btn--edit-type" type="button" name="edit_type_button" data-type-id="{{ type.type_id }}">Сохранить изменения</button>
+                        </div>
                     </li>
                 {% endfor %}
             </ul>
@@ -56,58 +61,68 @@
                 <p class="help-text">Старайтесь по возможности придерживаться типов по умолчанию, так как под них разработаны готовые логические блоки.</p>
                 <p class="help-text">Старайтесь не создавать лишних типов для профиля, так как это увеличит объем визуальной информации в интерфейсе и сделает работу менее удобной.</p>
         {% endif %}
-        <br>
        
         
     </section>
     
     <!-- Добавление нового подтипа протокола -->
     <section class="section report-settings__section report-settings__section--subtypes">
-        <div class="flex">
-            <label class="report_label__item">
-                Выберите тип для добавления подтипа:
-                <select class="select report__select report-settings__select" id="reportTypes" required>
-                    {% for type in types_subtypes %}
-                        <option value="{{ type.type_id }}">{{ type.type_text }}</option>
-                    {% endfor %}
-                </select>
-            </label>
-
-            <div class="flex_column report-settings__wrapper" id="newSubtypeForm">
-                <label class="report-settings__label">
-                    Выберите подтип для добавления:
-                    <select class="select report__select report-settings__select" id="reportSubtypesDefault">
-                        {% for subtype in default_report_subtypes %}
-                        <option value="{{ subtype }}">{{ subtype }}</option>
+        <div class="report-settings__card">
+            <h3 class="report-settings__title">Добавление нового подтипа протокола</h3>
+            <div class="report-settings__box">
+                <div class="flex_column report-settings__wrapper">
+                    <label class="label" for="reportTypes">Тип:</label>
+                    <select class="select report-settings__select" id="reportTypes" required>
+                        {% for type in types_subtypes %}
+                            <option value="{{ type.type_id }}">{{ type.type_text }}</option>
                         {% endfor %}
-                        <option value="new_subtype">Создать новый подтип</option>
                     </select>
-                </label>
-                <label class="report-settings__label" id="newSubtypeLabel" style="display: none;">
-                    Новый подтип:
-                    <input class="input report-settings__input" type="text" id="newSubtypeInput">
-                </label>
+                </div>
+                
+                <div class="flex_column report-settings__wrapper" id="newSubtypeForm">
+                    <div class="report-settings__wrapper">
+                        <label class="label" for="reportSubtypesDefault">Подтип:</label>
+                        <select class="select report-settings__select" id="reportSubtypesDefault">
+                            {% for subtype in default_report_subtypes %}
+                            <option value="{{ subtype }}">{{ subtype }}</option>
+                            {% endfor %}
+                            <option value="new_subtype">Создать новый подтип</option>
+                        </select>
+                    </div>
+                    <div class="report-settings__wrapper" style="display: none;" id="newSubtypeInputForm">
+                        <label class="label" id="newSubtypeLabel" >Новый подтип:</label>
+                        <input class="input report-settings__input" type="text" id="newSubtypeInput">
+                    </div>
+                </div>
+                
+                <button class="btn  report-settings__btn" id="newSubtypeButton" type="button">Добавить</button>
             </div>
-            <button class="btn  report-settings__btn" id="newSubtypeButton" type="button">Добавить</button>
         </div>
         
         {% if has_subtypes %}
             <!--Список подтипов-->
-            <ul id="subtypes-list" class="report-settings__list--types_subtypes">
-                {% for type in types_subtypes %}
-                    {% for subtype in type.subtypes  %}
-                            <li class="flex report-settings__item report-settings__item--subtype" style="display: none;" data-type-id="{{ type.type_id }}">
-                                <input class="input report_input__item" type="text" value="{{ type.type_text }}" readonly>
-                                <input class="input report_input__item report-settings__input--subtype" type="text" value="{{ subtype.subtype_text }}">
-                                <button class="btn  report-settings__btn--delete-subtype" type="button" data-subtype-id="{{ subtype.subtype_id }}">Удалить</button>
-                                <button class="btn  report-settings__btn--edit-subtype" type="button" data-subtype-id="{{ subtype.subtype_id }}">Сохранить</button>
-                            </li>
+            <div class="report-settings__card">
+                <h3 class="report-settings__title">Подтипы протоколов текущего профиля (сортированные по типу):</h3>
+                <ul id="subtypes-list" class="flex_column">
+                    {% for type in types_subtypes %}
+                        {% for subtype in type.subtypes  %}
+                                <li class="flex report-settings__box report-settings__item report-settings__item--subtype" style="display: none;" data-type-id="{{ type.type_id }}">
+                                    <div class="flex">
+                                        <input class="input report_input__item" type="text" value="{{ type.type_text }}" readonly>
+                                        <input class="input report_input__item report-settings__input--subtype" type="text" value="{{ subtype.subtype_text }}">
+                                    </div>
+                                    <div class="flex">
+                                        <button class="btn  report-settings__btn--delete-subtype" type="button" data-subtype-id="{{ subtype.subtype_id }}">Удалить</button>
+                                        <button class="btn  report-settings__btn--edit-subtype" type="button" data-subtype-id="{{ subtype.subtype_id }}">Сохранить</button>
+                                    </div>
+                                </li>
+                        {% endfor %}
                     {% endfor %}
-                {% endfor %}
-            </ul>
+                </ul>
+            </div>
         {% else %}
             <!-- Если нет подтипов, то показываем сообщение -->
-            <p class="help-text">На данный момент для текущего профиля не было найдено ни одного ПОДТИПА протокола. </p>
+            <h3 >На данный момент для текущего профиля не было найдено ни одного ПОДТИПА протокола. </h3>
             <p class="help-text">Для того чтобы иметь возможность создать протокол Вам нужно добавить хотя бы один подтип. </p>
             <p class="help-text">Выше есть поле в котором Вы можете выбрать один из подтипов протоколов по умолчанию. </p>
             <p class="help-text">Выберите и добавьте те подтипы, которые кажутся Вам подходящими для Вашей работы или создайте новый подтип.</p>

@@ -114,16 +114,44 @@ function onTripleClick(element, callback) {
 
 /**
  * Универсальная функция для закрытия попапа.
- * @param {HTMLElement} popup - элемент попапа, который нужно скрыть.   
  */
-function hidePopup(popup) {
-    if (popup && popup.style.display === "block") {
-        popup.style.display = "none";
+function hideElement(element) {
+    if (element && element.style.display === "block") {
+        element.style.display = "none";
+    }
+}
+/**
+ * Универсальная функция для показа попапа.
+ */
+function showElement(element) {
+    if (element && element.style.display === "none") {
+        element.style.display = "block";
+        hideOnClickOutside(element);
     }
 }
 
+/**
+ * Вешает обработчик, который скрывает элемент при клике вне его. Используется для закрытия попапов.
+ * @param {HTMLElement} targetElement - Элемент, который нужно скрыть.
+ * @param {Function} [onHide] - (Необязательно) callback, вызывается при скрытии.
+ */
+function hideOnClickOutside(targetElement, onHide) {
+    if (!targetElement) return;
 
+    // Хендлер клика
+    function handleClick(event) {
+        if (!targetElement.contains(event.target)) {
+            hideElement(targetElement);
+            if (typeof onHide === "function") onHide();
+            document.removeEventListener("mousedown", handleClick);
+        }
+    }
 
+    // Навешиваем слушатель
+    setTimeout(() => { // setTimeout, чтобы не ловить клик, который открыл popup
+        document.addEventListener("mousedown", handleClick);
+    }, 0);
+}
 
 
 /**

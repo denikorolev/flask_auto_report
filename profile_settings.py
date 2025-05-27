@@ -74,17 +74,7 @@ def profile_settings():
 @profile_settings_bp.route("/choosing_profile", methods=["GET"])
 @auth_required()
 def choosing_profile():
-    # Вот пользователь авторизован и у него либо нет профиля 
-    # либо их несколько и нет дефолтного
-    logger.info(f"(route 'choosing_profile') --------------------------------------")
-    logger.info(f"(route 'choosing_profile') 🚀 Profile settings started and profile in g = {getattr(g,'current_profile', None)}")
-    user_profiles = UserProfile.get_user_profiles(current_user.id)
-    logger.info(f"(rout 'choosing_profile') User profiles: {user_profiles}")
-    if not user_profiles:
-        logger.info(f"(route 'choosing_profile') ⚠️ User has no profiles")
-        return render_template("choosing_profile.html",
-                           title="Создание нового профиля",
-                           new_user=True)
+   
     profile_id = request.args.get("profile_id") or None
     logger.info(f"(route 'choosing_profile') Profile id from url: {profile_id}")
     if profile_id:
@@ -104,10 +94,17 @@ def choosing_profile():
             return render_template(url_for("error"),
                            title="Данные о выбранном профиле не получены"
                            )
-    logger.info(f"(route 'choosing_profile') Profile id from url not found")
-    return render_template("choosing_profile.html",
-                           title="Выбор профиля",
-                           user_profiles=user_profiles)
+    
+
+# Маршрут для создания нового профиля
+@profile_settings_bp.route("/new_profile_creation", methods=["GET"])
+@auth_required()
+def new_profile_creation():
+    logger.info(f"(route 'new_profile_creation') --------------------------------------")
+    logger.info(f"(route 'new_profile_creation') 🚀 New profile creation started")
+    return render_template("new_profile_creation.html",
+                           title="Создание нового профиля")
+
 
 
 # Маршрут для создания профиля
@@ -125,50 +122,33 @@ def create_profile():
     is_default = data.get('is_default')
     
         
-    if profile_name:
-        logger.info(f"(route 'create_profile') Profile name: {profile_name}")
-        try:
-            new_profile = UserProfile.create(
-                current_user.id, 
-                profile_name, 
-                description,
-                default_profile=is_default
-                )
-            logger.info(f"(route 'create_profile') Profile {new_profile.id} created")
-            default_settings = dict(current_app.config.get("DEFAULT_PROFILE_SETTINGS", {}))
-            save_settings = set_profile_settings(new_profile.id, default_settings)
+    if not profile_name:
+        logger.error(f"(route 'create_profile') ❌ Profile name is required.")
+        return jsonify({"status": "error", "message": "Profile name is required."}), 400
 
-            report_types = []
-            current_user_profiles = UserProfile.get_user_profiles(current_user.id)
-            for profile in current_user_profiles:
-                if profile.id == new_profile.id:
-                    continue
-                r_types = ReportType.find_by_profile(profile.id)
-                for r_type in r_types:
-                    report_types.append(r_type)
-            for r_type in report_types:
-                try:
-                    ReportType.create(r_type.type_text, new_profile.id, r_type.type_index)
-                    logger.debug(f"(route 'create_profile') Report type {r_type.type_text} created for profile {new_profile.id}")
-                except Exception as e:
-                    logger.error(f"(route 'create_profile') ❌ Error creating report type {r_type.type_text} for profile {new_profile.id}: {e}")
-                    return jsonify({"status": "error", "message": str(e)}), 400
-    
-        except Exception as e:
-            print("creating profile end work {e} --------")
-            return jsonify({"status": "error", "message": str(e)}), 400
+    logger.info(f"(route 'create_profile') Profile name: {profile_name}")
+    try:
+        new_profile = UserProfile.create(
+            current_user.id,
+            profile_name,
+            description,
+            default_profile=is_default
+        )
         
-    
-    
+        logger.info(f"(route 'create_profile') Profile {new_profile.id} created")
+        default_settings = dict(current_app.config.get("DEFAULT_PROFILE_SETTINGS", {}))
+        save_settings = set_profile_settings(new_profile.id, default_settings)
         if not save_settings:
             return jsonify({"status": "error", "message": "Не получилось сохранить настройки по умолчанию для нового профиля"}), 400
         print("creating profile end work SUCCESS --------")
-        return jsonify({"status": "success", "message": "Profile created successfully!"}), 200
+        return jsonify({"status": "success", "message": f"Профиль {new_profile.profile_name} успешно создан!", "data": new_profile.id}), 200
+
+    except Exception as e:
+        logger.error(f"(route 'create_profile') ❌ Error creating profile: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 400
+        
     
-    print("creating profile end work ERROR no profile name --------")
-    return jsonify({"status": "error", "message": "Profile name is required."}), 400
-
-
+    
 # Маршрут для обновления имени и дескриптора профиля и выбора профиля по умолчанию
 @profile_settings_bp.route('/update_profile_settings', methods=['POST'])
 @auth_required()

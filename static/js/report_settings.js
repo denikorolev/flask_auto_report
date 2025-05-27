@@ -71,20 +71,20 @@ document.addEventListener("DOMContentLoaded", function(){
 // Функция для обработки выбора типа отчета
 function reportTypesSelect(select) {
     const selectedType = select.value;
-    const newTypeInput = document.getElementById('newTypeLabel');
+    const newTypeInputBox = document.getElementById('newTypeInputForm');
 
     if (selectedType === 'new_type') {
-        newTypeInput.style.display = 'block'; // Показываем поле для ввода нового типа
+        newTypeInputBox.style.display = 'block'; // Показываем поле для ввода нового типа
     }
     else {
-        newTypeInput.style.display = 'none'; // Скрываем поле для ввода нового типа
+        newTypeInputBox.style.display = 'none'; // Скрываем поле для ввода нового типа
     }
 }
 
 // Функция для обработки выбора подтипа отчета
 function reportSubtypesSelect(select) {
     const selectedSubtype = select.value;
-    const newSubtypeInput = document.getElementById('newSubtypeLabel');
+    const newSubtypeInput = document.getElementById('newSubtypeInputForm');
     
     if (selectedSubtype === 'new_subtype') {
         newSubtypeInput.style.display = 'block'; // Показываем поле для ввода нового подтипа
@@ -97,7 +97,6 @@ function reportSubtypesSelect(select) {
 
 // Функция для добавления нового типа отчета
 async function addNewType() {
-    const newTypeLabel = document.getElementById('newTypeLabel');
     const newTypeInput = document.getElementById('newTypeInput');
     const newTypeSelect = document.getElementById('reportTypesDefault');
 

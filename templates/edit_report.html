@@ -16,29 +16,29 @@
     <form class="edit-report__form--report" id="edit-report-form">
         <div class="flex">
             <div class="edit-report__input-block">
-                <label class="report_label__item" for="report_type">Report Type:</label>
+                <label class="label" for="report_type">Тип:</label>
                 <input class="input report_input__item report_input__item--type" id="report_type" name="report_type" value="{{ report_data.report_type }}" readonly>
             </div>
             <div class="edit-report__input-block">
-                <label class="report_label__item" for="report_subtype">Report Subtype:</label>
+                <label class="label" for="report_subtype">Подтип:</label>
                 <input class="input report_input__item" id="report_subtype" name="report_subtype" value="{{ report_data.report_subtype }}" readonly>
             </div>
             <div class="edit-report__input-block">
-                <label class="report_label__item" for="report_name">Report Name:</label>
+                <label class="label" for="report_name">Название:</label>
                 <input class="input report_input__item" type="text" id="reportName" name="report_name" value="{{ report_data.report_name }}" required>
             </div>
             <div class="edit-report__input-block">
-                <label class="report_label__item" for="comment">Comment:</label>
+                <label class="label" for="comment">Комментарий:</label>
                 <input class="input report_input__item" type="text" id="reportComment" name="comment" value="{{ report_data.comment }}" required>
             </div>
             <!-- side boolean changer -->
             <div class="edit-report__input-block">
-                <label class="report_label__item">Учитывать сторону:</label> <!-- Подпись для радиокнопок -->
+                <label class="label">Учитывать сторону:</label> <!-- Подпись для радиокнопок -->
                 <div class="flex_row">
                     <input type="radio" name="report_side" value="True" class="form-check-input" {% if report_data.report_side == True %}checked{% endif %}> 
-                    <label for="report_side_yes" class="report_label__item">Да</label>
+                    <label for="report_side_yes" class="label">Да</label>
                     <input type="radio" name="report_side" value="False" class="form-check-input" {% if report_data.report_side == False %}checked{% endif %}> 
-                    <label for="report_side_no" class="report_label__item">Нет</label>
+                    <label for="report_side_no" class="label">Нет</label>
                 </div>
             </div>
             <!-- Отключение грамматических проверок -->

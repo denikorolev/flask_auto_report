@@ -312,10 +312,14 @@ class UserProfile(BaseModel):
         Raises:
             ValueError: Если профиль по умолчанию уже существует для данного пользователя.
         """
+        existing_default_profile = cls.get_default_profile(user_id)
         if default_profile:
-            existing_default_profile = cls.get_default_profile(user_id)
             if existing_default_profile:
+                logger.warning(f"(create) ❌ Профиль по умолчанию уже существует для пользователя {user_id}. Удаляю старый профиль по умолчанию.")  
                 existing_default_profile.default_profile = False
+        else:
+            if not existing_default_profile:
+                default_profile = True
         
         new_profile = cls(
             user_id=user_id,
@@ -324,6 +328,7 @@ class UserProfile(BaseModel):
             default_profile=default_profile
         )
         new_profile.save()  
+        logger.info(f"(create) ✅ Профиль {profile_name} успешно создан для пользователя {user_id}.")
         return new_profile
         
     @classmethod
@@ -498,8 +503,8 @@ class Report(BaseModel):
     
     @classmethod
     def find_by_profile(cls, profile_id):
-        """Возвращает все отчеты, связанные с данным профилем."""
-        return cls.query.filter_by(profile_id=profile_id).all()
+        reports = cls.query.filter_by(profile_id=profile_id, user_id=current_user.id).all()
+        return reports
     
     
     @classmethod

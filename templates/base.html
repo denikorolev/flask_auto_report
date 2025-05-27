@@ -15,7 +15,8 @@
 <body class="body">
 
     {% block menu %}
-    
+    {% from "macros/all_popups.html" import choose_profile_popup %}
+
     <header class="header">
         <div class="container container--header">
             <a href="{{ url_for("index")}}" class="header__logo--link">
@@ -38,24 +39,38 @@
             
             <!-- Сообщение о текущем профиле -->
             {% if g.current_profile %}
-                <a href="{{ url_for("profile_settings.choosing_profile") }}" class="header__user-box" title="Здесь можно сменить профиль">
+                <div class="header__user-box" id="changeProfileBlock" title="Здесь можно сменить профиль">
                     <p class="header__paragraph">Профиль:</p>
                     <p class="header__paragraph header__paragraph--data">{{ g.current_profile.profile_name }}</p>
-                </a>
+                </div>
             {% else %}
-                <p class="header__paragraph">Профиль не выбран</p>
+                <div class="header__user-box" id="changeProfileBlock" title="Здесь можно сменить профиль">
+                    <p class="header__paragraph">Профиль не выбран</p>
+                </div>
             {% endif %}
 
             <!-- Сообщение о текущем юзере -->
+             {% if profiles %}
             <a href="{{ url_for("profile_settings.profile_settings") }}" title="Роль пользователя: {{ current_user.roles[0].name }}. При нажатии откроются настройки текущего профиля" class="header__user-box">
                 <p class="header__paragraph" id="userNameHeader" data-user-name="{{ current_user.username }}">Пользователь:</p>
                 <p class="header__paragraph header__paragraph--data">{{ current_user.username }}</p>
             </a>
+            {% else %}
+            <div class="header__user-box" title="У пользователя нет ни одного профиля. Создайте профиль, чтобы продолжить работу с программой.">
+                <p class="header__paragraph" id="userNameHeader" data-user-name="{{ current_user.username }}">Пользователь:</p>
+                <p class="header__paragraph header__paragraph--data">{{ current_user.username }}</p>
+            </div>
+            {% endif %}
+            <!-- Кнопка для выхода из системы и сброса сессии -->
             <a class="header__exit" href="{{ url_for("custom_logout") }}">Выйти</a>
         </div>
 
     
     </header>
+
+    <!-- Попап для выбора профиля -->
+    {{ choose_profile_popup(profiles) }}
+
     {% endblock menu %}
 
     <!-- Общий контент страниц -->
@@ -99,6 +114,7 @@
 <script src="{{ url_for("static", filename='js/loader.js') }}"></script>
 <script src="{{ url_for("static", filename='js/utils.js') }}"></script>
 <script src="{{ url_for("static", filename='js/api.js') }}"></script>
+<script src="{{ url_for("static", filename='js/dropdown_menus.js') }}"></script>
 
 <!-- Блок для специфичных JS-скриптов -->
 {% block scripts %}

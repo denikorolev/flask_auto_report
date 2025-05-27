@@ -6,10 +6,14 @@ document.addEventListener("DOMContentLoaded", function(){
     // чтобы отправлять только измененные данные
     initializeChangeListeners(); 
 
-    // Слушатель на кнопку Сохранить (сохранить настройки профиля)
-    document.getElementById("saveSettings").addEventListener("click", () => {
-        profileSettingsSave();
-    });
+    // Слушатель на кнопку Сохранить (сохранить настройки профиля) с учетом того, что она может быть скрыта
+    saveSettingsButton = document.getElementById("saveSettings");
+    if (saveSettingsButton) {
+        
+        saveSettingsButton.addEventListener("click", () => {
+            profileSettingsSave();
+        });
+    }   
     
     // Слушатель на кнопку Сохранить изменения (сохранить глобальные настройки профиля)
     document.getElementById("saveSettingProfile").addEventListener("click", () => {
@@ -54,6 +58,9 @@ function profileGlobalSettingsSave() {
         csrfToken: csrfToken,
         data: settingsData
     }).then(response => {
+        if (response.status === "success") {
+            window.location.reload(); // Перезагружаем страницу для обновления данных
+        }
         console.log(response.message || "Settings updated successfully.");
     }).catch(error => {
         console.error("Failed to update settings:", error);
@@ -102,21 +109,22 @@ function profileSettingsSave() {
 */
 function initializeChangeListeners() {
     const settingsBlock = document.getElementById("settings-block");
-    const inputs = settingsBlock.querySelectorAll("input, select");
+    if (settingsBlock) {
+        const inputs = settingsBlock.querySelectorAll("input, select");
+        inputs.forEach(input => {
+            // Добавляем слушатель события изменения
+            input.addEventListener("change", () => {
+                input.dataset.changed = "true"; // Устанавливаем флаг для измененного элемента
 
-    inputs.forEach(input => {
-        // Добавляем слушатель события изменения
-        input.addEventListener("change", () => {
-            input.dataset.changed = "true"; // Устанавливаем флаг для измененного элемента
-
-        // Находим родительский <li> элемент
-        const parentLi = input.closest(".settings-block__item");
-        if (parentLi) {
-            parentLi.classList.add("settings-block__item--changed"); // Добавляем класс
-        }
-        
+            // Находим родительский <li> элемент
+            const parentLi = input.closest(".settings-block__item");
+            if (parentLi) {
+                parentLi.classList.add("settings-block__item--changed"); // Добавляем класс
+            }
+            
+            });
         });
-    });
+    }
 }
 
 
@@ -139,12 +147,11 @@ function deleteProfile() {
     sendRequest({
         url: `/profile_settings/delete_profile/${profileID}`,
         method: "DELETE",
-        csrfToken: csrfToken,
     }).then(response => {
-        if (response.status === "success"){
-            window.location.href = "/profile_settings/choosing_profile";
-            console.log(response.message || "Profile deleted successfully.");
+        if (response.status === "success") {
+            window.location.reload(); // Перезагружаем страницу для обновления данных
         }
+            console.log(response.message || "Profile deleted successfully.");
     }).catch(error => {
         console.error("Failed to delete profile:", error);
     });

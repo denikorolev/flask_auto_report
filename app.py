@@ -127,9 +127,8 @@ def inject_user_rank():
 
 @app.context_processor
 def inject_current_profile_data():
-    excluded_endpoints = {"error", "security.login", "security.logout", "custom_logout", "index"}
-    if request.endpoint in excluded_endpoints:
-        return {"current_profile": None}
+    if request.path.startswith('/static/') or not current_user.is_authenticated:
+        return {"profiles": None}
 
     user_profiles = UserProfile.get_user_profiles(current_user.id)
     if not user_profiles:
@@ -156,8 +155,8 @@ def load_current_profile():
     if request.path.startswith('/static/') or request.endpoint in [
         "security.login", "security.logout", "security.register", "custom_logout",
         "security.forgot_password", "security.reset_password", 
-        "security.change_password","profile_settings.choosing_profile", 
-        "error", "index", "profile_settings.create_profile", "profile_settings.set_default_profile"
+        "security.change_password","profile_settings.new_profile_creation", 
+        "error", "index", "profile_settings.create_profile", "profile_settings.set_default_profile", "feedback_form"
     ]:
         return None
     # Если пользователь не авторизован, удаляем профиль из g и сессии    
@@ -172,7 +171,6 @@ def load_current_profile():
         logger.info("Profile is already set in g")
         return
     
-    # Если я здесь, значит пользователь авторизован и у него нет профиля в g
     profile_id = session.get("profile_id")
     
     if profile_id:
@@ -189,36 +187,23 @@ def load_current_profile():
             print("Profile not found in db or doesn't belong to current user")
             session.pop("profile_id", None)
     
-    user_profiles = UserProfile.get_user_profiles(current_user.id)
+    profile = UserProfile.get_default_profile(current_user.id)
     # Если профиля нет ни в сессии ни в g то выясняем если ли вообще 
     # у пользователя профили, сколько их и в зависимости 
     # от этого маршрутизируем
-    if not user_profiles:
+    if not profile:
         logger.info("User has no profiles")
         # Если у пользователя нет профилей отпраляем его создавать профиль
-        return redirect(url_for("profile_settings.choosing_profile"))
-    elif len(user_profiles) == 1:
-        logger.info("User has only one profile")
-        # Если только один профиль, устанавливаем его и отправляем на выбор отчета
-        profile = user_profiles[0]
-        session["profile_id"] = profile.id
-        g.current_profile = profile
-        ProfileSettingsManager.load_profile_settings()
-        return redirect(url_for("working_with_reports.choosing_report"))
-    elif len(user_profiles) > 1 and UserProfile.get_default_profile(current_user.id):
-        logger.info("User has multiple profiles and default profile")
-        # Если у пользователя несколько профилей и есть дефолтный, устанавливаем его и отправляем на выбор отчета
-        profile = UserProfile.get_default_profile(current_user.id)
-        session["profile_id"] = profile.id
-        g.current_profile = profile
-        ProfileSettingsManager.load_profile_settings()
-        return redirect(url_for("working_with_reports.choosing_report"))
+        return redirect(url_for("profile_settings.new_profile_creation"))
     else:
-        logger.info("User has multiple profiles and no default profile")
-        # Если профилей несколько и дефолтный не выбран, перенаправляем для выбора профиля
-        return redirect(url_for("profile_settings.choosing_profile"))
+        logger.info(f"User has default profile {profile.profile_name}")
+        session["profile_id"] = profile.id
+        g.current_profile = profile
+        ProfileSettingsManager.load_profile_settings()
+        return redirect(url_for("working_with_reports.choosing_report"))
     
-                               
+
+
 # Запускаем различные синхронизаторы при первом запуске сессии
 @app.before_request
 def one_time_sync_tasks():
@@ -310,10 +295,32 @@ def playground():
         title="Playground"
     )
     
-
+@app.route("/feedback_form", methods=["POST"])
+def feedback_form():
+    form_data = request.form
+    logger.info(f"Feedback form submitted: {form_data}")
+    to_email = "support@radiologary.com"
+    subject = f"Письмо с формы обратной связи от {form_data.get('name', 'Unknown')}"
+    html_content = f"{form_data.get('message', 'No message provided')}"
+    token = app.config.get("ZEPTOMAIL_API_TOKEN")
+    from_email = "feedbackform_sender@radiologary.com"
+    if not token:
+        logger.error("❌ Не указан ZEPTOMAIL_API_TOKEN")
+        return render_template("error.html", message="Не удалось отправить сообщение. Пожалуйста, попробуйте позже.")
+    try:
+        send_email_via_zeptomail(to_email, subject, html_content, token, from_email)
+        logger.info(f"📧 Feedback form submitted successfully: {form_data}")
+        return render_template("feedback_form.html", title="Feedback Form")
+    except Exception as e:
+        logger.error(f"⚠️ Ошибка при отправке письма: {e}")
+        return render_template("error.html", message="Не удалось отправить сообщение. Пожалуйста, попробуйте позже.")
+    
     
 
-# Фильтруем логи 
+
+
+
+# Фильтруем логи
 
 
 if os.getenv("FLASK_ENV") == "local":

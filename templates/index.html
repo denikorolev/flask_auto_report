@@ -97,7 +97,7 @@
                         <li>Assist in education and professional development.</li>
                     </ul>
                     <p>The AI is constantly learning and improving its ability to generate conclusions based on your input, gradually adapting to your style. With every day using Radiologary, the AI-generated conclusion will resemble one you would have written yourself.</p>
-                    <a href="/ai-demo" class="btn btn--secondary">Try AI Features</a>
+                    <a href="#contact" class="btn btn--secondary">Try AI Features</a>
                 </div>
                 <div class="ai-flex__image">
                     <img src="{{ url_for('static', filename='pic/logo.png') }}" alt="Radiologary AI" />
@@ -117,11 +117,12 @@
                         <p>We will contact you as soon as possible.</p>
                         <p>Thank you for your interest in Radiologary!</p>
                     </div>
-                    <form class="contact__form">
+                    <form class="contact__form" action="{{ url_for('feedback_form') }}" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <h3>Feedback Form</h3>
-                        <input type="text" placeholder="Your name" required>
-                        <input type="email" placeholder="Your email" required>
-                        <textarea placeholder="Your message"></textarea>
+                        <input type="text" placeholder="Your name" name="name" required>
+                        <input type="email" placeholder="Your email" name="email" required>
+                        <textarea placeholder="Your message" name="message" required></textarea>
                         <button type="submit" class="btn btn--primary">Send</button>
                     </form>
                 </div>

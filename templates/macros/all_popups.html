@@ -69,17 +69,26 @@
 
 {% macro choose_profile_popup(profiles) %}
     <div class="choose-profile-popup" id="chooseProfilePopup" style="display: none;">
-        <h3 class="choose-profile-popup__title">Выберите профиль</h3>
+        <button class="choose-profile-popup__close" id="closeChooseProfilePopup" title="Закрыть">✖</button>
+        {% if profiles and profiles|length > 1 %}
+            <h3 class="choose-profile-popup__title">Выберите профиль</h3>
+        {% endif %}
         <ul class="choose-profile-popup__list" id="profileList">
             <!-- Сюда будут динамически добавляться профили -->
-            {% for profile in profiles %}
-                <li class="choose-profile-popup__item" data-profile-id="{{ profile.id }}">
-                    <input type="radio" name="profile" value="{{ profile.id }}" id="profile_{{ profile.id }}" class="choose-profile-popup__radio">
-                    <label for="profile_{{ profile.id }}" class="choose-profile-popup__label" id="label_{{ profile.id }}">{{ profile.profile_name }}</label>
-                </li>
-            {% endfor %}
+            {% if not profiles %}
+                <li class="choose-profile-popup__item">Нет доступных профилей</li>
+            {% else %}
+                {% for profile in profiles %}
+                    <li class="choose-profile-popup__item" data-profile-id="{{ profile.id }}" {% if profile.is_active %}style="display: none;"{% endif %}>
+                        <a href="{{ url_for("profile_settings.choosing_profile", profile_id=profile.id) }}" class="choose-profile-popup__text" id="profile_name_id_{{ profile.id }}">{{ profile.profile_name }}</a>
+                        {% if profile.is_default %}
+                            <span class="choose-profile-popup__active"> (по умолчанию)</span>
+                        {% endif %}
+                    </li>
+                {% endfor %}
+            {% endif %}
             <li class="choose-profile-popup__item">
-                <p class="choose-profile-popup__label" id="label_profile_new">Создать новый профиль</p>
+                <a href="{{ url_for("profile_settings.new_profile_creation")}}" class="choose-profile-popup__link">Создать новый профиль</a>
             </li>
         </ul>
     </div>

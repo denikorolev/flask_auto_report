@@ -1,0 +1,91 @@
+<!-- index.html -->
+
+{% extends "base.html" %}
+
+{% block container %}
+<input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
+
+<div class="container">
+    
+        {% if profiles %}
+            <div class="choosing-profile">
+                <p>Здесь вы можете создать новый профиль.</p>
+            </div>
+            <br>
+            <br>
+        {% else %}
+            <h3>Не найдено ни одного профиля:</h3>
+            <p>Здесь вы можете создать новый профиль. Профили позволяют сохранять
+                индивидуальные настройки ваших шаблонов — внешний вид, способ отображения,
+                набор доступных функций и сами шаблоны. Это удобно, если вы работаете в
+                нескольких учреждениях, где используются разные стандарты оформления протоколов
+                или разные модальности исследований.</p>
+                <p>С помощью отдельных профилей вы сможете быстро переключаться между рабочими сценариями,
+                    скрывать ненужные кнопки и функции, которые не используются в текущей роли, а также
+                    настраивать разные цветовые темы для удобства. Такой подход делает работу с программой
+                    более гибкой и комфортной.</p>
+            <p>После создания профиля вы сможете выбрать его в выпадающем списке в верхней части страницы.</p>
+    
+        {% endif %}
+    
+        <!-- Блок для создания нового профиля -->
+        <form class="creation-profile" id="profileCreationForm" style="display: block;">
+    
+            <div class="creation-profile__block">
+                <label for="profileName">Название профиля:</label>
+                <input type="text" id="profileName" name="profile_name" class="input" required placeholder="Введите имя профиля" minlength="3" maxlength="50">
+            </div>
+            <div class="creation-profile__block">
+                <label for="profileDescription">Описание:</label>
+                <textarea id="profileDescription" name="description" class="textarea"></textarea>
+            </div>
+            <div class="creation-profile__block">
+                <label for="isDefault">Сделать этот профиль, профилем по умолчанию?</label>
+                <input type="checkbox" id="isDefault" name="is_default" class="checkbox"></input>
+            </div>
+            <br>
+            <br>
+            <button type="button" class="btn" id="addProfileButton" onclick="addProfileButtonHandler(this)">Сохранить</button>
+        </form>
+</div>
+
+
+{% endblock container %}
+
+
+{% block scripts %}
+
+<script>
+    function addProfileButtonHandler(button) {
+    const profileCreationBlock = document.getElementById("profileCreationForm");
+    
+    const profileData = {
+        profile_name: profileCreationBlock.querySelector("#profileName").value,
+        description: profileCreationBlock.querySelector("#profileDescription").value,
+        is_default: profileCreationBlock.querySelector("#isDefault").checked
+    };
+
+    if (!profileData.profile_name) {
+        alert("Пожалуйста, введите имя профиля.");
+        return;
+    }
+    if (profileData.profile_name.length < 3 || profileData.profile_name.length > 50) {
+        alert("Имя профиля должно быть от 3 до 50 символов.");
+        return;
+    }
+
+    sendRequest({
+        url: "/profile_settings/create_profile",
+        data: profileData
+    }).then(response => { 
+        if (response.status === "success") {
+            window.location.href = "/profile_settings/choosing_profile?profile_id=" + response.data;
+        }
+        
+    }).catch(error => {
+        console.error("Failed to create profile:", error);
+    });
+}
+</script>
+
+{% endblock scripts %}

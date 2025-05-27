@@ -42,7 +42,7 @@
 
         <form class="flex" id="reportForm" method="POST">
             <div class="flex_column" id="reports-container">
-                <label class="report_label__item" for="report_type"> Тип протокола:</label>
+                <label class="label" for="report_type"> Тип протокола:</label>
                 <select class="report__select" id="report_type" name="report_type" required>
                     {% for rt in report_types_and_subtypes %}
                         <option value="{{ rt.type_id }}">{{ rt.type_text }}</option>
@@ -51,7 +51,7 @@
             </div>
         
             <div class="flex_column" id="reports-container">
-                <label class="report_label__item" for="report_subtype">Подтип протокола:</label>
+                <label class="label" for="report_subtype">Подтип протокола:</label>
                 <select class="report__select" id="report_subtype" name="report_subtype" required>
                         <!-- Подтипы будут динамически обновляться с помощью JS -->
                 </select>
