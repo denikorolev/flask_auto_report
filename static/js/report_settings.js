@@ -121,8 +121,8 @@ async function addNewType() {
         // Если запрос успешен, обновляем список типов на странице
         if (response.status === 'success') {
             window.location.reload(); 
-        } else {
-            console.error('Ошибка при добавлении типа протокола:', response.message);
+        } else if (response.status === 'warning') {
+            console.warn('такой тип уже есть в бд для данного профиля', response.message);
         }
     } catch (error) {
         alert(error.message || 'Ошибка при добавлении типа протокола.');

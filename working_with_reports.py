@@ -27,7 +27,7 @@ def choosing_report():
     logger.info(f"(Выбор шаблона протокола) 🚀 Начинаю обработку запроса")
     current_profile = g.current_profile
     report_types_and_subtypes = ReportType.get_types_with_subtypes(current_profile.id) 
-    current_profile_reports = Report.find_by_profile(current_profile.id)
+    # current_profile_reports = Report.find_by_profile(current_profile.id)
     default_report_types = current_app.config.get("REPORT_TYPES_DEFAULT_RU", [])
 
     if request.method == "POST":
@@ -53,7 +53,7 @@ def choosing_report():
     return render_template(
         "choose_report.html",
         title="Выбор шаблона протокола",
-        user_reports=current_profile_reports,
+        # user_reports=current_profile_reports,
         report_types_and_subtypes=report_types_and_subtypes,
         default_report_types=default_report_types,
     )
@@ -185,7 +185,7 @@ def save_modified_sentences():
         report_id = int(data.get("report_id"))
         sentences = ensure_list(data.get("sentences"))
         user_id = current_user.id
-        report_type_id = Report.get_report_type(report_id)
+        report_type_id = Report.get_report_type_id(report_id)
         
         if not sentences or not report_id:
             logger.error(f"(Сохранение измененных предложений) ❌ Не хватает текстов предложений или id протокола")

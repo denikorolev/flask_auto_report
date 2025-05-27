@@ -26,8 +26,8 @@ db = SQLAlchemy()
 # ✅ быстрее 👉 🔥 📌 ❌ 🚀 😎 🔄 1️⃣ 2️⃣ 3️⃣ ⚠️ 💻 🧠 💥 🙌 🗑 ✏️ 🔙 🕘 ➕ 📨
 
     
-
-
+class DatabaseDuplicateError(Exception):
+    pass    
 
 
 # Ассоциативная таблица для связи ключевых слов с отчетами
@@ -368,12 +368,14 @@ class ReportType(BaseModel):
         existing_type = cls.query.filter_by(type_text=type_text, profile_id=profile_id).first()
         if existing_type:
             logger.warning(f"(create) ❌ Тип {type_text} уже существует для профиля {profile_id}.")
-            return existing_type
+            raise DatabaseDuplicateError(f"Тип {type_text} уже существует для профиля {profile_id}.")
         # If type_index is not provided, set it to the next available index
+        all_types = cls.query.filter_by(profile_id=profile_id).all()
         if type_index is None:
-            max_index = db.session.query(db.func.max(cls.type_index)).scalar() or 0
+            all_indexes = [t.type_index for t in all_types if t.type_index is not None]
+            max_index = max(all_indexes, default=0)
             type_index = max_index + 1
-
+        
         new_type = cls(
             type_text=type_text,
             profile_id=profile_id,
@@ -403,17 +405,16 @@ class ReportType(BaseModel):
         result = []
         
         for report_type in types:
-            subtypes = [
-                {
+            subtypes = [{
                     "subtype_id": subtype.id,
-                    "subtype_text": subtype.subtype_text
-                } 
-                for subtype in report_type.type_to_subtypes
-            ]
+                    "subtype_text": subtype.subtype_text,
+                    "subtype_index": subtype.subtype_index
+                } for subtype in report_type.type_to_subtypes]
             result.append({
                 "type_id": report_type.id,
                 "type_text": report_type.type_text,
-                "subtypes": subtypes
+                "subtypes": subtypes,
+                "type_index": report_type.type_index 
             })
         return result
 
@@ -439,9 +440,15 @@ class ReportSubtype(BaseModel):
         Returns:
             ReportSubtype: The newly created report subtype object.
         """
-        # If subtype_index is not provided, set it to the next available index
+        existing_subtype = cls.query.filter_by(type_id=type_id, subtype_text=subtype_text).first()
+        if existing_subtype:
+            logger.warning(f"(create) ❌ Подтип {subtype_text} уже существует для типа {type_id}.")
+            raise DatabaseDuplicateError(f"Подтип '{subtype_text}' уже существует для типа ID={type_id}.")
+
         if subtype_index is None:
-            max_index = db.session.query(db.func.max(cls.subtype_index)).scalar() or 0
+            all_subtypes = cls.query.filter_by(type_id=type_id).all()
+            all_indexes = [s.subtype_index for s in all_subtypes if s.subtype_index is not None]
+            max_index = max(all_indexes, default=0)
             subtype_index = max_index + 1
 
         new_subtype = cls(
@@ -496,10 +503,16 @@ class Report(BaseModel):
     
     
     @classmethod
-    def get_report_type (cls, report_id):
+    def get_report_type_id (cls, report_id):
         """Возвращает тип отчета"""
         report = cls.query.filter_by(id=report_id).first()
         return report.report_to_subtype.subtype_to_type.id
+    
+    @classmethod
+    def get_report_type_name (cls, report_id):
+        """Возвращает текстовое представление типа отчета"""
+        report = cls.query.filter_by(id=report_id).first()
+        return report.report_to_subtype.subtype_to_type.type_text
     
     
     @classmethod

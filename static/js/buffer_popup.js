@@ -54,10 +54,15 @@ function refreshBufferPopup() {
         li.classList.add("buffer-popup__item");
         li.setAttribute("data-buffer-index", index);
         li.innerHTML = `
-            <span><strong>${item.object_type === 'paragraph' ? 'Параграф' : 'Предложение'} (${item.object_type === 'sentence' ? item.sentence_type : item.object_id})</strong></span> — 
-            <span>${item.object_text || 'Нет текста'}</span>
-            <button class="btn btn-icon buffer-popup__btn--remove" title="Удалить из буфера" data-index="${index}">❌</button>
-            <button class="btn btn-icon buffer-popup__btn--insert" title="Вставить" data-index="${index}">📌</button>
+            <div class="buffer-popup__content">
+                <span class="buffer-popup__text buffer-popup__text--report-type">${item.report_type}</span>
+                <span class="buffer-popup__text"><strong>${item.object_type === 'paragraph' ? 'Параграф' : 'Предложение'} (${item.object_type === 'sentence' ? item.sentence_type : item.object_id})</strong></span>
+                <span class="buffer-popup__text">${item.object_text || 'Нет текста'}</span>
+            </div>
+            <div class="control-buttons">
+                <button class="btn-icon buffer-popup__btn--remove" title="Удалить из буфера" data-index="${index}">❌</button>
+                <button class="btn-icon buffer-popup__btn--insert" title="Вставить" data-index="${index}">📌</button>
+            </div>
         `;
         bufferList.appendChild(li);
     });

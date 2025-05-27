@@ -47,7 +47,7 @@
             
             <button class="btn " type="button" id="updateReportButton">Сохранить изменения</button>
             <!-- Кнопка для вызова попапа буфера -->
-            <button type="button" id="openBufferPopupButton" class="btn btn-icon btn-open-buffer" title="Открыть буфер обмена">
+            <button type="button" id="openBufferPopupButton" class="btn btn-open-buffer" title="Открыть буфер обмена">
                 📋 Буфер обмена
             </button>
             <!-- Кнопка для шаринга протокола -->
@@ -247,6 +247,7 @@
 
 <script src="{{ url_for('static', filename='js/buffer_popup.js') }}"></script>
 <script src="{{ url_for('static', filename='js/sentence_buffer.js') }}"></script>
+<script src="{{ url_for('static', filename='js/firstGrammaSentence.js') }}"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
 <script src="{{ url_for('static', filename='js/edit_report.js') }}"></script>
 {% endblock scripts %}

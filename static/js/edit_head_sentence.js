@@ -75,6 +75,11 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
 
+    // Слушатель на кнопку "Вставить всё" в попапе буфера
+    document.getElementById("pasteAllBufferButton").addEventListener("click", function () {
+        insertAllFromBuffer();
+    });
+
 });
 
 
@@ -687,4 +692,28 @@ function saveBodySentencesOrder(evt) {
     }).catch(error => {
         console.error("Ошибка запроса:", error);
     });
+}
+
+// Вставка всего содержимого буфера в конец списка предложений
+// буду использовать функцию создания нового предложения, но с данными из буфера
+function insertAllFromBuffer() {
+    console.log("Вставка всех элементов из буфера в конец списка предложений");
+    const itemsFromBuffer = getBuffer();
+    const reportType = document.getElementById("editSentenceContainer").getAttribute("data-report-type");
+    console.log("Тип протокола:", reportType);
+    acceptableItems = itemsFromBuffer.filter(item => {
+        return item.object_type === "sentence" && item.sentence_type === "body" && item.report_type === reportType;
+    });
+    console.log("Подходящие элементы из буфера:", acceptableItems);
+
+    if (acceptableItems.length === 0) {
+        alert("Буфер пуст или не содержит подходящих предложений для вставки.");
+        return;
+    } else if (acceptableItems.length > 1) {
+       alert("Сделаю эту логику позднее")
+    } else {
+        const itemFromBuffer = acceptableItems[0];
+        addBodySentence(itemFromBuffer);
+    }
+
 }

@@ -27,6 +27,66 @@ document.addEventListener("DOMContentLoaded", function () {
     initializeSubtypeLogic("report_type", "report_subtype", "report-types-data");
 });
 
+/**
+ * Инициализирует логику выбора подтипа отчета на основе выбранного типа.
+  */
+function initializeSubtypeLogic(reportTypeSelectId, reportSubtypeSelectId, subtypesDataScriptId) {
+    const subtypesDataScript = document.getElementById(subtypesDataScriptId);
+    if (!subtypesDataScript) {
+        return;
+    }
+    const reportTypesAndSubtypes = JSON.parse(subtypesDataScript.textContent);
+    const allSubtypes = {};
+
+    // Store subtypes grouped by their type_id
+    reportTypesAndSubtypes.forEach(type => {
+        allSubtypes[type.type_id] = type.subtypes;
+    });
+
+    const reportTypeSelect = document.getElementById(reportTypeSelectId);
+
+    if (!reportTypeSelect) {
+        return;
+    }
+
+    reportTypeSelect.addEventListener("change", function() {
+        updateSubtypes(reportTypeSelectId, reportSubtypeSelectId, allSubtypes);
+    });
+
+    // Initial update of subtypes
+    updateSubtypes(reportTypeSelectId, reportSubtypeSelectId, allSubtypes);
+}
+
+
+/**
+ * Обновляет список подтипов отчета в зависимости от выбранного типа.
+*/
+function updateSubtypes(reportTypeSelectId, reportSubtypeSelectId, allSubtypes) {
+    const reportTypeSelect = document.getElementById(reportTypeSelectId);
+    const reportSubtypeSelect = document.getElementById(reportSubtypeSelectId);
+
+
+    if (!reportTypeSelect || !reportSubtypeSelect) {
+        return;
+    }
+
+    const selectedTypeId = reportTypeSelect.value.trim();
+    reportSubtypeSelect.innerHTML = '';
+
+    const subtypes = allSubtypes[selectedTypeId] || [];
+
+    subtypes.forEach(subtype => {
+        const option = document.createElement("option");
+        option.value = subtype.subtype_id || subtype.id;
+        option.textContent = subtype.subtype_text || subtype.subtype;
+        reportSubtypeSelect.appendChild(option);
+    });
+
+    if (subtypes.length > 0) {
+        reportSubtypeSelect.selectedIndex = 0;
+    }
+}
+
 
 // Логика нажатия на кнопку "Протоколы", обработки имени фамилии и тд
 document.addEventListener("DOMContentLoaded", function () {

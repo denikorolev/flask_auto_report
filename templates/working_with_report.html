@@ -174,13 +174,10 @@
             <h3 title="Параграфы, которые не участвуют в формировании заключения. Можно активировать нажав на имя параграфа">
                 Неактивные параграфы:
             </h3>
-            <br>
-            <br>
             {% for paragraph in paragraphs_data  %}
                 {% if not paragraph.is_active %}
                 <li class="report-controlpanel__inactive-paragraphs-item" data-paragraph-id="{{ paragraph.id }}"> 
-                    <span><b>{{ paragraph.paragraph }}</b></span> 
-                    <span>({{ paragraph.comment }})</span> 
+                    <span title="{{ paragraph.comment }}">{{ paragraph.paragraph }}</span> 
                 </li>
                 {% endif %}       
             {% endfor %}
@@ -236,5 +233,6 @@
 <script src="{{ url_for('static', filename='js/popup_sentences.js') }}"></script>
 <script src="{{ url_for('static', filename='js/working_with_report.js') }}"></script>
 <script src="{{ url_for("static", filename="js/spacy_training_popup.js") }}"></script>
+<script src="{{ url_for('static', filename='js/firstGrammaSentence.js') }}"></script>
 
 {% endblock scripts %}

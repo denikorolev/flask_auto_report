@@ -277,7 +277,7 @@ def create_report_from_file():
                     )
 
                 # Определяем тип протокола
-                report_type_id = Report.get_report_type(new_report.id)
+                report_type_id = Report.get_report_type_id(new_report.id)
                 # Добавляем абзацы и предложения в отчет
                 for idx, paragraph in enumerate(paragraphs_from_file, start=1):
 

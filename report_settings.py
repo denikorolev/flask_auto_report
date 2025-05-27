@@ -2,7 +2,7 @@
 
 from flask import Blueprint, render_template, request, current_app, jsonify, g
 from flask_login import login_required
-from models import db, ReportType, ReportSubtype
+from models import db, ReportType, ReportSubtype, DatabaseDuplicateError
 from file_processing import file_uploader
 from flask_security.decorators import auth_required
 from logger import logger
@@ -19,7 +19,6 @@ def report_settings():
     logger.info(f"(Report_settings) 🚀 Начато получение настроек протоколов")
     try:
         profile_types_with_subtypes = ReportType.get_types_with_subtypes(g.current_profile.id)
-        print(profile_types_with_subtypes)
         default_report_types = current_app.config.get("REPORT_TYPES_DEFAULT_RU")
         default_report_subtypes = current_app.config.get("REPORT_SUBTYPES_DEFAULT_RU")
         has_subtypes = any(t["subtypes"] for t in profile_types_with_subtypes)
@@ -50,7 +49,6 @@ def add_type():
     
     data = request.get_json()
     new_type = data.get("new_type", "").strip()
-    print(new_type)
 
     if not new_type:
         logger.error(f"(Add_new_type) ❌ Ошибка: Имя типа не может быть пустым")
@@ -60,6 +58,9 @@ def add_type():
         ReportType.create(type_text=new_type, profile_id=g.current_profile.id)
         logger.info(f"(Add_new_type) ✅ Новый тип протокола - '{new_type}' успешно добавлен")
         return jsonify({"status": "success", "message": "Новый тип протокола успешно добавлен"}), 200
+    except DatabaseDuplicateError as e:
+        logger.error(f"(Add_new_type) ❌ Ошибка: Тип протокола с таким именем уже существует - {e}")
+        return jsonify({"status": "warning", "message": "Тип протокола с таким именем уже существует для данного профиля."}), 200
     except Exception as e:
         logger.error(f"(Add_new_type) ❌ Ошибка: Не удалось добавить новый тип протокола - {e}")
         return jsonify({"status": "error", "message": f"Не удалось создать новый тип протокола"}), 400
@@ -137,6 +138,9 @@ def add_subtype():
         logger.info(f"(Add_new_subtype) ✅ Новый подтип протокола - '{new_subtype_name}' успешно добавлен")
         logger.info(f"(Add_new_subtype)---------------------------------")
         return jsonify({"status": "success", "message": "Новый подтип протокола успешно добавлен"}), 200
+    except DatabaseDuplicateError as e:
+        logger.error(f"(Add_new_subtype) ❌ Ошибка: Подтип протокола с таким именем уже существует - {e}")
+        return jsonify({"status": "warning", "message": "Подтип протокола с таким именем уже существует для данного профиля."}), 200
     except Exception as e:
         logger.error(f"(Add_new_subtype) ❌ Ошибка: Не удалось добавить новый подтип протокола - {e}")
         return jsonify({"status": "error", "message": "Не удалось добавить новый подтип протокола"}), 400

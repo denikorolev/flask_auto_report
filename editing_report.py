@@ -54,7 +54,7 @@ def edit_paragraph():
     logger.info("(Страница редактирования параграфа /edit_paragraph) 🚀 Начинаю получения данных для формирования страницы.")
     paragraph_id = int(request.args.get("paragraph_id"))
     report_id = int(request.args.get("report_id"))
-    report_type = Report.get_report_type(report_id)
+    report_type = Report.get_report_type_name(report_id)
    
     paragraph_data = Paragraph.get_paragraph_data(paragraph_id)
     logger.info(f"(Страница редактирования параграфа /edit_paragraph) ----------------------------------------------")
@@ -78,7 +78,7 @@ def edit_head_sentence():
     sentence_id = request.args.get("sentence_id")
     paragraph_id = request.args.get("paragraph_id")
     report_id = request.args.get("report_id")
-    report_type = Report.get_report_type(report_id)
+    report_type = Report.get_report_type_name(report_id)
     
     group_id = Paragraph.get_by_id(paragraph_id).head_sentence_group_id
     if not group_id:
@@ -400,7 +400,7 @@ def add_new_sentence():
         logger.error(f"(Создание нового предложения) ❌ Неизвестный тип предложения")
         return jsonify({"status": "error", "message": "Неизвестный тип предложения"}), 400
     
-    report_type_id = Report.get_report_type(int(data.get("report_id")))
+    report_type_id = Report.get_report_type_id(int(data.get("report_id")))
     related_id = data.get("related_id")
     sentence_index = data.get("sentence_index")
     if not report_type_id or not related_id:

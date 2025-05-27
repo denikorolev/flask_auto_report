@@ -18,29 +18,13 @@
 
     <!-- Данные параграфа -->
     <div class="flex edit-paragraph__paragraph-data-block">
-        <div class="flex edit-paragraph__paragraph-data">
-            <div>
-                <label for="paragraph_id">ID:</label>
-                <span name="paragraph_id">{{ paragraph.id }}</span>
-            </div>
-            <div>
-                <label>Комментарий:</label>
-                <input type="text" id="paragraph_comment" value="{{ paragraph.paragraph_comment }}" class="input">
-            </div>
-            <div>
-                <label>Вес:</label>
-                <input type="number" id="paragraph_weight" value="{{ paragraph.paragraph_weight }}" class="input">
-            </div>
-           
-        </div>
+
 
         <!-- Отключение проверок -->
         {{editor_checkboxes(user_settings)}}
 
-        <!-- Кнопка сохранения -->
-        <button class="btn  edit-paragraph__btn--save-paragraph-data" id="saveParagraphDataButton">Сохранить изменения</button>
         <!-- Кнопка для вызова попапа буфера -->
-        <button type="button" id="openBufferPopupButton" class="btn btn-icon btn-open-buffer" title="Открыть буфер обмена">
+        <button type="button" id="openBufferPopupButton" class="btn btn-open-buffer" title="Открыть буфер обмена">
             📋 Буфер обмена
         </button>
     </div>
@@ -185,4 +169,5 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
 <script src="{{ url_for('static', filename='js/edit_paragraph.js') }}"></script>
 <script src="{{ url_for('static', filename='js/buffer_popup.js') }}"></script>
+<script src="{{ url_for('static', filename='js/firstGrammaSentence.js') }}"></script>
 {% endblock scripts %}

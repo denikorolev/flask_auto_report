@@ -17,31 +17,16 @@
 
 <div class="container edit-sentence" id="editSentenceContainer" data-sentence-id="{{ head_sentence.id }}" data-paragraph-id="{{ paragraph_id }}" data-report-id="{{ report_id }}" data-report-type="{{report_type}}">
     <div class="flex_column edit-sentence__sentence-data-block">
-        <div class="flex edit-sentence__sentence-data">
-            <div>
-                <label for="sentence_id">ID:</label>
-                <span name="sentence_id">{{ head_sentence.id }}</span>
-            </div>
-            <div>
-                <label>Комментарий:</label>
-                <input type="text" id="sentence_comment" value="{{ head_sentence.comment }}" class="input">
-            </div>
-            <div>
-                <label>Теги:</label>
-                <input type="text" id="sentence_tags" value="{{ head_sentence.tags }}" class="input">
-            </div>
+        
 
+        <div class="flex">
             <!-- Отключение проверок -->
             {{editor_checkboxes(user_settings)}}
-
-            <button class="btn  edit-sentence__btn--save-sentence-data" id="saveSentenceDataButton">Сохранить изменения</button>
             <!-- Кнопка для вызова попапа буфера -->
-            <button type="button" id="openBufferPopupButton" class="btn btn-icon btn-open-buffer" title="Открыть буфер обмена">
+            <button type="button" id="openBufferPopupButton" class="btn btn-open-buffer" title="Открыть буфер обмена">
                 📋 Буфер обмена
             </button>
-
         </div>
-        <textarea class="edit-sentence__textarea" id="sentenceText">{{ head_sentence.sentence }}</textarea>
     </div>
     <br>
     <input type="text" id="sentenceSearch" class="input" placeholder="🔍 Найти предложение...">
@@ -123,4 +108,5 @@
 <script src="{{ url_for('static', filename='js/sentence_buffer.js') }}"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
 <script src="{{ url_for('static', filename='js/edit_head_sentence.js') }}"></script>
+<script src="{{ url_for('static', filename='js/firstGrammaSentence.js') }}"></script>
 {% endblock scripts %}

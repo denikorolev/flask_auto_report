@@ -126,6 +126,11 @@ body {
     background-color: var(--main-btn-color-hover);
 }
 
+.control-btn {
+    width: 30px;
+    height: 30px;
+}
+
 
 
 .input {
@@ -613,6 +618,7 @@ body {
 /* Стиль для правой часть working_with_report */
 
 .report-controlpanel__inactive-paragraphs-list {
+    font-size: 14px;
     list-style-type: none;
 }
 
@@ -961,7 +967,6 @@ body {
     padding: 3px 5px;
     box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.1);
     border: 1px solid #ddd;
-    gap: 5px;
     width: 100%;
     min-height: 60px;
 }
@@ -977,7 +982,7 @@ body {
     background: white;
     border: 2px solid #ccc;
     padding: 20px;
-    width: 400px;
+    width: 600px;
     max-height: 70vh;
     overflow-y: auto;
     box-shadow: 0 4px 8px rgba(0,0,0,0.2);
@@ -995,6 +1000,26 @@ body {
     margin: 15px 0;
     max-height: 300px;
     overflow-y: auto;
+}
+
+.buffer-popup__item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+    font-size: 12px;
+    border-bottom: 1px solid #eee;
+}
+
+.buffer-popup__text {
+    flex-grow: 1;
+    margin-right: 10px;
+}
+
+.buffer-popup__text--report-type {
+    font-weight: bold;
+    color: var(--accent-attention);
 }
 
 .buffer-popup__footer {

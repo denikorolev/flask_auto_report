@@ -75,7 +75,7 @@ function sendRequest({ url, method = "POST", data = {}, responseType = "json", l
                 } else if (data.status === "warning") {
                     toastr.warning(alertMessage);
                 } else {
-                    alert(data.message || "Request failed");
+                    alert(alertMessage || "Request failed");
                     throw new Error(data.message || "Request failed");
                 }
             }

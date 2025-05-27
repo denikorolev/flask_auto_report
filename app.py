@@ -32,7 +32,7 @@ from openai_api import openai_api_bp
 from key_words import key_words_bp
 from admin import admin_bp
 
-version = "0.9.6.2"
+version = "0.9.6.4"
 
 app = Flask(__name__)
 app.config.from_object(get_config()) # Load configuration from file config.py
@@ -125,6 +125,29 @@ def inject_user_rank():
     return {"user_max_rank": user_max_rank}
 
 
+@app.context_processor
+def inject_current_profile_data():
+    excluded_endpoints = {"error", "security.login", "security.logout", "custom_logout", "index"}
+    if request.endpoint in excluded_endpoints:
+        return {"current_profile": None}
+
+    user_profiles = UserProfile.get_user_profiles(current_user.id)
+    if not user_profiles:
+        return {"profiles": None}
+    
+    profiles = []
+    
+    for profile in user_profiles:
+        profile_dict = {
+            "id": profile.id,
+            "profile_name": profile.profile_name,
+            "description": profile.description,
+            "is_default": profile.default_profile,
+            "is_active": True if (getattr(g, "current_profile", None) and profile.id == g.current_profile.id) else False
+        }
+        profiles.append(profile_dict)
+    return {"profiles": profiles}
+
 
 # Логика для того, чтобы сделать данные профиля доступными в любом месте программы
 @app.before_request
@@ -194,6 +217,7 @@ def load_current_profile():
         logger.info("User has multiple profiles and no default profile")
         # Если профилей несколько и дефолтный не выбран, перенаправляем для выбора профиля
         return redirect(url_for("profile_settings.choosing_profile"))
+    
                                
 # Запускаем различные синхронизаторы при первом запуске сессии
 @app.before_request

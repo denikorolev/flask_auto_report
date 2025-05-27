@@ -14,21 +14,21 @@
     >
         <!-- Кнопка редактировать -->
         {% if object_type == "paragraph" or (object_type == "sentence" and sentence_type == "head") %}
-            <button class="btn btn-icon control-btn--edit" title="Редактировать этот объект (переход на другую страницу)">
+            <button class="btn-icon control-btn control-btn--edit" title="Редактировать этот объект (переход на другую страницу)">
                 ✏️
             </button>
         {% endif %}
         <!-- Кнопка удалить -->
-        <button class="btn btn-icon control-btn--delete" title="Удалить этот объект">
+        <button class="btn-icon control-btn control-btn--delete" title="Удалить этот объект">
             ❌
         </button>
         <!-- Кнопка копировать в буфер параграф или предложение -->
-        <button class="btn btn-icon control-btn--copy-to-buffer" title="Скопировать в буфер обмена предложение или параграф (для вставки в другие места)">
+        <button class="btn-icon control-btn control-btn--copy-to-buffer" title="Скопировать в буфер обмена предложение или параграф (для вставки в другие места)">
             🗒️
         </button>
         {% if object_type == "paragraph" or (object_type == "sentence" and sentence_type == "head") %}
         <!-- Кнопка удалить текущую группу -->
-            <button class="btn btn-icon control-btn--unlink" 
+            <button class="btn-icon control-btn control-btn--unlink" 
             title="Удалить дочернюю группу у данного объекта (для параграфа удаляет и head и tail группы)"
             >
                 ✂️
