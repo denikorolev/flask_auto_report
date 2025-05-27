@@ -1,8 +1,9 @@
-from flask import Blueprint, render_template, request, jsonify, current_app
+from flask import Blueprint, render_template, request, jsonify, current_app, g
 from models import *
 from logger import logger
 import re
 from flask_security.decorators import auth_required, roles_required
+from sentence_processing import group_keywords, sort_key_words_group
 import os
 
 
@@ -493,19 +494,75 @@ def revert_model(version_index):
     
     
     
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
+@admin_bp.route("/make_all_public", methods=["POST"])
+@auth_required()
+@roles_required("superadmin")
+def make_all_public():
+    profile_id = g.current_profile.id
+    if not profile_id:
+        return jsonify({"status": "error", "message": " Не удалось получить profile_id."}), 400
+
+    try:
+        reports = Report.find_by_profile(profile_id=profile_id)
+        count = 0
+        for report in reports:
+            if not report.public:
+                report.public = True
+                count += 1
+        db.session.commit()
+        return jsonify({"status": "success", "message": f"{count} протоколов сделано общедоступными."}), 200
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Ошибка при массовом переводе протоколов в public: {e}")
+        return jsonify({"status": "error", "message": f"Ошибка при обновлении протоколов: {e}"}), 500
+
+
+
+@admin_bp.route("/share_global_keywords", methods=["POST"])
+@auth_required()
+@roles_required("superadmin")
+def share_global_keywords():
+    data = request.get_json()
+    email = data.get("email")
+    if not email:
+        return jsonify({"status": "error", "message": "Email не указан"}), 400
+
+    # Находим пользователя по email
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        return jsonify({"status": "error", "message": "Пользователь не найден"}), 404
+
+    # Находим профиль-реципиент (например, первый профиль)
+    recipient_profile = UserProfile.get_default_profile(user.id)
+    if not recipient_profile:
+        return jsonify({"status": "error", "message": "У пользователя нет подходящего профиля"}), 404
+
+    # Получаем глобальные ключевые слова текущего профиля
+    global_keywords = KeyWord.find_without_reports(g.current_profile.id)
+    if not global_keywords:
+        return jsonify({"status": "error", "message": "Нет глобальных ключевых слов для копирования"}), 400
+
+
+    # Копируем ключевые слова
+    new_keywords_count = 0
+    for group in group_keywords(global_keywords, with_index=True):
+        # Для каждой группы делаем новую группу у получателя
+        group_index = group['group_index']
+        for i, word_obj in enumerate(group['key_words'], 1):
+            KeyWord.create(
+                group_index=group_index,
+                index=i,
+                key_word=word_obj['word'],
+                profile_id=recipient_profile.id,
+            )
+            new_keywords_count += 1
+
+    db.session.commit()
+
+    return jsonify({
+        "status": "success",
+        "message": f"Скопировано {new_keywords_count} глобальных ключевых слов для пользователя {email}."
+    }), 200
     
     
     

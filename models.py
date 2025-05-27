@@ -503,6 +503,8 @@ class Report(BaseModel):
     
     @classmethod
     def find_by_profile(cls, profile_id):
+        """Ищет все отчеты, принадлежащие конкретному профилю конкретного пользователя."""
+        
         reports = cls.query.filter_by(profile_id=profile_id, user_id=current_user.id).all()
         return reports
     

@@ -642,12 +642,58 @@ function isPasswordField(columnName) {
 }
 
 
+// Логика для кнопки "Сделать все протоколы публичными"
+document.getElementById("make-all-public").addEventListener("click", function () {
+    if (!confirm("Сделать все протоколы публичными?")) return;
+    sendRequest({
+        url: "/admin/make_all_public",
+    }).then(result => {
+        const statusBox = document.getElementById("make-public-status");
+        if (statusBox) {
+            statusBox.innerHTML = ""; // очищаем старые сообщения
+            if (result && result.status === "success") {
+                const li = document.createElement("li");
+                li.textContent = result.message || "Операция выполнена успешно";
+                li.style.color = "green";
+                statusBox.appendChild(li);
+            } else {
+                const li = document.createElement("li");
+                li.textContent = result && result.message ? result.message : "Произошла ошибка";
+                li.style.color = "red";
+                statusBox.appendChild(li);
+            }
+        }
+    });
+});
 
 
 
-
-
-
-
+// Логика для кнопки "Поделиться ключевыми словами"
+document.getElementById("share-keywords").addEventListener("click", function () {
+    const emailInput = document.getElementById("share-keywords-input");
+    const email = emailInput.value.trim();
+    if (!email) {
+        alert("Введите email получателя.");
+        return;
+    }
+    sendRequest({
+        url: "/admin/share_global_keywords",
+        data: { email }
+    }).then(result => {
+        if (statusBox) {
+            statusBox.innerHTML = ""; // очищаем старые сообщения
+            const li = document.createElement("li");
+            if (result && result.status === "success") {
+                li.textContent = result.message || "Операция выполнена успешно";
+                li.style.color = "green";
+                emailInput.value = "";
+            } else {
+                li.textContent = (result && result.message) ? result.message : "Произошла ошибка";
+                li.style.color = "red";
+            }
+            statusBox.appendChild(li);
+        }
+    });
+});
 
 
