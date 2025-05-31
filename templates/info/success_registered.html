@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Успешная регистрация</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="success-container">
+        <div class="success-title">Вы успешно зарегистрированы</div>
+        <div class="success-subtitle">Для подтверждения адреса электронной почты проверьте вашу почту и перейдите по ссылке.</div>
+        <p class="success-message">Если вы не получили письмо, проверьте папку "Спам".</p>
+        <p class="success-instructions">Если у вас есть дополнительные вопросы, вы можете написать нам на почту <a href="mailto:support@radiologary.com">support@radiologary.com</a>.</p>
+        <a href="{{ url_for('index') }}" class="success-btn">На главную</a>
+    </div>
+</body>
+</html>

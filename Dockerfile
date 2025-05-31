@@ -1,6 +1,6 @@
 # Dockerfile
 # Используем официальный образ Python 3.9
-FROM python:3.11-slim
+FROM python:3.13-slim
 
 # Устанавливаем рабочую директорию
 WORKDIR /app

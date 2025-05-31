@@ -20,6 +20,7 @@ from flask_wtf.csrf import CSRFProtect
 from flask_security import Security, SQLAlchemyUserDatastore
 from flask_security.decorators import auth_required, roles_required
 from flask_security.signals import user_registered
+from celery import Celery
 
 # Импортирую блюпринты
 from working_with_reports import working_with_reports_bp  
@@ -32,7 +33,8 @@ from openai_api import openai_api_bp
 from key_words import key_words_bp
 from admin import admin_bp
 
-version = "0.10.0.0"
+version = "0.10.0.1"
+
 
 app = Flask(__name__)
 app.config.from_object(get_config()) # Load configuration from file config.py
@@ -50,6 +52,25 @@ security = Security(app, user_datastore, mail_util_cls=CustomMailUtil, register_
 # Инициализация CSRF-защиты
 csrf = CSRFProtect(app)
 csrf.init_app(app) # Инициализация CSRF-защиты
+
+
+# Настройка celery
+def make_celery(app):
+    celery = Celery(
+        app.import_name,
+        backend=app.config["CELERY_RESULT_BACKEND"],
+        broker=app.config["CELERY_BROKER_URL"]
+    )
+    celery.conf.update(app.config)
+    TaskBase = celery.Task
+
+    class ContextTask(TaskBase):
+        def __call__(self, *args, **kwargs):
+            with app.app_context():
+                return TaskBase.__call__(self, *args, **kwargs)
+    celery.Task = ContextTask
+    return celery
+
 
 
 # Обработчик сигнала user_registered и автоматическое назначение роли 'user'
@@ -257,14 +278,18 @@ def custom_logout():
 def error():
     print("inside error route")
     message = request.args.get("message") or "no message"
-    return render_template("error.html",
+    return render_template("errors/error.html",
                            message=message)
+    
+@app.route("/success_registered", methods=["GET"])
+def success_registered():
+    return render_template("info/success_registered.html")
 
 
 # Обработка ошибок
 @app.errorhandler(404)
 def page_not_found(e):
-    return render_template('404.html'), 404
+    return render_template('errors/404.html'), 404
 
 @app.errorhandler(Exception)
 def handle_exception(e):
@@ -306,14 +331,14 @@ def feedback_form():
     from_email = "feedbackform_sender@radiologary.com"
     if not token:
         logger.error("❌ Не указан ZEPTOMAIL_API_TOKEN")
-        return render_template("error.html", message="Не удалось отправить сообщение. Пожалуйста, попробуйте позже.")
+        return render_template("errors/error.html", message="Не удалось отправить сообщение. Пожалуйста, попробуйте позже.")
     try:
         send_email_via_zeptomail(to_email, subject, html_content, token, from_email)
         logger.info(f"📧 Feedback form submitted successfully: {form_data}")
-        return render_template("feedback_form.html", title="Feedback Form")
+        return render_template("info/feedback_form.html", title="Feedback Form")
     except Exception as e:
         logger.error(f"⚠️ Ошибка при отправке письма: {e}")
-        return render_template("error.html", message="Не удалось отправить сообщение. Пожалуйста, попробуйте позже.")
+        return render_template("errors/error.html", message="Не удалось отправить сообщение. Пожалуйста, попробуйте позже.")
     
     
 

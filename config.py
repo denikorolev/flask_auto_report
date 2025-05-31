@@ -67,6 +67,7 @@ class Config:
     SECURITY_SEND_PASSWORD_RESET_EMAIL = True  # Отправлять email при сбросе пароля
     SECURITY_POST_LOGIN_VIEW = "/working_with_reports/choosing_report"  # URL после успешного входа
     SECURITY_POST_LOGOUT_VIEW = "/" # URL после выхода
+    SECURITY_POST_REGISTER_VIEW = "success_registered"
     REMEMBER_COOKIE_DURATION = 3600 * 24 * 7  # Продолжительность в секундах (7 дней)
     REMEMBER_COOKIE_HTTPONLY = True          # Безопасность cookie
     SECURITY_REMEMBER_ME = True              # Включить "запомнить меня"# URL после выхода
@@ -84,6 +85,10 @@ class Config:
     SECURITY_EMAIL_SUBJECT_PASSWORD_CHANGE_NOTICE = "Пароль успешно изменён"
     SECURITY_EMAIL_SUBJECT_PASSWORD_RESET = "Сброс пароля Radiologary"
     
+    
+    # Celery Configuration
+    CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")  # URL брокера сообщений
+    CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6379/0")  # URL для хранения результатов задач
     
     SECRET_KEY = os.getenv("SECRET_KEY")
     SQLALCHEMY_TRACK_MODIFICATIONS = False # Отключает события SQLAlchemy что бережет память и избавляет от сообщения об ошибках в терминале.
