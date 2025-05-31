@@ -243,18 +243,18 @@ function showLockPopup(itemWrapper, event) {
 
     unlinkBtn.onclick = function () {
         unlinkGroup(itemWrapper);
-        hidePopup(popup);
+        hideElement(popup);
     };
 
     allowBtn.onclick = function () {
         allowEditing(itemWrapper);
-        hidePopup(popup);
+        hideElement(popup);
     };
 
     // Вешаем временный обработчик клика вне попапа
     function onClickOutside(event) {
         if (!popup.contains(event.target)) {
-            hidePopup(popup);
+            hideElement(popup);
             document.removeEventListener("click", onClickOutside);
         }
     }
@@ -309,7 +309,8 @@ function initPopupButtons(sentenceElement, sentenceId) {
         makeSentenceEditable(sentenceElement);
 
         // Закрываем попап
-        hideSentencePopup();
+        const popup = document.getElementById("sentencePopup");
+        hideElement(popup);
     });
 
     unlinkButton.addEventListener("click", function () {
@@ -334,7 +335,7 @@ function initPopupButtons(sentenceElement, sentenceId) {
 
         // Закрываем попап
         const popup = document.getElementById("sentencePopup");
-        hidePopup(popup);
+        hideElement(popup);
     });
 }
 
@@ -407,6 +408,7 @@ function showSentencePopup(sentenceElement, event) {
 // Инициализация обработчиков закрытия попапа предложения
 function initSentencePopupCloseHandlers() {
     const popup = document.getElementById("sentencePopup");
+    console.log(popup)
     const closeButton = popup.querySelector("#closeSentencePopupButton");
 
     if (!popup || !closeButton) {
@@ -414,40 +416,30 @@ function initSentencePopupCloseHandlers() {
         return;
     }
 
-    // Функция скрытия попапа
-    function hidePopup() {
-        popup.style.display = "none";
-    }
-
     // Закрытие по кнопке
-    closeButton.addEventListener("click", hidePopup);
+    closeButton.addEventListener("click", function () {
+        hideElement(popup);
+    });
 
     // Закрытие при клике вне попапа
     document.addEventListener("click", function (event) {
         if (popup.style.display === "block" && !popup.contains(event.target)) {
-            hidePopup();
+            hideElement(popup);
         }
     });
 
     // ❗ Закрытие при начале ввода текста
     document.querySelectorAll(".edit-sentence__text").forEach(sentence => {
         sentence.addEventListener("input", function () {
+            
+            
             if (popup.style.display === "block") {
-                hideSentencePopup();
+                hideElement(popup);
             }
         });
     });
 }
 
-// Hides the sentence popup.
-function hideSentencePopup() {
-    const popup = document.getElementById("sentencePopup");
-    if (popup) {
-        popup.style.display = "none";
-    } else {
-        console.warn("Попап для предложения не найден.");
-    }
-}
 
 
 // Вызываемые функции (не требуют инициализации при загрузке страницы)

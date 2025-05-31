@@ -240,18 +240,18 @@ function showLockPopup(itemWrapper, event) {
 
     unlinkBtn.onclick = function () {
         unlinkGroup(itemWrapper);
-        hidePopup(popup);
+        hideElement(popup);
     };
 
     allowBtn.onclick = function () {
         allowEditing(itemWrapper);
-        hidePopup(popup);
+        hideElement(popup);
     };
 
     // Вешаем временный обработчик клика вне попапа
     function onClickOutside(event) {
         if (!popup.contains(event.target)) {
-            hidePopup(popup);
+            hideElement(popup);
             document.removeEventListener("click", onClickOutside);
         }
     }
@@ -307,7 +307,7 @@ function initPopupButtons(sentenceElement, sentenceId) {
 
         // Закрываем попап
         const popup = document.getElementById("sentencePopup");
-        hidePopup(popup);
+        hideElement(popup);
     });
 
     unlinkButton.addEventListener("click", function () {
@@ -332,7 +332,7 @@ function initPopupButtons(sentenceElement, sentenceId) {
 
         // Закрываем попап
         const popup = document.getElementById("sentencePopup");
-        hidePopup(popup);
+        hideElement(popup);
     });
 }
 
@@ -401,12 +401,12 @@ function initSentencePopupCloseHandlers() {
     }
 
     // Закрытие по кнопке
-    closeButton.addEventListener("click", () => hidePopup(popup));
+    closeButton.addEventListener("click", () => hideElement(popup));
 
     // Закрытие при клике вне попапа
     document.addEventListener("click", function (event) {
         if (popup.style.display === "block" && !popup.contains(event.target)) {
-            hidePopup(popup);
+            hideElement(popup);
         }
     });
 
@@ -414,7 +414,7 @@ function initSentencePopupCloseHandlers() {
     document.querySelectorAll(".edit-sentence__text").forEach(sentence => {
         sentence.addEventListener("input", function () {
             if (popup.style.display === "block") {
-                hidePopup(popup);
+                hideElement(popup);
             }
         });
     });

@@ -14,14 +14,12 @@ from utils.mail_helpers import send_email_via_zeptomail
 from werkzeug.middleware.proxy_fix import ProxyFix
 from logger import logger
 import os
-from file_processing import prepare_impression_snippets
 from utils.mail_helpers import CustomMailUtil, ExtendedRegisterForm
 from flask_wtf.csrf import CSRFProtect
 from flask_security import Security, SQLAlchemyUserDatastore
 from flask_security.decorators import auth_required, roles_required
 from flask_security.signals import user_registered
-from celery import Celery
-
+from file_processing import prepare_impression_snippets
 # Импортирую блюпринты
 from working_with_reports import working_with_reports_bp  
 from my_reports import my_reports_bp 
@@ -33,7 +31,7 @@ from openai_api import openai_api_bp
 from key_words import key_words_bp
 from admin import admin_bp
 
-version = "0.10.0.1"
+version = "0.10.0.2"
 
 
 app = Flask(__name__)
@@ -52,25 +50,6 @@ security = Security(app, user_datastore, mail_util_cls=CustomMailUtil, register_
 # Инициализация CSRF-защиты
 csrf = CSRFProtect(app)
 csrf.init_app(app) # Инициализация CSRF-защиты
-
-
-# Настройка celery
-def make_celery(app):
-    celery = Celery(
-        app.import_name,
-        backend=app.config["CELERY_RESULT_BACKEND"],
-        broker=app.config["CELERY_BROKER_URL"]
-    )
-    celery.conf.update(app.config)
-    TaskBase = celery.Task
-
-    class ContextTask(TaskBase):
-        def __call__(self, *args, **kwargs):
-            with app.app_context():
-                return TaskBase.__call__(self, *args, **kwargs)
-    celery.Task = ContextTask
-    return celery
-
 
 
 # Обработчик сигнала user_registered и автоматическое назначение роли 'user'
