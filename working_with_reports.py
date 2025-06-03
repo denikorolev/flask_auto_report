@@ -179,7 +179,6 @@ def save_modified_sentences():
     try:
         # Получаем данные из запроса
         data = request.get_json()
-        logger.debug(f"(Сохранение измененных предложений) Полученные данные: {data}")
         logger.info(f"(Сохранение измененных предложений) Полученные данные: {data}")
 
         report_id = int(data.get("report_id"))
@@ -205,15 +204,14 @@ def save_modified_sentences():
             # Проверяем корректность данных
             if not paragraph_id or not nativ_text.strip():
                 missed_count += 1
-                logger.info(f"(Сохранение измененных предложений) ⚠️ Пропускаю некорректные данные: {sentence_data}")
-                continue  # Пропускаем некорректные предложения
+                logger.info(f"(Сохранение измененных предложений) ⚠️ Пропускаю данные без параграфа или пустой текст: {sentence_data}")
+                continue  
             
             before_split_text = preprocess_sentence(nativ_text)
             
             if not before_split_text.strip():
                 missed_count += 1
-                logger.info(f"(Сохранение измененных предложений) ⚠️ Пропускаю некорректные данные: {sentence_data}")
-                continue  # Пропускаем некорректное предложение
+                continue  
             
             # Проверяем текст на наличие нескольких предложений
             unsplited_sentences, splited_sentences = split_sentences_if_needed(before_split_text)

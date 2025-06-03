@@ -11,11 +11,11 @@
     
     <!-- Fields for creating report -->
     <div class="flex report-creation__data-container">
-        <div class="flex_column">
+        <div class="report-creation__data-block">
             <label class="report-creation__label" for="report_name">Название протокола:</label>
             <input class="input report-creation__input form-control" type="text" id="report_name" name="report_name" required>
         </div>
-        <div class="flex_column">
+        <div class="report-creation__data-block">
             <label class="report-creation__label" for="report_type">Тип протокола:</label>
             <select class="select report-creation__select" id="reportType" name="report_type" required>
                 {% for type in report_types_and_subtypes %}
@@ -23,13 +23,13 @@
                 {% endfor %}
             </select>
         </div>
-        <div class="flex_column">
+        <div class="report-creation__data-block">
             <label class="report-creation__label" for="report_subtype">Подтип протокола:</label>
             <select class="select report-creation__select" id="reportSubtype" name="report_subtype" required>
                 <!-- option заполню в js-->
             </select>
         </div>
-        <div class="flex_column">
+        <div class="report-creation__data-block">
             <label class="report-creation__label" for="comment">Комментарий:</label>
             <input class="input report-creation__input form-control" type="text" id="reportCreationComment" name="comment">
         </div>
@@ -119,14 +119,35 @@
                     {% endfor %}
                 </ul>
             </div>
+
+            <!-- Список shared протоколов -->
             <div id="sharedReportContainer" style="display: none;">
                 <h3>Shared протоколы</h3>
-                <ul id="sharedReportList" class="existing-fewreports__list"></ul>
+                <ul id="sharedReportList" class="existing-fewreports__list">
+                    <!-- Список будет заполнен динамически через JS -->
+                </ul>
             </div>
 
+            <!-- Список общедоступных протоколов -->
             <div id="publicReportContainer" style="display: none;">
-                <h3>Общедоступные протоколы</h3>
-                <ul id="publicReportList" class="public-reports__list"></ul>
+                <div>
+                    <label class="label">Выберите модальность:</label>
+                    <select id="publicReportTypeSelect" class="select report-creation__select">
+                        <option value="allReports">Все</option>
+                        <!-- Опции будут заполнены динамически через JS -->
+                    </select>
+                </div>
+                <p>Осторожно фильтры работаю по принципу "или или" если вы ищете по словам, то в выдаче будут все модальности</p>
+                <div>
+                    <label class="label">Начните вводить текст для быстрого поиска:</label>
+                    <input type="text" id="publicReportSearchInput" class="input report-creation__input" placeholder="Введите текст для поиска...">
+                </div>
+
+                <h3>Список общедоступных протоколов</h3>
+                <ul id="publicReportList" class="public-reports__list">
+                    
+                    <!-- Список будет заполнен динамически через JS -->
+                </ul>
             </div>
             
         </div>
@@ -142,15 +163,11 @@
 
 
 
-<!-- Hidden element to pass subtype data -->
-<script>
-
-  const reportTypesAndSubtypes = {{ report_types_and_subtypes | tojson | safe }};
-</script>
-
 {% endblock container %}
 
 {% block scripts %}
+    <script>const reportTypesAndSubtypes = {{ report_types_and_subtypes | tojson | safe }};</script>
     <script src="{{ url_for('static', filename='js/create_report.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/utils/textFiltrator.js') }}"></script>
 {% endblock scripts %}
 

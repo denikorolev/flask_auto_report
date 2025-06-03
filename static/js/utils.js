@@ -172,3 +172,20 @@ function onEnter(element, callback, preventDefault = true) {
         }
     });
 }
+
+function validateInputText(text, maxLength = 600, minLength = 1) {
+    // Удаляем лишние пробелы в начале и конце строки
+    const trimmedText = text.trim();
+
+    if (typeof text !== "string") {
+        return { valid: false, message: "Введённый текст должен быть строкой." };
+    }
+    if (trimmedText.length < minLength) {
+        return { valid: false, message: `Текст слишком короткий. Пожалуйста, введите не менее ${minLength} символов.` };
+    }
+    if (trimmedText.length > maxLength) {
+        return { valid: false, message: `Текст слишком длинный. Пожалуйста, сократите его до ${maxLength} символов.` };
+    }
+
+    return { valid: true };
+}

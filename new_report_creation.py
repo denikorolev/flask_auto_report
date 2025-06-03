@@ -159,8 +159,6 @@ def get_public_reports():
             Report.public == True,
         ).all()
         
-        print("public_reports", public_reports)
-
         if not public_reports:
             return jsonify({
                 "status": "warning",
@@ -168,17 +166,20 @@ def get_public_reports():
                 "reports": []
             })
         public_reports_data = []
+        public_report_types = set()
         for report in public_reports:
             public_reports_data.append({
                 "id": report.id,
                 "report_name": report.report_name,
                 "report_type": report.report_to_subtype.subtype_to_type.type_text
             })
+            public_report_types.add(report.report_to_subtype.subtype_to_type.type_text)
 
         logger.info(f"(Маршрут: get_public_reports) ✅ Найдено {len(public_reports)} общедоступных протоколов")
         return jsonify({
             "status": "success",
-            "reports": public_reports_data
+            "reports": public_reports_data,
+            "report_types": list(public_report_types)
         })
 
     except Exception as e:
@@ -457,7 +458,7 @@ def create_report_from_public():
                     bold_paragraph=paragraph.bold_paragraph,
                     head_sentence_group_id=None,
                     tail_sentence_group_id=None,
-                    is_impression=False,
+                    is_impression=paragraph.is_impression,
                     is_additional=paragraph.is_additional,
                     str_after=paragraph.str_after,
                     str_before=paragraph.str_before,

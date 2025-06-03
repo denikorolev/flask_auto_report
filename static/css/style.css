@@ -1355,6 +1355,15 @@ body {
     width: 50%;
 }
 
+.report-creation__data-block {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    width: 100%;
+    min-height: 60px;
+    padding: 10px;
+}
+
 /* Стили для ai */
 .ai-conversation__textarea {
     width: 70%;

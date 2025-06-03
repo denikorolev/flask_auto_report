@@ -173,7 +173,8 @@ def update_report():
     new_report_data = {
         "report_name": data.get("report_name"),
         "comment": data.get("report_comment"),
-        "report_side": data.get("report_side") == "True"
+        "report_side": data.get("report_side") == "True",
+        "public": report.public
     }
     logger.info(f"(Обновление протокола) Получены данные для обновления протокола: {new_report_data}")
 

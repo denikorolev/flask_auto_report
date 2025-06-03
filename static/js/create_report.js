@@ -166,10 +166,10 @@ function handleActionChange(selectedAction) {
         existingReportContainer.style.display = "block";
     } else if (selectedAction === "shared") {
         sharedReportContainer.style.display = "block";
-        loadSharedReports();  // функция уже есть
+        loadSharedReports();  
     } else if (selectedAction === "public") {
         publicReportContainer.style.display = "block";
-        loadPublicReports();  // создадим её ниже
+        loadPublicReports();  
     }
 
 
@@ -225,7 +225,9 @@ async function loadSharedReports() {
 // Отправляет запрос на сервер для получения данных о существующих public отчетах
 async function loadPublicReports() {    
     const list = document.getElementById("publicReportList");
-    list.innerHTML = ""; // очистка
+    const typeSelect = document.getElementById("publicReportTypeSelect");
+    list.innerHTML = ""; // сброс
+    typeSelect.innerHTML = '<option value="allReports">Все</option>'; // сброс
 
     try {
         const response = await sendRequest({
@@ -234,6 +236,16 @@ async function loadPublicReports() {
         });
 
         if (response.status === "success" && response.reports.length > 0) {
+            // Заполнение селекта с типами
+            if (response.report_types && response.report_types.length > 0) {
+                response.report_types.forEach(type => {
+                    const option = document.createElement("option");
+                    option.value = type;
+                    option.textContent = type;
+                    typeSelect.appendChild(option);
+                });
+            }
+            // Заполнение списка протоколов
             response.reports.forEach(report => {
                 const li = document.createElement("li");
                 li.setAttribute("data-report-type", report.report_type);
@@ -246,6 +258,22 @@ async function loadPublicReports() {
                 `;
                 list.appendChild(li);
             });
+
+            // Обработчик фильтрации по типу 
+            typeSelect.addEventListener("change", function () {
+                const selectedType = this.value;
+                const reportItems = document.querySelectorAll("#publicReportList li");
+                reportItems.forEach(item => {
+                    const itemType = item.getAttribute("data-report-type");
+                    item.style.display = (selectedType === "allReports" || 
+                        selectedType === "" || 
+                        itemType === selectedType
+                    ) ? "block" : "none";
+                });
+            });
+
+            setupTextFilter("#publicReportSearchInput", "#publicReportList li");
+
         } else {
             list.innerHTML = `<li>Нет общедоступных протоколов.</li>`;
         }

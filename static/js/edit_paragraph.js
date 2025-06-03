@@ -187,6 +187,14 @@ function makeSentenceEditableActions(sentenceElement) {
         }
         const firstGrammaSentenceCheckBox = document.getElementById("firstGrammaSentence").checked;
         const newText = firstGrammaSentenceCheckBox ? firstGrammaSentence(sentenceElement.textContent.trim()) : sentenceElement.textContent.trim();
+
+        const validationResult = validateInputText(newText, 600, 1);
+        if (!validationResult.valid) {
+            alert(validationResult.message);
+            sentenceElement.textContent = oldText; // Возвращаем старый текст
+            return;
+        }
+
         if (newText !== oldText) {
             sentenceElement.textContent = newText; // Обновляем текст элемента
             updateSentence(sentenceElement); // Вызов твоей функции обновления

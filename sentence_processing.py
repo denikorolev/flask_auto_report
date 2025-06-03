@@ -149,6 +149,11 @@ def preprocess_sentence(text):
     """
     # Проверяем, содержит ли текст хотя бы одну букву или цифру
     if not re.search(r'[a-zA-Zа-яА-ЯёЁ0-9]', text):
+        logger.info(f"(preprocess_sentence) ⚠️ Пропускаю некорректные данные: {text}")
+        return ""
+
+    if len(text.strip()) < 3:
+        logger.info(f"(preprocess_sentence) ⚠️ Пропускаю слишком короткий текст: {text}")
         return ""
 
    # Обрабатываем повторяющиеся знаки, кроме точки
@@ -275,15 +280,18 @@ def split_sentences_if_needed(text):
     
     doc = nlp(text)
     sentences = [sent.text for sent in doc.sents]
+    splited_sentences = []
     for sentence in sentences:
-        if not re.search(r'[a-zA-Zа-яА-ЯёЁ0-9]', sentence):
-            logger.info(f"(функция split_sentences_if_needed) ⚠️ Пропускаю предложение в котором нет букв или цифр: ({sentence})")
-            sentences.remove(sentence)
-    logger.info(f"(функция split_sentences_if_needed) После разделения предложений мы получили -  ({sentences}) ")
-    if len(sentences) > 1:
+        if re.search(r'[a-zA-Zа-яА-ЯёЁ0-9]', sentence) and len(sentence.strip()) > 2:
+            logger.info(f"(функция split_sentences_if_needed) ✅ добавляю предложение в список: ({sentence})")
+            splited_sentences.append(sentence.strip())
+        else:
+            logger.info(f"(функция split_sentences_if_needed) ❌ Пропускаю предложение: ({sentence}) - не содержит букв или слишком короткое")
+    logger.info(f"(функция split_sentences_if_needed) После разделения предложений мы получили -  ({splited_sentences}) ")
+    if len(splited_sentences) > 1:
         # Если найдено более одного предложения, добавляем в исключения
-        return [], sentences # Splitted sentences
-    return sentences, [] # Unsplitted sentences
+        return [], splited_sentences # Splitted sentences
+    return splited_sentences, [] # Unsplitted sentences
 
 
 

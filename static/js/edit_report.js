@@ -486,6 +486,12 @@ function makeEditable(paragraphElement) {
         const firstGrammaSentenceCheckBox = document.getElementById("firstGrammaSentence").checked; // проверяем включена ли автопроверка текста
         const newText = firstGrammaSentenceCheckBox ? firstGrammaSentence(paragraphElement.textContent.trim()) : paragraphElement.textContent.trim(); 
 
+        const validationResult = validateInputText(newText, 600, 1); // Проверяем текст на валидность
+        if (!validationResult.valid) {
+            alert(validationResult.message);
+            paragraphElement.textContent = oldText; // Возвращаем старый текст
+            return;
+        }
 
         if (newText !== oldText) {
             paragraphElement.textContent = newText; // Обновляем текст параграфа
