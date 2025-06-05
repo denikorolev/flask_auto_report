@@ -515,6 +515,7 @@ class Report(BaseModel):
         report = cls.query.filter_by(id=report_id).first()
         return report.report_to_subtype.subtype_to_type.id
     
+    
     @classmethod
     def get_report_type_name (cls, report_id):
         """Возвращает текстовое представление типа отчета"""

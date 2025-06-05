@@ -558,4 +558,33 @@ def check_head_sentence_indexes(paragraph_id):
 
         
       
+def build_prompt_template_from_report_data(report_data: list) -> str:
+    """
+    Преобразует структуру отчета в текстовую форму, пригодную для передачи в prompt OpenAI.
+    Используются только названия параграфов и head_sentences.
+    """
+    logger.info(f"(функция build_prompt_template_from_report_data) 🚀 Начато преобразование структуры отчета в текстовую форму")
+    if not report_data:
+        return ""
+
+    output_lines = []
+    for paragraph in report_data:
+        if not isinstance(paragraph, dict):
+            logger.warning(f"(функция build_prompt_template_from_report_data) ⚠️ Пропускаю некорректный параграф: {paragraph}")
+            continue
+        paragraph_name = paragraph.get("paragraph", "Без названия")
+        output_lines.append(f"Параграф: {paragraph_name}")
+        head_sentences = paragraph.get("head_sentences", [])
         
+        for sentence_data in head_sentences:
+            if not isinstance(sentence_data, dict):
+                logger.warning(f"(функция build_prompt_template_from_report_data) ⚠️ Пропускаю некорректное предложение: {sentence_data}")
+                continue
+            sentence = sentence_data.get("sentence", "").strip()
+            if sentence:
+                output_lines.append(f"– {sentence}")
+        output_lines.append("")  # пустая строка между параграфами
+        
+    logger.info(f"(функция build_prompt_template_from_report_data) Преобразование завершено. Получено {len(output_lines)} строк.")
+
+    return "\n".join(output_lines)

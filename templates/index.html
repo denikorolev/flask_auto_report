@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -16,24 +16,25 @@
             </a>
             <nav class="header__nav">
                 <ul class="header__menu">
-                    <li class="header__menu-item"><a class="header__menu-link" href="#features">Features</a></li>
-                    <li class="header__menu-item"><a class="header__menu-link" href="#ai-capabilities">AI</a></li>
-                    <li class="header__menu-item"><a class="header__menu-link" href="#contact">Contact</a></li>
+                    <li class="header__menu-item"><a class="header__menu-link" href="#features">Возможности</a></li>
+                    <li class="header__menu-item"><a class="header__menu-link" href="#ai-capabilities">ИИ</a></li>
+                    <li class="header__menu-item"><a class="header__menu-link" href="#contact">Контакты</a></li>
                 </ul>
             </nav>
             <div class="header__actions">
-                <a href="{{ url_for('security.login') }}" class="btn">Sign In</a>
-                <a href="{{ url_for('security.register') }}" class="btn btn--auth">Register</a>
+                <a href="{{ url_for('security.login') }}" class="btn">Войти</a>
+                <a href="{{ url_for('security.register') }}" class="btn btn--auth">Зарегистрироваться</a>
             </div>
         </div>
+        
     </header>
     <main class="main">
         <section id="hero" class="hero">
             <div class="container">
                 <div class="main__title">
-                    <h1 class="main__heading">Radiologary – A New Look at Reporting Templates in Radiology</h1>
+                    <h1 class="main__heading">Radiologary – Новый взгляд на шаблоны протоколов в лучевой диагностике</h1>
                 </div>
-                <p class="main__subtitle">Create, edit, and manage study reports faster, smarter, and more accurately.</p>
+                <p class="main__subtitle">Создавайте, редактируйте и управляйте протоколами исследований быстрее, умнее и точнее.</p>
                 <div class="carousel-container">
                     <img src="{{ url_for('static', filename='pic/radiologary_main_image.jpg') }}" alt="Radiology Slide 1" class="carousel-image active">
                     <img src="{{ url_for('static', filename='pic/ai_suggestion.jpg') }}" alt="Radiology Slide 2" class="carousel-image">
@@ -46,33 +47,34 @@
             </div>
         </section>
 
+        
         <section id="features" class="features">
             <div class="container">
-                <h2 class="section__title">Key Features</h2>
+                <h2 class="section__title">Основные возможности</h2>
                 <div class="features__grid">
                     <div class="feature">
-                        <h3>Customizable Templates</h3>
-                        <p>Create your own templates for CT, MRI, PET-CT, X-ray, and other studies. Fully tailored to your needs.</p>
+                        <h3>Настраиваемые шаблоны</h3>
+                        <p>Создавайте свои собственные шаблоны для КТ, МРТ, ПЭТ-КТ, рентгенографии и других исследований. Полностью под ваши нужды.</p>
                     </div>
                     <div class="feature">
-                        <h3>AI Integration</h3>
-                        <p>Spellchecking, logic and structure verification. Instantly generate conclusions based on entered data.</p>
+                        <h3>Интеграция искусственного интеллекта</h3>
+                        <p>Проверка орфографии, логики и структуры. Быстрое формирование заключений на основе введенных данных.</p>
                     </div>
                     <div class="feature">
-                        <h3>Automatic Learning</h3>
-                        <p>The system remembers your changes and adapts templates automatically to boost efficiency.</p>
+                        <h3>Автоматическое обучение</h3>
+                        <p>Система запоминает ваши изменения и адаптирует шаблоны автоматически для повышения эффективности.</p>
                     </div>
                     <div class="feature">
-                        <h3>Keyword Management</h3>
-                        <p>Global and template-specific keywords let you quickly switch context and adapt templates.</p>
+                        <h3>Работа с ключевыми словами</h3>
+                        <p>Глобальные и шаблон-специфические ключевые слова позволяют быстро "переключать" контекст и адаптировать шаблоны.</p>
                     </div>
                     <div class="feature">
-                        <h3>AI Diagnostic Support</h3>
-                        <p>You can ask AI about pathologies, diagnostic signs, and differential diagnoses. Discuss any aspect of radiology.</p>
+                        <h3>Диагностическая поддержка ИИ</h3>
+                        <p>Можно задавать вопросы ИИ о патологиях, диагностических признаках и дифференциальных диагнозах. Можно обсудить любые аспекты лучевой диагностики.</p>
                     </div>
                     <div class="feature">
-                        <h3>Export & Integration</h3>
-                        <p>Export your reports to Word or copy the text in one click.</p>
+                        <h3>Экспорт и интеграция</h3>
+                        <p>Экспортируйте протоколы исследований в Word или копируйте текст одним нажатием.</p>
                     </div>
                 </div>
             </div>
@@ -87,43 +89,42 @@
         <section id="ai-capabilities" class="ai-flex">
             <div class="container container--ai-flex">
                 <div class="ai-flex__text">
-                    <h2 class="section__title">AI Capabilities</h2>
-                    <p>Radiologary uses powerful AI algorithms that:</p>
+                    <h2 class="section__title">Возможности искусственного интеллекта</h2>
+                    <p>Radiologary использует мощные алгоритмы ИИ, которые:</p>
                     <ul>
-                        <li>Automatically generate conclusions based on the report data.</li>
-                        <li>Check your report for logic, grammar, and consistency.</li>
-                        <li>Answer questions about pathologies, findings, and differential diagnosis.</li>
-                        <li>Adapt to your writing style and preferences.</li>
-                        <li>Assist in education and professional development.</li>
+                        <li>Автоматически формируют заключения на основе данных протокола.</li>
+                        <li>Проверяют логику, грамматику и последовательность вашего отчета.</li>
+                        <li>Отвечают на вопросы о патологиях, находках и дифференциальной диагностике.</li>
+                        <li>Адаптируются к вашему стилю написания и предпочтениям.</li>
+                        <li>Помогают в обучении и повышении квалификации.</li>
                     </ul>
-                    <p>The AI is constantly learning and improving its ability to generate conclusions based on your input, gradually adapting to your style. With every day using Radiologary, the AI-generated conclusion will resemble one you would have written yourself.</p>
-                    <a href="#contact" class="btn btn--secondary">Try AI Features</a>
+                    <p>Искусственный интеллект постоянно обучается и улучшает не только свои навыки в формировании заключения по предоставленному описанию, но и постепенно перенимает стиль пользователя. С каждым днём работы с Radiologary, заключение, сформулированное программой, всё больше походит на то, которое написал бы сам пользователь.</p>
+                    <a href="/ai-demo" class="btn btn--secondary">Попробовать возможности ИИ</a>
                 </div>
                 <div class="ai-flex__image">
                     <img src="{{ url_for('static', filename='pic/logo.png') }}" alt="Radiologary AI" />
                 </div>
             </div>
         </section>
-        <!-- Contact (optional) -->
+        <!-- Контакты (опционально) -->
         <section id="contact" class="contact">
             <div class="container">
-                <h2 class="section__title">Contact Us</h2>
+                <h2 class="section__title">Свяжитесь с нами</h2>
                 <div class="contact__content">
                     <div class="contact__info">
-                        <p>If you have any questions, suggestions, or want to learn more about Radiologary, we are happy to help!</p>
-                        <p>We are always open to feedback and ready to answer your questions.</p>
-                        <p>The software is currently in testing and preparing for public release. If you want to participate in testing or need more information, please contact us.</p>
-                        <p>You can write to us at: <a class="contact__link" href="mailto:support@radiologary.com">support@radiologary.com</a> or fill out the form</p>
-                        <p>We will contact you as soon as possible.</p>
-                        <p>Thank you for your interest in Radiologary!</p>
+                        <p>Если у вас есть вопросы, предложения или вы хотите узнать больше о Radiologary, мы будем рады помочь!</p>
+                        <p>Мы всегда открыты для обратной связи и готовы ответить на ваши вопросы.</p>
+                        <p>В настоящий момент программа находится на стадии тестирования и готовится к публичному запуску. Если вы хотите участвовать в тестировании или получить дополнительную информацию, пожалуйста, свяжитесь с нами.</p>
+                        <p>Вы можете написать нам на почту: <a class="contact__link" href="mailto:support@radiologary.com">support@radiologary.com</a> или заполнить форму</p>
+                        <p>Мы свяжемся с вами в ближайшее время.</p>
+                        <p>Спасибо за интерес к Radiologary!</p>
                     </div>
-                    <form class="contact__form" action="{{ url_for('feedback_form') }}" method="POST">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <h3>Feedback Form</h3>
-                        <input type="text" placeholder="Your name" name="name" required>
-                        <input type="email" placeholder="Your email" name="email" required>
-                        <textarea placeholder="Your message" name="message" required></textarea>
-                        <button type="submit" class="btn btn--primary">Send</button>
+                    <form class="contact__form">
+                        <h3>Форма обратной связи</h3>
+                        <input type="text" placeholder="Ваше имя" required>
+                        <input type="email" placeholder="Ваш email" required>
+                        <textarea placeholder="Ваше сообщение"></textarea>
+                        <button type="submit" class="btn btn--primary">Отправить</button>
                     </form>
                 </div>
             </div>
@@ -131,7 +132,7 @@
     </main>
     <footer class="footer">
         <div class="container container--footer">
-            <p class="footer__paragraph">&copy; 2025 Radiologary. All rights reserved.</p>
+            <p class="footer__paragraph">&copy; 2025 Radiologary. Все права защищены.</p>
             <p class="footer__paragraph"><a href="mailto:support@radiologary.com">support@radiologary.com</a></p>
         </div>
     </footer>

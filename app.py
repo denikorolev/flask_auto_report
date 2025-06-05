@@ -31,7 +31,7 @@ from openai_api import openai_api_bp
 from key_words import key_words_bp
 from admin import admin_bp
 
-version = "0.10.0.3"
+version = "0.10.0.4"
 
 
 app = Flask(__name__)
@@ -305,7 +305,7 @@ def feedback_form():
     logger.info(f"Feedback form submitted: {form_data}")
     to_email = "support@radiologary.com"
     subject = f"Письмо с формы обратной связи от {form_data.get('name', 'Unknown')}"
-    html_content = f"{form_data.get('message', 'No message provided')}"
+    html_content = f"{form_data.get('message', 'No message provided')}  от {form_data.get('email', 'Unknown Email')}."
     token = app.config.get("ZEPTOMAIL_API_TOKEN")
     from_email = "feedbackform_sender@radiologary.com"
     if not token:

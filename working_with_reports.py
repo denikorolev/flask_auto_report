@@ -3,9 +3,11 @@
 from flask import Blueprint, render_template, request, jsonify, send_file, g, current_app, json
 from flask_security import current_user
 import os
+import json
 from models import db, Report, ReportType, KeyWord, TailSentence, BodySentence, ReportTextSnapshot
 from file_processing import save_to_word
-from sentence_processing import group_keywords, split_sentences_if_needed, clean_and_normalize_text, compare_sentences_by_paragraph, preprocess_sentence
+from sentence_processing import group_keywords, split_sentences_if_needed, clean_and_normalize_text, compare_sentences_by_paragraph, preprocess_sentence, build_prompt_template_from_report_data
+from openai_api import _process_openai_request, reset_ai_session, count_tokens
 from utils.common import ensure_list
 from logger import logger
 from flask_security.decorators import auth_required
@@ -482,3 +484,80 @@ def increase_sentence_weight():
     except Exception as e:
         logger.error(f"(Увеличение веса предложения) ❌ Ошибка при обновлении веса: {e}")
         return jsonify({"status": "error", "message": f"Ошибка при обновлении веса: {e}"}), 500
+    
+    
+
+@working_with_reports_bp.route("/analyze_dynamics", methods=["POST"])
+@auth_required()
+def analyze_dynamics():
+    logger.info(f"(Анализ динамики) ------------------------------------")
+    logger.info(f"(Анализ динамики) 🚀 Начинаю анализ динамики по тексту и шаблону отчета")
+    data = request.get_json()
+    raw_text = data.get("raw_text", "").strip()
+    report_id = data.get("report_id")
+    logger.info(f"(Анализ динамики) Полученные данные: raw_text={raw_text[:50]}..., report_id={report_id}")
+
+    if not raw_text or not report_id:
+        logger.error(f"(Анализ динамики) Не передан текст или report_id")
+        return jsonify({"status": "error", "message": "Не передан текст или report_id"}), 400
+
+    report_data, sorted_parag = Report.get_report_data(report_id)
+    if not report_data:
+        logger.error(f"(Анализ динамики) Шаблон отчета не найден")
+        return jsonify({"status": "error", "message": "Шаблон отчета не найден"}), 404
+
+    template_text = build_prompt_template_from_report_data(sorted_parag)
+    logger.info(f"(Анализ динамики) Шаблон отчета: {template_text[:150]}...") 
+
+    assistant_id = current_app.config.get("OPENAI_ASSISTANT_DYNAMIC_STRUCTURER")
+    cleaner_assistant_id = current_app.config.get("OPENAI_ASSISTANT_TEXT_CLEANER")
+    grammar_assistant_id = current_app.config.get("OPENAI_ASSISTANT_GRAMMA_CORRECTOR_RU")
+
+    if not assistant_id or not cleaner_assistant_id or not grammar_assistant_id:
+        logger.error(f"(Анализ динамики) Не удалось получить ID ассистента OpenAI для динамического структурирования")
+        return jsonify({"status": "error", "message": "Не удалось получить ID ИИ ассистента для динамического структурирования"}), 500
+    
+    try:
+        # Сначала очищаем текст от лишних кусков и оставляем только протокол
+        cleaned_text = _process_openai_request(
+            text=raw_text,
+            assistant_id=cleaner_assistant_id,
+            file_id=None,
+            clean_response=False,
+        )
+        logger.info(f"(Анализ динамики) ✅ Текст успешно очищен от мусора: {cleaned_text}...")
+    except Exception as e:
+        logger.error(f"(Анализ динамики) ❌ Ошибка при очистке текста: {e}")
+        pass
+    
+
+    # Собираю промпт структуризации
+    prompt_structuring = f"""
+                This is the report template:
+                {template_text}
+                This is the original (raw) medical report text:
+                {cleaned_text}
+                Please restructure the raw report using only the content from the original text and the template.
+                """
+
+   
+    try:
+        result_text = _process_openai_request(
+            text=prompt_structuring,
+            assistant_id=assistant_id,
+            file_id=None,
+            clean_response=False,
+        )
+    
+        reset_ai_session(assistant_id=assistant_id)  # Сбрасываем сессию после запроса
+    
+    except Exception as e:
+        return jsonify({"status": "error", "message": f"Ошибка вызова OpenAI: {e}"}), 500
+
+    parsed_result = json.loads(result_text)
+    result = parsed_result.get("items", [])
+    print(f"(Анализ динамики) Полученный результат: {parsed_result}")
+    
+    
+    logger.info(f"(Анализ динамики) ✅ Получен ответ от OpenAI: {result_text[:150]}...")
+    return jsonify({"status": "success", "text": result})

@@ -34,7 +34,7 @@ def count_tokens(text: str) -> int:
 
 
 # Функция для обработки запроса к OpenAI
-def _process_openai_request(text: str, assistant_id: str, file_id: str = None) -> str:
+def _process_openai_request(text: str, assistant_id: str, file_id: str = None, clean_response: bool = True) -> str:
     """
     Internal helper that sends a user message to OpenAI Assistant and returns the assistant's reply.
     Thread and message state is automatically managed via Flask session.
@@ -90,7 +90,6 @@ def _process_openai_request(text: str, assistant_id: str, file_id: str = None) -
 
     assistant_reply = ""
     assistant_messages = [msg for msg in messages.data if msg.role == "assistant"]
-    logger.info(f"Assistant messages: {assistant_messages}")
 
     if assistant_messages:
         last = assistant_messages[-1]
@@ -98,11 +97,18 @@ def _process_openai_request(text: str, assistant_id: str, file_id: str = None) -
             logger.debug(f"Content block: {content_block}")
             if hasattr(content_block, "text"):
                 assistant_reply += content_block.text.value
-                
-    # Очистка ответа от цитаты загруженного файла       
-    clean_reply = re.sub(r"【.*?】", "", assistant_reply)
-    logger.debug(f"Cleaned reply: {clean_reply}")
-    return clean_reply or "Ответ ассистента не получен."
+    if not assistant_reply:
+        logger.warning("No assistant reply found in the messages.")
+        return "Ответ ассистента не получен."
+    
+    # Очистка ответа от цитаты загруженного файла     
+    if clean_response:
+        clean_reply = re.sub(r"【.*?】", "", assistant_reply)
+        logger.debug(f"Cleaned reply: {clean_reply}")
+        return clean_reply
+    else:
+        logger.debug(f"Raw reply: {assistant_reply}")
+        return assistant_reply
 
 
 
@@ -269,7 +275,7 @@ def generate_impression():
         return jsonify({"status": "error", "message": f"Ошибка при обращении к ИИ: error {e}" }), 500
 
 
-  
+
 
 
     

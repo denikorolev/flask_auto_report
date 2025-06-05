@@ -8,6 +8,8 @@
 <!-- Передаем csrf_token как скрытое поле формы -->
 <input type="hidden" data-report-id=" {{report_data.id}} " id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
 
+{% from "macros/all_popups.html" import dynamics_popup %}
+
 <!-- Предзаполненная форма с ФИО и тд на странице протокола -->
 {% if user_settings.USE_WORD_REPORTS %}
     <form class="flex" id="exportForm" data-report-type="{{ report_data.report_type }}" data-subtype="{{ report_data.report_subtype }}" data-comment="{{ report_data.comment }}">
@@ -169,6 +171,7 @@
             Редактировать протокол
         </a>
         <br>
+        <button class="btn" id="dynamicReportButton">Динамика</button>
        
         <ul class="report-controlpanel__inactive-paragraphs-list" id="inactiveParagraphsList">
             <h3 title="Параграфы, которые не участвуют в формировании заключения. Можно активировать нажав на имя параграфа">
@@ -218,6 +221,9 @@
     <div class="" id="sentenceAddingReportContainer">
     </div>
 </div>
+
+<!-- Попап для работы с динамикой -->
+{{ dynamics_popup() }}
 
 
 {% endblock container %}

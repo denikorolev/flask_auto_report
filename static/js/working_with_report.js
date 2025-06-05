@@ -1,11 +1,14 @@
 // working_with_report.js
-
+// у меня есть глобальные переменные const keyWordsGroups = {{ key_words_groups | tojson | safe }};
+    // const reportData = {{ report_data | tojson | safe }};
+    // const currentReportParagraphsData = {{ paragraphs_data | tojson | safe }};
 
 
 // Объявляем глобальные переменные и запускаем стартовые функции, постепенно нужно перенести сюда и логику связанную с ключевыми словами и развешивание части слушателей
 document.addEventListener("DOMContentLoaded", function() {
 
     let activeSentence = null;  // Для отслеживания активного предложения
+
     const popupList = document.getElementById("popupList");  // Для обращения к PopUp
     const exportButton = document.getElementById("exportButton"); // Для обращения к кнопке "Экспорт в Word"
     const copyButton = document.getElementById("copyButton"); // Для обращения к кнопке "Копировать текст"
@@ -13,9 +16,10 @@ document.addEventListener("DOMContentLoaded", function() {
     const editButton = document.getElementById("editFormButton"); // Для обращения к кнопке Edit Form
     const addReportButton = document.getElementById("addReportButton"); // Для обращения к кнопке Add Report
     const generateButton = document.getElementById("generateImpression"); // Для обращения к кнопке Generate Impression
-    const boxForAiImpressionResponse = document.getElementById("aiImpressionResponseBlock");
-    const boxForAiRedactorResponse = document.getElementById("aiRedactorResponseBlock");
+    const boxForAiImpressionResponse = document.getElementById("aiImpressionResponseBlock"); // Для обращения к блоку с ответом ИИ по заключению
+    const boxForAiRedactorResponse = document.getElementById("aiRedactorResponseBlock"); // Для обращения к блоку с ответом ИИ по редактированию
     const addImpressionButton = document.getElementById("addImpressionToReportButton"); // Для обращения к кнопке "Вставить заключение"
+    const dynamicReportButton = document.getElementById("dynamicReportButton"); // Для обращения к кнопке "Динамический отчет"
     
 
     // Проверяем наличие списка неактивных абзацев и скрываем его, если он пуст
@@ -105,6 +109,17 @@ document.addEventListener("DOMContentLoaded", function() {
     document.getElementById("aiReportCheck").addEventListener("click", function() {
         checkReportAI(boxForAiRedactorResponse, boxForAiImpressionResponse);
     });
+
+    // Слушатель на кнопку "Динамический отчет"
+    if (dynamicReportButton) {
+        dynamicReportButton.addEventListener("click", function() {
+          // Показываем popup с динамическим отчетом
+          showDynamicReportPopup();
+        });
+    }
+
+
+
 });
 
 
@@ -1186,4 +1201,115 @@ function checkReportAI(boxForAiResponse, responseForDelete){
     }).catch(error => {
         console.error("Ошибка отправки отчета на проверку:", error);
     });
+}
+
+
+function showDynamicReportPopup() {
+    const popup = document.getElementById("dynamicsPopup");
+    if (!popup) {
+        console.error("Popup element not found");
+        return;
+    }
+
+    const closeDynamicsPopup = document.getElementById("closeDynamicsPopup");
+    const analyzeDynamicsButton = document.getElementById("analyzeDynamicsButton");
+    const acceptDynamicsButton = document.getElementById("acceptDynamicsButton");
+    const dynamicsTextarea = document.getElementById("dynamicsTextarea");
+    const dynamicsResultBlock = document.getElementById("dynamicsResultBlock");
+
+    // Очистка перед показом
+    dynamicsTextarea.value = "";
+    dynamicsResultBlock.innerText = "";
+    acceptDynamicsButton.style.display = "none";
+
+    showElement(popup);
+
+    // Обработчики (нужно сохранять ссылки, чтобы можно было удалить потом)
+    const closeHandler = () => {
+        hideElement(popup);
+        dynamicsTextarea.value = "";
+        dynamicsResultBlock.innerText = "";
+        acceptDynamicsButton.style.display = "none";
+
+        // Снятие обработчиков
+        closeDynamicsPopup.removeEventListener("click", closeHandler);
+        analyzeDynamicsButton.removeEventListener("click", analyzeHandler);
+        acceptDynamicsButton.removeEventListener("click", acceptHandler);
+    };
+
+    const analyzeHandler = async () => {
+        const rawText = dynamicsTextarea.value.trim();
+        if (!rawText) {
+            alert("Пожалуйста, введите текст для анализа.");
+            return;
+        }
+
+        dynamicsResultBlock.innerHTML = '<em class="dynamics-sentence">Анализирую текст...</em>';
+
+        const result = await sendRequest({
+            url: "/working_with_reports/analyze_dynamics",
+            data: {
+                raw_text: rawText,
+                report_id: reportData.id
+            }
+        });
+
+        if (result.status === "success" && Array.isArray(result.text)) {
+            dynamicsResultBlock.innerHTML = ""; // Очищаем блок перед добавлением результатов
+            result.text.forEach((item, idx) => {
+                const paragraphEl = document.createElement("div");
+                paragraphEl.classList.add("dynamics-paragraph");
+                paragraphEl.innerHTML = `<strong>${item.paragraph || `Параграф ${idx + 1}`}</strong>`;
+                dynamicsResultBlock.appendChild(paragraphEl);
+
+                if (Array.isArray(item.head_sentences)) {
+                    const sentenceLine = document.createElement("div");
+                    sentenceLine.classList.add("dynamics-sentence-line");
+
+                    item.head_sentences.forEach(sentObj => {
+                        const sentenceSpan = document.createElement("span");
+                        sentenceSpan.classList.add("dynamics-sentence");
+                        sentenceSpan.textContent = sentObj.sentence.trim();
+                        sentenceLine.appendChild(sentenceSpan);
+                    });
+
+                    dynamicsResultBlock.appendChild(sentenceLine);
+                }
+            });
+
+            acceptDynamicsButton.style.display = "inline-block";
+
+        } else {
+            dynamicsResultBlock.innerHTML = `<p style="color: red;">Ошибка: ${result.message || "Не удалось получить ответ от ИИ"}</p>`;
+            acceptDynamicsButton.style.display = "none";
+        }
+    };
+
+    const acceptHandler = async () => {
+        const resultText = dynamicsResultBlock.innerText.trim();
+        if (!resultText) {
+            toastr.error("Нет данных для сохранения");
+            return;
+        }
+
+        const result = await sendRequest({
+            url: "/working_with_reports/accept_dynamics",
+            method: "POST",
+            data: {
+                result_text: resultText,
+                report_id: reportData.id
+            }
+        });
+
+        if (result.status === "success" && result.report_id) {
+            window.location.href = `/working_with_reports/edit_report/${result.report_id}`;
+        } else {
+            toastr.error("Ошибка при создании нового отчета");
+        }
+    };
+
+    // Назначаем обработчики
+    closeDynamicsPopup.addEventListener("click", closeHandler);
+    analyzeDynamicsButton.addEventListener("click", analyzeHandler);
+    acceptDynamicsButton.addEventListener("click", acceptHandler);
 }

@@ -1637,3 +1637,108 @@ body {
     margin: 0 10px 0 0;
     gap: 8px;
 }
+
+
+/* попап для динамики в working_with_report */
+
+.dynamics-popup {
+    position: fixed;
+    top: 8vh;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90vw;
+    max-width: 900px;
+    max-height: 84vh;
+    overflow-y: auto;
+    background-color: var(--main-background-color-light);
+    border: 2px solid var(--main-border-color);
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    padding: 25px;
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.dynamics-popup__content {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.dynamics-popup__title {
+    font-size: 1.5rem;
+    color: var(--dark-text-color);
+    margin: 0;
+}
+
+.dynamics-popup__error {
+    color: var(--accent-attention);
+    font-weight: bold;
+}
+
+.dynamics-popup__result {
+    max-height: 40vh;
+    overflow-y: auto;
+    background-color: var(--main-background-color);
+    padding: 10px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 6px;
+    white-space: pre-wrap;
+}
+
+.dynamics-popup__columns {
+    display: flex;
+    flex-direction: row;
+    gap: 20px;
+    justify-content: space-between;
+}
+
+.dynamics-popup__column {
+    flex: 1 1 50%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.dynamics-popup__column .textarea {
+    height: 100%;
+    min-height: 300px;
+}
+
+.dynamics-popup__result {
+    height: 100%;
+    min-height: 300px;
+}
+
+.dynamics-popup__footer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.dynamics-paragraph {
+    margin-top: 10px;
+    font-weight: bold;
+    font-size: 1.1rem;
+    color: var(--main-btn-color);
+    padding-top: 8px;
+}
+
+.dynamics-sentence-line {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-left: 20px;
+}
+
+.dynamics-sentence {
+    display: inline-block;
+    color: var(--dark-text-color);
+    font-size: 0.95rem;
+    line-height: 1.4;
+    background: var(--main-background-color);
+    padding: 2px 6px;
+    border-radius: 4px;
+}
