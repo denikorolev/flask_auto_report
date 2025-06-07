@@ -1640,16 +1640,13 @@ body {
 
 
 /* попап для динамики в working_with_report */
-
 .dynamics-popup {
     position: fixed;
     top: 8vh;
     left: 50%;
     transform: translateX(-50%);
     width: 90vw;
-    max-width: 900px;
-    max-height: 84vh;
-    overflow-y: auto;
+    max-width: 800px;
     background-color: var(--main-background-color-light);
     border: 2px solid var(--main-border-color);
     border-radius: 10px;
@@ -1658,13 +1655,7 @@ body {
     z-index: 2000;
     display: flex;
     flex-direction: column;
-    gap: 15px;
-}
-
-.dynamics-popup__content {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
+    gap: 20px;
 }
 
 .dynamics-popup__title {
@@ -1673,72 +1664,58 @@ body {
     margin: 0;
 }
 
+.dynamics-popup__textarea {
+    width: 100%;
+    min-height: 300px;
+    padding: 12px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 6px;
+    background-color: var(--main-background-color);
+    resize: vertical;
+    font-size: 14px;
+    color: var(--dark-text-color);
+    font-family: inherit;
+}
+
 .dynamics-popup__error {
     color: var(--accent-attention);
     font-weight: bold;
-}
-
-.dynamics-popup__result {
-    max-height: 40vh;
-    overflow-y: auto;
-    background-color: var(--main-background-color);
-    padding: 10px;
-    border: 1px solid var(--main-border-color);
-    border-radius: 6px;
-    white-space: pre-wrap;
-}
-
-.dynamics-popup__columns {
-    display: flex;
-    flex-direction: row;
-    gap: 20px;
-    justify-content: space-between;
-}
-
-.dynamics-popup__column {
-    flex: 1 1 50%;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.dynamics-popup__column .textarea {
-    height: 100%;
-    min-height: 300px;
-}
-
-.dynamics-popup__result {
-    height: 100%;
-    min-height: 300px;
+    display: none;
 }
 
 .dynamics-popup__footer {
     display: flex;
+    justify-content: space-between;
     flex-wrap: wrap;
     gap: 10px;
 }
 
-.dynamics-paragraph {
-    margin-top: 10px;
-    font-weight: bold;
-    font-size: 1.1rem;
-    color: var(--main-btn-color);
-    padding-top: 8px;
-}
 
-.dynamics-sentence-line {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-left: 20px;
-}
-
-.dynamics-sentence {
-    display: inline-block;
-    color: var(--dark-text-color);
-    font-size: 0.95rem;
-    line-height: 1.4;
-    background: var(--main-background-color);
-    padding: 2px 6px;
+#aiDynamicBlock {
+    margin-top: 15px;
+    padding: 12px 16px;
+    background-color: var(--main-background-color-light); /* светлый фон */
+    border-left: 4px solid var(--main-btn-color); /* основной цвет кнопки */
     border-radius: 4px;
+    font-size: 0.95rem;
+    color: var(--main-text-color);
+}
+
+.second-look-title {
+    font-weight: 600;
+    margin-top: 12px;
+    margin-bottom: 6px;
+    color: var(--main-font-color); /* акцентный цвет для названия параграфа */
+    font-size: 1rem;
+}
+
+.second-look-paragraph ul {
+    margin: 0 0 12px 20px;
+    padding-left: 0;
+    list-style-type: disc;
+}
+
+.second-look-paragraph li {
+    margin-bottom: 4px;
+    color: var(--main-text-color);
 }

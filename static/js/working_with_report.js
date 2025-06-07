@@ -3,9 +3,11 @@
     // const reportData = {{ report_data | tojson | safe }};
     // const currentReportParagraphsData = {{ paragraphs_data | tojson | safe }};
 
+document.addEventListener("DOMContentLoaded", initWorkingWithReport);
+
 
 // Объявляем глобальные переменные и запускаем стартовые функции, постепенно нужно перенести сюда и логику связанную с ключевыми словами и развешивание части слушателей
-document.addEventListener("DOMContentLoaded", function() {
+function initWorkingWithReport() {
 
     let activeSentence = null;  // Для отслеживания активного предложения
 
@@ -120,7 +122,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
 
 
-});
+}
 
 
 
@@ -1213,14 +1215,12 @@ function showDynamicReportPopup() {
 
     const closeDynamicsPopup = document.getElementById("closeDynamicsPopup");
     const analyzeDynamicsButton = document.getElementById("analyzeDynamicsButton");
-    const acceptDynamicsButton = document.getElementById("acceptDynamicsButton");
     const dynamicsTextarea = document.getElementById("dynamicsTextarea");
-    const dynamicsResultBlock = document.getElementById("dynamicsResultBlock");
+    const dynamicsErrorMessage = document.getElementById("dynamicsErrorMessage");
 
     // Очистка перед показом
     dynamicsTextarea.value = "";
-    dynamicsResultBlock.innerText = "";
-    acceptDynamicsButton.style.display = "none";
+    dynamicsErrorMessage.innerText = "";
 
     showElement(popup);
 
@@ -1228,23 +1228,23 @@ function showDynamicReportPopup() {
     const closeHandler = () => {
         hideElement(popup);
         dynamicsTextarea.value = "";
-        dynamicsResultBlock.innerText = "";
-        acceptDynamicsButton.style.display = "none";
+        dynamicsErrorMessage.innerText = "";
 
         // Снятие обработчиков
         closeDynamicsPopup.removeEventListener("click", closeHandler);
         analyzeDynamicsButton.removeEventListener("click", analyzeHandler);
-        acceptDynamicsButton.removeEventListener("click", acceptHandler);
     };
 
+    
     const analyzeHandler = async () => {
         const rawText = dynamicsTextarea.value.trim();
+
         if (!rawText) {
             alert("Пожалуйста, введите текст для анализа.");
             return;
         }
 
-        dynamicsResultBlock.innerHTML = '<em class="dynamics-sentence">Анализирую текст...</em>';
+        dynamicsErrorMessage.innerText = "Анализирую текст...";
 
         const result = await sendRequest({
             url: "/working_with_reports/analyze_dynamics",
@@ -1254,62 +1254,91 @@ function showDynamicReportPopup() {
             }
         });
 
-        if (result.status === "success" && Array.isArray(result.text)) {
-            dynamicsResultBlock.innerHTML = ""; // Очищаем блок перед добавлением результатов
-            result.text.forEach((item, idx) => {
-                const paragraphEl = document.createElement("div");
-                paragraphEl.classList.add("dynamics-paragraph");
-                paragraphEl.innerHTML = `<strong>${item.paragraph || `Параграф ${idx + 1}`}</strong>`;
-                dynamicsResultBlock.appendChild(paragraphEl);
-
-                if (Array.isArray(item.head_sentences)) {
-                    const sentenceLine = document.createElement("div");
-                    sentenceLine.classList.add("dynamics-sentence-line");
-
-                    item.head_sentences.forEach(sentObj => {
-                        const sentenceSpan = document.createElement("span");
-                        sentenceSpan.classList.add("dynamics-sentence");
-                        sentenceSpan.textContent = sentObj.sentence.trim();
-                        sentenceLine.appendChild(sentenceSpan);
-                    });
-
-                    dynamicsResultBlock.appendChild(sentenceLine);
-                }
-            });
-
-            acceptDynamicsButton.style.display = "inline-block";
-
+        if (result.status === "success") {
+            handleAnalyzeDynamicsResponse(result);
         } else {
-            dynamicsResultBlock.innerHTML = `<p style="color: red;">Ошибка: ${result.message || "Не удалось получить ответ от ИИ"}</p>`;
-            acceptDynamicsButton.style.display = "none";
+            alert("Ошибка анализа динамики: " + (result.message || "Неизвестная ошибка"));
         }
     };
-
-    const acceptHandler = async () => {
-        const resultText = dynamicsResultBlock.innerText.trim();
-        if (!resultText) {
-            toastr.error("Нет данных для сохранения");
-            return;
-        }
-
-        const result = await sendRequest({
-            url: "/working_with_reports/accept_dynamics",
-            method: "POST",
-            data: {
-                result_text: resultText,
-                report_id: reportData.id
-            }
-        });
-
-        if (result.status === "success" && result.report_id) {
-            window.location.href = `/working_with_reports/edit_report/${result.report_id}`;
-        } else {
-            toastr.error("Ошибка при создании нового отчета");
-        }
-    };
+    
 
     // Назначаем обработчики
     closeDynamicsPopup.addEventListener("click", closeHandler);
     analyzeDynamicsButton.addEventListener("click", analyzeHandler);
-    acceptDynamicsButton.addEventListener("click", acceptHandler);
+}
+
+
+
+function reexecuteInlineScripts(container = document.body) {
+    const scripts = container.querySelectorAll("script:not(.no-reexec)");
+
+    scripts.forEach(oldScript => {
+        const newScript = document.createElement("script");
+        [...oldScript.attributes].forEach(attr => newScript.setAttribute(attr.name, attr.value));
+        if (oldScript.src) {
+            newScript.src = oldScript.src;
+        } else {
+            newScript.textContent = oldScript.textContent;
+        }
+        oldScript.replaceWith(newScript);
+    });
+}
+
+
+function handleAnalyzeDynamicsResponse(response) {
+    document.body.innerHTML = response.html;
+    window.keyWordsGroups = response.key_words_groups;
+    window.reportData = response.report_data;
+    window.currentReportParagraphsData = response.paragraphs_data;
+    refreshCsrfToken();
+    initWorkingWithReport();
+    additionalFindings(response);
+}
+
+
+
+function additionalFindings(response) {
+    const aiBlock = document.getElementById("aiDynamicBlock");
+    aiBlock.innerHTML = ""; // Очистка перед новым рендером
+
+    const secondLook = response.second_look_result;
+
+    if (Array.isArray(secondLook) && secondLook.length > 0) {
+        const header = document.createElement("h5");
+        header.textContent = "📌 Missed Findings (according to second-look AI):";
+        aiBlock.appendChild(header);
+
+        const grouped = {};
+
+        // Группировка по параграфам
+        secondLook.forEach(item => {
+            const para = item.paragraph || "Без параграфа";
+            if (!grouped[para]) grouped[para] = [];
+            grouped[para].push(item.sentence);
+        });
+
+        // Рендер групп
+        Object.entries(grouped).forEach(([paragraph, sentences]) => {
+            const paraBlock = document.createElement("div");
+            paraBlock.classList.add("second-look-paragraph");
+
+            const title = document.createElement("div");
+            title.classList.add("second-look-title");
+            title.textContent = paragraph;
+            paraBlock.appendChild(title);
+
+            const ul = document.createElement("ul");
+            sentences.forEach(sentence => {
+                const li = document.createElement("li");
+                li.textContent = sentence;
+                ul.appendChild(li);
+            });
+            paraBlock.appendChild(ul);
+            aiBlock.appendChild(paraBlock);
+        });
+    } else {
+        const empty = document.createElement("div");
+        empty.textContent = "✅ No additional findings detected by second-look AI.";
+        aiBlock.appendChild(empty);
+    }
 }

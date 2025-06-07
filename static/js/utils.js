@@ -189,3 +189,15 @@ function validateInputText(text, maxLength = 600, minLength = 1) {
 
     return { valid: true };
 }
+
+/** * Обновляет CSRF токен в глобальной переменной window.csrfToken после перерендеринга страницы.
+ * Предполагается, что новый токен находится в input с именем "csrf_token".
+ */
+function refreshCsrfToken() {
+    const newTokenInput = document.querySelector('input[name="csrf_token"]');
+    if (newTokenInput) {
+        window.csrfToken = newTokenInput.value;
+    } else {
+        console.warn("CSRF токен не найден после перерендеринга");
+    }
+}

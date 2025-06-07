@@ -4,6 +4,7 @@ from flask import g, current_app
 from flask_login import current_user
 from rapidfuzz import fuzz
 import re
+import json
 from docx import Document
 from spacy_manager import SpacyModel
 from models import db, Paragraph, KeyWord, Report, HeadSentence, BodySentence, TailSentence, HeadSentenceGroup, BodySentenceGroup, TailSentenceGroup
@@ -490,29 +491,6 @@ def compare_sentences_by_paragraph(new_sentences, report_id):
     return {"duplicates": duplicates, "unique": unique_sentences, "errors_count": errors_count}
 
 
-# Функция проверяет предложение на уникальность и добавляет его 
-# в результат, если оно уникально. Работает со списком по ссылке, 
-# ничего не возвращает, просто меняет предоставленные список и множество
-def _add_if_unique(raw_text, key_words, except_words, cleaned_list, result_set, threshold):
-    """
-    Проверяет, является ли предложение уникальным, и добавляет его в результат.
-
-    Args:
-        raw_text (str): Оригинальный текст.
-        key_words (list): Ключевые слова для очистки.
-        except_words (list): Слова-исключения.
-        cleaned_list (list): Уже очищенные тексты.
-        result_set (set): Уникальные предложения (результат).
-        threshold (int): Порог схожести.
-    """
-    cleaned = clean_text_with_keywords(raw_text, key_words, except_words)
-    for existing in cleaned_list:
-        if fuzz.ratio(cleaned, existing) >= threshold:
-            return
-    cleaned_list.append(cleaned)
-    result_set.add(raw_text)
-   
-
 
 # Функция для поиска существующих аналогичных предложений того же типа в базе данных 
 # использую в models.py. Ищет 100% совпадения
@@ -557,7 +535,33 @@ def check_head_sentence_indexes(paragraph_id):
     return duplicates
 
         
-      
+
+# Функция проверяет предложение на уникальность и добавляет его 
+# в результат, если оно уникально. Работает со списком по ссылке, 
+# ничего не возвращает, просто меняет предоставленные список и множество
+def _add_if_unique(raw_text, key_words, except_words, cleaned_list, result_set, threshold):
+    """
+    Проверяет, является ли предложение уникальным, и добавляет его в результат.
+
+    Args:
+        raw_text (str): Оригинальный текст.
+        key_words (list): Ключевые слова для очистки.
+        except_words (list): Слова-исключения.
+        cleaned_list (list): Уже очищенные тексты.
+        result_set (set): Уникальные предложения (результат).
+        threshold (int): Порог схожести.
+    """
+    cleaned = clean_text_with_keywords(raw_text, key_words, except_words)
+    for existing in cleaned_list:
+        if fuzz.ratio(cleaned, existing) >= threshold:
+            return
+    cleaned_list.append(cleaned)
+    result_set.add(raw_text)
+   
+
+
+
+
 def build_prompt_template_from_report_data(report_data: list) -> str:
     """
     Преобразует структуру отчета в текстовую форму, пригодную для передачи в prompt OpenAI.
@@ -588,3 +592,83 @@ def build_prompt_template_from_report_data(report_data: list) -> str:
     logger.info(f"(функция build_prompt_template_from_report_data) Преобразование завершено. Получено {len(output_lines)} строк.")
 
     return "\n".join(output_lines)
+
+
+
+# Функция для замены заголовков главных предложений в параграфах
+# Используется в working_with_reports.py для замены заголовков главных предложений
+# с помощью AI, если заголовки совпадают с заголовками параграфов.
+def replace_head_sentences_with_fuzzy_check(main_data, ai_data, threshold=95):
+    logger.info("(replace_head_sentences_with_fuzzy_check) 🚀  Начат процесс замены главных предложений синтезированными")
+    logger.info(f"(replace_head_sentences_with_fuzzy_check) Получен основной протокол: {main_data[150:200]}... (всего {len(main_data)} параграфов)")
+    logger.info("-----------------------------------------------------")
+    logger.info(f"(replace_head_sentences_with_fuzzy_check) Получен сгенерированный протокол: {ai_data[150:200]}... (всего {len(ai_data)} параграфов)")
+    if len(main_data) != len(ai_data):
+        logger.error(f"(функция replace_head_sentences_with_fuzzy_check) ❌ Количество параграфов не совпадает: основной протокол: {len(main_data)} != сгенерированный протокол: {len(ai_data)}")
+        raise ValueError("Number of paragraphs does not match between the original and the AI-generated report. "
+                        "Make sure your generated report has the exact same number of paragraphs as in the template. "
+                        "Do not add or remove any paragraphs. Regenerate the report strictly following the structure.")
+
+    for i, (main_par, ai_par) in enumerate(zip(main_data, ai_data)):
+        main_title = main_par.get("paragraph", "").strip()
+        ai_title = ai_par.get("paragraph", "").strip()
+
+        ratio = fuzz.ratio(main_title, ai_title)
+        if ratio < threshold:
+            logger.error(f"(функция replace_head_sentences_with_fuzzy_check) ❌ Параграф №{i + 1} не совпадает по заголовку: '{main_title}' vs '{ai_title}' (совпадение {ratio}%)")
+            raise ValueError(f"Paragraph #{i + 1} title mismatch: '{main_title}' vs '{ai_title}' (similarity: {ratio}%). "
+                            "Please make sure all paragraph titles match exactly with the original template. "
+                            "Do not rename, reword, or change paragraph headers. Use the exact same titles.")
+
+        main_head_sentences = main_par.get("head_sentences", [])
+        ai_head_sentences = ai_par.get("head_sentences", [])
+
+        if len(main_head_sentences) != len(ai_head_sentences):
+            logger.error(f"(функция replace_head_sentences_with_fuzzy_check) ❌ Количество предложений в параграфе '{main_title}' не совпадает: основной протокол: {len(main_head_sentences)} != сгенерированный протокол: {len(ai_head_sentences)}")
+            raise ValueError(f"Mismatch in number of head sentences in paragraph '{main_title}': "
+                            f"the original report has {len(main_head_sentences)}, the AI-generated report has {len(ai_head_sentences)}. "
+                            "Make sure you preserve the exact number of head sentences for each paragraph as in the template. "
+                            "Do not add, remove, or merge sentences. Rewrite only the content, not the structure.")
+
+        for j, (main_sentence, ai_sentence) in enumerate(zip(main_head_sentences, ai_head_sentences)):
+            if isinstance(main_sentence, dict) and isinstance(ai_sentence, dict):
+                main_sentence["sentence"] = ai_sentence.get("sentence", main_sentence.get("sentence"))
+
+    return main_data
+
+
+
+# Превращает JSON-строки в объекты Python, если они сериализованы нигде не использую
+def deep_json_deserialize_if_needed(data, context="root"):
+    """
+    Рекурсивно десериализует строки на всех уровнях, если они являются JSON-строкой
+    (например, список или словарь, сериализованный дважды).
+    """
+    # 1. Попытка распарсить JSON, если это строка
+    logger.info(f"(deep_json_deserialize_if_needed) 🚀 Начата десериализация данных в контексте: {context}")
+    if isinstance(data, str):
+        try:
+            parsed = json.loads(data)
+            logger.warning(f"(deep_json_deserialize_if_needed) ⚠️ В '{context}' десериализована строка в JSON.")
+            return deep_json_deserialize_if_needed(parsed, context)
+        except json.JSONDecodeError:
+            logger.info(f"(deep_json_deserialize_if_needed) ❌ Данные в '{context}' не являются JSON-строкой, возвращаю как есть.")
+            return data  # обычная строка, не JSON
+
+    # 2. Обработка словаря
+    elif isinstance(data, dict):
+        return {
+            key: deep_json_deserialize_if_needed(value, context + f".{key}")
+            for key, value in data.items()
+        }
+
+    # 3. Обработка списка
+    elif isinstance(data, list):
+        return [
+            deep_json_deserialize_if_needed(item, context + f"[{i}]")
+            for i, item in enumerate(data)
+        ]
+
+    # 4. Всё остальное возвращаем как есть (int, float, None и пр.)
+    return data
+

@@ -97,27 +97,15 @@
 
 {% macro dynamics_popup() %}
 <div id="dynamicsPopup" class="dynamics-popup" style="display: none;">
-    <div class="dynamics-popup__content">
-        <h3 class="dynamics-popup__title">Анализ динамики</h3>
+    <h3 class="dynamics-popup__title">Анализ динамики</h3>
 
-        <div class="dynamics-popup__columns">
-            <div class="dynamics-popup__column">
-                <label class="label">Исходный текст:</label>
-                <textarea id="dynamicsTextarea" class="textarea" placeholder="Вставьте текст предыдущего протокола сюда"></textarea>
-            </div>
-            <div class="dynamics-popup__column">
-                <label class="label">Результат анализа:</label>
-                <div id="dynamicsResultBlock" class="dynamics-popup__result"></div>
-            </div>
-        </div>
+    <textarea id="dynamicsTextarea" class="dynamics-popup__textarea" placeholder="Вставьте текст предыдущего протокола сюда"></textarea>
 
+    <p id="dynamicsErrorMessage" class="dynamics-popup__error">Ошибка анализа. Проверьте текст и повторите попытку.</p>
+
+    <div class="dynamics-popup__footer">
         <button class="btn" id="analyzeDynamicsButton">Анализировать</button>
-        <p id="dynamicsErrorMessage" class="dynamics-popup__error" style="display: none;"></p>
-
-        <div class="dynamics-popup__footer">
-            <button class="btn" id="acceptDynamicsButton" style="display: none;">Принять</button>
-            <button class="btn dynamics-popup__btn--close" id="closeDynamicsPopup">Закрыть</button>
-        </div>
+        <button class="btn dynamics-popup__btn--close" id="closeDynamicsPopup">Закрыть</button>
     </div>
 </div>
 {% endmacro %}
