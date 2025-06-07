@@ -1296,7 +1296,6 @@ function handleAnalyzeDynamicsResponse(response) {
 }
 
 
-
 function additionalFindings(response) {
     const aiBlock = document.getElementById("aiDynamicBlock");
     aiBlock.innerHTML = ""; // Очистка перед новым рендером
@@ -1308,17 +1307,12 @@ function additionalFindings(response) {
         header.textContent = "📌 Missed Findings (according to second-look AI):";
         aiBlock.appendChild(header);
 
-        const grouped = {};
-
-        // Группировка по параграфам
         secondLook.forEach(item => {
-            const para = item.paragraph || "Без параграфа";
-            if (!grouped[para]) grouped[para] = [];
-            grouped[para].push(item.sentence);
-        });
+            const paragraph = item.paragraph || "Без параграфа";
+            const sentences = Array.isArray(item.sentences) ? item.sentences : [];
 
-        // Рендер групп
-        Object.entries(grouped).forEach(([paragraph, sentences]) => {
+            if (sentences.length === 0) return; // Нет данных — пропускаем
+
             const paraBlock = document.createElement("div");
             paraBlock.classList.add("second-look-paragraph");
 

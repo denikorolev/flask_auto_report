@@ -171,7 +171,10 @@
             Редактировать протокол
         </a>
         <br>
-        <button class="btn" id="dynamicReportButton">Динамика</button>
+        {% if user_max_rank == 4 %}
+            <button class="btn" id="dynamicReportButton">Динамика</button>
+        {% endif %}
+        
        
         <ul class="report-controlpanel__inactive-paragraphs-list" id="inactiveParagraphsList">
             <h3 title="Параграфы, которые не участвуют в формировании заключения. Можно активировать нажав на имя параграфа">

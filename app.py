@@ -31,7 +31,7 @@ from openai_api import openai_api_bp
 from key_words import key_words_bp
 from admin import admin_bp
 
-version = "0.10.1.0"
+version = "0.10.2.0"
 
 
 app = Flask(__name__)

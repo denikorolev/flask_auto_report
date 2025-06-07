@@ -6,7 +6,7 @@ import os
 import json
 from models import db, Report, ReportType, KeyWord, TailSentence, BodySentence, ReportTextSnapshot
 from file_processing import save_to_word
-from sentence_processing import group_keywords, split_sentences_if_needed, clean_and_normalize_text, compare_sentences_by_paragraph, preprocess_sentence, build_prompt_template_from_report_data, replace_head_sentences_with_fuzzy_check, deep_json_deserialize_if_needed
+from sentence_processing import group_keywords, split_sentences_if_needed, clean_and_normalize_text, compare_sentences_by_paragraph, preprocess_sentence, build_prompt_template_from_report_data, build_prompt_template_from_report_data_json, replace_head_sentences_with_fuzzy_check, deep_json_deserialize_if_needed
 from openai_api import _process_openai_request, reset_ai_session, count_tokens
 from utils.common import ensure_list
 from logger import logger
@@ -515,8 +515,11 @@ def analyze_dynamics():
         logger.error(f"(Анализ динамики) ❌ Не получилось получить ключевые слова для текущего пользователя: {e}")
         key_words_groups = []
     
-    template_text = build_prompt_template_from_report_data(sorted_parag)
-    logger.info(f"(Анализ динамики) Шаблон отчета: {template_text[:150]}...") 
+    template_text = build_prompt_template_from_report_data_json(sorted_parag)
+    if not template_text:
+        logger.error(f"(Анализ динамики) ❌ Не удалось собрать шаблон отчета")
+        return jsonify({"status": "error", "message": "Не удалось собрать шаблон отчета"}), 500
+    logger.info(f"(Анализ динамики) Шаблон отчета: {template_text[:200]}...{template_text[-200:]}") 
 
     structurer_assistant_id = current_app.config.get("OPENAI_ASSISTANT_DYNAMIC_STRUCTURER")
     cleaner_assistant_id = current_app.config.get("OPENAI_ASSISTANT_TEXT_CLEANER")
@@ -527,32 +530,32 @@ def analyze_dynamics():
         return jsonify({"status": "error", "message": "Не удалось получить ID ИИ ассистента для динамического структурирования"}), 500
     
     try:
-        # Сначала очищаем текст от лишних кусков и оставляем только протокол
+        # Сначала очищаем текст от лишних кусков фио, названия организации и т.д. и оставляем только протокол
         cleaned_text = _process_openai_request(
             text=raw_text,
             assistant_id=cleaner_assistant_id,
             file_id=None,
             clean_response=False,
         )
-        if cleaned_text:
-            reset_ai_session(cleaner_assistant_id)
-            logger.info(f"(Анализ динамики) ✅ Текст успешно очищен от мусора: {cleaned_text}...")
-        else:
+        if not cleaned_text:
             logger.error(f"(Анализ динамики) ❌ Не удалось очистить текст от мусора")
+        
     except Exception as e:
         logger.error(f"(Анализ динамики) ❌ Ошибка при очистке текста: {e}")
         pass
     
-
-    # Собираю промпт структуризации
+    logger.info(f"(Анализ динамики) ✅ Текст успешно очищен от мусора")
+    print("--------------------------------------------")
+    print(f"Полученный результат после очистки от мусора: {cleaned_text}")
+    print("--------------------------------------------")
+    
+    # Теперь структурируем текст в соответствии с шаблоном
     prompt_structuring = f"""
                 This is the report template:
                 {template_text}
-                This is the original (raw) medical report text:
+                This is the original medical report text:
                 {cleaned_text}
-                Please restructure the raw report using only the content from the original text and the template.
                 """
-
    
     try:
         result_text = _process_openai_request(
@@ -564,6 +567,9 @@ def analyze_dynamics():
     
     
     except Exception as e:
+        # Если первая попытка не удалась, пробуем еще раз. 
+        # Это на случай ошибки отловленной через exeption не логическая 
+        # ошибка и не ошибка с несовпадением количества предложений. 
         logger.error(f"(Анализ динамики) ❌ Ошибка вызова OpenAI: {e}")
         try:
             result_text = _process_openai_request(
@@ -572,25 +578,31 @@ def analyze_dynamics():
                 file_id=None,
                 clean_response=False,
             )
-            logger.info("(Анализ динамики) ✅ Вторая попытка вызова OpenAI прошла успешно")
+            logger.info("(Анализ динамики) ✅ 2️⃣ Вторая попытка вызова OpenAI прошла успешно")
         except Exception as e2:
-            logger.error(f"(Анализ динамики) ❌ Повторная попытка тоже не удалась: {e2}")
+            logger.error(f"(Анализ динамики) ❌❌ 2️⃣ Повторная попытка тоже не удалась: {e2}")
             return jsonify({
                 "status": "error",
                 "message": f"Ошибка при повторной попытке вызова OpenAI: {e2}"
             }), 500
 
+    print("--------------------------------------------")
+    print(f"Полученный результат после системного структурирования: {result_text}")
+    print("--------------------------------------------")
     parsed = json.loads(result_text)
     result = parsed.get("items", [])
     try:
+        # Это первая попытка замены предложений в параграфах 
         initial_report = replace_head_sentences_with_fuzzy_check(sorted_parag, result)
-        logger.info("(Анализ динамики) ✅ Удалось исправить структуру и заменить предложения с первой попытки.")
+        logger.info("(Анализ динамики) ✅ Удалось исправить структуру и заменить предложения с первой попытки 1️⃣.")
         template_for_second_look = build_prompt_template_from_report_data(initial_report)
         try:
+            # Это второй взгляд после первой попытки замены предложений
+            # Если все прошло успешно, то мы можем отрендерить страницу с новым протоколом
             prompt_for_second_look = f"""            
-            This is the report template:
+            This is the template:
             {template_for_second_look}
-            and this is the original medical report text:
+            and this is the original radiological report:
             {cleaned_text}
             """
             second_look_response = _process_openai_request(
@@ -599,10 +611,15 @@ def analyze_dynamics():
                 file_id=None,
                 clean_response=False
             )
+            
+            print("--------------------------------------------")
+            print(f"Полученный результат второго мнения: {second_look_response}")
+            print("--------------------------------------------")
+    
             parsed_second_look = json.loads(second_look_response)
             second_look_result = parsed_second_look.get("items", [])
         except Exception as e2:
-            logger.error(f"(Анализ динамики) ❌ Ошибка при повторном анализе структуры отчета: {e2}")
+            logger.error(f"(Анализ динамики) ❌ Ошибка получения второго мнения: {e2}")
             second_look_result = []
 
         new_html = render_template(
@@ -623,14 +640,15 @@ def analyze_dynamics():
         }), 200
     except Exception as e:
         error_message = str(e)
-        logger.error(f"(Анализ динамики) ❌ Ошибка при замене начальных предложений: {error_message}")
+        logger.error(f"(Анализ динамики) ❌ Ошибка при изменении структуры отчета и замене предложений: {error_message}")
 
         try:
+            # Вторая попытка структурирования отчета
             # Отправляем ассистенту текст ошибки, просим пересобрать результат
             retry_prompt = f"""
                             The following error occurred while analyzing the generated report structure:
                             {error_message}
-                            Ensure that you use only the information from the original input text and the given template.
+                            Ensure that you use only the information from the original medical report and the given template.
                             """
             retry_response = _process_openai_request(
                 text=retry_prompt,
@@ -638,18 +656,28 @@ def analyze_dynamics():
                 file_id=None,
                 clean_response=False
             )
+            
+            print("--------------------------------------------")
+            print(f"Полученный результат структурирования, вторая попытка: {retry_response}")
+            print("--------------------------------------------")
+            
             parsed_retry = json.loads(retry_response)
             result = parsed_retry.get("items", [])
-            # Повторная попытка замены
-            initial_report = replace_head_sentences_with_fuzzy_check(sorted_parag, result)
-            logger.info("(Анализ динамики) ✅ Удалось исправить структуру и заменить предложения со второй попытки.")
+            
+            # Вторая попытка замены предложений в параграфах
+            try:
+                initial_report = replace_head_sentences_with_fuzzy_check(sorted_parag, result)
+                logger.info("(Анализ динамики) ✅ Удалось исправить структуру и заменить предложения со второй попытки.")
+            except Exception as e3:
+                logger.error(f"(Анализ динамики) ❌ Ошибка при повторной попытке замены предложений: {e3}")
+                return jsonify({"status": "error", "message": f"Ошибка при повторной попытке замены предложений: {e3}"}), 500
             
             template_for_second_look = build_prompt_template_from_report_data(initial_report)
             try:
                 prompt_for_second_look = f"""            
-                This is the report template:
+                This is the template:
                 {template_for_second_look}
-                and this is the original medical report text:
+                and this is the original radiological report:
                 {cleaned_text}
                 """
                 second_look_response = _process_openai_request(
@@ -658,10 +686,15 @@ def analyze_dynamics():
                     file_id=None,
                     clean_response=False
                 )
+                
+                print("--------------------------------------------")
+                print(f"Полученный результат второго мнения, вторая попытка: {second_look_response}")
+                print("--------------------------------------------")
+                
                 parsed_second_look = json.loads(second_look_response)
                 second_look_result = parsed_second_look.get("items", [])
             except Exception as e2:
-                logger.error(f"(Анализ динамики) ❌ Ошибка при повторном анализе структуры отчета: {e2}")
+                logger.error(f"(Анализ динамики) ❌ Ошибка при попытке получения второго мнения по отчету {e2}")
                 second_look_result = []
             
             new_html = render_template(
@@ -686,4 +719,5 @@ def analyze_dynamics():
     finally:
         reset_ai_session(assistant_id=structurer_assistant_id)
         reset_ai_session(assistant_id=cleaner_assistant_id)
+        reset_ai_session(assistant_id=second_look_assistant_id)
         logger.info(f"(Анализ динамики) 📌 Сессии ассистентов OpenAI успешно сброшены")

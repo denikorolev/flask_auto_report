@@ -562,7 +562,8 @@ def _add_if_unique(raw_text, key_words, except_words, cleaned_list, result_set, 
 
 
 
-
+# Функция для преобразования структуры отчета в текстовую форму. 
+# Используется в working_with_reports.py для второго мнения AI.
 def build_prompt_template_from_report_data(report_data: list) -> str:
     """
     Преобразует структуру отчета в текстовую форму, пригодную для передачи в prompt OpenAI.
@@ -594,6 +595,49 @@ def build_prompt_template_from_report_data(report_data: list) -> str:
 
     return "\n".join(output_lines)
 
+
+# Функция для преобразования структуры отчета в JSON-строку
+# Используется в working_with_reports.py для сруктурирования отчета
+def build_prompt_template_from_report_data_json(report_data: list) -> str:
+    """
+    Преобразует структуру отчета в JSON-строку с ключами:
+    [
+      {
+        "paragraph": "Имя параграфа",
+        "head_sentences": [
+          "Предложение 1",
+          "Предложение 2"
+        ]
+      },
+      ...
+    ]
+    Если данных нет — возвращает "[]".
+    """
+    logger.info(f"(функция build_prompt_template_from_report_data_json) 🚀 Начато преобразование структуры отчета в JSON")
+    if not report_data:
+        return "[]"
+
+    result = []
+    for paragraph in report_data:
+        if not isinstance(paragraph, dict):
+            logger.warning(f"(функция build_prompt_template_from_report_data_json) ⚠️ Пропускаю некорректный параграф: {paragraph}")
+            continue
+        paragraph_name = paragraph.get("paragraph", "Без названия")
+        head_sentences = paragraph.get("head_sentences", [])
+        sentences_list = []
+        for sentence_data in head_sentences:
+            if not isinstance(sentence_data, dict):
+                logger.warning(f"(функция build_prompt_template_from_report_data_json) ⚠️ Пропускаю некорректное предложение: {sentence_data}")
+                continue
+            sentence = sentence_data.get("sentence", "").strip()
+            if sentence:
+                sentences_list.append(sentence)
+        result.append({
+            "paragraph": paragraph_name,
+            "head_sentences": sentences_list
+        })
+    logger.info(f"(функция build_prompt_template_from_report_data_json) Преобразование завершено. Получено {len(result)} параграфов.")
+    return json.dumps(result, ensure_ascii=False)
 
 
 # Функция для замены заголовков главных предложений в параграфах
