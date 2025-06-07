@@ -5,6 +5,10 @@ FROM python:3.11-slim
 # Устанавливаем рабочую директорию
 WORKDIR /app
 
+# Если когда-нибудь потребуется poppler для PDF:
+# RUN apt-get update && apt-get install -y poppler-utils
+RUN apt-get update && apt-get install -y ca-certificates
+
 # Копируем файл зависимостей
 COPY requirements.txt requirements.txt
 

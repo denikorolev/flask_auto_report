@@ -5,7 +5,7 @@ from flask_security import current_user
 import os
 import json
 from models import db, Report, ReportType, KeyWord, TailSentence, BodySentence, ReportTextSnapshot
-from file_processing import save_to_word
+from file_processing import save_to_word, extract_text_from_uploaded_file
 from sentence_processing import group_keywords, split_sentences_if_needed, clean_and_normalize_text, compare_sentences_by_paragraph, preprocess_sentence, build_prompt_template_from_report_data, build_prompt_template_from_report_data_json, replace_head_sentences_with_fuzzy_check, deep_json_deserialize_if_needed
 from openai_api import _process_openai_request, reset_ai_session, count_tokens
 from utils.common import ensure_list
@@ -721,3 +721,32 @@ def analyze_dynamics():
         reset_ai_session(assistant_id=cleaner_assistant_id)
         reset_ai_session(assistant_id=second_look_assistant_id)
         logger.info(f"(Анализ динамики) 📌 Сессии ассистентов OpenAI успешно сброшены")
+        
+        
+        
+
+
+@working_with_reports_bp.route("/ocr_extract_text", methods=["POST"])
+@auth_required()
+def ocr_extract_text():
+    logger.info(f"(Извлечение текста из загруженного файла) ------------------------------------")
+    logger.info(f"(Извлечение текста из загруженного файла) 🚀 Начинаю обработку запроса на извлечение текста из загруженного файла")
+    try:
+        file = request.files.get("file")
+        if not file:
+            logger.error(f"(Извлечение текста из загруженного файла) ❌ Не получен файл для обработки")
+            return jsonify({"status": "error", "message": "No file uploaded"}), 400
+        from file_processing import extract_text_from_uploaded_file
+        text, error = extract_text_from_uploaded_file(file)
+        if error:
+            # Если pdf — отдать код 200, но сообщить что не поддерживается
+            if "PDF files are not supported" in error:
+                logger.info(f"(Извлечение текста из загруженного файла) 📄 PDF файл не поддерживается")
+                return jsonify({"status": "success", "text": "", "message": error}), 200
+            logger.error(f"(Извлечение текста из загруженного файла) ❌ Ошибка при извлечении текста: {error}")
+            return jsonify({"status": "error", "message": error}), 400
+        logger.info(f"(Извлечение текста из загруженного файла) ✅ Текст успешно извлечен")
+        return jsonify({"status": "success", "text": text}), 200
+    except Exception as e:
+        logger.error(f"(Извлечение текста из загруженного файла) ❌ Ошибка при обработке файла: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500

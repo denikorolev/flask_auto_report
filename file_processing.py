@@ -3,6 +3,7 @@
 from flask import g, current_app, session
 from flask_login import current_user
 from werkzeug.datastructures import FileStorage
+from werkzeug.utils import secure_filename
 from docx import Document
 import os
 from unidecode import unidecode
@@ -16,6 +17,7 @@ from models import db, FileMetadata, Report, Paragraph, HeadSentenceGroup, TailS
 from sentence_processing import clean_text_with_keywords, _add_if_unique
 from openai import OpenAI
 from logger import logger
+import easyocr
 
 
 # Проверка допустимости расширения загружаемого файла
@@ -492,3 +494,38 @@ def generate_impression_json(modality="CT"):
     print(f"Saved path: {saved_path}")
 
     return saved_path
+
+
+
+
+# Функция для извлечения текста из загруженного файла с помощью OCR
+def extract_text_from_uploaded_file(file):
+    logger.info(f"extract_text_from_uploaded_file: {file}")
+    # Проверка типа файла (разрешён только jpeg/png)
+    allowed_ext = {'jpg', 'jpeg', 'png', 'pdf'}
+    filename = secure_filename(file.filename)
+    ext = filename.rsplit('.', 1)[-1].lower()
+    if ext not in allowed_ext:
+        logger.error(f"Unsupported file type: {ext}")
+        return None, f"Unsupported file type: {ext}"
+
+    # Для PDF — сразу возвращаем "не поддерживается"
+    if ext == "pdf":
+        return None, "PDF files are not supported for OCR yet. Please upload JPG or PNG images."
+
+    # Сохраняем файл во временный файл
+    with tempfile.NamedTemporaryFile(delete=False, suffix=f".{ext}") as tmp:
+        file.save(tmp.name)
+        tmp_path = tmp.name
+
+    text = ""
+    try:
+        reader = easyocr.Reader(['ru', 'en'])
+        result = reader.readtext(tmp_path, detail=0)
+        text = "\n".join(result)
+    except Exception as e:
+        os.unlink(tmp_path)
+        logger.error(f"Error during OCR processing: {e}")
+        return None, f"OCR error: {str(e)}"
+    os.unlink(tmp_path)
+    return text, None

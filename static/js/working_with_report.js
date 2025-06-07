@@ -40,6 +40,7 @@ function initWorkingWithReport() {
 
     addSentenceButtonLogic(); // Включаем логику кнопки "+"
 
+    setupDynamicsDropZone(); // Дроп-зона загрузки изображений динамического отчета
 
     
 
@@ -1336,3 +1337,94 @@ function additionalFindings(response) {
         aiBlock.appendChild(empty);
     }
 }
+
+// Функция для установки зоны перетаскивания для динамического отчета
+function setupDynamicsDropZone() {
+    const dropZone = document.getElementById("dynamicsDropZone");
+    const preview = document.getElementById("dynamicsPreview");
+    const textarea = document.getElementById("dynamicsTextarea");
+
+    if (!dropZone) return;
+
+    // Drag & Drop
+    dropZone.addEventListener("dragover", e => {
+        e.preventDefault();
+        dropZone.classList.add("dragover");
+    });
+
+    dropZone.addEventListener("dragleave", e => {
+        e.preventDefault();
+        dropZone.classList.remove("dragover");
+    });
+
+    dropZone.addEventListener("drop", e => {
+        e.preventDefault();
+        dropZone.classList.remove("dragover");
+
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            handleFileUpload(files[0], preview, textarea);
+        }
+    });
+
+    // Paste image from clipboard
+    dropZone.addEventListener("paste", e => {
+        const items = e.clipboardData.items;
+        for (let item of items) {
+            if (item.type.indexOf("image") !== -1) {
+                const file = item.getAsFile();
+                handleFileUpload(file, preview, textarea);
+                e.preventDefault();
+            }
+        }
+    });
+}
+
+
+
+// Функция для предпросмотра и отправки файла на сервер
+function handleFileUpload(file, preview, textarea) {
+    if (!file) return;
+    preview.innerHTML = ""; // очищаем предпросмотр
+
+    // Предпросмотр для картинки
+    if (file.type.startsWith("image/")) {
+        const img = document.createElement("img");
+        img.style.maxWidth = "200px";
+        img.style.maxHeight = "200px";
+        preview.appendChild(img);
+
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    } else if (file.type === "application/pdf") {
+        preview.textContent = "PDF файл загружен: " + file.name;
+    } else {
+        preview.textContent = "Неподдерживаемый тип файла: " + file.type;
+        return;
+    }
+
+    // Загружаем на сервер для OCR (сделай свой /ocr_extract_text маршрут)
+    const formData = new FormData();
+    formData.append("file", file);
+
+    sendRequest({
+        url: "/working_with_reports/ocr_extract_text",
+        method: "POST",
+        data: formData,
+        responseType: "json",
+        loader: true
+    }).then(data => {
+        if (data && data.status === "success" && data.text) {
+            if (data.message && data.message.includes("PDF files are not supported")) {
+                preview.textContent = data.message; 
+            } else if (data.text) {
+                textarea.value = data.text;
+            }
+        } else {
+            preview.textContent = "Ошибка распознавания: " + (data?.message || "Unknown error");
+        }
+    });
+}  
