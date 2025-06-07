@@ -2,7 +2,7 @@
 
 from flask import Blueprint, render_template, request, g, jsonify
 from flask_login import current_user
-from models import db, Report, ReportType, ReportSubtype, Paragraph, HeadSentence, BodySentence, ReportShare, HeadSentenceGroup
+from models import db, Report, ReportType, ReportSubtype, Paragraph, HeadSentence, BodySentence, TailSentence, ReportShare, HeadSentenceGroup, BodySentenceGroup, TailSentenceGroup
 from sentence_processing import extract_paragraphs_and_sentences
 from file_processing import allowed_file
 from utils.common import ensure_list
@@ -100,7 +100,6 @@ def create_report():
     report_types_and_subtypes = ReportType.get_types_with_subtypes(g.current_profile.id)
     current_user_reports_data = []
     current_user_reports = Report.query.filter_by(user_id=current_user.id).all()
-    print(f"Найдено протоколов {len(current_user_reports)}")
     for report in current_user_reports:
         report_info = Report.get_report_info(report.id)
         current_user_reports_data.append(report_info)
@@ -264,7 +263,6 @@ def create_report_from_file():
             try:
                 # Извлекаем содержимое файла
                 paragraphs_from_file = extract_paragraphs_and_sentences(filepath)
-                print(paragraphs_from_file)
                 public = False
                 # Создаем новый отчет
                 new_report = Report.create(
@@ -390,111 +388,161 @@ def create_report_from_existing_few():
 # Создание нового протокола на основе публичного или расшаренного
 @new_report_creation_bp.route('/create_report_from_public', methods=['POST'])
 @auth_required()
-def create_report_from_public():
-    logger.info(f"(Маршрут: создание протокола из публичного)------------------------")
-    logger.info(f"(Маршрут: создание протокола из публичного) 🚀 Начато создание протокола")
+def create_report_from_public_route():
+    logger.info("(Маршрут: создание протокола из публичного) 🚀 Начато создание протокола из public")
+
     try:
         data = request.get_json()
-        logger.debug(f"(Маршрут: создание протокола из публичного) Получены данные: {data}")
-
         report_name = data.get("report_name")
         report_subtype = int(data.get("report_subtype"))
         comment = data.get("comment", "")
         report_side = data.get("report_side", False)
-        is_shared = data.get("is_shared", False)
         public_report_id = int(data.get("selected_report_id"))
+
         public_report = Report.get_by_id(public_report_id)
+        if not public_report or not public_report.public:
+            logger.error("(Маршрут: создание протокола из публичного) ❌ Выбранный протокол не является общедоступным")
+            return jsonify({"status": "error", "message": "Выбранный протокол не является общедоступным"}), 400
+
         report_type_id = ReportSubtype.get_by_id(report_subtype).subtype_to_type.id
-        
-        if not is_shared:
-            if not public_report or not public_report.public:
-                return jsonify({
-                    "status": "error", 
-                    "message": "Выбранный протокол не является общедоступным"
-                }), 400
-        else:
-            shared_report = ReportShare.query.filter_by(report_id=public_report_id, shared_with_user_id=current_user.id).first()
-            logger.info(f"(Маршрут: создание протокола из публичного) shared_report: {shared_report}")
-            print(f"current_user.id: {current_user.id}")
-            print(f"shared_report.shared_with_user_id: {shared_report.shared_with_user_id}")
-            print(f"shared_report.shared_by_user_id: {shared_report.shared_by_user_id}")
-            if not shared_report:
-                logger.info(f"(Маршрут: создание протокола из публичного) ❌ Протокол не найден")
-                return jsonify({
-                    "status": "error", 
-                    "message": "Выбранный протокол не найден"
-                }), 400
+        new_report = Report.create(
+            profile_id=g.current_profile.id,
+            report_subtype=report_subtype,
+            report_name=report_name,
+            user_id=current_user.id,
+            comment=comment,
+            public=False,
+            report_side=report_side
+        )
 
-        new_report_data = {
-            "profile_id": g.current_profile.id,
-            "report_subtype": report_subtype,
-            "report_name": report_name,
-            "user_id": current_user.id,
-            "comment": comment,
-            "public": False,
-            "report_side": report_side
-        }
-        try:
-            new_report = Report.create(**new_report_data)
-            logger.info(f"(Маршрут: создание протокола из публичного) ✅ Протокол создан успешно. ID: {new_report.id}")
-        except Exception as e:
-            logger.error(f"(Маршрут: создание протокола из публичного) ❌ Ошибка при создании нового протокола: {str(e)}")
-            return jsonify({
-                "status": "error",
-                "message": f"Ошибка при создании нового протокола."
-            }), 500
-            
-       
-        # Копируем параграфы и предложения из публичного протокола
-        try:
-            for paragraph in public_report.report_to_paragraphs:
-                public_head_sentences = HeadSentenceGroup.get_group_sentences(paragraph.head_sentence_group_id)
-                new_paragraph = Paragraph.create(
-                    report_id=new_report.id,
-                    paragraph_index=paragraph.paragraph_index,
-                    paragraph=paragraph.paragraph,
-                    paragraph_visible=paragraph.paragraph_visible,
-                    title_paragraph=paragraph.title_paragraph,
-                    bold_paragraph=paragraph.bold_paragraph,
-                    head_sentence_group_id=None,
-                    tail_sentence_group_id=None,
-                    is_impression=paragraph.is_impression,
-                    is_additional=paragraph.is_additional,
-                    str_after=paragraph.str_after,
-                    str_before=paragraph.str_before,
-                    is_active=paragraph.is_active
+        for paragraph in public_report.report_to_paragraphs:
+            sentences = HeadSentenceGroup.get_group_sentences(paragraph.head_sentence_group_id)
+            new_paragraph = Paragraph.create(
+                report_id=new_report.id,
+                paragraph_index=paragraph.paragraph_index,
+                paragraph=paragraph.paragraph,
+                paragraph_visible=paragraph.paragraph_visible,
+                title_paragraph=paragraph.title_paragraph,
+                bold_paragraph=paragraph.bold_paragraph,
+                head_sentence_group_id=None,
+                tail_sentence_group_id=None,
+                is_impression=paragraph.is_impression,
+                is_additional=paragraph.is_additional,
+                str_after=paragraph.str_after,
+                str_before=paragraph.str_before,
+                is_active=paragraph.is_active
+            )
+            for s in sentences:
+                HeadSentence.create(
+                    user_id=current_user.id,
+                    report_type_id=report_type_id,
+                    sentence=s["sentence"],
+                    related_id=new_paragraph.id,
+                    sentence_index=s["sentence_index"],
+                    tags=s["tags"],
+                    comment=s["comment"]
                 )
-                # Копируем предложения
-                for sentence in public_head_sentences:
-                    HeadSentence.create(
-                        user_id=current_user.id,
-                        report_type_id=report_type_id,
-                        sentence=sentence["sentence"],
-                        related_id=new_paragraph.id,
-                        sentence_index=sentence["sentence_index"],
-                        tags=sentence["tags"],
-                        comment=sentence["comment"]
-                    )
-            logger.info(f"(Маршрут: создание протокола из публичного) ✅ Параграфы и предложения успешно скопированы.")
-            return jsonify({
-                "status": "success",
-                "message": "Протокол успешно создан",
-                "report_id": new_report.id
-            }), 200
-        except Exception as e:
-            logger.error(f"(Маршрут: создание протокола из публичного) ❌ Ошибка при копировании параграфов и предложений: {str(e)}")
-            return jsonify({
-                "status": "error",
-                "message": f"Ошибка при копировании параграфов и предложений: {str(e)}"
-            }), 500
-    except Exception as e:
-        logger.error(f"(Маршрут: создание протокола из публичного) ❌ Ошибка при создании протокола: {str(e)}")
-        return jsonify({
-            "status": "error",
-            "message": f"Ошибка при создании протокола. Не удалось создать протокол."
-        }), 500
+        logger.info("(Маршрут: создание протокола из публичного) ✅ Протокол успешно создан")
+        return jsonify({"status": "success", "message": "Протокол успешно создан", "report_id": new_report.id}), 200
 
+    except Exception as e:
+        logger.error(f"(create_report_from_public_route) ❌ Ошибка: {e}")
+        return jsonify({"status": "error", "message": "Не удалось создать протокол"}), 500
 
    
         
+@new_report_creation_bp.route('/create_report_from_shared', methods=['POST'])
+@auth_required()
+def create_report_from_shared_route():
+    logger.info("(Маршрут: создание протокола из shared) 🚀 Начато создание протокола из shared")
+
+    try:
+        data = request.get_json()
+        report_name = data.get("report_name")
+        report_subtype = int(data.get("report_subtype"))
+        comment = data.get("comment", "")
+        report_side = data.get("report_side", False)
+        shared_report_id = int(data.get("selected_report_id"))
         
+        # Ставлю ограничительь глубины копировния предложений сюда, возможно потом сделаю возможность его менять (например, в настройках)
+        deep_limit = 10
+
+        shared_record = ReportShare.query.filter_by(report_id=shared_report_id, shared_with_user_id=current_user.id).first()
+        if not shared_record:
+            return jsonify({"status": "error", "message": "Выбранный расшаренный протокол не найден"}), 400
+
+        shared_report = shared_record.report
+        report_type_id = ReportSubtype.get_by_id(report_subtype).subtype_to_type.id
+        new_report = Report.create(
+            profile_id=g.current_profile.id,
+            report_subtype=report_subtype,
+            report_name=report_name,
+            user_id=current_user.id,
+            comment=comment,
+            public=False,
+            report_side=report_side
+        )
+
+        for paragraph in shared_report.report_to_paragraphs:
+            head_sentences = HeadSentenceGroup.get_group_sentences(paragraph.head_sentence_group_id)
+            new_paragraph = Paragraph.create(
+                report_id=new_report.id,
+                paragraph_index=paragraph.paragraph_index,
+                paragraph=paragraph.paragraph,
+                paragraph_visible=paragraph.paragraph_visible,
+                title_paragraph=paragraph.title_paragraph,
+                bold_paragraph=paragraph.bold_paragraph,
+                head_sentence_group_id=None,
+                tail_sentence_group_id=None,
+                is_impression=paragraph.is_impression,
+                is_additional=paragraph.is_additional,
+                str_after=paragraph.str_after,
+                str_before=paragraph.str_before,
+                is_active=paragraph.is_active
+            )
+            for hs in head_sentences:
+                new_hs, _ = HeadSentence.create(
+                    user_id=current_user.id,
+                    report_type_id=report_type_id,
+                    sentence=hs["sentence"],
+                    related_id=new_paragraph.id,
+                    sentence_index=hs["sentence_index"],
+                    tags=hs["tags"],
+                    comment=hs["comment"]
+                )
+                if hs["body_sentence_group_id"]:
+                    logger.info(f"(!!!!!!!!!!!!!!!!!!!!!) У данного предложения есть группа body предложений. ID группы: {hs['body_sentence_group_id']}")
+                    body_sentences = BodySentenceGroup.get_group_sentences(hs["body_sentence_group_id"])
+                    logger.info(f"(!!!!!!!!!!!!!!!!!!!!!) Количество предложений в группе: {len(body_sentences)} и ниже они перечисленны: {body_sentences[:deep_limit]}")
+                    for bs in body_sentences[:deep_limit]: 
+                        logger.info(f"(!!!!!!!!!!!!!!!!!!!!!!) родительское предложение для данного имеет ID: {hs['id']}")
+                        BodySentence.create(
+                            user_id=current_user.id,
+                            report_type_id=report_type_id,
+                            sentence=bs["sentence"],
+                            related_id=new_hs.id,
+                            sentence_weight=bs["sentence_weight"],
+                            tags=bs["tags"],
+                            comment=bs["comment"]
+                        )
+            if paragraph.tail_sentence_group_id:
+                tail_sentences = TailSentenceGroup.get_group_sentences(paragraph.tail_sentence_group_id)
+                for ts in tail_sentences[:deep_limit]:
+                    TailSentence.create(
+                        user_id=current_user.id,
+                        report_type_id=report_type_id,
+                        sentence=ts["sentence"],
+                        related_id=new_paragraph.id,
+                        sentence_weight=ts["sentence_weight"],
+                        tags=ts["tags"],
+                        comment=ts["comment"]
+                    )
+                    logger.info(f"(!!!!!!!!!!!!!!!!!!!!!) Количество предложений в группе: {len(tail_sentences)} и ниже они перечисленны: {tail_sentences[:deep_limit]}")
+
+        logger.info("(Маршрут: создание протокола из расшаренного) ✅ Протокол успешно создан")
+        shared_record.delete()  
+        return jsonify({"status": "success", "message": "Протокол успешно создан", "report_id": new_report.id}), 200
+
+    except Exception as e:
+        logger.error(f"(create_report_from_shared_route) ❌ Ошибка: {e}")
+        return jsonify({"status": "error", "message": "Не удалось создать протокол"}), 500

@@ -259,9 +259,6 @@ def save_modified_sentences():
         new_sentences = comparsion_result["unique"]
         duplicates = comparsion_result["duplicates"]
         errors_count = comparsion_result["errors_count"]
-        print("----------------------------------------")
-        print(f" Новые предложения {new_sentences}")
-        print("----------------------------------------")
         
         missed_count = 0  # Счётчик пропущенных предложений
         saved_count = 0  # Счётчик сохранённых предложений
@@ -626,7 +623,6 @@ def analyze_dynamics():
         }), 200
     except Exception as e:
         error_message = str(e)
-        print(error_message)
         logger.error(f"(Анализ динамики) ❌ Ошибка при замене начальных предложений: {error_message}")
 
         try:

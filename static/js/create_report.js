@@ -456,10 +456,9 @@ function createReportFromShared() {
         comment: comment,
         report_side: reportSide,
         selected_report_id: selectedReportId,
-        is_shared: true
     };
     sendRequest({
-        url: "/new_report_creation/create_report_from_public",
+        url: "/new_report_creation/create_report_from_shared",
         data: jsonData
     }).then(response => {
         if (response?.status === "success") {

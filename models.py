@@ -637,7 +637,18 @@ class ReportShare(db.Model):
     shared_with = db.relationship("User", foreign_keys=[shared_with_user_id])
 
 
-    from flask_login import current_user
+    def delete(self):
+        """
+        Удаляет объект ReportShare из базы данных.
+        """
+        try:
+            db.session.delete(self)
+            db.session.commit()
+            logger.info(f"[ReportShare.delete] ✅ Запись о шаринге ID={self.id} удалена")
+        except Exception as e:
+            logger.error(f"[ReportShare.delete] ❌ Ошибка при удалении записи о шаринге: {e}")
+            db.session.rollback()
+    
 
     @classmethod
     def create(cls, report_id, shared_with_user_id):
@@ -1039,6 +1050,8 @@ class SentenceBase(BaseModel):
         ):
         """
         Универсальный метод создания предложений (head, body, tail).
+        !!!!! Возвращает кортеж (созданное предложение, использованная группа) !!!!!!!  
+        Нужно учитывать когда используем для каскадного создания body для вновь созданных head !!!!!!!!!!!!
 
         Args:
             user_id (int): ID пользователя.
@@ -1049,6 +1062,7 @@ class SentenceBase(BaseModel):
             tags (str, optional): Теги предложения.
             comment (str, optional): Комментарий.
             sentence_weight (int, optional): Вес предложения (только для body/tail).
+            unique (bool, optional): Если False, проверяет наличие аналогичного предложения в базе данных.
 
         Returns:
             tuple: (созданное предложение, использованная группа)
@@ -1083,6 +1097,7 @@ class SentenceBase(BaseModel):
 
             group = head_sentence.body_sentence_group or BodySentenceGroup.create()
             head_sentence.body_sentence_group_id = group.id
+            print(f"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!    Группа body предложения для данного head {head_sentence.id} существует и это ID: {group.id}")
             sentence_type = "body"
 
         elif cls == TailSentence:

@@ -511,7 +511,8 @@ def find_similar_exist_sentence(sentence_text, sentence_type, report_type_id):
         similar_type_sentences = TailSentence.query.filter_by(tags=tags, report_type_id=report_type_id, user_id = user_id).all()
     else:
         raise ValueError(f"Invalid sentence type: {sentence_type}")
-    
+
+    print(f"-----тип {sentence_type}------найдено предложений для данного пользователя {len(similar_type_sentences)} --------------------")
     # Сравниваем входное предложение с каждым из существующих
     for exist_sentence in similar_type_sentences:
         if exist_sentence.sentence == sentence_text:
