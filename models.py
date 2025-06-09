@@ -483,7 +483,6 @@ class Report(BaseModel):
     
    
     report_to_paragraphs = db.relationship('Paragraph', lazy=True, backref=db.backref("paragraph_to_report"), cascade="all, delete-orphan")
-
     
     @classmethod
     def create(cls, profile_id, report_subtype, report_name,  user_id, comment=None, public=False, report_side=False):

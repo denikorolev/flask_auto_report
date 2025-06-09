@@ -47,7 +47,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
 
-    // слушатель на кнопку изменения протокола
+    // слушатель на кнопку сохранения изменений протокола
     document.getElementById("updateReportButton").addEventListener("click", function() {
         handleUpdateReportButtonClick();
     });
@@ -388,7 +388,8 @@ async function handleUpdateReportButtonClick() {
     data = { report_name: document.getElementById("reportName").value,
              report_id: reportData.id,
              report_comment: document.getElementById("reportComment").value,
-             report_side: document.querySelector('input[name="report_side"]:checked').value
+             report_side: document.querySelector('input[name="report_side"]:checked').value,
+             report_subtype_id: document.querySelector('select[name="report_subtype"]').value,
             };
 
     console.log("Обновление протокола:", data);

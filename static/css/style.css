@@ -1701,21 +1701,33 @@ body {
     color: var(--main-text-color);
 }
 
-.second-look-title {
-    font-weight: 600;
-    margin-top: 12px;
-    margin-bottom: 6px;
-    color: var(--main-font-color); /* акцентный цвет для названия параграфа */
-    font-size: 1rem;
+/* Блок не классифицированных предложений (misc_sentences) */
+.ai-response-block {
+    background: var(--main-background-color);
+    border-left: 4px solid var(--accent-attention);
+    border-radius: 5px;
+    padding: 12px 18px;
+    margin: 18px 0 12px 0;
+    box-shadow: 0 2px 8px rgba(97, 72, 51, 0.07);
 }
 
-.second-look-paragraph ul {
-    margin: 0 0 12px 20px;
-    padding-left: 0;
+.ai-response-header {
+    color: var(--accent-attention);
+    font-weight: 600;
+    margin-bottom: 8px;
+    font-size: 1.04rem;
+    letter-spacing: 0.5px;
+}
+
+.ai-response-list {
+    padding-left: 20px;
+    margin: 0;
     list-style-type: disc;
 }
 
-.second-look-paragraph li {
-    margin-bottom: 4px;
-    color: var(--main-text-color);
+.ai-response-list li {
+    color: var(--dark-text-color);
+    font-size: 0.98rem;
+    margin-bottom: 6px;
+    line-height: 1.5;
 }

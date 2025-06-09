@@ -2,7 +2,7 @@
 
 from flask import Blueprint, render_template, request, current_app, jsonify, g
 from flask_security import current_user
-from models import db, User, Report, Paragraph, HeadSentence, BodySentence, TailSentence, HeadSentenceGroup, TailSentenceGroup, BodySentenceGroup, ReportShare
+from models import db, User, Report, Paragraph, HeadSentence, BodySentence, TailSentence, HeadSentenceGroup, TailSentenceGroup, BodySentenceGroup, ReportShare, ReportSubtype
 from utils.common import get_max_index, normalize_paragraph_indices
 from flask_security.decorators import auth_required
 from decorators import require_role_rank
@@ -36,13 +36,23 @@ def edit_report():
     except Exception as e:
         logger.error(f"(Страница редактирования протокола /edit_report) ❌ Ошибка при получении данных протокола: {str(e)}")
         return jsonify({"status": "error", "message": f"Ошибка при получении данных протокола: {str(e)}"}), 500
-    # делаю выборку типов параграфов
-
+    
+    subtypes = []
+    
+    subtypes_obj = ReportSubtype.find_by_report_type(report.report_to_subtype.subtype_to_type.id) if report.report_to_subtype.subtype_to_type else None
+    if subtypes_obj:
+        for subtype in subtypes_obj:
+            subtypes.append({
+                "id": subtype.id,
+                "name": subtype.subtype_text
+            })
+    print(subtypes)
 
     return render_template('edit_report.html', 
                            title=f"Редактирование протокола {report.report_name}", 
                            report_data=report_data,
                            report_paragraphs=report_paragraphs,
+                           subtypes=subtypes,
                            )
 
 
@@ -165,6 +175,7 @@ def update_report():
     data = request.json
     report_id = data.get("report_id")
     report = Report.query.get(report_id)
+    report_subtype_id = data.get("report_subtype_id")
     
     if not report or report.profile_id != g.current_profile.id:
         logger.error(f"(Обновление протокола) ❌ Протокол не найден или не соответствует профилю")
@@ -174,7 +185,8 @@ def update_report():
         "report_name": data.get("report_name"),
         "comment": data.get("report_comment"),
         "report_side": data.get("report_side") == "True",
-        "public": report.public
+        "public": report.public,
+        "report_subtype": report_subtype_id
     }
     logger.info(f"(Обновление протокола) Получены данные для обновления протокола: {new_report_data}")
 

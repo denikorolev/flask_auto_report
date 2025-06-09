@@ -5,6 +5,7 @@ from flask_login import current_user
 from rapidfuzz import fuzz
 import re
 import json
+import copy
 from docx import Document
 from spacy_manager import SpacyModel
 from models import db, Paragraph, KeyWord, Report, HeadSentence, BodySentence, TailSentence, HeadSentenceGroup, BodySentenceGroup, TailSentenceGroup
@@ -562,128 +563,186 @@ def _add_if_unique(raw_text, key_words, except_words, cleaned_list, result_set, 
 
 
 
-# Функция для преобразования структуры отчета в текстовую форму. 
-# Используется в working_with_reports.py для второго мнения AI.
-def build_prompt_template_from_report_data(report_data: list) -> str:
+
+def split_report_structure_for_ai(report_data: list) -> tuple:
     """
-    Преобразует структуру отчета в текстовую форму, пригодную для передачи в prompt OpenAI.
-    Используются только названия параграфов и head_sentences.
-    """
-    logger.info(f"(функция build_prompt_template_from_report_data) 🚀 Начато преобразование структуры отчета в текстовую форму")
-    if not report_data:
-        return ""
+    Формирует две структуры:
+    - skeleton: полная структура + id параграфов и head_sentences
+    - ai_input: только editable параграфы (is_active=True, is_additional=False, head_sentences not empty) + "Miscellaneous"
+      (В ai_input нет ключей is_active и is_additional!)
 
-    output_lines = []
-    for paragraph in report_data:
-        if not isinstance(paragraph, dict):
-            logger.warning(f"(функция build_prompt_template_from_report_data) ⚠️ Пропускаю некорректный параграф: {paragraph}")
-            continue
-        paragraph_name = paragraph.get("paragraph", "Без названия")
-        output_lines.append(f"Параграф: {paragraph_name}")
-        head_sentences = paragraph.get("head_sentences", [])
-        
-        for sentence_data in head_sentences:
-            if not isinstance(sentence_data, dict):
-                logger.warning(f"(функция build_prompt_template_from_report_data) ⚠️ Пропускаю некорректное предложение: {sentence_data}")
-                continue
-            sentence = sentence_data.get("sentence", "").strip()
-            if sentence:
-                output_lines.append(f"– {sentence}")
-        output_lines.append("")  # пустая строка между параграфами
-        
-    logger.info(f"(функция build_prompt_template_from_report_data) Преобразование завершено. Получено {len(output_lines)} строк.")
-
-    return "\n".join(output_lines)
-
-
-# Функция для преобразования структуры отчета в JSON-строку
-# Используется в working_with_reports.py для сруктурирования отчета
-def build_prompt_template_from_report_data_json(report_data: list) -> str:
-    """
-    Преобразует структуру отчета в JSON-строку с ключами:
-    [
-      {
-        "paragraph": "Имя параграфа",
-        "head_sentences": [
-          "Предложение 1",
-          "Предложение 2"
+    Пример:
+        skeleton = [
+            {
+                "id": 1,
+                "paragraph": "ОРГАНЫ ГРУДНОЙ КЛЕТКИ:",
+                "is_active": True,
+                "is_additional": False,
+                "head_sentences": []
+            },
+            ...
         ]
-      },
-      ...
-    ]
-    Если данных нет — возвращает "[]".
+        ai_input = [
+            {
+                "id": 2,
+                "paragraph": "Легкие",
+                "head_sentences": [{"id": 11, "sentence": "Инфильтрация не выявлена."}]
+            },
+            {
+                "id": "miscellaneous",
+                "paragraph": "Miscellaneous",
+                "head_sentences": []
+            }
+        ]
+
+    Args:
+        report_data (list): Список параграфов отчета.
+    Returns:
+        tuple: (skeleton, ai_input)
     """
-    logger.info(f"(функция build_prompt_template_from_report_data_json) 🚀 Начато преобразование структуры отчета в JSON")
-    if not report_data:
-        return "[]"
+    skeleton = []
+    ai_input = []
 
-    result = []
-    for paragraph in report_data:
-        if not isinstance(paragraph, dict):
-            logger.warning(f"(функция build_prompt_template_from_report_data_json) ⚠️ Пропускаю некорректный параграф: {paragraph}")
-            continue
-        paragraph_name = paragraph.get("paragraph", "Без названия")
-        head_sentences = paragraph.get("head_sentences", [])
-        sentences_list = []
-        for sentence_data in head_sentences:
-            if not isinstance(sentence_data, dict):
-                logger.warning(f"(функция build_prompt_template_from_report_data_json) ⚠️ Пропускаю некорректное предложение: {sentence_data}")
-                continue
-            sentence = sentence_data.get("sentence", "").strip()
-            if sentence:
-                sentences_list.append(sentence)
-        result.append({
-            "paragraph": paragraph_name,
-            "head_sentences": sentences_list
-        })
-    logger.info(f"(функция build_prompt_template_from_report_data_json) Преобразование завершено. Получено {len(result)} параграфов.")
-    return json.dumps(result, ensure_ascii=False)
+    # Build skeleton
+    for para in report_data:
+        scel = {
+            "id": para["id"],
+            "paragraph": para["paragraph"],
+            "is_active": para.get("is_active", True),
+            "is_additional": para.get("is_additional", False),
+            "head_sentences": [
+                {
+                    "id": hs["id"],
+                    "sentence": hs["sentence"]
+                }
+                for hs in para.get("head_sentences", [])
+            ]
+        }
+        skeleton.append(scel)
+
+    # Build ai_input: only paragraphs with is_active==True, is_additional==False, and head_sentences not empty
+    for para in skeleton:
+        if (
+            para.get("is_active", True)
+            and not para.get("is_additional", False)
+            and len(para.get("head_sentences", [])) > 0
+        ):
+            ai_para = dict(para)  # shallow copy is enough, head_sentences is list of dicts
+            ai_para.pop("is_active", None)
+            ai_para.pop("is_additional", None)
+            ai_input.append(ai_para)
+
+    # Add "Miscellaneous" paragraph to ai_input
+    misc_paragraph = {
+        "id": "miscellaneous",
+        "paragraph": "Miscellaneous",
+        "head_sentences": []
+    }
+    ai_input.append(misc_paragraph)
+
+    return skeleton, ai_input
 
 
-# Функция для замены заголовков главных предложений в параграфах
-# Используется в working_with_reports.py для замены заголовков главных предложений
-# с помощью AI, если заголовки совпадают с заголовками параграфов.
+
 def replace_head_sentences_with_fuzzy_check(main_data, ai_data, threshold=95):
+    """
+    Обновляет тексты head_sentences в main_data на основе ai_data.
+    Структура параграфов и head_sentences должна совпадать по id.
+    Если кол-во параграфов не совпадает — логируем и возвращаем main_data как есть.
+    Если заголовки параграфов отличаются более чем на threshold — бросаем ValueError.
+    """
     logger.info("(replace_head_sentences_with_fuzzy_check) 🚀  Начат процесс замены главных предложений синтезированными")
-    logger.info(f"(replace_head_sentences_with_fuzzy_check) Получен основной протокол: {main_data[150:200]}... (всего {len(main_data)} параграфов)")
-    logger.info("-----------------------------------------------------")
-    logger.info(f"(replace_head_sentences_with_fuzzy_check) Получен сгенерированный протокол: {ai_data[150:200]}... (всего {len(ai_data)} параграфов)")
+    logger.info(f"(replace_head_sentences_with_fuzzy_check) main_data: {len(main_data)} параграфов, ai_data: {len(ai_data)} параграфов")
+
+    if not isinstance(main_data, list) or not isinstance(ai_data, list):
+        logger.error("(replace_head_sentences_with_fuzzy_check) ❌ Входные данные не являются списками.")
+        return main_data
+
+    # 1. Быстрая сверка количества параграфов
     if len(main_data) != len(ai_data):
-        logger.error(f"(функция replace_head_sentences_with_fuzzy_check) ❌ Количество параграфов не совпадает: основной протокол: {len(main_data)} != сгенерированный протокол: {len(ai_data)}")
-        raise ValueError("Number of paragraphs does not match between the original and the AI-generated report. "
-                        "Make sure your generated report has the exact same number of paragraphs as in the template. "
-                        "Do not add or remove any paragraphs. Regenerate the report strictly following the structure.")
+        logger.error(f"(replace_head_sentences_with_fuzzy_check) ❌ Количество параграфов не совпадает: main={len(main_data)} / ai={len(ai_data)}")
+        # Не рейзим, продолжаем попытку подстановки
 
-    for i, (main_par, ai_par) in enumerate(zip(main_data, ai_data)):
+    # 2. Индексируем AI-параграфы по id для быстрого доступа
+    ai_paragraphs_by_id = {str(p["id"]): p for p in ai_data}
+
+    # 3. Обрабатываем каждый параграф main_data
+    for main_par in main_data:
+        para_id = str(main_par["id"])
         main_title = main_par.get("paragraph", "").strip()
-        ai_title = ai_par.get("paragraph", "").strip()
+        ai_par = ai_paragraphs_by_id.get(para_id)
+        if not ai_par:
+            logger.warning(f"(replace_head_sentences_with_fuzzy_check) Не найден параграф id={para_id} в AI-ответе, пропускаю")
+            continue
 
+        ai_title = ai_par.get("paragraph", "").strip()
         ratio = fuzz.ratio(main_title, ai_title)
         if ratio < threshold:
-            logger.error(f"(функция replace_head_sentences_with_fuzzy_check) ❌ Параграф №{i + 1} не совпадает по заголовку: '{main_title}' vs '{ai_title}' (совпадение {ratio}%)")
-            raise ValueError(f"Paragraph #{i + 1} title mismatch: '{main_title}' vs '{ai_title}' (similarity: {ratio}%). "
-                            "Please make sure all paragraph titles match exactly with the original template. "
-                            "Do not rename, reword, or change paragraph headers. Use the exact same titles.")
+            logger.error(f"(replace_head_sentences_with_fuzzy_check) ❌ Заголовок параграфа '{main_title}' не совпадает с AI '{ai_title}' (совпадение {ratio}%)")
+            raise ValueError(
+                f"Paragraph id={para_id}: title mismatch.\n"
+                f"Expected: '{main_title}'\n"
+                f"Found:    '{ai_title}'\n"
+                "Please make sure all paragraph titles match exactly with the original template. "
+                "Do not rename, reword, or change paragraph headers. Use the exact same titles."
+            )
 
-        main_head_sentences = main_par.get("head_sentences", [])
-        ai_head_sentences = ai_par.get("head_sentences", [])
-
-        if len(main_head_sentences) != len(ai_head_sentences):
-            logger.error(f"(функция replace_head_sentences_with_fuzzy_check) ❌ Количество предложений в параграфе '{main_title}' не совпадает: основной протокол: {len(main_head_sentences)} != сгенерированный протокол: {len(ai_head_sentences)}")
-            raise ValueError(f"Mismatch in number of head sentences in paragraph '{main_title}': "
-                            f"the original report has {len(main_head_sentences)}, the AI-generated report has {len(ai_head_sentences)}. "
-                            "Make sure you preserve the exact number of head sentences for each paragraph as in the template. "
-                            "Do not add, remove, or merge sentences. Rewrite only the content, not the structure.")
-
-        for j, (main_sentence, ai_sentence) in enumerate(zip(main_head_sentences, ai_head_sentences)):
-            if isinstance(main_sentence, dict) and isinstance(ai_sentence, dict):
-                main_sentence["sentence"] = ai_sentence.get("sentence", main_sentence.get("sentence"))
+        # Индексируем head_sentences по id для замены
+        ai_head_by_id = {str(hs["id"]): hs.get("sentence", "") for hs in ai_par.get("head_sentences", [])}
+        for main_hs in main_par.get("head_sentences", []):
+            hs_id = str(main_hs["id"])
+            if hs_id in ai_head_by_id:
+                main_hs["sentence"] = ai_head_by_id[hs_id]
+            # если нет — не меняем (оставляем оригинал)
 
     return main_data
 
 
+def merge_ai_response_into_skeleton(skeleton, ai_response):
+    """
+    Восстанавливает полную структуру отчета:
+    - Основные параграфы: id, paragraph, is_active, is_additional, head_sentences с новыми текстами
+    - Miscellaneous возвращается отдельно (список head_sentences)
+    """
+    # Быстрая индексация AI-параграфов по id
+    ai_paragraphs_by_id = {str(p["id"]): p for p in ai_response if str(p["id"]) != "miscellaneous"}
+    misc_sentences = []
+    for p in ai_response:
+        if str(p["id"]) == "miscellaneous":
+            misc_sentences = p.get("head_sentences", [])
+            break
 
-# Превращает JSON-строки в объекты Python, если они сериализованы нигде не использую
+    # Идем по скелету и подменяем предложения
+    merged = []
+    for para in skeleton:
+        para_id = str(para["id"])
+        # Копируем параграф из скелета
+        merged_para = dict(para)
+        # Обновляем только текст предложений
+        ai_para = ai_paragraphs_by_id.get(para_id)
+        if ai_para:
+            # Маппинг head_sentences по id для скорости
+            ai_head_by_id = {str(hs["id"]): hs["sentence"] for hs in ai_para.get("head_sentences", [])}
+            # Обновляем предложения только по id (не меняя структуру)
+            new_head_sentences = []
+            for hs in merged_para["head_sentences"]:
+                hs_id = str(hs["id"])
+                if hs_id in ai_head_by_id:
+                    # Обновляем только текст
+                    new_hs = dict(hs)
+                    new_hs["sentence"] = ai_head_by_id[hs_id]
+                    new_head_sentences.append(new_hs)
+                else:
+                    # Не найдено в AI — оставляем оригинал
+                    new_head_sentences.append(hs)
+            merged_para["head_sentences"] = new_head_sentences
+        # Если нет ai_para — ничего не трогаем, копия скелета
+        merged.append(merged_para)
+    return merged, misc_sentences
+
+
+
+# Превращает JSON-строки в объекты Python, если они сериализованы НИГДЕ НЕ ИСПОЛЬЗУЮТСЯ
 def deep_json_deserialize_if_needed(data, context="root"):
     """
     Рекурсивно десериализует строки на всех уровнях, если они являются JSON-строкой

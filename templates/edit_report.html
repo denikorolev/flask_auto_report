@@ -21,7 +21,13 @@
             </div>
             <div class="edit-report__input-block">
                 <label class="label" for="report_subtype">Подтип:</label>
-                <input class="input report_input__item" id="report_subtype" name="report_subtype" value="{{ report_data.report_subtype }}" readonly>
+                <select class="select" id="report_subtype" name="report_subtype">
+                    {% for subtype in subtypes %}
+                        <option value="{{ subtype.id }}" {% if subtype.name == report_data.report_subtype %}selected{% endif %}>
+                            {{ subtype.name }}
+                        </option>
+                    {% endfor %}
+                </select>
             </div>
             <div class="edit-report__input-block">
                 <label class="label" for="report_name">Название:</label>

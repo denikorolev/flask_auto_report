@@ -20,6 +20,7 @@ function initWorkingWithReport() {
     const generateButton = document.getElementById("generateImpression"); // Для обращения к кнопке Generate Impression
     const boxForAiImpressionResponse = document.getElementById("aiImpressionResponseBlock"); // Для обращения к блоку с ответом ИИ по заключению
     const boxForAiRedactorResponse = document.getElementById("aiRedactorResponseBlock"); // Для обращения к блоку с ответом ИИ по редактированию
+    const boxForAiDynamicResponse = document.getElementById("aiDynamicBlock"); // Для обращения к блоку с ответом ИИ по динамическому отчету
     const addImpressionButton = document.getElementById("addImpressionToReportButton"); // Для обращения к кнопке "Вставить заключение"
     const dynamicReportButton = document.getElementById("dynamicReportButton"); // Для обращения к кнопке "Динамический отчет"
     
@@ -83,7 +84,7 @@ function initWorkingWithReport() {
 
     if (generateButton) {
         generateButton.addEventListener("click", async function() {
-            await generateImpressionLogic(boxForAiImpressionResponse, boxForAiRedactorResponse);
+            await generateImpressionLogic(boxForAiImpressionResponse, boxForAiRedactorResponse, boxForAiDynamicResponse);
         });
     }
 
@@ -110,14 +111,14 @@ function initWorkingWithReport() {
 
     // Слушатель на кнопку "Проверить протокол ИИ"
     document.getElementById("aiReportCheck").addEventListener("click", function() {
-        checkReportAI(boxForAiRedactorResponse, boxForAiImpressionResponse);
+        checkReportAI(boxForAiRedactorResponse, boxForAiImpressionResponse, boxForAiDynamicResponse);
     });
 
     // Слушатель на кнопку "Динамический отчет"
     if (dynamicReportButton) {
         dynamicReportButton.addEventListener("click", function() {
           // Показываем popup с динамическим отчетом
-          showDynamicReportPopup();
+          showDynamicReportPopup(boxForAiImpressionResponse, boxForAiRedactorResponse);
         });
     }
 
@@ -825,8 +826,8 @@ function wordButtonLogic(exportButton) {
 }
 
 
-// Логика для кнопки "Generate Impression". Возможно нужно объединить с логикой generateImpressionRequest   
-async function generateImpressionLogic(boxForAiResponse, responseForDelete) {
+// Логика для кнопки "Generate Impression". Возможно нужно объединить с логикой generateImpressionRequest
+async function generateImpressionLogic(boxForAiResponse, responseForDelete, boxForAiDynamicResponse) {
     const textToCopy = collectTextFromParagraphs("paragraph__item--core");
     boxForAiResponse.textContent = "Ожидаю ответа ИИ...";
 
@@ -839,6 +840,10 @@ async function generateImpressionLogic(boxForAiResponse, responseForDelete) {
         console.log("я стер блок", responseForDelete);
         responseForDelete.innerText = "";
         responseForDelete.style.display = "none";
+    }
+    if (boxForAiDynamicResponse) {
+        boxForAiDynamicResponse.innerText = "";
+        boxForAiDynamicResponse.style.display = "none";
     }
 
     try {
@@ -1173,7 +1178,7 @@ function finishWorkAndSaveSnapShot() {
 
 
 // Функция для отправки протокола на проверку ИИ (REDACTOR)
-function checkReportAI(boxForAiResponse, responseForDelete){
+function checkReportAI(boxForAiResponse, responseForDelete, boxForAiDynamicResponse){
     const coreText = collectTextFromParagraphs("paragraph__item--core");
     const impressionText = collectTextFromParagraphs("paragraph__item--impression");
 
@@ -1186,10 +1191,16 @@ function checkReportAI(boxForAiResponse, responseForDelete){
         responseForDelete.innerText = "";
         responseForDelete.style.display = "none";
     }
-    
+    if (boxForAiDynamicResponse) {
+        boxForAiDynamicResponse.innerText = "";
+        boxForAiDynamicResponse.style.display = "none";
+    }
 
     const textToCheck = `${coreText}\n\n${impressionText}`.trim();
-    
+    if (!textToCheck) {
+        alert("Нет текста для проверки. Пожалуйста, заполните протокол.");
+        return;
+    }
     return sendRequest({
         url: "/openai_api/generate_redactor",
         method: "POST",
@@ -1207,11 +1218,20 @@ function checkReportAI(boxForAiResponse, responseForDelete){
 }
 
 
-function showDynamicReportPopup() {
+function showDynamicReportPopup(boxForAiImpressionResponse, boxForAiRedactorResponse) {
     const popup = document.getElementById("dynamicsPopup");
     if (!popup) {
         console.error("Popup element not found");
         return;
+    }
+
+    if (boxForAiImpressionResponse) {
+        boxForAiImpressionResponse.innerText = "";
+        boxForAiImpressionResponse.style.display = "none";
+    }
+    if (boxForAiRedactorResponse) {
+        boxForAiRedactorResponse.innerText = "";
+        boxForAiRedactorResponse.style.display = "none";
     }
 
     const closeDynamicsPopup = document.getElementById("closeDynamicsPopup");
@@ -1296,47 +1316,53 @@ function handleAnalyzeDynamicsResponse(response) {
     additionalFindings(response);
 }
 
-
+// Функция для обработки дополнительных находок после анализа динамики
+// Отображает нераспознанные предложения в блоке aiDynamicBlock
 function additionalFindings(response) {
     const aiBlock = document.getElementById("aiDynamicBlock");
-    aiBlock.innerHTML = ""; // Очистка перед новым рендером
+    const aiRedactorResponseBlock = document.getElementById("aiRedactorResponseBlock");
+    const aiImpressionResponseBlock = document.getElementById("aiImpressionResponseBlock"); 
 
-    const secondLook = response.second_look_result;
+    if (aiRedactorResponseBlock) {
+        aiRedactorResponseBlock.innerHTML = ""; 
+        aiRedactorResponseBlock.style.display = "none"; // Скрываем блок
+    }
+    if (aiImpressionResponseBlock) {
+        aiImpressionResponseBlock.innerHTML = "";
+        aiImpressionResponseBlock.style.display = "none"; // Скрываем блок
+    }
 
-    if (Array.isArray(secondLook) && secondLook.length > 0) {
+    if (aiBlock) {
+        aiBlock.style.display = "block"; // Показываем блок, если он существует
+        aiBlock.innerHTML = ""; // Очистка перед новым рендером
+    }
+
+    const miscSentences = response.misc_sentences;
+
+    if (Array.isArray(miscSentences) && miscSentences.length > 0) {
+
         const header = document.createElement("h5");
-        header.textContent = "📌 Missed Findings (according to second-look AI):";
-        aiBlock.appendChild(header);
+        header.className = "ai-response-header";
+        header.textContent = "📌 Не классифицированные предложения:";
 
-        secondLook.forEach(item => {
-            const paragraph = item.paragraph || "Без параграфа";
-            const sentences = Array.isArray(item.sentences) ? item.sentences : [];
-
-            if (sentences.length === 0) return; // Нет данных — пропускаем
-
-            const paraBlock = document.createElement("div");
-            paraBlock.classList.add("second-look-paragraph");
-
-            const title = document.createElement("div");
-            title.classList.add("second-look-title");
-            title.textContent = paragraph;
-            paraBlock.appendChild(title);
-
-            const ul = document.createElement("ul");
-            sentences.forEach(sentence => {
-                const li = document.createElement("li");
-                li.textContent = sentence;
-                ul.appendChild(li);
-            });
-            paraBlock.appendChild(ul);
-            aiBlock.appendChild(paraBlock);
+        const ul = document.createElement("ul");
+        ul.className = "ai-response-list";
+        miscSentences.forEach(item => {
+            const li = document.createElement("li");
+            li.textContent = item.sentence || String(item);
+            ul.appendChild(li);
         });
+
+        aiBlock.appendChild(header);
+        aiBlock.appendChild(ul);
     } else {
         const empty = document.createElement("div");
-        empty.textContent = "✅ No additional findings detected by second-look AI.";
+        empty.textContent = "✅ Все фрагменты классифицированы. Нераспознанных предложений нет.";
         aiBlock.appendChild(empty);
     }
 }
+
+
 
 // Функция для установки зоны перетаскивания для динамического отчета
 function setupDynamicsDropZone() {
@@ -1427,4 +1453,4 @@ function handleFileUpload(file, preview, textarea) {
             preview.textContent = "Ошибка распознавания: " + (data?.message || "Unknown error");
         }
     });
-}  
+}
