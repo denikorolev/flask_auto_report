@@ -6,7 +6,7 @@ import os
 import json
 from models import db, Report, ReportType, KeyWord, TailSentence, BodySentence, ReportTextSnapshot
 from file_processing import save_to_word, extract_text_from_uploaded_file
-from sentence_processing import group_keywords, split_sentences_if_needed, clean_and_normalize_text, compare_sentences_by_paragraph, preprocess_sentence, split_report_structure_for_ai, replace_head_sentences_with_fuzzy_check, merge_ai_response_into_skeleton
+from sentence_processing import group_keywords, split_sentences_if_needed, clean_and_normalize_text, compare_sentences_by_paragraph, preprocess_sentence, split_report_structure_for_ai, replace_head_sentences_with_fuzzy_check, merge_ai_response_into_skeleton, convert_template_json_to_text
 from openai_api import _process_openai_request, reset_ai_session, count_tokens
 from utils.common import ensure_list
 from logger import logger
@@ -525,6 +525,7 @@ def analyze_dynamics():
 
     structurer_assistant_id = current_app.config.get("OPENAI_ASSISTANT_DYNAMIC_STRUCTURER")
     cleaner_assistant_id = current_app.config.get("OPENAI_ASSISTANT_TEXT_CLEANER")
+    first_look_assistant_id = current_app.config.get("OPENAI_ASSISTANT_FIRST_LOOK_RADIOLOGIST")
 
     if not structurer_assistant_id or not cleaner_assistant_id:
         logger.error(f"(Анализ динамики) Не удалось получить ID ассистента OpenAI для динамического структурирования")
@@ -560,12 +561,48 @@ def analyze_dynamics():
     print(f"Полученный результат после очистки от мусора: {cleaned_text}")
     print("--------------------------------------------")
     
+    # теперь делаем обработку у ассистента первого взгляда, чтобы получить его мнение о тексте
+    text_template_text = convert_template_json_to_text(template_text)
+    first_look_prompt = f"""
+                TEMPLATE REPORT:
+                {text_template_text}
+                RAW REPORT:
+                {cleaned_text}
+                """
+    try:
+        first_look_result = _process_openai_request(
+            text=first_look_prompt,
+            assistant_id=first_look_assistant_id,
+            file_id=None,
+            clean_response=False,
+        )
+        logger.info(f"(Анализ динамики) ✅ Результат первого взгляда успешно получен")
+    except Exception as e:
+        logger.error(f"(Анализ динамики) ❌ Ошибка при вызове OpenAI для первого взгляда: {e}")
+        # Вторая попытка на случай временной ошибки
+        try:
+            first_look_result = _process_openai_request(
+                text=first_look_prompt,
+                assistant_id=first_look_assistant_id,
+                file_id=None,
+                clean_response=False,
+            )
+            logger.info("(Анализ динамики) ✅ 2️⃣ Вторая попытка вызова OpenAI для первого взгляда прошла успешно")
+        except Exception as e2:
+            logger.error(f"(Анализ динамики) ❌❌ 2️⃣ Повторная попытка тоже не удалась: {e2}")
+            return jsonify({
+                "status": "error",
+                "message": f"Ошибка при повторной попытке вызова OpenAI для первого взгляда: {e2}"
+            }), 500
+    print("--------------------------------------------")
+    print(f"Полученный результат после первого взгляда: {first_look_result}")
+    print("--------------------------------------------")
     # Теперь структурируем текст в соответствии с шаблоном
     prompt_structuring = f"""
                 This is the report template:
                 {template_text}
                 This is the original medical report text:
-                {cleaned_text}
+                {first_look_result}
                 """
    
     try:
@@ -680,6 +717,7 @@ def analyze_dynamics():
     finally:
         reset_ai_session(assistant_id=structurer_assistant_id)
         reset_ai_session(assistant_id=cleaner_assistant_id)
+        reset_ai_session(assistant_id=first_look_assistant_id)
         logger.info(f"(Анализ динамики) 📌 Сессии ассистентов OpenAI успешно сброшены")
         
         

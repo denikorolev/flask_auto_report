@@ -562,6 +562,29 @@ def _add_if_unique(raw_text, key_words, except_words, cleaned_list, result_set, 
    
 
 
+def convert_template_json_to_text(template_json: list) -> str:
+    """
+    Преобразует шаблон отчета из JSON-структуры (список параграфов с head_sentences)
+    в обычный текст с заголовками и предложениями для ассистента.
+
+    Args:
+        template_json (list): Список параграфов с ключами "paragraph" и "head_sentences".
+
+    Returns:
+        str: Простой текст с заголовками параграфов и предложениями под ними.
+    """
+    lines = []
+    for block in template_json:
+        paragraph = block.get("paragraph", "").strip()
+        if paragraph:
+            lines.append(f"{paragraph}:")
+        for sentence in block.get("head_sentences", []):
+            sentence_text = sentence.get("sentence", "").strip()
+            if sentence_text:
+                lines.append(sentence_text)
+        lines.append("")  # Пустая строка между параграфами
+    return "\n".join(lines).strip()
+
 
 
 def split_report_structure_for_ai(report_data: list) -> tuple:
@@ -739,7 +762,6 @@ def merge_ai_response_into_skeleton(skeleton, ai_response):
         # Если нет ai_para — ничего не трогаем, копия скелета
         merged.append(merged_para)
     return merged, misc_sentences
-
 
 
 # Превращает JSON-строки в объекты Python, если они сериализованы НИГДЕ НЕ ИСПОЛЬЗУЮТСЯ

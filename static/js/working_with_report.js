@@ -2,6 +2,7 @@
 // у меня есть глобальные переменные const keyWordsGroups = {{ key_words_groups | tojson | safe }};
     // const reportData = {{ report_data | tojson | safe }};
     // const currentReportParagraphsData = {{ paragraphs_data | tojson | safe }};
+let previousDynamicsText = ""; // сохраняем текст здесь
 
 document.addEventListener("DOMContentLoaded", initWorkingWithReport);
 
@@ -727,11 +728,6 @@ function copyButtonLogic(copyButton) {
             await navigator.clipboard.writeText(textToCopy);
             toastr.success("Текст успешно скопирован в буфер обмена");
 
-            // После успешного копирования выполняем отправку данных
-            // const paragraphsData = collectParagraphsData();
-
-            // Отправляем данные параграфов
-            // await sendParagraphsData(paragraphsData);
             
             if (userSettings.USE_SENTENCE_AUTOSAVE) {
                 await sendModifiedSentencesToServer();
@@ -1259,6 +1255,7 @@ function showDynamicReportPopup(boxForAiImpressionResponse, boxForAiRedactorResp
     
     const analyzeHandler = async () => {
         const rawText = dynamicsTextarea.value.trim();
+        previousDynamicsText = rawText; // Сохраняем текст для последующего использования в глобальной переменной
 
         if (!rawText) {
             alert("Пожалуйста, введите текст для анализа.");
@@ -1314,6 +1311,8 @@ function handleAnalyzeDynamicsResponse(response) {
     refreshCsrfToken();
     initWorkingWithReport();
     additionalFindings(response);
+    attachCtrlOverlayLogic(); // навешиваем поведение
+    console.log(previousDynamicsText);
 }
 
 // Функция для обработки дополнительных находок после анализа динамики
@@ -1350,6 +1349,7 @@ function additionalFindings(response) {
         miscSentences.forEach(item => {
             const li = document.createElement("li");
             li.textContent = item.sentence || String(item);
+            li.addEventListener("click", handleListMiscellaneousItemClick);
             ul.appendChild(li);
         });
 
@@ -1361,6 +1361,54 @@ function additionalFindings(response) {
         aiBlock.appendChild(empty);
     }
 }
+
+
+function attachCtrlOverlayLogic() {
+    const overlay = document.getElementById("ctrlPreviewOverlay");
+    console.log("🔍 overlay найден:", overlay);
+    console.log("📋 previousDynamicsText:", previousDynamicsText);
+    if (!overlay) return;
+    overlay.textContent = previousDynamicsText || "(нет сохранённого текста)";
+
+    document.addEventListener("keydown", (e) => {
+        if (e.key === "Control") {
+            console.log("Control key pressed, showing overlay");
+            overlay.classList.add("show");
+        }
+    });
+
+    document.addEventListener("keyup", (e) => {
+        if (e.key === "Control") {
+        console.log("Control key released, hiding overlay");
+            overlay.classList.remove("show");
+        }
+    });
+}
+
+// Функция для копирования текста в буфер обмена
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        console.log("Текст скопирован в буфер обмена:", text);
+    }).catch((err) => {
+        console.error("Ошибка при копировании текста:", err);
+    });
+}
+
+
+// Функция для обработки клика по элементу списка
+function handleListMiscellaneousItemClick(event) {
+    const listItem = event.target;
+    const sentenceText = listItem.textContent.trim();
+    
+    if (!sentenceText) return;
+
+    // Копируем текст в буфер
+    copyToClipboard(sentenceText);
+
+    // Убираем элемент из списка
+    listItem.remove();
+}
+
 
 
 
