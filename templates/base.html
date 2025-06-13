@@ -102,7 +102,7 @@
 <!-- Общие скрипты -->
 <noscript>please turn on JS!</noscript>
 
-<script> 
+<script class="no-reexec"> // Этот класс в скрипте нужен для того, чтобы не перезаписывать этот скрипт при выполнении вставки "динамического протокола" -->
     document.addEventListener("DOMContentLoaded", function(){
         window.csrfToken = document.getElementById("csrf_token").value;
     })

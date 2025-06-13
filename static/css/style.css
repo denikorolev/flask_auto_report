@@ -1646,7 +1646,7 @@ body {
     left: 50%;
     transform: translateX(-50%);
     width: 90vw;
-    max-width: 800px;
+    max-width: 900px;
     background-color: var(--main-background-color-light);
     border: 2px solid var(--main-border-color);
     border-radius: 10px;
@@ -1666,7 +1666,7 @@ body {
 
 .dynamics-popup__textarea {
     width: 100%;
-    min-height: 300px;
+    min-height: 400px;
     padding: 12px;
     border: 1px solid var(--main-border-color);
     border-radius: 6px;
@@ -1680,7 +1680,7 @@ body {
 .dynamics-popup__error {
     color: var(--accent-attention);
     font-weight: bold;
-    display: none;
+    display: block;
 }
 
 .dynamics-popup__footer {
@@ -1744,4 +1744,63 @@ body {
     display: block !important;
     opacity: 1;
     visibility: visible;
+}
+
+/* Прогресс бар для загрузки */
+.dynamics-progress-container {
+    margin: 18px 0 6px 0;
+    width: 98%;
+    max-width: 400px;
+}
+
+.dynamics-progress-bar {
+    width: 100%;
+    height: 18px;
+    background: var(--main-background-color);
+    border: 1.5px solid var(--main-btn-color);
+    border-radius: 9px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(140,107,79,0.07);
+    position: relative;
+    margin-top: 4px;
+}
+
+.dynamics-progress-bar::before {
+    content: "";
+    display: block;
+    height: 100%;
+    width: var(--progress-width, 0%);
+    background: linear-gradient(90deg, var(--main-btn-color) 0%, var(--accent-light) 100%);
+    border-radius: 9px 0 0 9px;
+    transition: width 0.3s;
+    position: absolute;
+    left: 0; top: 0;
+    z-index: 1;
+}
+
+/* Показываем процент поверх бара */
+.dynamics-progress-bar__label {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    transform: translateX(-50%);
+    text-align: center;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--dark-text-color);
+    z-index: 2;
+    line-height: 18px;
+    letter-spacing: 0.2px;
+    text-shadow: 0 1px 2px #fff9;
+    pointer-events: none;
+}
+
+.dynamics-popup__progress-text {
+    font-size: 13px;
+    color: var(--main-btn-color);
+    margin: 0 0 0 2px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
 }

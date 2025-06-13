@@ -18,6 +18,7 @@ from sentence_processing import clean_text_with_keywords, _add_if_unique
 from openai import OpenAI
 from logger import logger
 import easyocr
+from utils.redis_client import redis_get, redis_set, redis_delete
 
 
 # Проверка допустимости расширения загружаемого файла
@@ -348,9 +349,14 @@ def prepare_impression_snippets(profile_id):
 
     client = OpenAI(api_key=current_app.config.get("OPENAI_API_KEY"))
     modalities = ["CT", "MRI", "XRAY"]
-    session["impression_file_ids"] = {}
+    user_id = current_user.id if current_user.is_authenticated else None
+    if not user_id:
+        logger.error("Пользователь не аутентифицирован, не могу подготовить impression snippets.")
+        return
 
     for modality in modalities:
+        file_key = f"user:{user_id}:impression_file_id:{modality}"
+        
         try:
             logger.info(f"🔄 Работаем с модальностью: {modality}")
 
@@ -372,6 +378,9 @@ def prepare_impression_snippets(profile_id):
                     logger.info(f"🗑 Удалён локальный файл: {old_file.file_path}")
                 db.session.delete(old_file)
             db.session.commit()
+            
+            # Удаляем старый ключ из Redis, только поле удаления локального файла и файла в OpenAI
+            redis_delete(file_key)
 
             # 2. Генерируем новый JSON файл
             new_file_path = generate_impression_json(modality)
@@ -390,7 +399,7 @@ def prepare_impression_snippets(profile_id):
                 new_file_meta.ai_file_id = new_file_id
                 db.session.commit()
 
-            session["impression_file_ids"][modality] = new_file_id
+            redis_set(file_key, new_file_id)
             logger.info(f"✅ Загружен и сохранён файл для {modality}: {new_file_id}")
 
         except Exception as e:

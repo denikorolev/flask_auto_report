@@ -20,6 +20,8 @@ from flask_security import Security, SQLAlchemyUserDatastore
 from flask_security.decorators import auth_required, roles_required
 from flask_security.signals import user_registered
 from file_processing import prepare_impression_snippets
+from extensions import make_celery, celery
+
 # Импортирую блюпринты
 from working_with_reports import working_with_reports_bp  
 from my_reports import my_reports_bp 
@@ -30,6 +32,8 @@ from profile_settings import profile_settings_bp
 from openai_api import openai_api_bp
 from key_words import key_words_bp
 from admin import admin_bp
+from tasks.tasks_status import tasks_status_bp
+
 
 version = "0.10.3.4"
 
@@ -37,6 +41,7 @@ version = "0.10.3.4"
 app = Flask(__name__)
 app.config.from_object(get_config()) # Load configuration from file config.py
 
+celery = make_celery(app)
 # Инициализация базы данных
 db.init_app(app)
 
@@ -77,6 +82,7 @@ app.register_blueprint(profile_settings_bp, url_prefix="/profile_settings")
 app.register_blueprint(openai_api_bp, url_prefix="/openai_api")
 app.register_blueprint(key_words_bp, url_prefix="/key_words")
 app.register_blueprint(admin_bp, url_prefix="/admin")
+app.register_blueprint(tasks_status_bp, url_prefix="/tasks_status")
 
 
 # Добавляю контекстные процессоры

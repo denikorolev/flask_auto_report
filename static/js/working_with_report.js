@@ -2,15 +2,19 @@
 // у меня есть глобальные переменные const keyWordsGroups = {{ key_words_groups | tojson | safe }};
     // const reportData = {{ report_data | tojson | safe }};
     // const currentReportParagraphsData = {{ paragraphs_data | tojson | safe }};
-let previousDynamicsText = ""; // сохраняем текст здесь
+    // MAX_ATTEMPTS_FOR_DYNAMICS
+
 
 document.addEventListener("DOMContentLoaded", initWorkingWithReport);
+
 
 
 // Объявляем глобальные переменные и запускаем стартовые функции, постепенно нужно перенести сюда и логику связанную с ключевыми словами и развешивание части слушателей
 function initWorkingWithReport() {
 
     let activeSentence = null;  // Для отслеживания активного предложения
+
+    window.MAX_ATTEMPTS_FOR_DYNAMICS = window.MAX_ATTEMPTS_FOR_DYNAMICS || 25;
 
     const popupList = document.getElementById("popupList");  // Для обращения к PopUp
     const exportButton = document.getElementById("exportButton"); // Для обращения к кнопке "Экспорт в Word"
@@ -1233,11 +1237,9 @@ function showDynamicReportPopup(boxForAiImpressionResponse, boxForAiRedactorResp
     const closeDynamicsPopup = document.getElementById("closeDynamicsPopup");
     const analyzeDynamicsButton = document.getElementById("analyzeDynamicsButton");
     const dynamicsTextarea = document.getElementById("dynamicsTextarea");
-    const dynamicsErrorMessage = document.getElementById("dynamicsErrorMessage");
 
     // Очистка перед показом
     dynamicsTextarea.value = "";
-    dynamicsErrorMessage.innerText = "";
 
     showElement(popup);
 
@@ -1245,7 +1247,6 @@ function showDynamicReportPopup(boxForAiImpressionResponse, boxForAiRedactorResp
     const closeHandler = () => {
         hideElement(popup);
         dynamicsTextarea.value = "";
-        dynamicsErrorMessage.innerText = "";
 
         // Снятие обработчиков
         closeDynamicsPopup.removeEventListener("click", closeHandler);
@@ -1255,30 +1256,31 @@ function showDynamicReportPopup(boxForAiImpressionResponse, boxForAiRedactorResp
     
     const analyzeHandler = async () => {
         const rawText = dynamicsTextarea.value.trim();
-        previousDynamicsText = rawText; // Сохраняем текст для последующего использования в глобальной переменной
+        window.previousDynamicsText = rawText; // Сохраняем текст для последующего использования в глобальной переменной
 
         if (!rawText) {
             alert("Пожалуйста, введите текст для анализа.");
             return;
         }
+        // Блокируем кнопку анализа
+        analyzeDynamicsButton.disabled = true;
+        closeDynamicsPopup.innerText = "Отмена";
 
-        dynamicsErrorMessage.innerText = "Анализирую текст...";
-
-        const result = await sendRequest({
+        const startResponse = await sendRequest({
             url: "/working_with_reports/analyze_dynamics",
             data: {
                 raw_text: rawText,
                 report_id: reportData.id
             }
         });
-
-        if (result.status === "success") {
-            handleAnalyzeDynamicsResponse(result);
-        } else {
-            alert("Ошибка анализа динамики: " + (result.message || "Неизвестная ошибка"));
+        const {status, message, task_id} = startResponse;
+        if (status !== "success") {
+            console.error("Ошибка при отправке текста на анализ динамики:", message);
+            return;
         }
+        pollAnalyzeDynamicsResult(task_id);
+
     };
-    
 
     // Назначаем обработчики
     closeDynamicsPopup.addEventListener("click", closeHandler);
@@ -1287,6 +1289,95 @@ function showDynamicReportPopup(boxForAiImpressionResponse, boxForAiRedactorResp
 
 
 
+// Функция для опроса статуса задачи по трансформации предыдущего протокола
+function pollAnalyzeDynamicsResult(task_id, attempt = 0) {
+    const maxAttempts = window.MAX_ATTEMPTS_FOR_DYNAMICS || 20; // Максимальное количество попыток
+    const progress = Math.min((attempt / maxAttempts) * 100, 99);
+
+    updateDynamicsProgressBar(progress, `Ожидание результата...`);
+
+    sendRequest({
+        url: `/tasks_status/task_status/${task_id}`,
+        method: "GET",
+        loader: false
+    }).then(data => {
+        if (!data) {
+            updateDynamicsProgressBar(100, "Ошибка при получении статуса задачи.");
+            return;
+        }
+
+        const status = (data.status || "").toLowerCase();
+
+        if (status === "pending" || status === "started") {
+            if (attempt < maxAttempts) {
+                setTimeout(() => pollAnalyzeDynamicsResult(task_id, attempt + 1), 4000);
+            } else {
+                updateDynamicsProgressBar(100, "Превышено время ожидания ответа. Попробуйте ещё раз позже.");
+            }
+        } else if (status === "success") {
+            updateDynamicsProgressBar(100, "Готово!");
+            finalizeAnalyzeDynamics(data.result); // data.result — это словарь { result, report_id, skeleton }
+        } else if (status === "error") {
+            let details = data.details || "";
+            if (details.toLowerCase().includes("revoked") || details.toLowerCase().includes("terminated")) {
+                updateDynamicsProgressBar(100, "Слишком много запросов на сервер. Пожалуйста, попробуйте позже.");
+            } else {
+                updateDynamicsProgressBar(100, "Ошибка: " + details);
+            }
+        } else {
+            updateDynamicsProgressBar(100, "Ошибка: " + (status.details || "Неизвестный статус"));
+        }
+    }).catch(err => {
+        updateDynamicsProgressBar(100, "Ошибка связи с сервером");
+        console.error("Ошибка связи с сервером:", err);
+    });
+}
+
+
+// Функция для обновления прогресс-бара динамики трансформации протокола
+function updateDynamicsProgressBar(percent, text = null) {
+    const bar = document.getElementById("dynamicsProgressBar");
+    const label = document.getElementById("dynamicsProgressBarLabel");
+    if (!bar) return;
+    bar.style.setProperty('--progress-width', `${Math.min(percent, 100)}%`);
+    if (label) label.textContent = `${Math.round(percent)}%`;
+    if (text !== null) {
+        document.getElementById("dynamicsProgressBarText").textContent = text;
+    }
+}
+
+    
+// Функция для финального этапа анализа динамики
+async function finalizeAnalyzeDynamics(resultObj) {
+    // resultObj должен содержать: result, report_id, skeleton
+    if (!resultObj || !resultObj.result || !resultObj.report_id || !resultObj.skeleton) {
+        alert("Ошибка: не хватает данных для финального этапа анализа динамики.");
+        return;
+    }
+
+    try {
+        const response = await sendRequest({
+            url: "/working_with_reports/analyze_dynamics_finalize",
+            data: {
+                result: resultObj.result,
+                report_id: resultObj.report_id,
+                skeleton: resultObj.skeleton,
+            }
+        });
+
+        if (response && response.status === "success") {
+            handleAnalyzeDynamicsResponse(response);
+        } else {
+            console.error("Ошибка при финальном этапе анализа динамики:", response.message || "Неизвестная ошибка");
+        }
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+
+// Функция для повторного выполнения встроенных скриптов в контейнере
+// использую после ререндеринга body без перезагрузки страницы
 function reexecuteInlineScripts(container = document.body) {
     const scripts = container.querySelectorAll("script:not(.no-reexec)");
 
@@ -1303,6 +1394,8 @@ function reexecuteInlineScripts(container = document.body) {
 }
 
 
+// Функция для обработки ответа после трансформации предыдущего протокола. 
+// Перерисовывает body
 function handleAnalyzeDynamicsResponse(response) {
     document.body.innerHTML = response.html;
     window.keyWordsGroups = response.key_words_groups;
@@ -1310,10 +1403,11 @@ function handleAnalyzeDynamicsResponse(response) {
     window.currentReportParagraphsData = response.paragraphs_data;
     refreshCsrfToken();
     initWorkingWithReport();
-    additionalFindings(response);
-    attachCtrlOverlayLogic(); // навешиваем поведение
-    console.log(previousDynamicsText);
+    reexecuteInlineScripts(); // Перезапускаем скрипты в новом body
+    additionalFindings(response); // Отображаем нераспознанные предложения
+    attachCtrlOverlayLogic(); // навешиваем поведение на Ctrl+Overlay
 }
+
 
 // Функция для обработки дополнительных находок после анализа динамики
 // Отображает нераспознанные предложения в блоке aiDynamicBlock
@@ -1363,23 +1457,20 @@ function additionalFindings(response) {
 }
 
 
+// Функция для навешивания логики на Ctrl+Overlay
 function attachCtrlOverlayLogic() {
     const overlay = document.getElementById("ctrlPreviewOverlay");
-    console.log("🔍 overlay найден:", overlay);
-    console.log("📋 previousDynamicsText:", previousDynamicsText);
     if (!overlay) return;
-    overlay.textContent = previousDynamicsText || "(нет сохранённого текста)";
+    overlay.textContent = window.previousDynamicsText || "(нет сохранённого текста)";
 
     document.addEventListener("keydown", (e) => {
         if (e.key === "Control") {
-            console.log("Control key pressed, showing overlay");
             overlay.classList.add("show");
         }
     });
 
     document.addEventListener("keyup", (e) => {
         if (e.key === "Control") {
-        console.log("Control key released, hiding overlay");
             overlay.classList.remove("show");
         }
     });

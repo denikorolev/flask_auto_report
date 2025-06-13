@@ -7,12 +7,14 @@ import json
 from models import db, Report, ReportType, KeyWord, TailSentence, BodySentence, ReportTextSnapshot
 from file_processing import save_to_word, extract_text_from_uploaded_file
 from sentence_processing import group_keywords, split_sentences_if_needed, clean_and_normalize_text, compare_sentences_by_paragraph, preprocess_sentence, split_report_structure_for_ai, replace_head_sentences_with_fuzzy_check, merge_ai_response_into_skeleton, convert_template_json_to_text
-from openai_api import _process_openai_request, reset_ai_session, count_tokens
+from openai_api import _process_openai_request, reset_ai_session, count_tokens, clean_raw_text, run_first_look_assistant, structure_report_text
 from utils.common import ensure_list
 from logger import logger
 from flask_security.decorators import auth_required
 from spacy_manager import SpacyModel
 from datetime import datetime
+from celery_tasks import async_analyze_dynamics
+from celery.result import AsyncResult
 
 
 
@@ -486,161 +488,82 @@ def increase_sentence_weight():
         logger.error(f"(Увеличение веса предложения) ❌ Ошибка при обновлении веса: {e}")
         return jsonify({"status": "error", "message": f"Ошибка при обновлении веса: {e}"}), 500
     
-    
+     
 
+# Маршрут для переделывания протокола предыдущего исследования по образу предоставленного шаблона
 @working_with_reports_bp.route("/analyze_dynamics", methods=["POST"])
 @auth_required()
 def analyze_dynamics():
-    logger.info(f"(Анализ динамики) ------------------------------------")
+    logger.info(f"(Анализ динамики) ---------------------------------------------")
     logger.info(f"(Анализ динамики) 🚀 Начинаю анализ динамики по тексту и шаблону отчета")
+    logger.info("----------------------------------------------------------------")
+    
     data = request.get_json()
     raw_text = data.get("raw_text", "").strip()
     report_id = data.get("report_id")
-    logger.info(f"(Анализ динамики) Полученные данные: raw_text={raw_text[:50]}..., report_id={report_id}")
+    user_id = current_user.id
 
     if not raw_text or not report_id:
-        logger.error(f"(Анализ динамики) Не передан текст или report_id")
+        logger.error("Не передан текст или report_id")
         return jsonify({"status": "error", "message": "Не передан текст или report_id"}), 400
 
     report_data, sorted_parag = Report.get_report_data(report_id)
     if not report_data:
-        logger.error(f"(Анализ динамики) Шаблон отчета не найден")
+        logger.error("Шаблон отчета не найден")
         return jsonify({"status": "error", "message": "Шаблон отчета не найден"}), 404
 
-    # Попытка собрать ключевые слова для возможного перерендеривания страницы при успшном синтезе протокола
-    try:
-        key_words_obj = KeyWord.get_keywords_for_report(g.current_profile.id, report_id)
-        key_words_groups = group_keywords(key_words_obj)
-    except Exception as e:
-        logger.error(f"(Анализ динамики) ❌ Не получилось получить ключевые слова для текущего пользователя: {e}")
-        key_words_groups = []
-    
-    # Сбор шаблона отчета
     skeleton, template_text = split_report_structure_for_ai(sorted_parag)
     if not template_text or not skeleton:
-        logger.error(f"(Анализ динамики) ❌ Не удалось собрать шаблон отчета")
+        logger.error("Не удалось собрать шаблон отчета")
         return jsonify({"status": "error", "message": "Не удалось собрать шаблон отчета"}), 500
-    logger.info(f"(Анализ динамики) Шаблон отчета для отправки ИИ: {template_text[:3]}...{template_text[-3:]}") 
-    logger.info(f"(Анализ динамики) Скелет шаблона отчета: {skeleton[:3]}...{skeleton[-3:]}")
 
-    structurer_assistant_id = current_app.config.get("OPENAI_ASSISTANT_DYNAMIC_STRUCTURER")
-    cleaner_assistant_id = current_app.config.get("OPENAI_ASSISTANT_TEXT_CLEANER")
-    first_look_assistant_id = current_app.config.get("OPENAI_ASSISTANT_FIRST_LOOK_RADIOLOGIST")
-
-    if not structurer_assistant_id or not cleaner_assistant_id:
-        logger.error(f"(Анализ динамики) Не удалось получить ID ассистента OpenAI для динамического структурирования")
-        return jsonify({"status": "error", "message": "Не удалось получить ID ИИ ассистента для динамического структурирования"}), 500
+    logger.info(f"✅ Шаблон отчета успешно собран. Получены json структуры skeleton и template_text")
     
     try:
-        # Сначала очищаем текст от лишних кусков фио, названия организации и т.д. и оставляем только протокол
-        cleaned_text = _process_openai_request(
-            text=raw_text,
-            assistant_id=cleaner_assistant_id,
-            file_id=None,
-            clean_response=False,
-        )
-        if not cleaned_text:
-            logger.warning(f"(Анализ динамики) ❌ Первая попытка очистки текста не удалась, пробую еще раз...")
-            # Вторая попытка
-            cleaned_text = _process_openai_request(
-                text=raw_text,
-                assistant_id=cleaner_assistant_id,
-                file_id=None,
-                clean_response=False,
-            )
-            if not cleaned_text:
-                logger.warning(f"(Анализ динамики) ❌ Вторая попытка очистки текста тоже не удалась — использую исходный текст без очистки")
-                cleaned_text = raw_text # Используем исходный текст без очистки
+        task = async_analyze_dynamics.delay(raw_text, template_text, user_id, skeleton, report_id)
+    except Exception as e:
+        logger.error(f"❌ Не удалось запустить celery задачу async_analyze_dynamics: {e}")
+        return jsonify({
+            "status": "error",
+            "message": f"Ошибка запуска анализа динамики: {str(e)}"
+        }), 500
+
+    return jsonify({
+        "status": "success",
+        "message": "Анализ динамики запущен",
+        "task_id": task.id,
+    }), 200
+
+       
         
-    except Exception as e:
-        logger.error(f"(Анализ динамики) ❌ Ошибка при попытке очистки текста: {e}")
-        cleaned_text = raw_text  # Используем исходный текст без очистки
-    
-    logger.info(f"(Анализ динамики) ✅ Текст успешно очищен от мусора")
-    print("--------------------------------------------")
-    print(f"Полученный результат после очистки от мусора: {cleaned_text}")
-    print("--------------------------------------------")
-    
-    # теперь делаем обработку у ассистента первого взгляда, чтобы получить его мнение о тексте
-    text_template_text = convert_template_json_to_text(template_text)
-    first_look_prompt = f"""
-                TEMPLATE REPORT:
-                {text_template_text}
-                RAW REPORT:
-                {cleaned_text}
-                """
-    try:
-        first_look_result = _process_openai_request(
-            text=first_look_prompt,
-            assistant_id=first_look_assistant_id,
-            file_id=None,
-            clean_response=False,
-        )
-        logger.info(f"(Анализ динамики) ✅ Результат первого взгляда успешно получен")
-    except Exception as e:
-        logger.error(f"(Анализ динамики) ❌ Ошибка при вызове OpenAI для первого взгляда: {e}")
-        # Вторая попытка на случай временной ошибки
-        try:
-            first_look_result = _process_openai_request(
-                text=first_look_prompt,
-                assistant_id=first_look_assistant_id,
-                file_id=None,
-                clean_response=False,
-            )
-            logger.info("(Анализ динамики) ✅ 2️⃣ Вторая попытка вызова OpenAI для первого взгляда прошла успешно")
-        except Exception as e2:
-            logger.error(f"(Анализ динамики) ❌❌ 2️⃣ Повторная попытка тоже не удалась: {e2}")
-            return jsonify({
-                "status": "error",
-                "message": f"Ошибка при повторной попытке вызова OpenAI для первого взгляда: {e2}"
-            }), 500
-    print("--------------------------------------------")
-    print(f"Полученный результат после первого взгляда: {first_look_result}")
-    print("--------------------------------------------")
-    # Теперь структурируем текст в соответствии с шаблоном
-    prompt_structuring = f"""
-                This is the report template:
-                {template_text}
-                This is the original medical report text:
-                {first_look_result}
-                """
-   
-    try:
-        result_text = _process_openai_request(
-            text=prompt_structuring,
-            assistant_id=structurer_assistant_id,
-            file_id=None,
-            clean_response=False,
-        )
-    except Exception as e:
-        logger.error(f"(Анализ динамики) ❌ Ошибка вызова OpenAI: {e}")
-        # Вторая попытка на случай временной ошибки
-        try:
-            result_text = _process_openai_request(
-                text=prompt_structuring,
-                assistant_id=structurer_assistant_id,
-                file_id=None,
-                clean_response=False,
-            )
-            logger.info("(Анализ динамики) ✅ 2️⃣ Вторая попытка вызова OpenAI прошла успешно")
-        except Exception as e2:
-            logger.error(f"(Анализ динамики) ❌❌ 2️⃣ Повторная попытка тоже не удалась: {e2}")
-            return jsonify({
-                "status": "error",
-                "message": f"Ошибка при повторной попытке вызова OpenAI: {e2}"
-            }), 500
 
-    print("--------------------------------------------")
-    print(f"Полученный результат после системного структурирования: {result_text}")
-    print("--------------------------------------------")
-    parsed = json.loads(result_text)
-    result = parsed.get("items", [])
+# Маршрут для финального этапа трансформации шаблона в соответствии с предыдущим протоколом
+@working_with_reports_bp.route("/analyze_dynamics_finalize", methods=["POST"])
+def analyze_dynamics_finalize():
+    logger.info(f"(Финальный этап анализа динамики) ------------------------------------")
+    logger.info(f"(Финальный этап анализа динамики) 🚀 Начинаю финальный этап анализа динамики")
+    
     try:
-        # Восстанавливаю структуру параграфов из результата по skeleton. Тут не ожидаю ошибок.
+        data = request.get_json()
+        result = data.get("result")  # результат работы celery задачи
+        report_id = data.get("report_id")
+        skeleton = data.get("skeleton")
+
+        if not result or not report_id:
+            return jsonify({"status": "error", "message": "Missing required data"}), 400
+
+        report_data, sorted_parag = Report.get_report_data(report_id)
+        
+        try:
+            key_words_obj = KeyWord.get_keywords_for_report(g.current_profile.id, report_id)
+            key_words_groups = group_keywords(key_words_obj)
+        except Exception as e:
+            logger.warning(f"⚠️ Ошибка загрузки ключевых слов: {e}")
+            key_words_groups = []
+        
+
         merged_parag, misc_sentences = merge_ai_response_into_skeleton(skeleton, result)
-        # Это первая попытка замены предложений в параграфах 
         initial_report = replace_head_sentences_with_fuzzy_check(sorted_parag, merged_parag)
-        logger.info("(Анализ динамики) ✅ Удалось исправить структуру и заменить предложения с первой попытки 1️⃣.")
 
         new_html = render_template(
             "working_with_report.html",
@@ -649,7 +572,6 @@ def analyze_dynamics():
             paragraphs_data=initial_report,
             key_words_groups=key_words_groups,
         )
-        print(misc_sentences)
         return jsonify({
             "status": "success",
             "message": "Структура отчета успешно обновлена",
@@ -660,67 +582,12 @@ def analyze_dynamics():
             "misc_sentences": misc_sentences,
         }), 200
     except Exception as e:
-        error_message = str(e)
-        logger.error(f"(Анализ динамики) ❌ Ошибка при изменении структуры отчета и замене предложений: {error_message}")
+        logger.error(f"(Финальный этап анализа динамики) ❌ Ошибка при финальном этапе анализа динамики: {e}")
+        return jsonify({"status": "error", "message": f"Ошибка замены предложений: {e}"}), 500
 
-        try:
-            # Вторая попытка структурирования отчета
-            retry_prompt = f"""
-                            The following error occurred while analyzing the generated report structure:
-                            {error_message}
-                            Ensure that you use only the information from the original medical report and the given template.
-                            """
-            retry_response = _process_openai_request(
-                text=retry_prompt,
-                assistant_id=structurer_assistant_id,
-                file_id=None,
-                clean_response=False
-            )
-            
-            print("--------------------------------------------")
-            print(f"Полученный результат структурирования, вторая попытка: {retry_response}")
-            print("--------------------------------------------")
-            
-            parsed_retry = json.loads(retry_response)
-            result = parsed_retry.get("items", [])
-            
-            try:
-                # Восстанавливаю структуру параграфов из результата по skeleton (вторая попытка).
-                merged_parag, misc_sentences = merge_ai_response_into_skeleton(skeleton, result)
-                # Вторая попытка замены предложений в параграфах
-                initial_report = replace_head_sentences_with_fuzzy_check(sorted_parag, merged_parag)
-                logger.info("(Анализ динамики) ✅ Удалось исправить структуру и заменить предложения со второй попытки.")
-            except Exception as e3:
-                logger.error(f"(Анализ динамики) ❌ Ошибка при повторной попытке замены предложений: {e3}")
-                return jsonify({"status": "error", "message": f"Ошибка при повторной попытке замены предложений: {e3}"}), 500
-            
-            new_html = render_template(
-                "working_with_report.html",
-                title=report_data["report_name"],
-                report_data=report_data,
-                paragraphs_data=initial_report,
-                key_words_groups=key_words_groups,
-            )
-            print(misc_sentences)
-            return jsonify({
-                "status": "success",
-                "message": "Структура отчета успешно обновлена после повторной попытки",
-                "report_data": report_data,
-                "paragraphs_data": initial_report,
-                "key_words_groups": key_words_groups,
-                "html": new_html,
-                "misc_sentences": misc_sentences,
-            }), 200
-        except Exception as e2:
-            logger.error(f"(Анализ динамики) ❌ Ошибка при повторной попытке после корректировки ассистентом: {e2}")
-            return jsonify({"status": "error", "message": f"Ошибка даже после повторной попытки: {e2}. Не получилось синтезировать протокол"}), 500
-    finally:
-        reset_ai_session(assistant_id=structurer_assistant_id)
-        reset_ai_session(assistant_id=cleaner_assistant_id)
-        reset_ai_session(assistant_id=first_look_assistant_id)
-        logger.info(f"(Анализ динамики) 📌 Сессии ассистентов OpenAI успешно сброшены")
-        
-        
+
+
+
 
 
 @working_with_reports_bp.route("/ocr_extract_text", methods=["POST"])

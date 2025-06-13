@@ -1,6 +1,6 @@
 // loader.js
 
-let loaderTimeout;
+
 
 /**
  * Adds a loading indicator to the page.
@@ -20,7 +20,7 @@ function showLoader() {
     document.body.appendChild(loader);
    
     // Если страница грузится быстрее 300 мс, лоадер не появится
-    loaderTimeout = setTimeout(() => {
+    window.loaderTimeout = setTimeout(() => {
         loader.classList.remove("hidden-loader"); // Плавное появление через ccs-класс
     }, 300); // 300 мс —  задержка
 }

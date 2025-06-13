@@ -679,7 +679,7 @@ def replace_head_sentences_with_fuzzy_check(main_data, ai_data, threshold=95):
 
     if not isinstance(main_data, list) or not isinstance(ai_data, list):
         logger.error("(replace_head_sentences_with_fuzzy_check) ❌ Входные данные не являются списками.")
-        return main_data
+        raise ValueError("основные данные и обработанные данные должны быть списками параграфов.")
 
     # 1. Быстрая сверка количества параграфов
     if len(main_data) != len(ai_data):
@@ -703,11 +703,9 @@ def replace_head_sentences_with_fuzzy_check(main_data, ai_data, threshold=95):
         if ratio < threshold:
             logger.error(f"(replace_head_sentences_with_fuzzy_check) ❌ Заголовок параграфа '{main_title}' не совпадает с AI '{ai_title}' (совпадение {ratio}%)")
             raise ValueError(
-                f"Paragraph id={para_id}: title mismatch.\n"
-                f"Expected: '{main_title}'\n"
-                f"Found:    '{ai_title}'\n"
-                "Please make sure all paragraph titles match exactly with the original template. "
-                "Do not rename, reword, or change paragraph headers. Use the exact same titles."
+                f"Несовпадение текста параграфа id={para_id}\n"
+                f"Ожидалось: '{main_title}'\n"
+                f"Найдено:    '{ai_title}'\n"
             )
 
         # Индексируем head_sentences по id для замены

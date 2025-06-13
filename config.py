@@ -86,9 +86,7 @@ class Config:
     SECURITY_EMAIL_SUBJECT_PASSWORD_RESET = "Сброс пароля Radiologary"
     
     
-    # Celery Configuration
-    CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")  # URL брокера сообщений
-    CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6379/0")  # URL для хранения результатов задач
+    
     
     SECRET_KEY = os.getenv("SECRET_KEY")
     SQLALCHEMY_TRACK_MODIFICATIONS = False # Отключает события SQLAlchemy что бережет память и избавляет от сообщения об ошибках в терминале.
@@ -177,11 +175,16 @@ class DevelopmentConfig(Config):
     DB_PASS = os.getenv("DB_PASS", "")
     BASE_UPLOAD_FOLDER = os.getenv("UPLOAD_FOLDER_TEST")
     SQLALCHEMY_DATABASE_URI = Config.init_db_uri(DB_USER, DB_PASS, DB_HOST, DB_PORT, DB_NAME)
-        
+    
+    # Celery Configuration
+    CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")  # URL брокера сообщений
+    CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6379/0")  # URL для хранения результатов задач
+    REDIS_HOST = os.getenv("REDIS_HOST", "localhost")  
+    REDIS_PORT = os.getenv("REDIS_PORT", "6379") 
 
 class ProductionConfig(Config):
     """Конфигурация для продакшена"""
-    DB_HOST = os.getenv("DB_HOST", "db")  # Используем Docker сервис "db"
+    DB_HOST = os.getenv("DB_HOST", "db")  
     DB_PORT = os.getenv("DB_PORT", "5432")
     DB_NAME = os.getenv("DB_NAME")
     DB_USER = os.getenv("DB_USER")
@@ -189,6 +192,12 @@ class ProductionConfig(Config):
     BASE_UPLOAD_FOLDER = os.getenv("UPLOAD_FOLDER")
     
     SQLALCHEMY_DATABASE_URI = Config.init_db_uri(DB_USER, DB_PASS, DB_HOST, DB_PORT, DB_NAME)
+    
+    # Celery Configuration
+    CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://redis:6379/0")  # URL брокера сообщений
+    CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", "redis://redis:6379/0")  # URL для хранения результатов задач
+    REDIS_HOST = os.getenv("REDIS_HOST", "redis")  
+    REDIS_PORT = os.getenv("REDIS_PORT", "6379")  
 
 
 class TestingConfig(Config):

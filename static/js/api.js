@@ -63,6 +63,12 @@ function sendRequest({ url, method = "POST", data = {}, responseType = "json", l
                     alert("Ошибка: пустой ответ от сервера.");
                     throw new Error("Empty response from server");
                 }
+
+                // Асинхронный статус — не показываем никаких alert/toastr,
+                // просто возвращаем данные вызывающей функции для дальнейшей обработки
+                if (data.status === "pending" || data.status === "started" || data.status === "unknown") {
+                    return data;
+                }
         
                 let alertMessage = data.message || "Request completed successfully.";
         

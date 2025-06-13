@@ -2,16 +2,17 @@ version: "3.8"
 services:
   web:
     build: .
+    restart: always
     env_file: 
       - .env
     ports:
       - "5000:5000"
     environment:
-      - FLASK_ENV=production
-      - DB_HOST=db  # Переопределяем переменную DB_HOST для Docker, чтобы подключаться к контейнеру базы данных
+      - FLASK_ENV=${FLASK_ENV}
+      - DB_HOST=${DB_HOST}
       - DATABASE_URL=postgresql://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_NAME}
       - SECRET_KEY=${SECRET_KEY}
-      - UPLOAD_FOLDER=/uploads
+      - UPLOAD_FOLDER=${UPLOAD_FOLDER}
     volumes:
       - uploads_data:/uploads
     command: gunicorn --log-level=info --bind 0.0.0.0:5000 --timeout 120 app:app
@@ -54,11 +55,29 @@ services:
   redis:
     image: redis:7
     restart: always
-    ports:
-      - "6379:6379"
     volumes:
       - redis_data:/data
 
+
+  celery:
+    build: .
+    restart: always
+    env_file:
+      - .env
+    command: celery -A app.celery worker --loglevel=info --concurrency=2
+    depends_on:
+      - web
+      - redis
+    volumes:
+      - uploads_data:/uploads
+    
+  celery-beat:
+    build: .
+    restart: always
+    command: celery -A extensions.celery beat --loglevel=info
+    depends_on:
+      - web
+      - redis
 
 volumes:
   pgdata:
