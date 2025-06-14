@@ -35,7 +35,7 @@ from admin import admin_bp
 from tasks.tasks_status import tasks_status_bp
 
 
-version = "0.10.3.4"
+version = "0.10.3.6"
 
 
 app = Flask(__name__)

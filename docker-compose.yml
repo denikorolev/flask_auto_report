@@ -64,7 +64,7 @@ services:
     restart: always
     env_file:
       - .env
-    command: celery -A app.celery worker --loglevel=info --concurrency=2
+    command: celery -A app.celery worker --loglevel=info --concurrency=3
     depends_on:
       - web
       - redis
