@@ -13,7 +13,7 @@ from logger import logger
 from flask_security.decorators import auth_required
 from spacy_manager import SpacyModel
 from datetime import datetime
-from celery_tasks import async_analyze_dynamics
+from tasks.celery_tasks import async_analyze_dynamics
 from celery.result import AsyncResult
 
 
@@ -499,11 +499,11 @@ def analyze_dynamics():
     logger.info("----------------------------------------------------------------")
     
     data = request.get_json()
-    raw_text = data.get("raw_text", "").strip()
+    origin_text = data.get("origin_text", "").strip()
     report_id = data.get("report_id")
     user_id = current_user.id
 
-    if not raw_text or not report_id:
+    if not origin_text or not report_id:
         logger.error("Не передан текст или report_id")
         return jsonify({"status": "error", "message": "Не передан текст или report_id"}), 400
 
@@ -520,7 +520,7 @@ def analyze_dynamics():
     logger.info(f"✅ Шаблон отчета успешно собран. Получены json структуры skeleton и template_text")
     
     try:
-        task = async_analyze_dynamics.delay(raw_text, template_text, user_id, skeleton, report_id)
+        task = async_analyze_dynamics.delay(origin_text, template_text, user_id, skeleton, report_id)
     except Exception as e:
         logger.error(f"❌ Не удалось запустить celery задачу async_analyze_dynamics: {e}")
         return jsonify({
@@ -590,27 +590,3 @@ def analyze_dynamics_finalize():
 
 
 
-@working_with_reports_bp.route("/ocr_extract_text", methods=["POST"])
-@auth_required()
-def ocr_extract_text():
-    logger.info(f"(Извлечение текста из загруженного файла) ------------------------------------")
-    logger.info(f"(Извлечение текста из загруженного файла) 🚀 Начинаю обработку запроса на извлечение текста из загруженного файла")
-    try:
-        file = request.files.get("file")
-        if not file:
-            logger.error(f"(Извлечение текста из загруженного файла) ❌ Не получен файл для обработки")
-            return jsonify({"status": "error", "message": "No file uploaded"}), 400
-        from file_processing import extract_text_from_uploaded_file
-        text, error = extract_text_from_uploaded_file(file)
-        if error:
-            # Если pdf — отдать код 200, но сообщить что не поддерживается
-            if "PDF files are not supported" in error:
-                logger.info(f"(Извлечение текста из загруженного файла) 📄 PDF файл не поддерживается")
-                return jsonify({"status": "success", "text": "", "message": error}), 200
-            logger.error(f"(Извлечение текста из загруженного файла) ❌ Ошибка при извлечении текста: {error}")
-            return jsonify({"status": "error", "message": error}), 400
-        logger.info(f"(Извлечение текста из загруженного файла) ✅ Текст успешно извлечен")
-        return jsonify({"status": "success", "text": text}), 200
-    except Exception as e:
-        logger.error(f"(Извлечение текста из загруженного файла) ❌ Ошибка при обработке файла: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 500

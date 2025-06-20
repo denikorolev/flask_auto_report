@@ -4,6 +4,9 @@
     // const currentReportParagraphsData = {{ paragraphs_data | tojson | safe }};
     // MAX_ATTEMPTS_FOR_DYNAMICS
 
+import { setupDynamicsDropZone, handleFileUpload, handlePasteFromClipboard } from "/static/js/utils/dynamicsDropZone.js";
+import { prepareTextWithAI } from "/static/js/utils/ai_handlers.js";
+
 
 document.addEventListener("DOMContentLoaded", initWorkingWithReport);
 
@@ -42,11 +45,9 @@ function initWorkingWithReport() {
     
     updateCoreAndImpessionParagraphText(); // Запускает выделение ключевых слов при загрузке страницы
 
-    sentenceDoubleClickHandle () // Включаем логику двойного клика на предложение
+    sentenceDoubleClickHandle(); // Включаем логику двойного клика на предложение
 
     addSentenceButtonLogic(); // Включаем логику кнопки "+"
-
-    setupDynamicsDropZone(); // Дроп-зона загрузки изображений динамического отчета
 
     
 
@@ -1217,8 +1218,8 @@ function checkReportAI(boxForAiResponse, responseForDelete, boxForAiDynamicRespo
     });
 }
 
-
-function showDynamicReportPopup(boxForAiImpressionResponse, boxForAiRedactorResponse) {
+// Вся логика для показа динамического отчета
+async function showDynamicReportPopup(boxForAiImpressionResponse, boxForAiRedactorResponse) {
     const popup = document.getElementById("dynamicsPopup");
     if (!popup) {
         console.error("Popup element not found");
@@ -1237,23 +1238,41 @@ function showDynamicReportPopup(boxForAiImpressionResponse, boxForAiRedactorResp
     const closeDynamicsPopup = document.getElementById("closeDynamicsPopup");
     const analyzeDynamicsButton = document.getElementById("analyzeDynamicsButton");
     const dynamicsTextarea = document.getElementById("dynamicsTextarea");
+    const dynamicsPreview = document.getElementById("dynamicsPreview");
+    const pasteDynamicsButton = document.getElementById("pasteDynamicsButton");
+    const prepareTextDynamicsButton = document.getElementById("prepareTextDynamicsButton");
+    const dynamicFileUploadButton = document.getElementById("uploadFileDynamicsButton");
+    const dynamicFileUploadInput = document.getElementById("dynamicFileUploadInput");
 
     // Очистка перед показом
     dynamicsTextarea.value = "";
 
-    showElement(popup);
+    showElement(popup, false); // второй параметр это bool для useHideOnClickOutside
+
+    let detachDropZone = setupDynamicsDropZone(
+        {
+            dropZoneId: "dynamicsDropZone",
+            previewId: "dynamicsPreview",
+            textareaId: "dynamicsTextarea"
+        }
+    );
 
     // Обработчики (нужно сохранять ссылки, чтобы можно было удалить потом)
     const closeHandler = () => {
         hideElement(popup);
         dynamicsTextarea.value = "";
-
+        dynamicsPreview.innerHTML = "";
         // Снятие обработчиков
         closeDynamicsPopup.removeEventListener("click", closeHandler);
         analyzeDynamicsButton.removeEventListener("click", analyzeHandler);
+        pasteDynamicsButton.removeEventListener("click", pasteHandler);
+        dynamicFileUploadButton.removeEventListener("click", uploadBtnHandler);
+        dynamicFileUploadInput.removeEventListener("change", fileSelectHandler);
+        prepareTextDynamicsButton.removeEventListener("click", prepareTextHandler);
+        if (detachDropZone) detachDropZone();
     };
 
-    
+    // Обработчик для кнопки анализа динамики
     const analyzeHandler = async () => {
         const rawText = dynamicsTextarea.value.trim();
         window.previousDynamicsText = rawText; // Сохраняем текст для последующего использования в глобальной переменной
@@ -1269,22 +1288,56 @@ function showDynamicReportPopup(boxForAiImpressionResponse, boxForAiRedactorResp
         const startResponse = await sendRequest({
             url: "/working_with_reports/analyze_dynamics",
             data: {
-                raw_text: rawText,
+                origin_text: rawText,
                 report_id: reportData.id
             }
         });
-        const {status, message, task_id} = startResponse;
-        if (status !== "success") {
+        const {status, message, task_id} = startResponse || {};
+        if (status !== "success" || !task_id) {
             console.error("Ошибка при отправке текста на анализ динамики:", message);
+            analyzeDynamicsButton.disabled = false;
+            closeDynamicsPopup.innerText = "Закрыть";
             return;
         }
+        
         pollAnalyzeDynamicsResult(task_id);
 
     };
 
+    const prepareTextHandler = async () => {
+        await prepareTextWithAI(dynamicsTextarea, prepareTextDynamicsButton);
+    };
+
+    // Обработчик для вставки из буфера обмена
+    const pasteHandler = async () => {
+        await handlePasteFromClipboard(dynamicsTextarea, dynamicsPreview);
+    };
+
+    // Обработчик выбора файла
+    const fileSelectHandler = (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (file) {
+            handleFileUpload(file, dynamicsPreview, dynamicsTextarea);
+        }
+        // Сброс значения чтобы можно было выбрать тот же файл снова при необходимости
+        dynamicFileUploadInput.value = "";
+    };
+
+    // Промежуточный обработчик симулирующий клик на input для 
+    // загрузки файла при клике на кнопку загрузить файл
+    const uploadBtnHandler = () => {
+        dynamicFileUploadInput.click();
+    };
+
+
     // Назначаем обработчики
     closeDynamicsPopup.addEventListener("click", closeHandler);
     analyzeDynamicsButton.addEventListener("click", analyzeHandler);
+    pasteDynamicsButton.addEventListener("click", pasteHandler);
+    dynamicFileUploadButton.addEventListener("click", uploadBtnHandler);
+    dynamicFileUploadInput.addEventListener("change", fileSelectHandler);
+    prepareTextDynamicsButton.addEventListener("click", prepareTextHandler);
+
 }
 
 
@@ -1310,7 +1363,7 @@ function pollAnalyzeDynamicsResult(task_id, attempt = 0) {
 
         if (status === "pending" || status === "started") {
             if (attempt < maxAttempts) {
-                setTimeout(() => pollAnalyzeDynamicsResult(task_id, attempt + 1), 4000);
+                setTimeout(() => pollAnalyzeDynamicsResult(task_id, attempt + 1), 9000);
             } else {
                 updateDynamicsProgressBar(100, "Превышено время ожидания ответа. Попробуйте ещё раз позже.");
             }
@@ -1405,7 +1458,7 @@ function handleAnalyzeDynamicsResponse(response) {
     initWorkingWithReport();
     reexecuteInlineScripts(); // Перезапускаем скрипты в новом body
     additionalFindings(response); // Отображаем нераспознанные предложения
-    attachCtrlOverlayLogic(); // навешиваем поведение на Ctrl+Overlay
+    attachCtrlOverlayLogic(); // навешиваем поведение Overlay
 }
 
 
@@ -1436,7 +1489,7 @@ function additionalFindings(response) {
 
         const header = document.createElement("h5");
         header.className = "ai-response-header";
-        header.textContent = "📌 Не классифицированные предложения:";
+        header.textContent = "📌 Не классифицированные предложения (оригинальный протокол можно посмотреть удерживая клавиши shift+пробел):";
 
         const ul = document.createElement("ul");
         ul.className = "ai-response-list";
@@ -1457,26 +1510,38 @@ function additionalFindings(response) {
 }
 
 
-// Функция для навешивания логики на Ctrl+Overlay
+// Функция для навешивания логики на Shift+Пробел (Space) 
+// название оставил старое для ctrl так как не меняе сути
 function attachCtrlOverlayLogic() {
     const overlay = document.getElementById("ctrlPreviewOverlay");
     if (!overlay) return;
     overlay.textContent = window.previousDynamicsText || "(нет сохранённого текста)";
 
-    document.addEventListener("keydown", (e) => {
-        if (e.key === "Control") {
-            overlay.classList.add("show");
-        }
-    });
+    // Используем флаг, чтобы избежать дребезга при зажатии клавиш
+    let isOverlayShown = false;
 
-    document.addEventListener("keyup", (e) => {
-        if (e.key === "Control") {
-            overlay.classList.remove("show");
+    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("keyup", onKeyUp);
+
+    function onKeyDown(e) {
+        if (e.shiftKey && e.code === "Space" && !isOverlayShown) {
+            overlay.classList.add("show");
+            isOverlayShown = true;
+            // Предотвращаем скроллинг по пробелу
+            e.preventDefault();
         }
-    });
+    }
+
+    function onKeyUp(e) {
+        if (isOverlayShown && (e.code === "Space" || !e.shiftKey)) {
+            overlay.classList.remove("show");
+            isOverlayShown = false;
+        }
+    }
 }
 
-// Функция для копирования текста в буфер обмена
+// Функция для копирования текста в буфер обмена использую для 
+// неклассфицированных предложений в логике трансформации протоколов в динамике
 function copyToClipboard(text) {
     navigator.clipboard.writeText(text).then(() => {
         console.log("Текст скопирован в буфер обмена:", text);
@@ -1486,7 +1551,8 @@ function copyToClipboard(text) {
 }
 
 
-// Функция для обработки клика по элементу списка
+// Функция для обработки клика по элементу списка использую для 
+// неклассфицированных предложений в логике трансформации протоколов в динамике
 function handleListMiscellaneousItemClick(event) {
     const listItem = event.target;
     const sentenceText = listItem.textContent.trim();
@@ -1501,95 +1567,3 @@ function handleListMiscellaneousItemClick(event) {
 }
 
 
-
-
-// Функция для установки зоны перетаскивания для динамического отчета
-function setupDynamicsDropZone() {
-    const dropZone = document.getElementById("dynamicsDropZone");
-    const preview = document.getElementById("dynamicsPreview");
-    const textarea = document.getElementById("dynamicsTextarea");
-
-    if (!dropZone) return;
-
-    // Drag & Drop
-    dropZone.addEventListener("dragover", e => {
-        e.preventDefault();
-        dropZone.classList.add("dragover");
-    });
-
-    dropZone.addEventListener("dragleave", e => {
-        e.preventDefault();
-        dropZone.classList.remove("dragover");
-    });
-
-    dropZone.addEventListener("drop", e => {
-        e.preventDefault();
-        dropZone.classList.remove("dragover");
-
-        const files = e.dataTransfer.files;
-        if (files.length > 0) {
-            handleFileUpload(files[0], preview, textarea);
-        }
-    });
-
-    // Paste image from clipboard
-    dropZone.addEventListener("paste", e => {
-        const items = e.clipboardData.items;
-        for (let item of items) {
-            if (item.type.indexOf("image") !== -1) {
-                const file = item.getAsFile();
-                handleFileUpload(file, preview, textarea);
-                e.preventDefault();
-            }
-        }
-    });
-}
-
-
-
-// Функция для предпросмотра и отправки файла на сервер
-function handleFileUpload(file, preview, textarea) {
-    if (!file) return;
-    preview.innerHTML = ""; // очищаем предпросмотр
-
-    // Предпросмотр для картинки
-    if (file.type.startsWith("image/")) {
-        const img = document.createElement("img");
-        img.style.maxWidth = "200px";
-        img.style.maxHeight = "200px";
-        preview.appendChild(img);
-
-        const reader = new FileReader();
-        reader.onload = function (e) {
-            img.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
-    } else if (file.type === "application/pdf") {
-        preview.textContent = "PDF файл загружен: " + file.name;
-    } else {
-        preview.textContent = "Неподдерживаемый тип файла: " + file.type;
-        return;
-    }
-
-    // Загружаем на сервер для OCR (сделай свой /ocr_extract_text маршрут)
-    const formData = new FormData();
-    formData.append("file", file);
-
-    sendRequest({
-        url: "/working_with_reports/ocr_extract_text",
-        method: "POST",
-        data: formData,
-        responseType: "json",
-        loader: true
-    }).then(data => {
-        if (data && data.status === "success" && data.text) {
-            if (data.message && data.message.includes("PDF files are not supported")) {
-                preview.textContent = data.message; 
-            } else if (data.text) {
-                textarea.value = data.text;
-            }
-        } else {
-            preview.textContent = "Ошибка распознавания: " + (data?.message || "Unknown error");
-        }
-    });
-}

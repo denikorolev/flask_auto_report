@@ -1,4 +1,4 @@
-# celery_task_processing.py
+# tasks/celery_task_processing.py
 
 from celery.result import AsyncResult
 from datetime import datetime, timezone
@@ -25,8 +25,9 @@ def cancel_stuck_tasks(max_pending_sec=120):
                 redis_delete(key)
     return stuck_tasks
 
-# watchdog-функция для отмены задач которые не были опрошены в течение 10 секунд
-def cancel_stale_polled_tasks(timeout_sec=10):
+
+# watchdog-функция для отмены задач которые не были опрошены в течение 20 секунд
+def cancel_stale_polled_tasks(timeout_sec=20):
     now = datetime.now(timezone.utc)
     killed = []
     for key in redis_keys("last_poll:*"):

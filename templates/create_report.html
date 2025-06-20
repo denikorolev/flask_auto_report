@@ -16,15 +16,15 @@
             <input class="input report-creation__input form-control" type="text" id="report_name" name="report_name" required>
         </div>
         <div class="report-creation__data-block">
-            <label class="report-creation__label" for="report_type">Тип протокола:</label>
+            <label class="report-creation__label" for="report_type">Модальность:</label>
             <select class="select report-creation__select" id="reportType" name="report_type" required>
                 {% for type in report_types_and_subtypes %}
-                <option value="{{ type.type_id }}">{{ type.type_text }}</option>
+                <option value="{{ type.type_id }}" data-type-text="{{ type.type_text }}">{{ type.type_text }}</option>
                 {% endfor %}
             </select>
         </div>
         <div class="report-creation__data-block">
-            <label class="report-creation__label" for="report_subtype">Подтип протокола:</label>
+            <label class="report-creation__label" for="report_subtype">Область исследования:</label>
             <select class="select report-creation__select" id="reportSubtype" name="report_subtype" required>
                 <!-- option заполню в js-->
             </select>
@@ -47,41 +47,49 @@
     </div>
     
     <div class="flex report-creation__container--action-selection-wrapper">
-        <!-- Селект для способа сохранения -->
+        <!-- Селект для способа сохранения. тут выбирается selectedAction -->
         <div class="report-creation__container report-creation__container--action">
             <label class="label">Выберите способ создания протокола:</label>
             
             <div class="flex_column report-creation__radio-group" id="reportCreationActionGroup">
-                <label class="report__radio-item">
-                    <input type="radio" name="action" value="manual" checked>
+                <label class="label">
+                    <input type="radio" name="action" value="manual" checked title="Тут вы сможете ввести текст протокола вручную.">
                     Вручную.
-                    Тут вы сможете ввести текст протокола вручную.
+                    
                 </label>
-                <label class="report__radio-item">
+                <label class="label" title="Тут вы сможете загрузить файл с протоколом.">
                     <input type="radio" name="action" value="file">
                     Из файла.
-                    Тут вы сможете загрузить файл с протоколом.
                 </label>
-                <label class="report__radio-item">
+                <label class="label" title="Тут вы сможете выбрать один из существующих протоколов.">
                     <input type="radio" name="action" value="existing_few">
                     Из существующих протоколов.
-                    Тут вы сможете выбрать один из существующих протоколов.
                 </label>
-                <label>
-                    <input type="radio" name="action" value="shared" > 
+                <label class="label" title="Тут вы сможете выбрать один из shared протоколов.">
+                    <input type="radio" name="action" value="shared">
                     Из shared протоколов.
                 </label>
-                <label>
-                    <input type="radio" name="action" value="public" > 
+                <label class="label" title="Тут вы сможете выбрать один из общедоступных протоколов.">
+                    <input type="radio" name="action" value="public">   
                     Из общедоступных протоколов.
                 </label>
-                
+                {% if user_max_rank == 4 %}
+                <label class="label" title="Тут вы сможете сгенерировать протокол с помощью ИИ.">
+                    <input type="radio" name="action" value="ai_generator">
+                    ИИ генерация.
+                </label>
+                {% endif %}
             </div>
         
             <button class="btn " id="createReportButton" type="button" name="report_creation">Создать протокол</button>
         </div>
         
         <div class="report-creation__container report-creation__container--selection">
+            <!-- Поле для ввода текста протокола вручную -->
+            <div id="manualReportCreationContainer" class="report-creation__container--manual" style="display: none;">
+                <p>Создание протокола в ручную параграф за параграфом, предложение за предложением.</p>
+            </div>
+
             <form id="reportCreationForm" class="flex_column" enctype="multipart/form-data" style="display: none;">
                 <label class="label" for="report_file">Загрузить файл с протоколом:</label>
                 <input class="report_input__item form-control" type="file" id="report_file" name="report_file" accept=".doc, .docx">
@@ -94,60 +102,82 @@
                 Каждый новый раздел документа начинается с заголовка. Заголовок должен быть выделен жирным шрифтом.
                 После заголовка идет обычный текст параграфа, который программа разделит на предложения автоматически.
 
-                Для разделения текста на отдельные предложения внутри параграфа используйте символы !!.
-                Если нужно разделить предложение на несколько вариантов (альтернатив), используйте !!. 
-                Программа добавит предложения после !! с тем же индексом и увеличенным весом.
-                Пример: "Это первое предложение!!Альтернативное предложение." Программа воспримет 
-                это как два связанных предложения.
+                Каждое новое ГЛАВНОЕ предложение должно начинаться с новой строки.
+
+                Если нужно добавить к предложению несколько вариантов (альтернатив), используйте два 
+                восклицательных знака -!!. До и после !! должен быть пробел.
+                Программа добавит предложения после !! в выпадающий список того предложения, которое идет первым на 
+                данной строке.
+                Пример: "Это первое предложение. !! Альтернативное предложение." Программа воспримет 
+                это как два связанных предложения."Это первое предложение." - будет основным, а "Альтернативное 
+                предложение." - в выпадающем списке.
 
                 Теперь вы знаете, как подготовить документ Word для создания шаблона. Правильно отформатируйте ваш текст, 
                 и программа автоматически обработает его, создавая удобный шаблон!
                 </pre>
             </form>
         
-            <!-- Список существующих отчетов -->
-            <div class="existing-fewreports" id="existingReportContainer" style="display: none;">
-                <h3 class="existing-fewreports__title">Выберите протокол из существующих:</h3>
-                <br>
-                <ul class="existing-fewreports__list" id="existingReportList">
-                    {% for report in user_reports %}
-                    <li class="existing-fewreports__item" data-report-type="{{ report.report_type }}">
-                        <input class="existing-fewreports__input--checkbox" type="checkbox" id="report_{{ report.id }}" name="existing_report_id" value="{{ report.id }}">
-                        <label class="existing-fewreports__label--checkbox" for="report_{{ report.id }}">{{ report.report_name }}</label>
-                        <span class="existing-fewreports__order-circle"></span>
-                    </li>
-                    {% endfor %}
-                </ul>
-            </div>
-
-            <!-- Список shared протоколов -->
-            <div id="sharedReportContainer" style="display: none;">
-                <h3>Shared протоколы</h3>
-                <ul id="sharedReportList" class="existing-fewreports__list">
-                    <!-- Список будет заполнен динамически через JS -->
-                </ul>
-            </div>
-
-            <!-- Список общедоступных протоколов -->
-            <div id="publicReportContainer" style="display: none;">
-                <div>
-                    <label class="label">Выберите модальность:</label>
-                    <select id="publicReportTypeSelect" class="select report-creation__select">
-                        <option value="allReports">Все</option>
-                        <!-- Опции будут заполнены динамически через JS -->
-                    </select>
-                </div>
-                <p>Осторожно фильтры работаю по принципу "или или" если вы ищете по словам, то в выдаче будут все модальности</p>
-                <div>
+            <div class="report-creation_filtered-list">
+                <!-- Поле для поиска по словам -->
+                <div id="reportSearchContainer" style="display: none;">
                     <label class="label">Начните вводить текст для быстрого поиска:</label>
-                    <input type="text" id="publicReportSearchInput" class="input report-creation__input" placeholder="Введите текст для поиска...">
+                    <input type="text" id="reportSearchInput" class="input report-creation__input" placeholder="Введите текст для поиска...">
                 </div>
 
-                <h3>Список общедоступных протоколов</h3>
-                <ul id="publicReportList" class="public-reports__list">
-                    
-                    <!-- Список будет заполнен динамически через JS -->
-                </ul>
+                <!-- Список существующих отчетов -->
+                <div class="existing-fewreports" id="existingReportContainer" style="display: none;">
+                    <h3 class="existing-fewreports__title">Выберите протокол из существующих (можно выбрать несколько протоколов и сделать на их основе один новый):</h3>
+                    <br>
+                    <ul class="existing-fewreports__list" id="existingReportList">
+                        <!-- Список будет заполнен динамически через JS -->
+                    </ul>
+                </div>
+                <!-- Список shared протоколов -->
+                <div id="sharedReportContainer" style="display: none;">
+                    <h3>Shared протоколы</h3>
+                    <ul id="sharedReportList" class="existing-fewreports__list">
+                        <!-- Список будет заполнен динамически через JS -->
+                    </ul>
+                </div>
+                <!-- Список общедоступных протоколов -->
+                <div id="publicReportContainer" style="display: none;">
+                    <h3>Список общедоступных протоколов</h3>
+                    <ul id="publicReportList" class="public-reports__list">
+                
+                        <!-- Список будет заполнен динамически через JS -->
+                    </ul>
+                </div>
+            </div>
+
+            <div id="aiGeneratorContainer" class="ai-generator__container" style="display: none;">
+                <h3 class="">ИИ генерация протокола</h3>
+                <textarea id="aiGeneratorTextarea" class="ai-generator__textarea" placeholder="Вставьте или введите шаблон для генерации"></textarea>
+                <div class="flex">
+                    <div id="aiGeneratorDropZone" class="ai-generator__dropzone">
+                        <p>Перетащи файл (JPG/PNG/PDF) сюда<br>или вставь скриншот из буфера (Ctrl+V)</p>
+                        <div id="aiGeneratorPreview" class="ai-generator__preview"></div>
+                    </div>
+                    <div class="flex_column">
+                        <div id="aiGeneratorProgressBarContainer" class="ai-generator__progress-bar-container" style="display:none;">
+                            <p id="aiGeneratorProgressBarText" class="ai-generator__progress-bar-text">Загрузка...</p>
+                            <div id="aiGeneratorProgressBar" class="ai-generator__progress-bar">
+                                <span id="aiGeneratorProgressBarLabel" class="ai-generator__progress-bar-label"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="dynamics-popup__footer"> <!-- Согласовать со стилями попап в working_with_report.html -->
+                    <div class="dynamics-popup__actions">
+                        <button class="btn" id="aiGeneratorPasteButton">Вставить из буфера</button>
+                        <button class="btn" id="aiGeneratorUploadButton">Загрузить файл</button>
+                        <button class="btn" id="aiGeneratorPrepareButton">Подготовить текст</button>
+                        <button class="btn" id="aiGeneratorGenerateButton">Сгенерировать шаблон</button>
+                    </div>
+                    <div class="dynamics-popup__actions">
+                        <button class="btn" id="aiGeneratorCancelButton">Отменить</button>
+                    </div>
+                </div>
+                <input type="file" id="aiGeneratorFileInput" accept=".jpg,.jpeg,.png,.pdf,image/*,application/pdf" style="display: none;">
             </div>
             
         </div>
@@ -167,7 +197,7 @@
 
 {% block scripts %}
     <script>const reportTypesAndSubtypes = {{ report_types_and_subtypes | tojson | safe }};</script>
-    <script src="{{ url_for('static', filename='js/create_report.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='js/create_report.js') }}"></script>
     <script src="{{ url_for('static', filename='js/utils/textFiltrator.js') }}"></script>
 {% endblock scripts %}
 

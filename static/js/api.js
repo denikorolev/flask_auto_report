@@ -45,12 +45,21 @@ function sendRequest({ url, method = "POST", data = {}, responseType = "json", l
                 
                 if (contentType && contentType.includes("application/json")) {
                     return response.json().then(errorData => {
-                        throw new Error(errorData.message || `HTTP error! Status: ${response.status}`);
+                        return {
+                            ...errorData,
+                            _httpError: true, // флаг, что это был не-200
+                            _httpStatus: response.status
+                        };
                     });
                 } else {
                     return response.text().then(errorText => {
-                        console.error("Server returned non-JSON response:", errorText);
-                        throw new Error(`Unexpected response format (status: ${response.status})`);
+                        console.error("Server returned non-JSON response (error from api):", errorText);
+                        return {
+                            status: "error",
+                            message: errorText,
+                            _httpError: true,
+                            _httpStatus: response.status
+                        };
                     });
                 }
             }
@@ -89,11 +98,16 @@ function sendRequest({ url, method = "POST", data = {}, responseType = "json", l
         })
         .catch(error => {
             alert(error.message);
-            console.error("Error:", error);
-            return null; // Не бросаем ошибку, чтобы `finally` отработал
+            console.error("Error message from api:", error);
+            return {
+                status: "error",
+                message: error.message,
+                _jsError: true
+            }; // не пробрасываю ошибку чтобы отработал finally блок
         })
         .finally(() => {
             hideLoader(); // Скрываем индикатор загрузки после завершения запроса
+            
         });
 }
 

@@ -509,13 +509,13 @@ def generate_impression_json(modality="CT"):
 
 # Функция для извлечения текста из загруженного файла с помощью OCR
 def extract_text_from_uploaded_file(file):
-    logger.info(f"extract_text_from_uploaded_file: {file}")
+    logger.info(f"(extract_text_from_uploaded_file) Начинаем извлечение текста из файла: {file.filename}")
     # Проверка типа файла (разрешён только jpeg/png)
     allowed_ext = {'jpg', 'jpeg', 'png', 'pdf'}
     filename = secure_filename(file.filename)
     ext = filename.rsplit('.', 1)[-1].lower()
     if ext not in allowed_ext:
-        logger.error(f"Unsupported file type: {ext}")
+        logger.error(f"(extract_text_from_uploaded_file) Ошибка: неподдерживаемый тип файла: {ext}")
         return None, f"Unsupported file type: {ext}"
 
     # Для PDF — сразу возвращаем "не поддерживается"
@@ -534,7 +534,8 @@ def extract_text_from_uploaded_file(file):
         text = "\n".join(result)
     except Exception as e:
         os.unlink(tmp_path)
-        logger.error(f"Error during OCR processing: {e}")
-        return None, f"OCR error: {str(e)}"
+        logger.error(f"(extract_text_from_uploaded_file) Ошибка при извлечении текста из файла: {str(e)}")
+        return None, f"Ошибка извлечения текста из файла: {str(e)}"
     os.unlink(tmp_path)
+    logger.info(f"(extract_text_from_uploaded_file) ✅ Текст успешно извлечен.")  # Логируем первые 100 символов текста
     return text, None

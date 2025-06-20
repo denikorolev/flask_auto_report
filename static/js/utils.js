@@ -123,10 +123,10 @@ function hideElement(element) {
 /**
  * Универсальная функция для показа попапа.
  */
-function showElement(element) {
+function showElement(element, useHideOnClickOutside = true) {
     if (element && element.style.display === "none") {
         element.style.display = "block";
-        hideOnClickOutside(element);
+        if (useHideOnClickOutside) hideOnClickOutside(element);
     }
 }
 

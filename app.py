@@ -20,7 +20,7 @@ from flask_security import Security, SQLAlchemyUserDatastore
 from flask_security.decorators import auth_required, roles_required
 from flask_security.signals import user_registered
 from file_processing import prepare_impression_snippets
-from extensions import make_celery, celery
+from tasks.extensions import make_celery
 
 # Импортирую блюпринты
 from working_with_reports import working_with_reports_bp  
@@ -35,7 +35,7 @@ from admin import admin_bp
 from tasks.tasks_status import tasks_status_bp
 
 
-version = "0.10.3.6"
+version = "0.10.4.1"
 
 
 app = Flask(__name__)

@@ -1,24 +1,59 @@
+// textFiltrator.js
+
 /**
- * Универсальная функция текстовой фильтрации элементов.
+ * Универсальная функция текстовой фильтрации массива элементов,
+ * с поддержкой detach и debounce. Работает с любым числом input'ов на странице.
  * 
- * @param {string} inputSelector - Селектор поля ввода текста.
- * @param {string} itemsSelector - Селектор элементов, которые нужно фильтровать.
- * @param {function} [getTextFn] - (необязательно) функция получения текста из элемента.
+ * @param {string|HTMLElement} inputSelector - селектор или сам input-элемент
+ * @param {Array<Element>} items - список элементов для фильтрации
+ * @param {function} [getTextFn] - функция получения текста из элемента
+ * @param {number} [debounceMs=100] - задержка debounce
+ * @returns {function} detach - функция удаления обработчика фильтрации
  */
-function setupTextFilter(inputSelector, itemsSelector, getTextFn = el => el.textContent) {
-    const input = document.querySelector(inputSelector);
-    const items = document.querySelectorAll(itemsSelector);
+function setupTextFilter(inputSelector, items, getTextFn = el => el.textContent, debounceMs = 150) {
+    const input = typeof inputSelector === 'string'
+        ? document.querySelector(inputSelector)
+        : inputSelector;
 
-    if (!input || items.length === 0) return;
+    if (!input || !items || !items.length) return () => {};
 
-    input.addEventListener("input", () => {
+    // --- Снимаем старый обработчик, если был ---
+    if (input._textFilterDetach) {
+        input._textFilterDetach();
+    }
+
+    // --- Debounce ---
+    let debounceTimer;
+    function debounce(fn, ms) {
+        return function(...args) {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => fn.apply(this, args), ms);
+        };
+    }
+
+    function filterItems() {
         const searchText = input.value.toLowerCase().trim();
         const searchWords = searchText.split(/\s+/);
-
         items.forEach(item => {
             const itemText = getTextFn(item).toLowerCase();
             const isMatch = searchWords.every(word => itemText.includes(word));
             item.style.display = isMatch ? "" : "none";
         });
-    });
+    }
+
+    const debouncedFilter = debounce(filterItems, debounceMs);
+
+    // --- Вешаем обработчик на input ---
+    input.addEventListener('input', debouncedFilter);
+    filterItems(); // сразу фильтруем при инициализации
+
+    // --- Возвращаем detach-функцию ---
+    function detach() {
+        input.removeEventListener('input', debouncedFilter);
+        delete input._textFilterDetach;
+    }
+    // Храним detach на самом input
+    input._textFilterDetach = detach;
+
+    return detach;
 }

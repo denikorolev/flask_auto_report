@@ -127,6 +127,7 @@ def reset_ai_session(assistant_id: str, user_id: int):
     redis_delete(thread_key)
 
 
+# Функция для проверки грамматики текста с помощью OpenAI API
 def gramma_correction_ai(text):
     logger.info("(функция gramma_correction_ai) --------------------------------------")
     logger.info("🚀 Начата попытка проверки текста с помощью OpenAI API.")
@@ -144,8 +145,8 @@ def gramma_correction_ai(text):
             raise ValueError("Assistant ID is not configured.")
 
         # Обработка запроса
-        reset_ai_session(assistant_id)
-        assistant_reply = _process_openai_request(text, assistant_id)
+        reset_ai_session(assistant_id, user_id=current_user.id)
+        assistant_reply = _process_openai_request(text, assistant_id, user_id=current_user.id)
 
         logger.info("(функция gramma_correction_ai) ✅ Ответ ассистента получен успешно")
         logger.debug(f"(функция gramma_correction_ai) Ответ: {assistant_reply}")
@@ -155,6 +156,154 @@ def gramma_correction_ai(text):
     except Exception as e:
         logger.exception(f"(функция gramma_correction_ai) ❌ Unexpected error: {str(e)}")
         raise ValueError(f"Ошибка при обращении к ИИ: error {e}")
+  
+  
+# Функция для очистки текста с помощью OpenAI. Использую в analyze_dinamics в working_with_reports.py
+def clean_raw_text(raw_text: str, user_id: int, max_attempts: int = 2) -> str:
+    logger.info("(Функция clean_raw_text) --------------------------------------")
+    logger.info("[clean_raw_text] 🚀 Начата очистка текста с помощью OpenAI API.")
+    logger.info("---------------------------------------------------")
+    
+    cleaner_assistant_id = current_app.config.get("OPENAI_ASSISTANT_TEXT_CLEANER")
+    if not cleaner_assistant_id:
+        logger.error("[clean_raw_text] ❌ Assistant ID for text cleaner is not configured.")
+        raise ValueError("Assistant ID for text cleaner is not configured.")
+    
+    for attempt in range(max_attempts):
+        try:
+            cleaned = _process_openai_request(
+                text=raw_text,
+                assistant_id=cleaner_assistant_id,
+                user_id=user_id,
+                file_id=None,
+                clean_response=False
+            )
+            if cleaned:
+                logger.info(f"[clean_raw_text] ✅ Очистка текста успешна на попытке {attempt + 1}.")
+                logger.info(f"[clean_raw_text] Очистка текста: {cleaned}")
+                logger.info("---------------------------------------------------")
+                return cleaned
+        except Exception as e:
+            logger.warning(f"[clean_raw_text] ❌ Попытка {attempt + 1} не удалась: {e}")
+        finally:
+            reset_ai_session(cleaner_assistant_id, user_id=user_id)
+
+    logger.warning("[clean_raw_text] ⚠️ Все попытки не удались, возвращаю исходный текст")
+    logger.info("---------------------------------------------------")
+    return raw_text
+
+
+
+# Функция для запуска ассистента первого взгляда. Использую в analyze_dinamics в working_with_reports.py
+def run_first_look_assistant(cleaned_text: str, template_text: list, user_id: int, max_attempts: int = 2) -> str:
+    logger.info("(Функция run_first_look_assistant) --------------------------------------")
+    logger.info("[run_first_look_assistant] 🚀 Начата попытка получения первого взгляда с помощью OpenAI API.")
+    logger.info("---------------------------------------------------")
+    
+    converted_template_text = convert_template_json_to_text(template_text)
+    if not converted_template_text:
+        logger.error("[run_first_look_assistant] ❌ Не удалось конвертировать шаблон в текст.")
+        raise ValueError("Не удалось конвертировать шаблон в текст.")
+
+    prompt = f"""TEMPLATE REPORT:
+                {converted_template_text}
+                RAW REPORT:
+                {cleaned_text}
+                """
+                
+    first_look_assistant_id = current_app.config.get("OPENAI_ASSISTANT_FIRST_LOOK_RADIOLOGIST")
+    if not first_look_assistant_id:
+        logger.error("[run_first_look_assistant] ❌ Assistant ID for first look is not configured.")
+        raise ValueError("Assistant ID for first look is not configured.")
+
+    for attempt in range(max_attempts):
+        try:
+            result = _process_openai_request(
+                text=prompt,
+                assistant_id=first_look_assistant_id,
+                user_id=user_id,
+                file_id=None,
+                clean_response=False
+            )
+            if result:
+                logger.info(f"[run_first_look_assistant] ✅ Получение первого взгляда успешно на попытке {attempt + 1}.")
+                logger.info(f"[run_first_look_assistant] Ответ ассистента: {result}")
+                logger.info("---------------------------------------------------")
+                return result
+        except Exception as e:
+            logger.warning(f"[run_first_look_assistant] ❌ Попытка {attempt + 1} не удалась: {e}")
+        finally:
+            reset_ai_session(first_look_assistant_id, user_id=user_id)
+
+    logger.error("[run_first_look_assistant] ❌ Все попытки получения первого взгляда не удались")
+    logger.info("---------------------------------------------------")
+    raise ValueError("Все попытки получения первого взгляда не удались.")
+
+
+# Окончательное структурирование протокола с помощью OpenAI API
+def structure_report_text(template_text: list, report_text: str, user_id: int, max_attempts: int = 2) -> list:
+    logger.info("(Функция structure_report_text) --------------------------------------")
+    logger.info("[structure_report_text] 🚀 Начата попытка структурирования отчета с помощью OpenAI API.")
+    logger.info("---------------------------------------------------")
+
+    prompt = f"""REPORT TEMPLATE:
+                {template_text}
+                ORIGINAL MEDICAL REPORT TEXT:
+                {report_text}
+                """
+
+    structurer_assistant_id = current_app.config.get("OPENAI_ASSISTANT_DYNAMIC_STRUCTURER")
+    if not structurer_assistant_id:
+        logger.error("[structure_report_text] ❌ Assistant ID for structurer is not configured.")
+        raise ValueError("Assistant ID for structurer is not configured.")
+
+    for attempt in range(max_attempts):
+        try:
+            result_text = _process_openai_request(
+                text=prompt,
+                assistant_id=structurer_assistant_id,
+                user_id=user_id,
+                file_id=None,
+                clean_response=False,
+            )
+            if not result_text:
+                logger.warning(f"[structure_report_text] ❌ Попытка {attempt + 1} не удалась: пустой ответ от ассистента.")
+                continue
+            logger.info(f"[structure_report_text] Получен ответ от ассистента на попытке {attempt + 1}.")
+            
+            try:
+                # Попытка загрузить ответ как JSON
+                parsed = pyjson.loads(result_text)
+            except pyjson.JSONDecodeError:
+                logger.warning(f"[structure_report_text] ❌ Ответ ассистента не является корректным JSON.")
+                raise ValueError("Ответ ассистента не является корректным JSON. Не удалось распарсить.")
+            
+            if isinstance(parsed, dict):
+                logger.info("[structure_report_text] ✅ Ответ ассистента является словарем. Достаю report.")
+                para_list = parsed.get("report", [])
+                logger.info(f"[structure_report_text] ✅ Удалось достать report. Теперь report это список содержащий: {len(para_list)} элементов.")
+            elif isinstance(parsed, list):
+                logger.info(f"[structure_report_text] 🙌 Ответ ассистента является списком с {len(parsed)} элементами. Пробую обработать его")
+                para_list = parsed
+            else:
+                logger.error("[structure_report_text] ❌ Ответ ассистента не является ни списком, ни словарем.")
+                raise ValueError("Ответ ассистента не является ни списком, ни словарем.")
+            
+            if para_list:
+                logger.info(f"[structure_report_text] ✅ Структурирование отчета успешно на попытке {attempt + 1}.")
+                logger.info(f"[structure_report_text] Отчет ассистента по структурированию: {para_list}")
+                logger.info("---------------------------------------------------")
+                return para_list
+        except Exception as e:
+            logger.warning(f"[structure_report_text] ❌ Попытка {attempt + 1} не удалась: {e}")
+        finally:
+            reset_ai_session(structurer_assistant_id, user_id=user_id)
+
+    logger.error("[structure_report_text] ❌ Все попытки структурирования отчета не удались")
+    logger.info("---------------------------------------------------")
+    raise ValueError("Все попытки структурирования отчета не удались.")
+    
+    
   
   
   
@@ -287,152 +436,53 @@ def generate_impression():
         return jsonify({"status": "error", "message": f"Ошибка при обращении к ИИ: error {e}" }), 500
 
 
-
-# Функция для очистки текста с помощью OpenAI. Использую в analyze_dinamics в working_with_reports.py
-def clean_raw_text(raw_text: str, user_id: int, max_attempts: int = 2) -> str:
-    logger.info("(Функция clean_raw_text) --------------------------------------")
-    logger.info("[clean_raw_text] 🚀 Начата очистка текста с помощью OpenAI API.")
-    logger.info("---------------------------------------------------")
-    
-    cleaner_assistant_id = current_app.config.get("OPENAI_ASSISTANT_TEXT_CLEANER")
-    if not cleaner_assistant_id:
-        logger.error("[clean_raw_text] ❌ Assistant ID for text cleaner is not configured.")
-        raise ValueError("Assistant ID for text cleaner is not configured.")
-    
-    for attempt in range(max_attempts):
-        try:
-            cleaned = _process_openai_request(
-                text=raw_text,
-                assistant_id=cleaner_assistant_id,
-                user_id=user_id,
-                file_id=None,
-                clean_response=False
-            )
-            if cleaned:
-                logger.info(f"[clean_raw_text] ✅ Очистка текста успешна на попытке {attempt + 1}.")
-                logger.info(f"[clean_raw_text] Очистка текста: {cleaned}")
-                logger.info("---------------------------------------------------")
-                return cleaned
-        except Exception as e:
-            logger.warning(f"[clean_raw_text] ❌ Попытка {attempt + 1} не удалась: {e}")
-        finally:
-            reset_ai_session(cleaner_assistant_id, user_id=user_id)
-
-    logger.warning("[clean_raw_text] ⚠️ Все попытки не удались, возвращаю исходный текст")
-    logger.info("---------------------------------------------------")
-    return raw_text
+# Маршрут для предварительной очистки текста испльзую в new_report_creation (можно также использовать в analyze_dinamics если разбить ее на части)
+@openai_api_bp.route("/clean_raw_text", methods=['POST'])
+@auth_required()
+def clean_raw_text_route():
+    logger.info("(Маршрут clean_raw_text_route) --------------------------------------")
+    logger.info(f"(Маршрут clean_raw_text_route) 🚀 Начата очистка текста с помощью OpenAI API.")
+    data = request.get_json()
+    raw_text = data.get("raw_text", "")
+    if not raw_text.strip():
+        logger.error(f"(Маршрут clean_raw_text_route) ❌ Не передан текст для очистки")
+        return jsonify({"status": "error", "message": "Не передан текст"}), 400
+    try:
+        cleaned = clean_raw_text(raw_text, user_id=current_user.id)
+        logger.info(f"(Маршрут clean_raw_text_route) ✅ Очистка текста успешна")
+        logger.info(f"(Маршрут clean_raw_text_route) ------------------------------------------")
+        return jsonify({"status": "success", "message": "Текст успешно очищен", "data": cleaned}), 200
+    except Exception as e:
+        logger.error(f"(Маршрут clean_raw_text_route) ❌ Ошибка при очистке текста: {str(e)}")
+        logger.info("---------------------------------------------------")
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 
 
-# Функция для запуска ассистента первого взгляда. Использую в analyze_dinamics в working_with_reports.py
-def run_first_look_assistant(cleaned_text: str, template_text: list, user_id: int, max_attempts: int = 2) -> str:
-    logger.info("(Функция run_first_look_assistant) --------------------------------------")
-    logger.info("[run_first_look_assistant] 🚀 Начата попытка получения первого взгляда с помощью OpenAI API.")
-    logger.info("---------------------------------------------------")
-    
-    converted_template_text = convert_template_json_to_text(template_text)
-    if not converted_template_text:
-        logger.error("[run_first_look_assistant] ❌ Не удалось конвертировать шаблон в текст.")
-        raise ValueError("Не удалось конвертировать шаблон в текст.")
-
-    prompt = f"""TEMPLATE REPORT:
-                {converted_template_text}
-                RAW REPORT:
-                {cleaned_text}
-                """
-                
-    first_look_assistant_id = current_app.config.get("OPENAI_ASSISTANT_FIRST_LOOK_RADIOLOGIST")
-    if not first_look_assistant_id:
-        logger.error("[run_first_look_assistant] ❌ Assistant ID for first look is not configured.")
-        raise ValueError("Assistant ID for first look is not configured.")
-
-    for attempt in range(max_attempts):
-        try:
-            result = _process_openai_request(
-                text=prompt,
-                assistant_id=first_look_assistant_id,
-                user_id=user_id,
-                file_id=None,
-                clean_response=False
-            )
-            if result:
-                logger.info(f"[run_first_look_assistant] ✅ Получение первого взгляда успешно на попытке {attempt + 1}.")
-                logger.info(f"[run_first_look_assistant] Ответ ассистента: {result}")
-                logger.info("---------------------------------------------------")
-                return result
-        except Exception as e:
-            logger.warning(f"[run_first_look_assistant] ❌ Попытка {attempt + 1} не удалась: {e}")
-        finally:
-            reset_ai_session(first_look_assistant_id, user_id=user_id)
-
-    logger.error("[run_first_look_assistant] ❌ Все попытки получения первого взгляда не удались")
-    logger.info("---------------------------------------------------")
-    raise ValueError("Все попытки получения первого взгляда не удались.")
-
-
-def structure_report_text(template_text: list, report_text: str, user_id: int, max_attempts: int = 2) -> list:
-    logger.info("(Функция structure_report_text) --------------------------------------")
-    logger.info("[structure_report_text] 🚀 Начата попытка структурирования отчета с помощью OpenAI API.")
-    logger.info("---------------------------------------------------")
-
-    prompt = f"""REPORT TEMPLATE:
-                {template_text}
-                ORIGINAL MEDICAL REPORT TEXT:
-                {report_text}
-                """
-
-    structurer_assistant_id = current_app.config.get("OPENAI_ASSISTANT_DYNAMIC_STRUCTURER")
-    if not structurer_assistant_id:
-        logger.error("[structure_report_text] ❌ Assistant ID for structurer is not configured.")
-        raise ValueError("Assistant ID for structurer is not configured.")
-
-    for attempt in range(max_attempts):
-        try:
-            result_text = _process_openai_request(
-                text=prompt,
-                assistant_id=structurer_assistant_id,
-                user_id=user_id,
-                file_id=None,
-                clean_response=False,
-            )
-            if not result_text:
-                logger.warning(f"[structure_report_text] ❌ Попытка {attempt + 1} не удалась: пустой ответ от ассистента.")
-                continue
-            logger.info(f"[structure_report_text] Получен ответ от ассистента на попытке {attempt + 1}.")
-            
-            try:
-                # Попытка загрузить ответ как JSON
-                parsed = pyjson.loads(result_text)
-            except pyjson.JSONDecodeError:
-                logger.warning(f"[structure_report_text] ❌ Ответ ассистента не является корректным JSON.")
-                raise ValueError("Ответ ассистента не является корректным JSON. Не удалось распарсить.")
-            
-            if isinstance(parsed, dict):
-                logger.info("[structure_report_text] ✅ Ответ ассистента является словарем. Достаю report.")
-                para_list = parsed.get("report", [])
-                logger.info(f"[structure_report_text] ✅ Удалось достать report. Теперь report это список содержащий: {len(para_list)} элементов.")
-            elif isinstance(parsed, list):
-                logger.info(f"[structure_report_text] 🙌 Ответ ассистента является списком с {len(parsed)} элементами. Пробую обработать его")
-                para_list = parsed
-            else:
-                logger.error("[structure_report_text] ❌ Ответ ассистента не является ни списком, ни словарем.")
-                raise ValueError("Ответ ассистента не является ни списком, ни словарем.")
-            
-            if para_list:
-                logger.info(f"[structure_report_text] ✅ Структурирование отчета успешно на попытке {attempt + 1}.")
-                logger.info(f"[structure_report_text] Отчет ассистента по структурированию: {para_list}")
-                logger.info("---------------------------------------------------")
-                return para_list
-        except Exception as e:
-            logger.warning(f"[structure_report_text] ❌ Попытка {attempt + 1} не удалась: {e}")
-        finally:
-            reset_ai_session(structurer_assistant_id, user_id=user_id)
-
-    logger.error("[structure_report_text] ❌ Все попытки структурирования отчета не удались")
-    logger.info("---------------------------------------------------")
-    raise ValueError("Все попытки структурирования отчета не удались.")
-    
-    
+@openai_api_bp.route("/ocr_extract_text", methods=["POST"])
+@auth_required()
+def ocr_extract_text():
+    logger.info(f"(Извлечение текста из загруженного файла) ------------------------------------")
+    logger.info(f"(Извлечение текста из загруженного файла) 🚀 Начинаю обработку запроса на извлечение текста из загруженного файла")
+    try:
+        file = request.files.get("file")
+        if not file:
+            logger.error(f"(Извлечение текста из загруженного файла) ❌ Не получен файл для обработки")
+            return jsonify({"status": "error", "message": "No file uploaded"}), 400
+        from file_processing import extract_text_from_uploaded_file
+        text, error = extract_text_from_uploaded_file(file)
+        if error:
+            # Если pdf — отдать код 200, но сообщить что не поддерживается
+            if "PDF files are not supported" in error:
+                logger.info(f"(Извлечение текста из загруженного файла) 📄 PDF файл не поддерживается")
+                return jsonify({"status": "success", "text": "", "message": error}), 200
+            logger.error(f"(Извлечение текста из загруженного файла) ❌ Ошибка при извлечении текста: {error}")
+            return jsonify({"status": "error", "message": error}), 400
+        logger.info(f"(Извлечение текста из загруженного файла) ✅ Текст успешно извлечен")
+        return jsonify({"status": "success", "text": text}), 200
+    except Exception as e:
+        logger.error(f"(Извлечение текста из загруженного файла) ❌ Ошибка при обработке файла: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
     
     
     

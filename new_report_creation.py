@@ -98,16 +98,42 @@ def create_report_from_existing(report_name, report_subtype, comment, report_sid
 @auth_required()
 def create_report():
     report_types_and_subtypes = ReportType.get_types_with_subtypes(g.current_profile.id)
-    current_user_reports_data = []
-    current_user_reports = Report.query.filter_by(user_id=current_user.id).all()
-    for report in current_user_reports:
-        report_info = Report.get_report_info(report.id)
-        current_user_reports_data.append(report_info)
     return render_template("create_report.html",
                            title="Создание нового протокола",
-                           user_reports=current_user_reports_data,
                            report_types_and_subtypes=report_types_and_subtypes
                            )
+    
+    
+@new_report_creation_bp.route("/get_existing_reports", methods=["GET"])
+@auth_required()
+def get_existing_reports():
+    logger.info("[get_existing_reports]------------------------")
+    logger.info("[get_existing_reports] 🚀 Начат запрос существующих протоколов пользователя")
+    try:
+        type_id = request.args.get("type_id", type=int)
+        query = Report.query.filter_by(user_id=current_user.id, profile_id=g.current_profile.id)
+        if type_id:
+            # Подтянем только нужный тип
+            query = query.join(ReportSubtype).filter(ReportSubtype.type_id == type_id)
+        user_reports = query.all()
+
+        if not user_reports:
+            return jsonify({"status": "success", "reports": []})
+
+        reports_data = []
+        for report in user_reports:
+            reports_data.append({
+                "id": report.id,
+                "report_name": report.report_name,
+                "report_type": report.report_to_subtype.subtype_to_type.type_text,
+                
+            })
+        print(reports_data)
+        return jsonify({"status": "success", "reports": reports_data})
+
+    except Exception as e:
+        logger.error(f"[get_existing_reports] ❌ Ошибка при получении протоколов пользователя: {e}")
+        return jsonify({"status": "error", "message": "Не удалось получить протоколы пользователя."}), 500
     
     
 # Получение shared протоколов
@@ -118,18 +144,21 @@ def get_shared_reports():
     logger.info("[get_shared_reports] 🚀 Начат запрос расшаренных протоколов")
 
     try:
-        # Получаем записи, где текущий пользователь получатель
+        type_text = request.args.get("type_text", type=str)
         shared_records = ReportShare.query.filter_by(shared_with_user_id=current_user.id).all()
 
         if not shared_records:
-            logger.info("[get_shared_reports] ⚠️ Нет протоколов которыми кто-либо поделился с данными пользователем.")
-            return jsonify({"status": "warning", "message": "Нет протоколов которыми кто-либо поделился с данными пользователем.", "reports": []})
+            logger.info("[get_shared_reports] ⚠️ Нет протоколов, которыми кто-либо поделился с данным пользователем.")
+            return jsonify({"status": "warning", "message": "Нет протоколов, которыми кто-либо поделился с данным пользователем.", "reports": []})
 
         shared_reports = []
         for record in shared_records:
             report = record.report
             if not report:
                 continue  # на случай, если отчет удалён
+            # Фильтруем по типу, если указан
+            if type_text and report.report_to_subtype.subtype_to_type.type_text != type_text:
+                continue
 
             shared_reports.append({
                 "id": report.id,
@@ -137,6 +166,9 @@ def get_shared_reports():
                 "report_type": report.report_to_subtype.subtype_to_type.type_text,
                 "shared_by_email": record.shared_by.email
             })
+        if not shared_reports:
+            logger.info("[get_shared_reports] ⚠️ Нет расшаренных протоколов для данной модальности.")
+            return jsonify({"status": "warning", "message": "Нет расшаренных протоколов для данной модальности.", "reports": []})
 
         logger.info(f"[get_shared_reports] ✅ Возвращено {len(shared_reports)} расшаренных протоколов")
         logger.info(f"[get_shared_reports] ------------------------")
@@ -154,9 +186,11 @@ def get_public_reports():
     logger.info("(Маршрут: get_public_reports)------------------------")
     logger.info("(Маршрут: get_public_reports) 🚀 Запрос общедоступных протоколов")
     try:
-        public_reports = Report.query.filter(
-            Report.public == True,
-        ).all()
+        type_text = request.args.get("type_text", type=str)
+        query = Report.query.filter(Report.public == True)
+        if type_text:
+            query = query.join(ReportSubtype).join(ReportType).filter(ReportType.type_text == type_text)
+        public_reports = query.all()
         
         if not public_reports:
             return jsonify({
@@ -165,20 +199,17 @@ def get_public_reports():
                 "reports": []
             })
         public_reports_data = []
-        public_report_types = set()
         for report in public_reports:
             public_reports_data.append({
                 "id": report.id,
                 "report_name": report.report_name,
                 "report_type": report.report_to_subtype.subtype_to_type.type_text
             })
-            public_report_types.add(report.report_to_subtype.subtype_to_type.type_text)
 
         logger.info(f"(Маршрут: get_public_reports) ✅ Найдено {len(public_reports)} общедоступных протоколов")
         return jsonify({
             "status": "success",
-            "reports": public_reports_data,
-            "report_types": list(public_report_types)
+            "reports": public_reports_data
         })
 
     except Exception as e:

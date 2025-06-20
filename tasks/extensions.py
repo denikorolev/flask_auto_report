@@ -5,8 +5,7 @@ from datetime import datetime, timezone
 from utils.redis_client import redis_set
 
 celery = Celery()
-import celery_tasks 
-celery.config_from_object('celeryconfig')
+celery.config_from_object('tasks.celeryconfig')
 
 def make_celery(app):
     celery.conf.update(
@@ -35,4 +34,4 @@ def store_enqueue_time(sender=None, headers=None, **kwargs):
     task_id = headers.get('id')
     if task_id:
         now = datetime.now(timezone.utc).isoformat()
-        redis_set(f"task_enqueue_time:{task_id}", now, ex=3600)
+        redis_set(f"task_enqueue_time:{task_id}", now, ex=600)

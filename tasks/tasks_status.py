@@ -4,7 +4,7 @@
 
 from flask import Blueprint, jsonify
 from celery.result import AsyncResult
-from celery_task_processing import cancel_stuck_tasks
+from tasks.celery_task_processing import cancel_stuck_tasks
 from datetime import datetime, timezone
 from utils.redis_client import redis_set
 
@@ -20,7 +20,7 @@ def task_status(task_id):
     # Обновляем время последнего запроса статуса. 
     # Это нужно для watchdog-функции, которая отменяет задачи, если они не были опрошены в течение 10 секунд.
     now = datetime.now(timezone.utc).isoformat()
-    redis_set(f"last_poll:{task_id}", now, ex=600)
+    redis_set(f"last_poll:{task_id}", now, ex=300)
 
     task = AsyncResult(task_id)
 

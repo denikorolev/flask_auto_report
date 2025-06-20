@@ -1,7 +1,12 @@
 // create_report.js
 
+import { setupDynamicsDropZone, handleFileUpload, handlePasteFromClipboard } from "/static/js/utils/dynamicsDropZone.js";
+import { prepareTextWithAI } from "/static/js/utils/ai_handlers.js";
+
 // Массив для хранения последовательности выбора отчетов
 let selectedReports = [];
+let detachCurrentFilter = null; // Переменная для хранения функции фильтрации отчетов
+
 
 document.addEventListener("DOMContentLoaded", function() {
     
@@ -13,15 +18,17 @@ document.addEventListener("DOMContentLoaded", function() {
     // Вешаем обработчик на изменение способа создания отчета
     document.querySelectorAll('input[name="action"]').forEach(radio => {
         radio.addEventListener("change", function () {
-            handleActionChange(this.value);
+            handleActionChange(this.value); // Передаем значение выбранного radio input это будет selectedAction
         });
     });
 
-    
+    // Обработчик кнопки ИИ-генерации
+    document.getElementById("aiGeneratorButton")?.addEventListener("click", prepareTextForAiGeneration);
+
+
     // Вешаем функцию обработчик на кнопку "Создать протокол"
     document.getElementById("createReportButton")?.addEventListener("click", handleCreateReportClick);
-    // Вешаем обработчик на чекбоксы существующих отчетов
-    document.getElementById("existingReportList").addEventListener("change", handleReportSelection);
+    
 
 });
 
@@ -36,7 +43,6 @@ function handleReportTypeChange() {
     // Получаем подтипы для выбранного типа
     const selectedType = reportTypesAndSubtypes.find(type => type.type_id === reportType);
     const currentSubtypes = selectedType ? selectedType.subtypes : [];
-    const reportTypeText = selectedType ? selectedType.type_text : "неизвестный тип";
 
     // Если нет подтипов, добавлям заглушку
     if (currentSubtypes.length === 0) {
@@ -57,24 +63,68 @@ function handleReportTypeChange() {
         reportSubtypeSelect.appendChild(option);
     });
     
-    // фильтруем список существующих протоколов в зависимости от выбранного типа
-    const existingReportsList = document.querySelectorAll("#existingReportList li");
-
-    existingReportsList.forEach(item => {
-        const itemReportType = item.dataset.reportType;
-        if (itemReportType === String(reportTypeText)) {
-            item.style.display = "block";
-        } else {
-            item.style.display = "none";
-        }
-    });
-
-    // Сбрасываем выбор отчетов
+    // Сбрасываем выбор отчетов и чекбоксы (если надо)
     selectedReports = [];
+    document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+        checkbox.checked = false;
+    });
+    updateOrderCircles();
+
+    // Теперь загружаем с сервера список отчётов нужного типа для каждого режима:
+    // existing_few, shared, public — по их контейнерам
+    if (document.getElementById("existingReportContainer").style.display === "block") {
+        loadExistingReports();
+    }
+    if (document.getElementById("sharedReportContainer").style.display === "block") {
+        loadSharedReports();
+    }
+    if (document.getElementById("publicReportContainer").style.display === "block") {
+        loadPublicReports();
+    }
 
 }
 
 // Функции обработчики
+
+
+// Активирует универсальный поиск по отчетам в зависимости от видимого списка
+function activateUniversalSearch() {
+    // Определяем, какой список сейчас видим
+    const searchContainer = document.getElementById("reportSearchContainer");
+    if (!searchContainer) return;
+    searchContainer.style.display = "none"; // Скрываем контейнер поиска, если он был виден
+
+    const lists = [
+        document.getElementById("existingReportList"),
+        document.getElementById("sharedReportList"),
+        document.getElementById("publicReportList")
+    ];
+
+    let activeList = null;
+    for (const ul of lists) {
+        if (ul && ul.parentElement && ul.parentElement.style.display !== "none") {
+            activeList = ul;
+            break;
+        }
+    }
+    if (!activeList) return;
+
+    if (searchContainer.style.display === "none") {
+        searchContainer.style.display = "block"; // Показываем контейнер поиска
+    }
+
+    const items = Array.from(activeList.querySelectorAll("li"));
+    const inputSelector = "#reportSearchInput";
+
+    // Снимаем старый фильтр, если был
+    if (typeof detachCurrentFilter === "function") {
+        detachCurrentFilter();
+    }
+
+    // Вешаем фильтр на активный список
+    detachCurrentFilter = setupTextFilter(inputSelector, items);
+}
+
 
 /**
  * Обновляет номера в кружках порядка выбора отчетов.
@@ -152,26 +202,39 @@ function handleActionChange(selectedAction) {
     const existingReportContainer = document.getElementById("existingReportContainer");
     const sharedReportContainer = document.getElementById("sharedReportContainer");
     const publicReportContainer = document.getElementById("publicReportContainer");
-
+    const manualReportContainer = document.getElementById("manualReportCreationContainer");
+    const aiGeneratorContainer = document.getElementById("aiGeneratorContainer");
     // Скрываем все
     fileUploadContainer.style.display = "none";
     existingReportContainer.style.display = "none";
     sharedReportContainer.style.display = "none";
     publicReportContainer.style.display = "none";
+    manualReportContainer.style.display = "none";
+    aiGeneratorContainer.style.display = "none";
 
     // Показываем выбранный
     if (selectedAction === "file") {
         fileUploadContainer.style.display = "flex";
+        activateUniversalSearch(); 
+    } else if (selectedAction === "manual") {
+        manualReportContainer.style.display = "flex";
+        activateUniversalSearch(); 
     } else if (selectedAction === "existing_few") {
         existingReportContainer.style.display = "block";
+        loadExistingReports();  
     } else if (selectedAction === "shared") {
         sharedReportContainer.style.display = "block";
         loadSharedReports();  
     } else if (selectedAction === "public") {
         publicReportContainer.style.display = "block";
         loadPublicReports();  
+    } else if (selectedAction === "ai_generator") {
+        aiGeneratorContainer.style.display = "block";
+        document.getElementById("aiGeneratorTextarea").value = "";
+        document.getElementById("aiGeneratorPreview").innerHTML = "";
+        activateUniversalSearch();
+        showAiGeneratorBlock(); // Показываем блок ИИ-генерации
     }
-
 
     // Сброс выбранных отчетов
     selectedReports = [];
@@ -185,20 +248,86 @@ function handleActionChange(selectedAction) {
 }
 
 
+// Получает информацию о выбранном типе отчета (для быстрого закидывания в JSON и переменные)
+function getReportTypeInfo() {
+    const select = document.getElementById("reportType");
+    const option = select.options[select.selectedIndex];
+    return {
+        typeId: select.value,
+        typeText: option.getAttribute("data-type-text"),
+        option,
+        select,
+    };
+}
+
+
+
+// Отправляет запрос на сервер для получения данных о существующих отчетах
+async function loadExistingReports() {
+    const list = document.getElementById("existingReportList");
+    list.innerHTML = ""; // Очистить список
+
+    // Получаем выбранный тип
+
+    const { typeId } = getReportTypeInfo();
+
+    try {
+        const response = await sendRequest({
+            method: "GET",
+            url: `/new_report_creation/get_existing_reports?type_id=${typeId}`,
+        });
+
+        if (response.status !== "success") {
+            list.innerHTML = `<li>Ошибка: ${response.message}</li>`;
+            return;
+        }
+        if (!response.reports.length) {
+            list.innerHTML = `<li>Нет существующих протоколов выбранного типа.</li>`;
+            return;
+        }
+
+        // Заполняем список
+        response.reports.forEach(report => {
+            const li = document.createElement("li");
+            li.setAttribute("data-report-type", report.report_type); // Для логики выбора, если нужно
+            li.classList.add("existing-fewreports__item");
+            li.innerHTML = `
+                <input class="existing-fewreports__input--checkbox" type="checkbox" id="report_${report.id}" name="existing_report_id" value="${report.id}">
+                <label class="existing-fewreports__label--checkbox" for="report_${report.id}">${report.report_name}</label>
+                <span class="existing-fewreports__order-circle></span>
+            `;
+            list.appendChild(li);
+        });
+
+        // Вешаем обработчик на чекбоксы существующих отчетов
+        list.addEventListener("change", handleReportSelection);
+
+        activateUniversalSearch();
+
+    } catch (error) {
+        list.innerHTML = `<li>Не удалось загрузить существующие протоколы.</li>`;
+        console.error(error);
+    }
+}
+
+
+
+
 // Отправляет запрос на сервер для получения данных о существующих shared отчетах
 async function loadSharedReports() {
     const list = document.getElementById("sharedReportList");
     list.innerHTML = ""; // очистим
 
+    const { typeText } = getReportTypeInfo(); // получаем тип отчета
+
     try {
         const response = await sendRequest({
-            url: "/new_report_creation/get_shared_reports",
+            url: `/new_report_creation/get_shared_reports?type_text=${encodeURIComponent(typeText)}`,
             method: "GET"
         });
 
         if (response.status != "error") {
-            if (response.reports.length === 0) {
-                console.log("Нет доступных протоколов от других пользователей.");
+            if (!response.reports.length) {
                 list.innerHTML = `<li>Нет доступных протоколов от других пользователей.</li>`;
                 return;
             }
@@ -214,37 +343,38 @@ async function loadSharedReports() {
                 `;
                 list.appendChild(li);
             });
-        } else {
-            list.innerHTML = `<li>Ошибка: ${response.message}</li>`;
-        }
+
+            activateUniversalSearch(); // Активируем универсальный поиск по словам
+        } 
     } catch (error) {
         list.innerHTML = `<li>Не удалось загрузить протоколы других пользователей.</li>`;
     }
 }
 
+
 // Отправляет запрос на сервер для получения данных о существующих public отчетах
 async function loadPublicReports() {    
     const list = document.getElementById("publicReportList");
-    const typeSelect = document.getElementById("publicReportTypeSelect");
     list.innerHTML = ""; // сброс
-    typeSelect.innerHTML = '<option value="allReports">Все</option>'; // сброс
+
+    const { typeText } = getReportTypeInfo(); // получаем тип отчета
 
     try {
         const response = await sendRequest({
             method: "GET",
-            url: "/new_report_creation/get_public_reports"
+            url: `/new_report_creation/get_public_reports?type_text=${encodeURIComponent(typeText)}`
         });
 
-        if (response.status === "success" && response.reports.length > 0) {
-            // Заполнение селекта с типами
-            if (response.report_types && response.report_types.length > 0) {
-                response.report_types.forEach(type => {
-                    const option = document.createElement("option");
-                    option.value = type;
-                    option.textContent = type;
-                    typeSelect.appendChild(option);
-                });
-            }
+        if (response.status === "success" && !response.reports.length) {
+            list.innerHTML = `<li>Нет общедоступных протоколов для данного типа.</li>`;
+            return;
+        }
+
+        if (response.status === "success") {
+            const reportTypeSelect = document.getElementById("reportType");
+            const selectedOption = reportTypeSelect.options[reportTypeSelect.selectedIndex];
+            const selectedReportType = selectedOption.getAttribute("data-type-text");
+
             // Заполнение списка протоколов
             response.reports.forEach(report => {
                 const li = document.createElement("li");
@@ -259,28 +389,97 @@ async function loadPublicReports() {
                 list.appendChild(li);
             });
 
-            // Обработчик фильтрации по типу 
-            typeSelect.addEventListener("change", function () {
-                const selectedType = this.value;
-                const reportItems = document.querySelectorAll("#publicReportList li");
-                reportItems.forEach(item => {
-                    const itemType = item.getAttribute("data-report-type");
-                    item.style.display = (selectedType === "allReports" || 
-                        selectedType === "" || 
-                        itemType === selectedType
-                    ) ? "block" : "none";
-                });
-            });
+            activateUniversalSearch(); // Активируем универсальный поиск по словам
 
-            setupTextFilter("#publicReportSearchInput", "#publicReportList li");
-
-        } else {
-            list.innerHTML = `<li>Нет общедоступных протоколов.</li>`;
-        }
+        } 
     } catch (error) {
         list.innerHTML = `<li>Не удалось загрузить общедоступные протоколы.</li>`;
         console.error(error);
     }
+}
+
+
+
+
+// Обработчик для блока ИИ-генерации шаблона
+function showAiGeneratorBlock() {
+    const container = document.getElementById("aiGeneratorContainer");
+    if (!container) {
+        console.error("aiGeneratorContainer not found");
+        return;
+    }
+
+    // Элементы
+    const textarea = document.getElementById("aiGeneratorTextarea");
+    const dropZone = document.getElementById("aiGeneratorDropZone");
+    const preview = document.getElementById("aiGeneratorPreview");
+    const pasteButton = document.getElementById("aiGeneratorPasteButton");
+    const uploadBtn = document.getElementById("aiGeneratorUploadButton");
+    const prepareButton = document.getElementById("aiGeneratorPrepareButton");
+    const cancelButton = document.getElementById("aiGeneratorCancelButton");
+    const fileInput = document.getElementById("aiGeneratorFileInput");
+    // Для будущей загрузки файлов с input (пока не реализовано)
+    // const fileInput = document.getElementById("aiGeneratorFileInput");
+
+    // Очистка состояния перед показом
+    textarea.value = "";
+    preview.innerHTML = "";
+
+    // Показываем сам блок (если скрыт)
+    container.style.display = "block";
+
+    // Инициализация dropzone (detach функция для снятия обработчиков)
+    let detachDropZone = setupDynamicsDropZone({
+        dropZoneId: "aiGeneratorDropZone",
+        previewId: "aiGeneratorPreview",
+        textareaId: "aiGeneratorTextarea"
+    });
+
+    // Обработчик для вставки текста из буфера обмена
+    const pasteHandler = async () => {
+        await handlePasteFromClipboard(textarea, preview);
+    };
+
+    // Обработчик "Подготовить текст" — просто вызывает уже существующую функцию
+    const prepareTextHandler = async () => {
+        await prepareTextWithAI(textarea, prepareButton);
+    };
+
+    // Заглушка для "Отменить" (можно будет заменить на сброс блока/скрытие)
+    const cancelHandler = () => {
+        alert("Отмена создания протокола через ИИ-генерацию. Блок будет скрыт.");
+    };
+
+    // Обработчик выбора файла
+    const fileSelectHandler = (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (file) {
+            handleFileUpload(file, preview, textarea);
+        }
+        // Сброс значения чтобы можно было выбрать тот же файл снова при необходимости
+        fileInput.value = "";
+    };
+
+    // Промежуточный обработчик симулирующий клик на input для 
+    // загрузки файла при клике на кнопку загрузить файл
+    const uploadBtnHandler = () => {
+        fileInput.click();
+    };
+
+    // Вешаем обработчики
+    pasteButton.addEventListener("click", pasteHandler);
+    prepareButton.addEventListener("click", prepareTextHandler);
+    cancelButton.addEventListener("click", cancelHandler);
+    fileInput.addEventListener("change", fileSelectHandler);
+    uploadBtn.addEventListener("click", uploadBtnHandler);
+
+    // Вернуть функцию для снятия обработчиков если нужно внести контроль снаружи
+    return () => {
+        pasteButton.removeEventListener("click", pasteHandler);
+        prepareButton.removeEventListener("click", prepareTextHandler);
+        cancelButton.removeEventListener("click", cancelHandler);
+        if (detachDropZone) detachDropZone();
+    };
 }
 
 
@@ -466,6 +665,9 @@ function createReportFromShared() {
         }
     });
 }
+
+
+
 
 
 

@@ -102,7 +102,7 @@
     <textarea id="dynamicsTextarea" class="dynamics-popup__textarea" placeholder="Вставьте текст предыдущего протокола сюда"></textarea>
 
     <div class="flex">
-        <div id="dynamicsDropZone" class="dynamics-popup__dropzone">
+        <div id="dynamicsDropZone" class="ai-generator__dropzone">
             <p>Перетащи файл (JPG/PNG/PDF) сюда<br>или вставь скриншот из буфера (Ctrl+V)</p>
             <div id="dynamicsPreview"></div>
         </div>
@@ -118,8 +118,14 @@
     </div>
 
     <div class="dynamics-popup__footer">
-        <button class="btn" id="analyzeDynamicsButton">Анализировать</button>
+        <div class="dynamics-popup__actions">
+            <button class="btn " id="pasteDynamicsButton">Вставить из буфера</button>
+            <button class="btn" id="uploadFileDynamicsButton">Загрузить файл</button>
+            <button class="btn " id="prepareTextDynamicsButton">Подготовить текст</button>
+            <button class="btn" id="analyzeDynamicsButton">Анализировать</button>
+        </div>
         <button class="btn dynamics-popup__btn--close" id="closeDynamicsPopup">Закрыть</button>
     </div>
+    <input type="file" id="dynamicFileUploadInput" accept=".jpg,.jpeg,.png,.pdf,image/*,application/pdf" style="display: none;">
 </div>
 {% endmacro %}
