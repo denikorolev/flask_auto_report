@@ -330,8 +330,6 @@ def feedback_form():
 
 
 
-# Фильтруем логи
-
 
 if os.getenv("FLASK_ENV") == "local":
     from flask_debugtoolbar import DebugToolbarExtension
@@ -339,31 +337,6 @@ if os.getenv("FLASK_ENV") == "local":
         """Фильтр для исключения запросов к /static/."""
         def filter(self, record):
             return not record.getMessage().startswith("GET /static/")
-
-    class DebugToolbarFilter(logging.Filter):
-        """Фильтр для исключения запросов к /_debug_toolbar/static/."""
-        def filter(self, record):
-            return not record.getMessage().startswith("GET /_debug_toolbar/static/")
-
-    class RemoveHeadersFilter(logging.Filter):
-        """Фильтр для исключения заголовков запросов из логов."""
-        def filter(self, record):
-            return not record.getMessage().startswith("Headers:")
-        
-    
-    
-    # Подключаем фильтры к логгеру Flask
-    app.logger.addFilter(StaticFilter())
-    app.logger.addFilter(DebugToolbarFilter())
-    app.logger.addFilter(RemoveHeadersFilter())
-   
-
-    # Подключаем фильтры к логгеру Werkzeug
-    werkzeug_logger = logging.getLogger("werkzeug")
-    
-    werkzeug_logger.addFilter(StaticFilter())
-    werkzeug_logger.addFilter(DebugToolbarFilter())
-    werkzeug_logger.addFilter(RemoveHeadersFilter())
 
 
 
