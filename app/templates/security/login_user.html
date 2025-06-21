@@ -1,0 +1,59 @@
+{% extends "security/base_login.html" %}
+
+{% block container %}
+{{ super() }}
+
+
+<div class="auth-register">
+    <h1 class="title auth-register__title">Авторизация</h1>
+    <form action="{{ url_for('security.login') }}" method="POST" class="auth-register__form" id="loginForm" name="login_form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    
+        <ul class="auth-register__list">
+            <li class=" auth-register__item">
+                <label class="label" for="authRegisterEmail">Электронная почта:</label>
+                    <input class="input auth-register__input" type="email" id="authRegisterEmail" name="email" required autocomplete="email">
+            </li>
+            <li class=" auth-register__item">
+                <label class="label" for="authRegisterPassword">Пароль:</label>
+                    <input class="input auth-register__input" type="password" id="authRegisterPassword" name="password" required autocomplete="current-password">
+            </li>
+            <li class=" auth-register__item">
+                <label class="label label--checkbox">Запомнить меня:
+                    <input class="checkbox" id="authRegisterRemember" name="remember" type="checkbox" value="y">
+                </label>
+            </li>
+            <li class="auth-register__item">
+                <a class="auth-register__link" href="{{ url_for('security.forgot_password') }}">Забыли пароль?</a>
+            </li>
+            <li class="auth-register__item">
+                <button class="btn auth-register__btn" type="submit">Войти</button>
+            </li>
+        </ul>
+    </form>
+    {% if login_user_form.errors %}
+        <ul class="auth-register__errors">
+        {% for field, errors in login_user_form.errors.items() %}
+            {% for error in errors %}
+                <li class="auth-register__error">
+                    <p>В поле {{ field }}</p>
+                    <p>ошибка:  {{ error }}</p>
+                </li>
+            {% endfor %}
+        {% endfor %}
+        </ul>
+    {% endif %}
+    <p>Еще нет аккаунта? 
+        <a class="auth-register__link" href="{{ url_for('security.register') }}">Зарегистрироваться</a> 
+    </p>
+    <a class="auth-register__link" href="{{ url_for('main.index') }}">На главную страницу</a>
+        
+</div>
+
+
+
+
+
+
+
+{% endblock container %}

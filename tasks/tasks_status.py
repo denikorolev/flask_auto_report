@@ -6,7 +6,7 @@ from flask import Blueprint, jsonify
 from celery.result import AsyncResult
 from tasks.celery_task_processing import cancel_stuck_tasks
 from datetime import datetime, timezone
-from utils.redis_client import redis_set
+from app.utils.redis_client import redis_set
 
 
 tasks_status_bp = Blueprint("celery_tasks", __name__)

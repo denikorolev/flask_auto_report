@@ -2,7 +2,7 @@
 
 from celery.result import AsyncResult
 from datetime import datetime, timezone
-from utils.redis_client import redis_set, redis_get, redis_delete, get_redis, redis_keys
+from app.utils.redis_client import redis_set, redis_get, redis_delete, get_redis, redis_keys
 
 
 

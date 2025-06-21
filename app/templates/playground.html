@@ -1,0 +1,28 @@
+<!-- playground.html-->
+
+{% extends "base.html" %}
+
+{% block container %}
+<input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
+
+<h1>Welcome to playground</h1>
+<p>Here you can play with different elements of the page</p>
+<br>
+
+<div class="flex container">
+       
+  Welcome to playground
+</div>
+<form method="POST" action="{{ url_for('support.playground') }}">
+    <input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="btn ">Отправить тестовое письмо</button>
+</form>
+
+
+
+
+{% endblock %}
+
+{% block scripts %}
+    <script src="{{ url_for('static', filename='js/playground.js') }}"></script>
+{% endblock %}

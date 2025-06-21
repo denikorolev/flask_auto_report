@@ -18,7 +18,7 @@ from sentence_processing import clean_text_with_keywords, _add_if_unique
 from openai import OpenAI
 from logger import logger
 import easyocr
-from utils.redis_client import redis_get, redis_set, redis_delete
+from app.utils.redis_client import redis_get, redis_set, redis_delete
 
 
 # Проверка допустимости расширения загружаемого файла

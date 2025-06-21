@@ -2,7 +2,7 @@
 from celery import Celery
 from celery.signals import before_task_publish
 from datetime import datetime, timezone
-from utils.redis_client import redis_set
+from app.utils.redis_client import redis_set
 
 celery = Celery()
 celery.config_from_object('tasks.celeryconfig')

@@ -1,0 +1,124 @@
+<!-- base.html -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for("static", filename="css/normalize.css")}}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for("static", filename='css/toastr.min.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for("static", filename='css/style.css') }}">
+    
+    
+
+    <title> {{ title }} </title>
+</head>
+<body class="body">
+
+    {% block menu %}
+    {% from "macros/all_popups.html" import choose_profile_popup %}
+
+    <header class="header">
+        <div class="container container--header">
+            <a href="{{ url_for("main.index")}}" class="header__logo--link">
+                <img class="header__logo" src="{{ url_for("static", filename="pic/logo_dark1.svg")}}" alt="logo ">
+            </a>
+            
+            <nav class="header__nav">
+                <ul class="header__menu">
+                    {% if g.current_profile %}
+                        {% for m in menu %}
+                            <li class="header__menu-item">
+                                <a class="header__menu-link" href="{{ m.url }}" title="{{ m.title }}">{{ m.name }}</a>
+                            </li>
+                        {% endfor %}
+                    {% endif %}
+                </ul>
+            </nav>
+
+            
+            
+            <!-- Сообщение о текущем профиле -->
+            {% if g.current_profile %}
+                <div class="header__user-box" id="changeProfileBlock" title="Здесь можно сменить профиль">
+                    <p class="header__paragraph">Профиль:</p>
+                    <p class="header__paragraph header__paragraph--data">{{ g.current_profile.profile_name }}</p>
+                </div>
+            {% else %}
+                <div class="header__user-box" id="changeProfileBlock" title="Здесь можно сменить профиль">
+                    <p class="header__paragraph">Профиль не выбран</p>
+                </div>
+            {% endif %}
+
+            <!-- Сообщение о текущем юзере -->
+             {% if profiles %}
+            <a href="{{ url_for("profile_settings.profile_settings") }}" title="Роль пользователя: {{ current_user.roles[0].name }}. При нажатии откроются настройки текущего профиля" class="header__user-box">
+                <p class="header__paragraph" id="userNameHeader" data-user-name="{{ current_user.username }}">Пользователь:</p>
+                <p class="header__paragraph header__paragraph--data">{{ current_user.username }}</p>
+            </a>
+            {% else %}
+            <div class="header__user-box" title="У пользователя нет ни одного профиля. Создайте профиль, чтобы продолжить работу с программой.">
+                <p class="header__paragraph" id="userNameHeader" data-user-name="{{ current_user.username }}">Пользователь:</p>
+                <p class="header__paragraph header__paragraph--data">{{ current_user.username }}</p>
+            </div>
+            {% endif %}
+            <!-- Кнопка для выхода из системы и сброса сессии -->
+            <a class="header__exit" href="{{ url_for("main.custom_logout") }}">Выйти</a>
+        </div>
+
+    
+    </header>
+
+    <!-- Попап для выбора профиля -->
+    {{ choose_profile_popup(profiles) }}
+
+    {% endblock menu %}
+
+    <!-- Общий контент страниц -->
+    <main class="main">
+        <div class="container">
+            <div class="main__title">
+                <h1 class="main__heading">{{ title }}</h1>
+            </div>
+
+            <div class="main__body">
+                {% block container %}
+                {% endblock container %}
+            </div>
+        </div>
+
+        
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p class="footer__paragraph">&copy; 2025 Radiologary</p>
+            <!-- Сообщение о версии программы -->
+            {% if app_info %}
+                <span class="header__paragraph header__paragraph--version">version.{{ app_info.version }}</span>
+            {% endif %}
+        </div>
+    </footer>
+</div>
+<!-- Общие скрипты -->
+<noscript>please turn on JS!</noscript>
+
+<script class="no-reexec"> // Этот класс в скрипте нужен для того, чтобы не перезаписывать этот скрипт при выполнении вставки "динамического протокола" -->
+    document.addEventListener("DOMContentLoaded", function(){
+        window.csrfToken = document.getElementById("csrf_token").value;
+    })
+    const userSettings = {{ user_settings | tojson | safe }};
+</script>
+
+<script src="{{ url_for("static", filename='js/jquery.js') }}"></script>
+<script src="{{ url_for("static", filename='js/toastr.min.js') }}"></script>
+<script src="{{ url_for("static", filename='js/loader.js') }}"></script>
+<script src="{{ url_for("static", filename='js/utils.js') }}"></script>
+<script src="{{ url_for("static", filename='js/api.js') }}"></script>
+<script src="{{ url_for("static", filename='js/dropdown_menus.js') }}"></script>
+
+<!-- Блок для специфичных JS-скриптов -->
+{% block scripts %}
+{% endblock scripts %}
+
+</body>
+</html>

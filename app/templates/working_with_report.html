@@ -1,0 +1,250 @@
+
+
+
+{% extends "base.html" %}
+
+
+{% block container %}
+<!-- Передаем csrf_token как скрытое поле формы -->
+<input type="hidden" data-report-id=" {{report_data.id}} " id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
+
+{% from "macros/all_popups.html" import dynamics_popup %}
+
+<!-- Предзаполненная форма с ФИО и тд на странице протокола -->
+{% if user_settings.USE_WORD_REPORTS %}
+    <form class="flex" id="exportForm" data-report-type="{{ report_data.report_type }}" data-subtype="{{ report_data.report_subtype }}" data-comment="{{ report_data.comment }}">
+        <div>
+            <label for="patient-name">ФИО:</label>
+            <input style="margin-right: 10px;" type="text" id="patient-name" name="patient_name" value="{{ full_name }}"readonly>
+        </div>
+        <div>
+            <label for="patient-birthdate">Дата рождения:</label>
+            <input style="margin-right: 10px;" type="date" id="patient-birthdate" name="patient_birthdate" value="{{ birthdate }}"readonly>
+        </div>
+        <div>
+            <label for="report-number">Номер протокола:</label>
+            <input style="margin-right: 10px;" type="text" id="report-number" name="report_number" value="{{ report_number }}"readonly>
+        </div>
+
+        <!-- Контейнер для поля выбора стороны, скрыт по умолчанию -->
+        {% if report_data.report_side == True %}
+        <div>
+            <label for="report-side">Сторона:</label>
+            <select id="report-side" name="report_side">
+                <option value=""></option>
+                <option value="right">Right</option>
+                <option value="left">Left</option>
+            </select>
+        </div>
+        {% endif %}
+
+        <!-- Кнопка "Edit Form" -->
+        <button class="icon-btn icon-btn--edit-form" type="button"
+            style="background: url('{{ url_for('static', filename='pic/edit_button.svg') }}') no-repeat center center;"
+            title="Edit Form">
+        </button>
+
+        <!-- Кнопка "Add Report" -->
+        <button class="btn  icon-btn--add-report" id="addReportButton" type="button"
+        title="Add Report">
+        + протокол
+        </button>
+
+        <!-- Кнопка "Next" -->
+        <button class="btn  icon-btn--next-report" id="nextPatientButton" type="button" 
+        title="При нажатии на эту кнопку данные из формы будут отправлены на сервер и загружен следующий пациент">
+            следующий пациент
+        </button>
+    </form>
+{% endif %}
+
+<!-- Сам протокол -->
+<div class="flex">
+    <!-- Основной блок с отчетом -->
+    <div class="container left-side-container">
+        {% if paragraphs_data %}
+            <!-- Уровень параграфа -->
+            <ul class="paragraph__list">
+                {% for paragraph in paragraphs_data  %}
+                    <!-- Устанавливаю классы параграфов в зависимости от типа и установки различных флагов-->
+                    <li class="paragraph__item
+                        {% if paragraph.is_impression %}
+                        paragraph__item--impression
+                        {% else %}
+                        paragraph__item--core
+                        {% endif %}
+                        {% if not paragraph.is_active %}
+                        paragraph__item--inactive
+                        {% endif %}
+                        "
+                        data-paragraph-id="{{ paragraph.id }}"
+                        >
+                        
+                        <!-- Вставляю строку если есть соответствующий флаг -->
+                        {% if paragraph.str_before or paragraph.is_impression%}
+                            <br>
+                        {% endif %}
+
+                        <p contenteditable="true" 
+                            data-paragraph-id="{{ paragraph.id }}" 
+                            data-title-paragraph="{{ paragraph.title_paragraph }}" 
+                            data-bold-paragraph="{{ paragraph.bold_paragraph }}" 
+                            data-visible-paragraph="{{ paragraph.paragraph_visible }}"
+                            data-paragraph-index="{{ paragraph.index }}"
+                            data-paragraph-comment="{{ paragraph.comment }}"
+                            data-paragraph-tags="{{ paragraph.tags }}"
+                            data-paragraph-weight="{{ paragraph.weight }}" 
+                            data-paragraph-str-before="{{ paragraph.str_before }}"
+                            data-paragraph-str-after="{{ paragraph.str_after }}"
+
+                            style="display:
+                            {% if paragraph.paragraph_visible and paragraph.is_active %}
+                                {% if paragraph.title_paragraph %}
+                                    block
+                                {% else %}
+                                    inline
+                                {% endif %}
+                            {% else %}
+                            none
+                            {% endif %};"
+                            class="paragraph__text 
+                            {% if paragraph.bold_paragraph %} 
+                                paragraph__text--bold   
+                            {% endif %}
+                            ">
+
+                            
+
+                            {{ paragraph.paragraph }}
+                        </p>
+                        <!-- Вставляю строку если есть соответствующий флаг -->
+                        {% if paragraph.str_after %}
+                            <br>
+                            {% endif %}
+
+                        <!-- Уровень предложения -->
+                        <ul class="" {% if not paragraph.paragraph_title %}style="display: inline;"{% endif %}>
+                            <li class="" {% if not paragraph.paragraph_title %}style="display: inline;"{% endif %}>
+                                {% if paragraph.head_sentences %}
+                                    {% for head_sentence in paragraph.head_sentences %}
+                                        
+                                            <span contenteditable="true"
+                                                {% if not paragraph.is_active %}
+                                                style="display: none;"
+                                                {% endif %}
+                                                
+                                                class="report__sentence sentence" 
+                                                data-paragraph-id="{{ paragraph.id }}" 
+                                                data-index="{{ head_sentence.sentence_index }}"
+                                                data-id="{{ head_sentence.id }}"
+                                                data-sentence-type="head"
+                                                data-paragraph-additional="{{ paragraph.is_additional }}"
+                                                > 
+                                            {{ head_sentence.sentence }} 
+                                            </span>
+                                            <!-- Кнопка "+" для добавления предложения -->
+                                            <button class="icon-btn icon-btn--add-sentence" type="button" title="Add Sentence">+</button>
+                                        
+                                    {% endfor %}
+                                {% endif %}
+                            </li>
+                        </ul>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+        
+        
+        <!-- PopUp для отображения предложений после двойного клика -->
+        <div id="popup" class="popup">
+            <ul id="popupList"></ul>
+        </div>
+
+    </div> 
+    
+    <!-- Контейнер справа -->
+    <div class="flex_column right-side-container report-controlpanel">
+
+        <!-- Кнопка для перехода к настройке текущего параграфа -->
+        <a href="/editing_report/edit_report?report_id={{ report_data.id }}" target="_blank" class="btn"
+            title="Открывает этот протокол в новом окне">
+            Редактировать протокол
+        </a>
+        <br>
+        {% if user_max_rank == 4 %}
+            <button class="btn" id="dynamicReportButton">Динамика</button>
+        {% endif %}
+        
+       
+        <ul class="report-controlpanel__inactive-paragraphs-list" id="inactiveParagraphsList">
+            <h3 title="Параграфы, которые не участвуют в формировании заключения. Можно активировать нажав на имя параграфа">
+                Неактивные параграфы:
+            </h3>
+            {% for paragraph in paragraphs_data  %}
+                {% if not paragraph.is_active %}
+                <li class="report-controlpanel__inactive-paragraphs-item" data-paragraph-id="{{ paragraph.id }}"> 
+                    <span title="{{ paragraph.comment }}">{{ paragraph.paragraph }}</span> 
+                </li>
+                {% endif %}       
+            {% endfor %}
+            <br>
+            <br>
+        </ul>
+       
+        <!-- Кнопки экспорта в Word копирования текста и генерации ИИ заключения -->
+        <div class="flex_column">
+            <button class="btn " id="copyButton">Копировать текст</button>
+            {% if user_settings.USE_WORD_REPORTS %}
+                <button class="btn " id="exportButton">Экспорт в Word</button>
+            {% endif %}
+            <button class="btn" id="generateImpression">ИИ заключение</button>
+            <br>
+            <br>
+        </div>
+
+
+        <!-- Место вывода ответа ИИ -->
+        
+        <div class="flex_column">
+            <p contenteditable="true" class="ai-response-block" id="aiImpressionResponseBlock" style="display: none;"></p>
+            <p class="ai-response-block" id="aiRedactorResponseBlock" style="display: none;"></p>
+            <p class="ai-response-block" id="aiDynamicBlock" style="display: none;"></p>
+            
+            <button class="btn " id="addImpressionToReportButton" style="display: none;">Вставить заключение</button>
+        </div>
+        
+        <button class="btn " id="aiReportCheck">Проверить протокол ИИ</button>
+        <button class="btn " id="finishWork">Завершить</button>
+
+    </div>
+</div>
+
+<!-- Контейнер для вывода отчета о добавлении новых предложений -->
+<div class="flex_column" style="display: none;" id="bottomContainer">
+    <h3>Отчет о добавлении предложений:</h3>
+    <div class="" id="sentenceAddingReportContainer">
+    </div>
+</div>
+
+<!-- Попап для работы с динамикой -->
+{{ dynamics_popup() }}
+
+<!-- Поле для вывода текста предыдущего протокола, если была оценка динамики -->
+<div id="ctrlPreviewOverlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:white; color:black; z-index:9999; overflow:auto; padding:40px; font-size:1.2rem; white-space:pre-wrap;"></div>
+
+{% endblock container %}
+{% block scripts %}
+
+<script class="no-reexec">
+    // Передаем ключевые слова как глобальную переменную JavaScript
+    const keyWordsGroups = {{ key_words_groups | tojson | safe }};
+    const reportData = {{ report_data | tojson | safe }};
+    const currentReportParagraphsData = {{ paragraphs_data | tojson | safe }};
+</script>
+
+<script type="module" src="{{ url_for('static', filename='js/working_with_report.js') }}"></script>
+<script src="{{ url_for('static', filename='js/utils/popup_sentences.js') }}"></script>
+<script src="{{ url_for("static", filename="js/spacy_training_popup.js") }}"></script>
+<script src="{{ url_for('static', filename='js/firstGrammaSentence.js') }}"></script>
+
+{% endblock scripts %}

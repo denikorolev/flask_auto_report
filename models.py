@@ -13,14 +13,14 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_security import UserMixin, RoleMixin, current_user
 from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy import Index, event, func, cast, Date
-from utils.common import ensure_list
+from app.utils.common import ensure_list
 from datetime import datetime, timezone  # Добавим для временных меток
 import json
 from logger import logger
+from app.extensions import db
 
 
 
-db = SQLAlchemy()
 
  
 # ✅ быстрее 👉 🔥 📌 ❌ 🚀 😎 🔄 1️⃣ 2️⃣ 3️⃣ ⚠️ 💻 🧠 💥 🙌 🗑 ✏️ 🔙 🕘 ➕ 📨

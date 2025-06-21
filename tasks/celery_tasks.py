@@ -2,7 +2,7 @@
 
 from tasks.extensions import celery
 from file_processing import prepare_impression_snippets
-from openai_api import clean_raw_text, run_first_look_assistant, structure_report_text
+from app.blueprints.openai_api import clean_raw_text, run_first_look_assistant, structure_report_text
 from tasks.celery_task_processing import cancel_stale_polled_tasks, cancel_stuck_tasks
 from logger import logger
 from tasks.extensions import celery

@@ -3,7 +3,7 @@
 from flask import g, current_app
 from models import KeyWord, db, AppConfig, UserProfile
 from logger import logger
-from utils.common import get_max_index
+from app.utils.common import get_max_index
 
 
 def add_keywords_to_db(key_words, report_ids):
