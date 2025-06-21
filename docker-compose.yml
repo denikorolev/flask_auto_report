@@ -15,7 +15,7 @@ services:
       - UPLOAD_FOLDER=${UPLOAD_FOLDER}
     volumes:
       - uploads_data:/uploads
-    command: gunicorn --log-level=info --bind 0.0.0.0:5000 --timeout 100 app:app
+    command: gunicorn --log-level=info --bind 0.0.0.0:5000 --timeout 100 -w 4 wsgi:app
     depends_on:
       - db
 

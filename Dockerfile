@@ -21,4 +21,4 @@ RUN pip install https://github.com/explosion/spacy-models/releases/download/en_c
 COPY . .
 
 # Указываем команду запуска Flask-приложения
-CMD ["gunicorn", "--workers", "4", "--bind", "0.0.0.0:5000", "app:app"]
+CMD ["gunicorn", "--workers", "4", "--bind", "0.0.0.0:5000", "wsgi:app"]
