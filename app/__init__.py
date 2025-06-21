@@ -15,7 +15,8 @@ from models import User, Role
 from .utils.mail_helpers import CustomMailUtil, ExtendedRegisterForm
 from .before_request_handlers import load_current_profile, one_time_sync_tasks
 from config import get_config
-from tasks.extensions import make_celery
+from tasks.make_celery import make_celery
+
 from .extensions import db, migrate, csrf, security
 
 from .context_processors import (
@@ -53,6 +54,8 @@ def create_app(config_object='config.Config'):
     db.init_app(app)
     migrate.init_app(app, db)
     csrf.init_app(app)
+    
+   
     celery = make_celery(app)
     
     # Инициализирую Flask-security-too

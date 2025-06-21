@@ -13,5 +13,3 @@ beat_schedule = {
     },
 }
 
-timezone = "UTC"
-enable_utc = True
