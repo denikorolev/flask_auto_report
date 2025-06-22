@@ -23,6 +23,6 @@ export async function prepareTextWithAI(textarea, button) {
     button.disabled = false;
 
     if (response && response.status === "success" && response.data) {
-        textarea.value = response.data;
+        return response.data;
     }
 }

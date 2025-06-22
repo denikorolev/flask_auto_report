@@ -12,7 +12,8 @@ def make_celery(app):
         accept_content=["json"],
         result_serializer="json",
         timezone="UTC",
-        enable_utc=True
+        enable_utc=True,
+        OPENAI_API_KEY=app.config.get("OPENAI_API_KEY", ""),
     )
 
     class ContextTask(celery.Task):

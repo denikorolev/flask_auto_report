@@ -6,6 +6,7 @@
 
 import { setupDynamicsDropZone, handleFileUpload, handlePasteFromClipboard } from "/static/js/utils/dynamicsDropZone.js";
 import { prepareTextWithAI } from "/static/js/utils/ai_handlers.js";
+import { pollTaskStatus, updateProgressBar } from "/static/js/utils/utils_module.js";      
 
 let activeSentence = null;  // Для отслеживания активного предложения
 document.addEventListener("DOMContentLoaded", initWorkingWithReport);
@@ -14,10 +15,6 @@ document.addEventListener("DOMContentLoaded", initWorkingWithReport);
 
 // Объявляем глобальные переменные и запускаем стартовые функции, постепенно нужно перенести сюда и логику связанную с ключевыми словами и развешивание части слушателей
 function initWorkingWithReport() {
-
-    
-
-    window.MAX_ATTEMPTS_FOR_DYNAMICS = window.MAX_ATTEMPTS_FOR_DYNAMICS || 25;
 
     const popupList = document.getElementById("popupList");  // Для обращения к PopUp
     const exportButton = document.getElementById("exportButton"); // Для обращения к кнопке "Экспорт в Word"
@@ -1225,6 +1222,7 @@ function checkReportAI(boxForAiResponse, responseForDelete, boxForAiDynamicRespo
 // Вся логика для показа динамического отчета
 async function showDynamicReportPopup(boxForAiImpressionResponse, boxForAiRedactorResponse) {
     const popup = document.getElementById("dynamicsPopup");
+    window.previousDynamicsText = null; // Сброс предыдущего текста динамики
     if (!popup) {
         console.error("Popup element not found");
         return;
@@ -1261,6 +1259,20 @@ async function showDynamicReportPopup(boxForAiImpressionResponse, boxForAiRedact
         }
     );
 
+    // Внутренняя функция, нужна чтобы не вводить каждый раз параметры 
+    // bar, label, text для универсальной функции updateProgressBar
+    function updateDynamicsProgressBar(percent, statusText = null) {
+        updateProgressBar(
+            {
+                bar: "dynamicsProgressBar",
+                label: "dynamicsProgressBarLabel",
+                text: "dynamicsProgressBarText"
+            },
+            percent,
+            statusText
+        );
+    }
+
     // Обработчики (нужно сохранять ссылки, чтобы можно было удалить потом)
     const closeHandler = () => {
         hideElement(popup);
@@ -1279,7 +1291,9 @@ async function showDynamicReportPopup(boxForAiImpressionResponse, boxForAiRedact
     // Обработчик для кнопки анализа динамики
     const analyzeHandler = async () => {
         const rawText = dynamicsTextarea.value.trim();
-        window.previousDynamicsText = rawText; // Сохраняем текст для последующего использования в глобальной переменной
+        if (!window.previousDynamicsText) {
+            window.previousDynamicsText = rawText
+        } // Сохраняем текст для последующего использования в overlay
 
         if (!rawText) {
             alert("Пожалуйста, введите текст для анализа.");
@@ -1304,12 +1318,40 @@ async function showDynamicReportPopup(boxForAiImpressionResponse, boxForAiRedact
             return;
         }
         
-        pollAnalyzeDynamicsResult(task_id);
+        pollTaskStatus(task_id, {
+            maxAttempts: 20,
+            interval: 7000,
+            onProgress: (progress) => updateDynamicsProgressBar(progress, "Ожидание результата..."),
+            onSuccess: (result) => {
+                updateDynamicsProgressBar(100, "Готово!");
+                finalizeAnalyzeDynamics(result);
+            },
+            onError: (errMsg) => updateDynamicsProgressBar(100, errMsg),
+            onTimeout: () => updateDynamicsProgressBar(100, "Превышено время ожидания ответа. Попробуйте ещё раз позже.")
+        });
 
     };
 
     const prepareTextHandler = async () => {
-        await prepareTextWithAI(dynamicsTextarea, prepareTextDynamicsButton);
+        const rawText = dynamicsTextarea.value.trim();
+        if (!rawText) {
+            alert("Пожалуйста, введите текст для подготовки.");
+            return;
+        }
+        window.previousDynamicsText = rawText; // Сохраняем текст для последующего использования в overlay
+        const taskID = await prepareTextWithAI(dynamicsTextarea, prepareTextDynamicsButton);
+
+        pollTaskStatus(taskID, {
+            maxAttempts: 10,
+            interval: 7000,
+            onProgress: (progress) => updateDynamicsProgressBar(progress, "Ожидание результата..."),
+            onSuccess: (result) => {
+                updateDynamicsProgressBar(100, "Готово!");
+                dynamicsTextarea.value = result || "";
+            },
+            onError: (errMsg) => updateDynamicsProgressBar(100, errMsg),
+            onTimeout: () => updateDynamicsProgressBar(100, "Превышено время ожидания ответа. Попробуйте ещё раз позже.")
+        });
     };
 
     // Обработчик для вставки из буфера обмена
@@ -1342,65 +1384,6 @@ async function showDynamicReportPopup(boxForAiImpressionResponse, boxForAiRedact
     dynamicFileUploadInput.addEventListener("change", fileSelectHandler);
     prepareTextDynamicsButton.addEventListener("click", prepareTextHandler);
 
-}
-
-
-
-// Функция для опроса статуса задачи по трансформации предыдущего протокола
-function pollAnalyzeDynamicsResult(task_id, attempt = 0) {
-    const maxAttempts = window.MAX_ATTEMPTS_FOR_DYNAMICS || 20; // Максимальное количество попыток
-    const progress = Math.min((attempt / maxAttempts) * 100, 99);
-
-    updateDynamicsProgressBar(progress, `Ожидание результата...`);
-
-    sendRequest({
-        url: `/tasks_status/task_status/${task_id}`,
-        method: "GET",
-        loader: false
-    }).then(data => {
-        if (!data) {
-            updateDynamicsProgressBar(100, "Ошибка при получении статуса задачи.");
-            return;
-        }
-
-        const status = (data.status || "").toLowerCase();
-
-        if (status === "pending" || status === "started") {
-            if (attempt < maxAttempts) {
-                setTimeout(() => pollAnalyzeDynamicsResult(task_id, attempt + 1), 9000);
-            } else {
-                updateDynamicsProgressBar(100, "Превышено время ожидания ответа. Попробуйте ещё раз позже.");
-            }
-        } else if (status === "success") {
-            updateDynamicsProgressBar(100, "Готово!");
-            finalizeAnalyzeDynamics(data.result); // data.result — это словарь { result, report_id, skeleton }
-        } else if (status === "error") {
-            let details = data.details || "";
-            if (details.toLowerCase().includes("revoked") || details.toLowerCase().includes("terminated")) {
-                updateDynamicsProgressBar(100, "Слишком много запросов на сервер. Пожалуйста, попробуйте позже.");
-            } else {
-                updateDynamicsProgressBar(100, "Ошибка: " + details);
-            }
-        } else {
-            updateDynamicsProgressBar(100, "Ошибка: " + (status.details || "Неизвестный статус"));
-        }
-    }).catch(err => {
-        updateDynamicsProgressBar(100, "Ошибка связи с сервером");
-        console.error("Ошибка связи с сервером:", err);
-    });
-}
-
-
-// Функция для обновления прогресс-бара динамики трансформации протокола
-function updateDynamicsProgressBar(percent, text = null) {
-    const bar = document.getElementById("dynamicsProgressBar");
-    const label = document.getElementById("dynamicsProgressBarLabel");
-    if (!bar) return;
-    bar.style.setProperty('--progress-width', `${Math.min(percent, 100)}%`);
-    if (label) label.textContent = `${Math.round(percent)}%`;
-    if (text !== null) {
-        document.getElementById("dynamicsProgressBarText").textContent = text;
-    }
 }
 
     

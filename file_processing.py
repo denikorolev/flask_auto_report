@@ -49,7 +49,7 @@ def create_filestorage_from_path(file_path):
         file_storage = FileStorage(file, filename=os.path.basename(file_path))
         return file_storage
     except Exception as e:
-        print(f"Error while creating FileStorage: {e}")
+        logger.error(f"Error creating FileStorage from path {file_path}: {e}")
         return None
 
 def sanitize_filename(filename):
@@ -65,7 +65,7 @@ def sanitize_filename(filename):
     return unidecode(sanitized_name)
 
 
-def sync_profile_files(profile_id):
+def sync_profile_files(profile_id, user_id, user_email):
     """
     Синхронизирует файлы профиля: проверяет записи в базе данных и соответствующие файлы на диске.
     Удаляет записи в базе данных, если файла нет на диске, и удаляет файлы, если нет записи в базе данных.
@@ -74,7 +74,7 @@ def sync_profile_files(profile_id):
     """
     try:
         # Получаем папку профиля
-        upload_folder = Config.get_user_upload_folder()
+        upload_folder = Config.get_user_upload_folder(user_id, profile_id, user_email)
 
         # 1. Проверяем наличие всех файлов из базы данных
         files_in_db = FileMetadata.query.filter_by(profile_id=profile_id).all()
@@ -83,7 +83,6 @@ def sync_profile_files(profile_id):
             file_path = file_meta.file_path
 
             if not os.path.exists(file_path):
-                print(f"File {file_path} not found, deleting record from database...")
                 db.session.delete(file_meta)
                 db.session.commit()
 
@@ -96,17 +95,16 @@ def sync_profile_files(profile_id):
                 file_record = FileMetadata.query.filter_by(file_path=file_path).first()
 
                 if not file_record:
-                    print(f"File {file_path} not found in database, deleting file from filesystem...")
                     os.remove(file_path)
 
         return "Synchronization completed successfully."
 
     except Exception as e:
-        print(f"Error during file synchronization: {e}")
+        logger.error(f"Error during file synchronization: {e}")
         return f"Error during file synchronization: {e}"
 
 
-def file_uploader(file, file_type, folder_name, file_name=None, file_description=None):
+def file_uploader(file, file_type, folder_name, file_name=None, file_description=None, user_id=None, profile_id=None, user_email=None):
     """
     Uploads a file to the server in the folder corresponding to the user's profile and specified folder name,
     and saves metadata to the database.
@@ -119,11 +117,6 @@ def file_uploader(file, file_type, folder_name, file_name=None, file_description
     
     :return: сообщение об успехе или ошибке и путь к файлу.
     """
-    print(f"file_uploader: {file}")
-    print(f"file_type: {file_type}")
-    print(f"folder_name: {folder_name}")
-    print(f"file_name: {file_name}")
-    print(f"file_description: {file_description}")
     # Проверяем, является ли file строкой, если да, то это путь к файлу
     if isinstance(file, str):
         file = create_filestorage_from_path(file)
@@ -154,8 +147,9 @@ def file_uploader(file, file_type, folder_name, file_name=None, file_description
     
     # Получаем путь к папке пользователя с учетом текущего профиля
     try:
-        user_folder = get_config().get_user_upload_folder()
+        user_folder = get_config().get_user_upload_folder(user_id, profile_id, user_email)
     except Exception as e:
+        logger.error(f"Failed to get user folder: {e}")
         return f"Failed to get user folder: {e}", None
     
     # Путь к папке, соответствующей folder_name и текущей дате
@@ -174,7 +168,6 @@ def file_uploader(file, file_type, folder_name, file_name=None, file_description
 
         # Создаем запись о файле в базе данных
         file_description = file_description or folder_name
-        profile_id = g.current_profile.id
         try:
             FileMetadata.create(
                 profile_id=profile_id,
@@ -184,11 +177,13 @@ def file_uploader(file, file_type, folder_name, file_name=None, file_description
                 file_description=file_description
             )
         except Exception as e:
+            logger.error(f"Error saving file metadata: {e}")
             return f"Can't add data to file metadata: {e}", None
         
         return "The file was uploaded successfully and metadata saved", file_path
     
     except Exception as e:
+        logger.error(f"Error uploading file: {e}")
         return f"The file wasn't uploaded due to the following error: {e}", None
 
 
@@ -206,9 +201,11 @@ def save_to_word(text, name, subtype, report_type, birthdate, reportnumber, scan
         # Форматирование даты
         modified_birthdate = trans_birthdate.strftime("%d.%m.%y")
     except:
+        logger.error("Error parsing birthdate, setting to 'unknown'")
         modified_birthdate = "unknown"
     try:
         profile_id = g.current_profile.id
+        user_id = g.current_profile.user_id
         
         signatura_metadata = FileMetadata.get_file_by_description(profile_id, "signatura")
         template_metadata = FileMetadata.get_file_by_description(profile_id, "word_template")
@@ -320,45 +317,46 @@ def save_to_word(text, name, subtype, report_type, birthdate, reportnumber, scan
         
         folder_name = "reports_word"
           
-        result, saved_file_path = file_uploader(temp_file_path, "doc", folder_name, filename)
+        result, saved_file_path = file_uploader(temp_file_path, "doc", folder_name, filename, user_id=user_id, profile_id=None, user_email=None)
         
         # Удаляем временный файл после загрузки
         if os.path.exists(temp_file_path):
             os.remove(temp_file_path)
             
         if "successfully" in result:
-            print(f"File saved at: {saved_file_path}")
             return saved_file_path
         else:
             raise Exception(result)
     except Exception as e:
-        print(f"Error in save_to_word: {e}")
+        logger.error(f"Error in save_to_word: {e}")
         raise Exception(f"Error in save_to_word: {e}")
 
 
 # Генерация JSON-файлов с уникальными заключениями для всех модальностей, функция 
 # вызывается при загрузке сессии и создает файлы и загружает их 
 # в OpenAI, кроме того вычищает отовсюду старые файлы старые файлы
-def prepare_impression_snippets(profile_id):
+def prepare_impression_snippets(profile_id, user_id, user_email, except_words):
     """
     Генерирует новые impression JSON файлы для всех модальностей, 
     удаляет старые файлы (локально, из БД и из OpenAI),
     загружает новые файлы в OpenAI и сохраняет file_ids в session.
     """
-    logger.info(f"🚀 Запущена подготовка impression snippets для профиля {profile_id}")
-
-    client = OpenAI(api_key=current_app.config.get("OPENAI_API_KEY"))
+    logger.info(f"(функция prepare_impression_snippets) 🚀 Запущена подготовка impression snippets для профиля {profile_id}")
+    from tasks.extensions import celery
+    client = OpenAI(api_key=celery.conf.OPENAI_API_KEY)
     modalities = ["CT", "MRI", "XRAY"]
-    user_id = current_user.id if current_user.is_authenticated else None
+    
     if not user_id:
-        logger.error("Пользователь не аутентифицирован, не могу подготовить impression snippets.")
-        return
-
+        user_id = current_user.id if current_user.is_authenticated else None
+        if not user_id:
+            logger.error(f"(функция prepare_impression_snippets) ❌ Не удалось определить user_id для подготовки impression snippets.")
+            raise Exception("User ID is required for preparing impression snippets.")
+    
     for modality in modalities:
         file_key = f"user:{user_id}:impression_file_id:{modality}"
         
         try:
-            logger.info(f"🔄 Работаем с модальностью: {modality}")
+            logger.info(f"(функция prepare_impression_snippets) 🔄 Работаем с модальностью: {modality}")
 
             # 1. Удаляем старые файлы
             old_files = FileMetadata.query.filter_by(
@@ -370,20 +368,37 @@ def prepare_impression_snippets(profile_id):
                 if old_file.ai_file_id:
                     try:
                         client.files.delete(old_file.ai_file_id)
-                        logger.info(f"🗑 Удалён файл из OpenAI: {old_file.ai_file_id}")
+                        logger.info(f"(функция prepare_impression_snippets) 🗑 Удалён файл из OpenAI: {old_file.ai_file_id}")
                     except Exception as e:
-                        logger.warning(f"⚠️ Не удалось удалить файл {old_file.ai_file_id} из OpenAI: {e}")
+                        logger.warning(f"(функция prepare_impression_snippets) ⚠️ Не удалось удалить файл {old_file.ai_file_id} из OpenAI: {e}")
                 if os.path.exists(old_file.file_path):
                     os.remove(old_file.file_path)
-                    logger.info(f"🗑 Удалён локальный файл: {old_file.file_path}")
+                    logger.info(f"(функция prepare_impression_snippets) 🗑 Удалён локальный файл: {old_file.file_path}")
+                    # --- Удаляем папку, если она пуста ---
+                    folder_path = os.path.dirname(old_file.file_path)
+                    try:
+                        # Если папка пуста — удаляем
+                        if os.path.isdir(folder_path) and not os.listdir(folder_path):
+                            os.rmdir(folder_path)
+                            logger.info(f"(функция prepare_impression_snippets) 🗑 Удалена пустая папка: {folder_path}")
+                    except Exception as e:
+                        logger.warning(f"(функция prepare_impression_snippets) ⚠️ Не удалось удалить папку {folder_path}: {e}")
                 db.session.delete(old_file)
             db.session.commit()
             
             # Удаляем старый ключ из Redis, только поле удаления локального файла и файла в OpenAI
-            redis_delete(file_key)
+            try:
+                redis_delete(file_key)
+            except Exception as e:
+                logger.warning(f"(функция prepare_impression_snippets) ⚠️ Ошибка при удалении ключа {file_key} из Redis: {e}")
+            logger.info(f"(функция prepare_impression_snippets) 🗑 Удалены старые файлы для {modality}")
 
             # 2. Генерируем новый JSON файл
-            new_file_path = generate_impression_json(modality)
+            try:
+                new_file_path = generate_impression_json(modality, profile_id, user_id, user_email, except_words)
+            except Exception as e:
+                logger.error(f"(функция prepare_impression_snippets) ❌ Ошибка при генерации JSON для {modality}: {e}")
+                continue
 
             # 3. Загружаем в OpenAI
             with open(new_file_path, "rb") as f:
@@ -398,20 +413,23 @@ def prepare_impression_snippets(profile_id):
             if new_file_meta:
                 new_file_meta.ai_file_id = new_file_id
                 db.session.commit()
-
-            redis_set(file_key, new_file_id)
-            logger.info(f"✅ Загружен и сохранён файл для {modality}: {new_file_id}")
+            try:
+                redis_set(file_key, new_file_id, ex=60*60*24*30)  # Сохраняем в Redis на 30 дней
+                logger.info(f"(функция prepare_impression_snippets) ✅ Загружен и сохранён файл для {modality}: {new_file_id}")
+            except Exception as e:
+                logger.error(f"(функция prepare_impression_snippets) ❌ Ошибка при сохранении файла в Redis для {modality}: {e}")
+                continue
 
         except Exception as e:
-            logger.error(f"❌ Ошибка при обработке модальности {modality}: {e}")
+            logger.error(f"(функция prepare_impression_snippets) ❌ Ошибка при обработке модальности {modality}: {e}")
             db.session.rollback()
 
-    logger.info(f"🎉 Подготовка impression snippets завершена для профиля {profile_id}")
+    logger.info(f"(функция prepare_impression_snippets) 🎉 Подготовка impression snippets завершена для профиля {profile_id}")
 
 
 
 # Генерация JSON-файла с уникальными заключениями (использую для индивидуализации ИИ)
-def generate_impression_json(modality="CT"):
+def generate_impression_json(modality, profile_id, user_id, user_email, except_words):
     """
     Сбор уникальных заключений (head/body/tail) для заданной модальности и профиля.
     Сохраняет результат в JSON-файл и возвращает путь к нему.
@@ -424,18 +442,23 @@ def generate_impression_json(modality="CT"):
     
         str: Путь к JSON-файлу с уникальными заключениями.
     """
+    logger.info(f"(функция generate_impression_json) 🚀 Запущена генерация impression JSON для профиля {profile_id} и модальности {modality}")
+    if not profile_id:
+        logger.error("(функция generate_impression_json) ❌ Не указан profile_id для генерации impression JSON.")
+        return None
     similarity_threshold = 95
-    profile_id = g.current_profile.id  # временно для file_uploader
     unique_sentences = set()
     cleaned_sentences = []
     
     report_type_id = {"CT": "15", "MRI": "14", "XRAY": "18"}.get(modality.upper(), None)
     
     if not report_type_id:
-            raise Exception(f"Unknown modality: {modality}")
+        logger.error(f"(функция generate_impression_json) ❌ Неизвестная модальность: {modality}. Допустимые значения: CT, MRI, XRAY.")
+        raise Exception(f"Unknown modality: {modality}")
         
     subtypes = ReportSubtype.find_by_report_type(report_type_id)
     if not subtypes:
+        logger.error(f"(функция generate_impression_json) ❌ Не найдены подтипы для типа отчёта {report_type_id}.")
         raise Exception(f"No subtypes found for report type {report_type_id}.")
     subtype_ids = [subtype.id for subtype in subtypes]
         
@@ -445,10 +468,8 @@ def generate_impression_json(modality="CT"):
     ).all()
     
     if not reports:
-        logger.warning(f"No reports found for profile ID {profile_id}.")
+        logger.warning(f"(функция generate_impression_json) ❌ No reports found for profile ID {profile_id}.")
         pass
-    
-    except_words = current_app.config["PROFILE_SETTINGS"].get("EXCEPT_WORDS", [])
 
     for report in reports:
         key_words_for_report = KeyWord.get_keywords_for_report(profile_id, report.id)
@@ -494,14 +515,18 @@ def generate_impression_json(modality="CT"):
     # Загружаем через file_uploader
     result, saved_path = file_uploader(
         tmp_file_path,
-        file_type="json",  # json нет, пусть будет doc (иначе file_uploader не пропустит)
+        file_type="json", 
         folder_name="impression_snippets",
         file_name=f"{modality.lower()}_impressions_user_{profile_id}",
-        file_description=f"impressions_snippets_{modality}"
+        file_description=f"impressions_snippets_{modality}",
+        user_id=user_id, 
+        profile_id=profile_id, 
+        user_email=user_email
     )
-    print(f"File upload result: {result}")
-    print(f"Saved path: {saved_path}")
-
+    if "successfully" not in result:
+        logger.error(f"(функция generate_impression_json) ❌ Ошибка при загрузке файла: {result}")
+        raise Exception(f"Error uploading file: {result}")
+    logger.info(f"(функция generate_impression_json) 📂 Файл с уникальными заключениями сохранён: {saved_path}")
     return saved_path
 
 

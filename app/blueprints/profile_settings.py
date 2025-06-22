@@ -83,9 +83,11 @@ def choosing_profile():
         if profile:
             session["profile_id"] = profile.id
             g.current_profile = profile
+            user_id = current_user.id
+            user_email = current_user.email
             ProfileSettingsManager.load_profile_settings()
             # Синхронизацию файлов пока оставлю здесь, но ее нужно будет перенести
-            sync_profile_files(profile.id)
+            sync_profile_files(profile.id, user_id, user_email)
             logger.info(f"(route 'choosing_profile') Profile {profile.id} selected")
             logger.info(f"(route 'choosing_profile') ✅ Profile settings loaded")
             return redirect(url_for("working_with_reports.choosing_report"))
@@ -262,8 +264,7 @@ def share_profile():
     try:
         user_id = current_user.id
         profile_id = g.current_profile.id
-        profile = UserProfile.find_by_id_and_user(profile_id, user_id)
-        all_reports = Report.find_by_profile(profile_id)
+        all_reports = Report.find_by_profile(profile_id, user_id)
     except Exception as e:
         logger.error(f"(route 'share_profile') ❌ Error getting current user or current profile: {e}")
         return jsonify({"status": "error", "message": "Не получилось загрузить данные текощего пользователя или текущего профиля"}), 400
@@ -273,7 +274,7 @@ def share_profile():
     try:
         for report in all_reports:
             try:
-                ReportShare.create(report.id, recipient.id)
+                ReportShare.create(report.id, user_id, recipient.id)
             except Exception as e:
                 logger.error(f"(route 'share_profile') ❌ Error sharing report {report.report_name}: {e}. Skipping...")
                 continue

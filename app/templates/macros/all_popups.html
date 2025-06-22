@@ -95,37 +95,3 @@
 {% endmacro %}
 
 
-{% macro dynamics_popup() %}
-<div id="dynamicsPopup" class="dynamics-popup" style="display: none;">
-    <h3 class="dynamics-popup__title">Анализ динамики</h3>
-
-    <textarea id="dynamicsTextarea" class="dynamics-popup__textarea" placeholder="Вставьте текст предыдущего протокола сюда"></textarea>
-
-    <div class="flex">
-        <div id="dynamicsDropZone" class="ai-generator__dropzone">
-            <p>Перетащи файл (JPG/PNG/PDF) сюда<br>или вставь скриншот из буфера (Ctrl+V)</p>
-            <div id="dynamicsPreview"></div>
-        </div>
-        <div class="flex_column">
-            
-            <div id="dynamicsProgressBarContainer" class="dynamics-progress-container">
-                <p id="dynamicsProgressBarText" class="dynamics-popup__progress-text">Загрузка...</p>
-                <div id="dynamicsProgressBar" class="dynamics-progress-bar">
-                    <span id="dynamicsProgressBarLabel" class="dynamics-progress-bar__label"></span>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="dynamics-popup__footer">
-        <div class="dynamics-popup__actions">
-            <button class="btn " id="pasteDynamicsButton">Вставить из буфера</button>
-            <button class="btn" id="uploadFileDynamicsButton">Загрузить файл</button>
-            <button class="btn " id="prepareTextDynamicsButton">Подготовить текст</button>
-            <button class="btn" id="analyzeDynamicsButton">Анализировать</button>
-        </div>
-        <button class="btn dynamics-popup__btn--close" id="closeDynamicsPopup">Закрыть</button>
-    </div>
-    <input type="file" id="dynamicFileUploadInput" accept=".jpg,.jpeg,.png,.pdf,image/*,application/pdf" style="display: none;">
-</div>
-{% endmacro %}

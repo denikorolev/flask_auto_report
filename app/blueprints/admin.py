@@ -499,11 +499,12 @@ def revert_model(version_index):
 @roles_required("superadmin")
 def make_all_public():
     profile_id = g.current_profile.id
+    user_id = g.current_profile.user_id
     if not profile_id:
         return jsonify({"status": "error", "message": " Не удалось получить profile_id."}), 400
 
     try:
-        reports = Report.find_by_profile(profile_id=profile_id)
+        reports = Report.find_by_profile(profile_id=profile_id, user_id=user_id)
         count = 0
         for report in reports:
             if not report.public:

@@ -6,7 +6,7 @@ from logger import logger
 from models import UserProfile
 from profile_constructor import ProfileSettingsManager
 from db_processing import sync_all_profiles_settings
-from file_processing import prepare_impression_snippets
+from tasks.celery_tasks import async_prepare_impression_snippets
 
 # Логика для того, чтобы сделать данные профиля доступными 
 # в любом месте программы через g.current_profile
@@ -86,9 +86,15 @@ def one_time_sync_tasks():
         except Exception as e: 
             logger.warning(f"⚠️ Ошибка при установке языка: {e}")
         try:
+            except_words = current_app.config.get("PROFILE_SETTINGS", {}).get("EXCEPT_WORDS", [])
+            user_id = current_user.id
+            user_email = current_user.email
             # Запуск полной подготовки файлов (удаление старых + генерация новых + загрузка в OpenAI)
-            prepare_impression_snippets(g.current_profile.id)
-            logger.info(f"📂 Impression snippets успешно подготовлены для профиля {g.current_profile.id}")
+            task = async_prepare_impression_snippets.delay(g.current_profile.id, user_id, user_email, except_words)
+            logger.info(f"📂 Начата подготовка Impression snippets для профиля {g.current_profile.profile_name}")
+            session["impression_snippets_task_id"] = task.id # не использую, просто бросаю задачу, автоматически редис 
+            # вычистится от нее через 24 часа. Сохраняю в сессию, возможно потом сделаю обратную связь с пользователем, 
+            # чтобы он видел прогресс задачи
         except Exception as e:
             logger.warning(f"⚠️ Ошибка при подготовке impression snippets: {e}")
         logger.debug("Synced profile settings")

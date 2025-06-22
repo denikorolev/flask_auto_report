@@ -229,8 +229,19 @@ def upload_template():
         logger.error(f"(Upload_template) ❌ Ошибка: Неверный тип файла.")
         return jsonify({"status": "error", "message": "Неверный тип файла"}), 400
     
+    profile_id = g.current_profile.id if hasattr(g, 'current_profile') else None
+    user_id = g.current_profile.user_id if hasattr(g, 'current_profile') else None
+    user_email = g.current_profile.email if hasattr(g, 'current_profile') else None
     # Загружаем файл с помощью функции file_uploader в папку "templates"
-    upload_result, filepath = file_uploader(file, file_ext, folder_name, file_name=file_name)
+    upload_result, filepath = file_uploader(file, 
+                                            file_ext, 
+                                            folder_name, 
+                                            file_name=file_name, 
+                                            file_description=None, 
+                                            user_id=user_id,
+                                            profile_id=profile_id, 
+                                            user_email=user_email
+                                            )
     if "successfully" not in upload_result:
         logger.error(f"(Upload_template) ❌ Ошибка: Не удалось загрузить файл - {upload_result}")
         return jsonify({"status": "error", "message": upload_result}), 400

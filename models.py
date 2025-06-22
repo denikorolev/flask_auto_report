@@ -10,7 +10,7 @@
 
 
 from flask_sqlalchemy import SQLAlchemy
-from flask_security import UserMixin, RoleMixin, current_user
+from flask_security import UserMixin, RoleMixin
 from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy import Index, event, func, cast, Date
 from app.utils.common import ensure_list
@@ -501,10 +501,10 @@ class Report(BaseModel):
     
     
     @classmethod
-    def find_by_profile(cls, profile_id):
+    def find_by_profile(cls, profile_id, user_id):
         """Ищет все отчеты, принадлежащие конкретному профилю конкретного пользователя."""
         
-        reports = cls.query.filter_by(profile_id=profile_id, user_id=current_user.id).all()
+        reports = cls.query.filter_by(profile_id=profile_id, user_id=user_id).all()
         return reports
     
     
@@ -650,9 +650,9 @@ class ReportShare(db.Model):
     
 
     @classmethod
-    def create(cls, report_id, shared_with_user_id):
+    def create(cls, report_id, shared_user_id, shared_with_user_id):
         """
-        Создает объект ReportShare — пользователь current_user делится отчетом с другим пользователем.
+        Создает объект ReportShare — пользователь делится отчетом с другим пользователем.
 
         Args:
             report_id (int): ID отчета, которым делятся.
@@ -665,7 +665,7 @@ class ReportShare(db.Model):
         try:
             new_share = cls(
                 report_id=report_id,
-                shared_by_user_id=current_user.id,
+                shared_by_user_id=shared_user_id,
                 shared_with_user_id=shared_with_user_id
             )
             db.session.add(new_share)

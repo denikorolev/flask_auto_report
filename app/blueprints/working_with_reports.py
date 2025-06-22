@@ -5,9 +5,8 @@ from flask_security import current_user
 import os
 import json
 from models import db, Report, ReportType, KeyWord, TailSentence, BodySentence, ReportTextSnapshot
-from file_processing import save_to_word, extract_text_from_uploaded_file
+from file_processing import save_to_word
 from sentence_processing import group_keywords, split_sentences_if_needed, clean_and_normalize_text, compare_sentences_by_paragraph, preprocess_sentence, split_report_structure_for_ai, replace_head_sentences_with_fuzzy_check, merge_ai_response_into_skeleton, convert_template_json_to_text
-from app.blueprints.openai_api import _process_openai_request, reset_ai_session, count_tokens, clean_raw_text, run_first_look_assistant, structure_report_text
 from app.utils.common import ensure_list
 from logger import logger
 from flask_security.decorators import auth_required
@@ -518,7 +517,9 @@ def analyze_dynamics():
     logger.info(f"✅ Шаблон отчета успешно собран. Получены json структуры skeleton и template_text")
     
     try:
-        task = async_analyze_dynamics.delay(origin_text, template_text, user_id, skeleton, report_id)
+        first_look_assistant_id = current_app.config.get("OPENAI_ASSISTANT_FIRST_LOOK_RADIOLOGIST")
+        structure_assistant_id = current_app.config.get("OPENAI_ASSISTANT_DYNAMIC_STRUCTURER")
+        task = async_analyze_dynamics.delay(origin_text, template_text, user_id, skeleton, report_id, first_look_assistant_id, structure_assistant_id)
     except Exception as e:
         logger.error(f"❌ Не удалось запустить celery задачу async_analyze_dynamics: {e}")
         return jsonify({

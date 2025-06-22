@@ -1,0 +1,12 @@
+
+
+<!--Макрос прогресс бара использую в working_with_report и editing_report-->
+{% macro progress_bar() %}
+<div id="dynamicsProgressBarContainer" class="dynamics-progress-container">
+    <p id="dynamicsProgressBarText" class="dynamics-popup__progress-text">Загрузка...</p>
+    <div id="dynamicsProgressBar" class="dynamics-progress-bar">
+        <span id="dynamicsProgressBarLabel" class="dynamics-progress-bar__label"></span>
+    </div>
+</div>
+{% endmacro %}
+

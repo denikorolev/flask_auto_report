@@ -97,7 +97,7 @@ function showPopupSentences(x, y, sentenceList, onSelect) {
             }
         }
         // Не даём навешивать обработчик Enter повторно
-        // Обработка нажатия Enter, onEnter в utils.js
+        // Обработка нажатия Enter, onEnter в utils/utils.js
         if (!filterInput._onEnterHandler) {
             filterInput._onEnterHandler = function(e, el) {
                 const newText = el.value.trim();

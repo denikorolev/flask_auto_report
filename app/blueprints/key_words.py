@@ -4,7 +4,6 @@ from flask import Blueprint, render_template, request, current_app, jsonify, g
 from flask_login import current_user
 from models import db, KeyWord, Report
 from itertools import chain
-from file_processing import file_uploader
 from sentence_processing import group_keywords, sort_key_words_group, process_keywords, check_existing_keywords
 from errors_processing import print_object_structure
 from app.utils.common import ensure_list
@@ -17,7 +16,8 @@ key_words_bp = Blueprint("key_words", __name__)
 @key_words_bp.route("/key_words", methods=["POST","GET"])
 @auth_required()
 def key_words():
-    current_profile_reports=Report.find_by_profile(g.current_profile.id)
+    user_id = current_user.id
+    current_profile_reports=Report.find_by_profile(g.current_profile.id, user_id)
     
     # Prepare global key words
     global_user_key_words = KeyWord.find_without_reports(g.current_profile.id)

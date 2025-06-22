@@ -7,7 +7,7 @@ from app.utils.common import get_max_index, normalize_paragraph_indices
 from flask_security.decorators import auth_required
 from decorators import require_role_rank
 from logger import logger
-from app.blueprints.openai_api import gramma_correction_ai
+from app.utils.ai_processing import gramma_correction_ai
 
 
 editing_report_bp = Blueprint('editing_report', __name__)
@@ -220,7 +220,9 @@ def update_paragraph_text():
     
     try:
         if ai_gramma_check:
-            new_paragraph_text = gramma_correction_ai(new_paragraph_text)
+            language = current_app.config.get("APP_LANGUAGE", "ru")
+            assistant_id = current_app.config.get("OPENAI_ASSISTANT_GRAMMA_CORRECTOR_RU")
+            new_paragraph_text = gramma_correction_ai(new_paragraph_text, language, assistant_id)
         paragraph.update(paragraph=new_paragraph_text)
         logger.info(f"(Обновление текста параграфа) ✅ Текст параграфа успешно обновлен")
         logger.info("(Обновление текста параграфа) -----------------------------------------------")
@@ -292,7 +294,9 @@ def update_sentence_text():
     if ai_gramma_check:
         logger.info(f"(Обновление текста предложения /update_sentence_text) Проверка грамматики через ИИ")
         try:
-            sentence_text = gramma_correction_ai(sentence_text)
+            language = current_app.config.get("APP_LANGUAGE", "ru")
+            assistant_id = current_app.config.get("OPENAI_ASSISTANT_GRAMMA_CORRECTOR_RU")
+            sentence_text = gramma_correction_ai(sentence_text, language, assistant_id)
         except Exception as e:
             logger.error(f"(Обновление текста предложения /update_sentence_text) ❌ Ошибка при проверке грамматики через ИИ: {str(e)} текс остается прежним")
             pass
@@ -698,9 +702,9 @@ def share_report():
         return jsonify({"status": "error", "message": "Пользователь с таким email не найден"}), 404
     
     shared_with_user_id = shared_with_user.id 
-    
+    shared_user_id = current_user.id
     try:
-        ReportShare.create(report_id, shared_with_user_id)
+        ReportShare.create(report_id, shared_user_id, shared_with_user_id)
         logger.info(f"(Поделиться протоколом) ✅ Протокол успешно поделен")
         logger.info(f"(Поделиться протоколом) --------------------------------------------")
         return jsonify({"status": "success", "message": f"Удалось успешно поделиться протоколом с пользователем {email}"}), 200

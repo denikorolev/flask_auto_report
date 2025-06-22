@@ -15,7 +15,7 @@ my_reports_bp = Blueprint('my_reports', __name__)
 def reports_list(): 
     # Initialize config variables
     reports_type_with_subtypes = ReportType.get_types_with_subtypes(g.current_profile.id)
-    profile_reports = Report.find_by_profile(g.current_profile.id)
+    profile_reports = Report.find_by_profile(g.current_profile.id, user_id=g.current_profile.user_id)
                 
     return render_template("my_reports.html", 
                            title="Список протоколов текущего профиля", 

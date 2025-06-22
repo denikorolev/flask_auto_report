@@ -129,23 +129,16 @@ class Config:
                                 }
     
     @staticmethod
-    def get_user_upload_folder():
+    def get_user_upload_folder(user_id, profile_id, user_email):
         """
         Создаёт путь к папке для загрузок пользователя в формате: <первая_часть_email>_<user_id>/profile_<profile_id>.
         Если папка не существует, она будет создана.
         """
-        user_email = current_user.email
-        user_id = current_user.id
         # Извлекаем первую часть email (до @)
         email_prefix = user_email.split('@')[0]
         # Путь к папке пользователя
         user_folder = os.path.join(current_app.config['BASE_UPLOAD_FOLDER'], f"{email_prefix}_{user_id}")
         
-        # Получаем текущий профиль пользователя
-        if not g.current_profile:
-            raise Exception("Profile is not selected.")
-        
-        profile_id = g.current_profile.id
         profile_folder = os.path.join(user_folder, f"profile_{profile_id}")
         
         # Создание папки пользователя, если её нет

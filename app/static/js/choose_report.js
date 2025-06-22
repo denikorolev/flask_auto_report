@@ -23,7 +23,7 @@ document.addEventListener("DOMContentLoaded", function () {
         if (reportNumber) document.getElementById("report-number").value = reportNumber;
     }
     
-    // Инициализируем логику типа и подтипа через utils.js
+    // Инициализируем логику типа и подтипа через utils/utils.js
     initializeSubtypeLogic("report_type", "report_subtype", "report-types-data");
 });
 
