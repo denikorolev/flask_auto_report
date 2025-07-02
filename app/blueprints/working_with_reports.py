@@ -394,69 +394,7 @@ def save_report_snapshot():
     
 
 
-@working_with_reports_bp.route("/train_sentence_boundary", methods=["POST"])
-@auth_required()
-def train_sentence_boundary():
-    """
-    Получает размеченное предложение и сохраняет его для дообучения SpaCy.
-    """
-    data = request.get_json()
-    text = data.get("text")
-    sent_starts = data.get("sent_starts")
-    if not text or not sent_starts:
-        return jsonify({"status": "error", "message": "Missing text or sent_starts"}), 400
-    
-    try:
-        # Сохраняем в jsonl
-        training_example = {
-            "text": text,
-            "sent_starts": sent_starts
-        }
 
-        file_path = os.path.join("spacy_training_data", "sent_boundary.jsonl")
-        os.makedirs(os.path.dirname(file_path), exist_ok=True)
-        with open(file_path, "a", encoding="utf-8") as f:
-            f.write(json.dumps(training_example, ensure_ascii=False) + "\n")
-        
-        return jsonify({"status": "success", "message": "Example saved"}), 200
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
-    
-    
-    
-# считаю токены от SpaCy это не часть работы с OpenAI,
-@working_with_reports_bp.route("/get_spacy_tokens", methods=["POST"])
-@auth_required()
-def get_spacy_tokens():
-    """
-    Принимает текст и возвращает список токенов от SpaCy с is_sent_start.
-    """
-    
-    language = current_app.config.get("PROFILE_SETTINGS", {}).get("APP_LANGUAGE", "ru")
-
-    data = request.get_json()
-    text = data.get("text", "").strip()
-    if not text:
-        return jsonify({"status": "error", "message": "Текст не передан"}), 400
-
-    try:
-        nlp = SpacyModel.get_instance(language)
-        doc = nlp(text)
-        tokens = [
-            {
-                "text": token.text,
-                "idx": token.idx,
-                "is_sent_start": token.is_sent_start
-            }
-            for token in doc
-        ]
-        return jsonify({"status": "success", "tokens": tokens}), 200
-
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
-    
-    
-    
 # editing_report.py
 @working_with_reports_bp.route("/increase_sentence_weight", methods=["POST"])
 @auth_required()

@@ -135,6 +135,7 @@ def delete_record(table_name, record_id):
         print(f"Ошибка при удалении записи: {e}")
         return jsonify({"error": "Ошибка при удалении записи"}), 500
     
+ 
     
 @admin_bp.route("/update/<table_name>/<int:record_id>", methods=["PUT"])
 @auth_required()
@@ -202,6 +203,8 @@ def update_record(table_name, record_id):
         print(f"Ошибка при обновлении записи: {e}")
         return jsonify({"status": "error", "message": "Ошибка при обновлении записи"}), 500
 
+
+
 # Маршрут для поиска пользоватея и отправки его данных на клиент
 @admin_bp.route("/search_user", methods=["POST"])
 @auth_required()
@@ -254,6 +257,8 @@ def search_user():
         return jsonify({"status": "error", "message": "Ошибка поиска пользователя."}), 500
 
 
+
+
 @admin_bp.route("/update_user/<int:user_id>", methods=["PUT"])
 @auth_required()
 @roles_required("superadmin")  # Доступ только для суперадминов
@@ -289,210 +294,10 @@ def update_user(user_id):
         current_app.logger.error(f"Ошибка обновления пользователя: {str(e)}")
         return jsonify({"status": "error", "message": "Ошибка сервера."}), 500
 
-
-
-# Маршрут для получения количества обучающих примеров (выводит на кнопке)
-@admin_bp.route("/get_training_count", methods=["GET"])
-@auth_required()
-def get_training_count():
-    logger.info("Запрос количества обучающих примеров")
-    try:
-        file_path = os.path.join("spacy_training_data", "sent_boundary.jsonl")
-        if not os.path.exists(file_path):
-            logger.error(f"Файл {file_path} не найден")
-            return jsonify({"count": 0})
-        with open(file_path, "r", encoding="utf-8") as f:
-            count = sum(1 for _ in f)
-        logger.info(f"Количество обучающих примеров: {count}")
-        return jsonify({"count": count})
-    except Exception as e:
-        logger.error(f"Ошибка при подсчете обучающих примеров: {e}")    
-        current_app.logger.error(f"Ошибка при подсчете обучающих примеров: {e}")
-        return jsonify({"count": 0})
     
+
     
-# Маршрут для переобучения модели SpaCy
-@admin_bp.route("/train_spacy_model", methods=["POST"])
-@auth_required()
-def train_spacy_model():
-    import shutil
-    import glob
-    from spacy_manager import SpacyModel
-    from spacy_train import start_spacy_retrain
 
-    try:
-        logger.info("🧠 Запуск переобучения SpaCy модели")
-
-        # 🧠 Обучаем модель и получаем путь
-        model_output_path = start_spacy_retrain()
-
-        # 🧹 Оставляем только 3 последние версии модели
-        versions = sorted(
-            glob.glob("spacy_models/custom_sentencizer_v*"),
-            key=os.path.getmtime,
-            reverse=True
-        )
-        for old_path in versions[3:]:
-            shutil.rmtree(old_path)
-
-        # 🔁 Обновляем активную модель
-        SpacyModel.set_custom_model(model_output_path)
-        SpacyModel.reset()
-
-        return jsonify({"status": "success", "message": "Модель успешно обучена"}), 200
-
-    except Exception as e:
-        logger.exception("❌ Ошибка при обучении модели")
-        return jsonify({"status": "error", "message": str(e)}), 500
-
-
-# Визуализация обучающего датасета (текущие 50 строк)
-@admin_bp.route("/get_training_data", methods=["GET"])
-@auth_required()
-def get_training_data():
-    file_path = os.path.join("spacy_training_data", "sent_boundary.jsonl")
-    try:
-        if not os.path.exists(file_path):
-            return jsonify([])
-
-        data = []
-        with open(file_path, "r", encoding="utf-8") as f:
-            for idx, line in enumerate(f):
-                example = json.loads(line.strip())
-                data.append({ "id": idx, **example })  # ID = номер строки
-
-        return jsonify(data)
-    except Exception as e:
-        logger.error(f"Ошибка при чтении обучающего файла: {e}")
-        return jsonify([])
-    
-    
-# Маршрут для удаления строки из датасета для обучения модели spaCy
-@admin_bp.route("/delete_training_example/<int:example_id>", methods=["DELETE"])
-@auth_required()
-def delete_training_example(example_id):
-    file_path = os.path.join("spacy_training_data", "sent_boundary.jsonl")
-    try:
-        if not os.path.exists(file_path):
-            return jsonify({"status": "error", "message": "Файл не найден"}), 404
-
-        with open(file_path, "r", encoding="utf-8") as f:
-            lines = f.readlines()
-
-        if example_id < 0 or example_id >= len(lines):
-            return jsonify({"status": "error", "message": "Некорректный ID"}), 400
-
-        del lines[example_id]
-
-        with open(file_path, "w", encoding="utf-8") as f:
-            f.writelines(lines)
-
-        return jsonify({"status": "success"}), 200
-
-    except Exception as e:
-        logger.error(f"Ошибка при удалении обучающего примера: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 500
-    
-    
-# Маршрут для исправления строки датасета перед его использованием в обучении модели spaCy
-@admin_bp.route("/update_training_example", methods=["POST"])
-@auth_required()
-def update_training_example():
-    data = request.get_json()
-    example_id = data.get("id")
-    text = data.get("text", "").strip()
-    sent_starts = data.get("sent_starts")
-
-    file_path = os.path.join("spacy_training_data", "sent_boundary.jsonl")
-    try:
-        if not os.path.exists(file_path):
-            return jsonify({"status": "error", "message": "Файл не найден"}), 404
-
-        with open(file_path, "r", encoding="utf-8") as f:
-            lines = f.readlines()
-
-        if example_id is None or example_id < 0 or example_id >= len(lines):
-            return jsonify({"status": "error", "message": "Некорректный ID"}), 400
-
-        updated_line = json.dumps({"text": text, "sent_starts": sent_starts}, ensure_ascii=False) + "\n"
-        lines[example_id] = updated_line
-
-        with open(file_path, "w", encoding="utf-8") as f:
-            f.writelines(lines)
-
-        return jsonify({"status": "success"}), 200
-
-    except Exception as e:
-        logger.error(f"Ошибка при обновлении обучающего примера: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 500
-    
-    
-# Маршрут для получения списка доступных моделей
-@admin_bp.route("/get_available_models", methods=["GET"])
-@auth_required()
-@roles_required("superadmin")
-def get_available_models():
-    """
-    Возвращает последние 3 модели с путём и датой.
-    """
-    import glob
-    import os
-    from datetime import datetime
-
-    try:
-        versions = sorted(
-            glob.glob("spacy_models/custom_sentencizer_v*"),
-            key=os.path.getmtime,
-            reverse=True
-        )
-
-        result = []
-        for path in versions[:3]:
-            name = os.path.basename(path)
-            mtime = datetime.fromtimestamp(os.path.getmtime(path)).strftime("%Y-%m-%d %H:%M:%S")
-            result.append({"name": name, "path": path, "modified": mtime})
-
-        return jsonify({"models": result}), 200
-
-    except Exception as e:
-        logger.error(f"Ошибка при получении списка моделей: {e}")
-        return jsonify({"models": []})
-    
-    
-    
-# Маршрут для отката модели на предыдущую или предпредыдущую версию
-@admin_bp.route("/revert_model/<int:version_index>", methods=["POST"])
-@auth_required()
-@roles_required("superadmin")
-def revert_model(version_index):
-    """
-    Откатывает модель на предыдущую или предпредыдущую версию.
-    version_index = 1 → предыдущая
-    version_index = 2 → предпредыдущая
-    """
-    import glob
-    import os
-    from spacy_manager import SpacyModel
-
-    try:
-        versions = sorted(
-            glob.glob("spacy_models/custom_sentencizer_v*"),
-            key=os.path.getmtime,
-            reverse=True
-        )
-
-        target_model_path = versions[version_index]
-        logger.info(f"🔁 Откат модели до версии: {target_model_path}")
-        SpacyModel.set_custom_model(target_model_path)
-        SpacyModel.reset()
-
-        return jsonify({"status": "success", "message": f"Модель откатана до версии {os.path.basename(target_model_path)}"}), 200
-
-    except Exception as e:
-        logger.error(f"Ошибка при откате модели: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 500
-    
-    
     
 @admin_bp.route("/make_all_public", methods=["POST"])
 @auth_required()

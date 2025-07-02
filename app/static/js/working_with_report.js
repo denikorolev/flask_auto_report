@@ -1013,33 +1013,7 @@ async function sendModifiedSentencesToServer() {
                 sentenceElement.classList.remove("was-changed-highlighted-sentence");
             });
 
-            // Назначаем обработчик на кнопку "🧠 Учить выбранные"
-            const trainSelectedButton = document.getElementById("trainSelectedSentencesButton");
-            if (trainSelectedButton) {
-                trainSelectedButton.addEventListener("click", () => {
-                    const checkboxes = document.querySelectorAll(".train-sentence__checkbox:checked");
-                    if (checkboxes.length === 0) {
-                        alert("Выберите хотя бы одно предложение.");
-                        return;
-                    }
-
-                    const selectedTexts = Array.from(checkboxes).map(cb => cb.dataset.text);
-                    const combinedText = selectedTexts.join(" ");
-
-                    showTrainingPopup(combinedText, async ({ text, sent_starts }) => {
-                        try {
-                            await sendRequest({
-                                url: "/working_with_reports/train_sentence_boundary",
-                                data: { text, sent_starts },
-                            });
-                            toastr.success("Пример отправлен на дообучение");
-                        } catch (e) {
-                            console.error("Ошибка обучения:", e);
-                            alert("Ошибка отправки обучающего примера");
-                        }
-                    });
-                });
-            }
+            
             // Назначаем обработчик на кнопку "❌ Удалить"
             const deleteBadSentenceButton = document.querySelectorAll(".train-sentence__btn--delete");
             if (deleteBadSentenceButton) {
