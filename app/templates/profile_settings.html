@@ -73,6 +73,11 @@
                         {% if user_settings.USE_WORD_REPORTS %} checked {% endif %}>
                 </li>
                 <li class="settings-block__item">
+                    <label class="settings-block__label" for="useSentenceAutosaveForDynamicReport">Использовать автосохранение новых предложений при использовании динамического протокола</label>
+                    <input class="settings-block__input" type="checkbox" id="useSentenceAutosaveForDynamicReport" name="USE_SENTENCE_AUTOSAVE_FOR_DYNAMIC_REPORT"
+                        {% if user_settings.USE_SENTENCE_AUTOSAVE_FOR_DYNAMIC_REPORT %} checked {% endif %}>
+                </li>
+                <li class="settings-block__item">
                     <label class="settings-block__label" for="useSentenceAutosave">Использовать автосохранение новых предложений</label>
                     <input class="settings-block__input" type="checkbox" id="useSentenceAutosave" name="USE_SENTENCE_AUTOSAVE"
                         {% if user_settings.USE_SENTENCE_AUTOSAVE %} checked {% endif %}>

@@ -1748,17 +1748,61 @@ body {
     cursor: pointer;
 }
 
-#ctrlPreviewOverlay {
-    display: none;
+.prevReportOverlay {
+    display:none; 
+    position:fixed; 
+    top:0; 
+    left:0; 
+    width:100vw; 
+    height:100vh; 
+    background:white; 
+    color:black; 
+    z-index:9999; 
+    overflow:auto; 
+    font-size:1.2rem; 
+    white-space:pre-wrap;
     opacity: 0;
     visibility: hidden;
     transition: opacity 0.4s ease, visibility 0.4s ease;
 }
 
-#ctrlPreviewOverlay.show {
+.prevReportOverlay.show {
     display: block !important;
     opacity: 1;
     visibility: visible;
+}
+
+.prevReportTextTitle {
+    max-width: 70%;
+    font-size: 1.5rem;
+    font-weight: bold;
+    padding: 20px;
+    color: var(--main-btn-color);
+}
+
+.prevReportText {
+    margin-top: 30px;
+    margin-left: 0;
+    padding: 20px;
+    max-width: 70%;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.prevReportCloseButton {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    font-size: 20px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: var(--main-btn-color);
+    z-index: 10001;
+}
+
+.prevReportCloseButton:hover {
+    color: var(--main-btn-color-hover);
 }
 
 /* Прогресс бар для загрузки */

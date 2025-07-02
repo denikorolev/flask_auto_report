@@ -16,6 +16,8 @@ document.addEventListener("DOMContentLoaded", initWorkingWithReport);
 // Объявляем глобальные переменные и запускаем стартовые функции, постепенно нужно перенести сюда и логику связанную с ключевыми словами и развешивание части слушателей
 function initWorkingWithReport() {
 
+    console.log(userSettings);
+
     const popupList = document.getElementById("popupList");  // Для обращения к PopUp
     const exportButton = document.getElementById("exportButton"); // Для обращения к кнопке "Экспорт в Word"
     const copyButton = document.getElementById("copyButton"); // Для обращения к кнопке "Копировать текст"
@@ -1445,7 +1447,26 @@ function handleAnalyzeDynamicsResponse(response) {
     initWorkingWithReport();
     reexecuteInlineScripts(); // Перезапускаем скрипты в новом body
     additionalFindings(response); // Отображаем нераспознанные предложения
-    attachCtrlOverlayLogic(); // навешиваем поведение Overlay
+    attachPrevReportOverlayLogic(); // навешиваем поведение Overlay
+    // показываем кнопку showPrevReportButton
+    const showPrevReportButton = document.getElementById("showPrevReportButton");
+    if (showPrevReportButton) {
+        showPrevReportButton.style.display = "block";
+    }
+    // Скрываем кнопки dynamicReportButton и editReportButton
+    const dynamicReportButton = document.getElementById("dynamicReportButton");
+    const editReportButton = document.getElementById("editReportButton");
+    if (dynamicReportButton) {
+        dynamicReportButton.style.display = "none";
+    }
+    if (editReportButton) {
+        editReportButton.style.display = "none";
+    }
+
+    if(!userSettings.USE_SENTENCE_AUTOSAVE_FOR_DYNAMIC_REPORT) {
+        // Меняем значение USE_SENTENCE_AUTOSAVE на false
+        userSettings.USE_SENTENCE_AUTOSAVE = false;
+    }
 }
 
 
@@ -1499,33 +1520,40 @@ function additionalFindings(response) {
 
 // Функция для навешивания логики на Shift+Пробел (Space) 
 // название оставил старое для ctrl так как не меняе сути
-function attachCtrlOverlayLogic() {
-    const overlay = document.getElementById("ctrlPreviewOverlay");
+function attachPrevReportOverlayLogic() {
+    const overlay = document.getElementById("prevReportOverlay");
+    const textBlock = overlay.querySelector("#prevReportText");
+
+    // Вешаем обработчик на кнопку "Показать предыдущий отчет"
+    const showPrevReportButton = document.getElementById("showPrevReportButton");
+    if (showPrevReportButton) {
+        showPrevReportButton.addEventListener("click", () => {
+            overlay.classList.toggle("show");
+        });
+    }
+
     if (!overlay) return;
-    overlay.textContent = window.previousDynamicsText || "(нет сохранённого текста)";
+    textBlock.textContent = window.previousDynamicsText || "(нет сохранённого текста)";
 
-    // Используем флаг, чтобы избежать дребезга при зажатии клавиш
-    let isOverlayShown = false;
-
-    document.addEventListener("keydown", onKeyDown);
-    document.addEventListener("keyup", onKeyUp);
-
-    function onKeyDown(e) {
-        if (e.shiftKey && e.code === "Space" && !isOverlayShown) {
-            overlay.classList.add("show");
-            isOverlayShown = true;
-            // Предотвращаем скроллинг по пробелу
-            e.preventDefault();
-        }
-    }
-
-    function onKeyUp(e) {
-        if (isOverlayShown && (e.code === "Space" || !e.shiftKey)) {
+    // close button logic
+    const closeButton = overlay.querySelector("#closePrevReportButton");
+    if (closeButton) {
+        closeButton.addEventListener("click", () => {
             overlay.classList.remove("show");
-            isOverlayShown = false;
-        }
+        });
     }
+    document.addEventListener("keydown", function (e) {
+        if (e.shiftKey && e.code === "Space") {
+            e.preventDefault(); // Предотвращаем скроллинг
+            overlay.classList.toggle("show");
+        }
+
+        if (e.code === "Escape" && overlay.classList.contains("show")) {
+            overlay.classList.remove("show");
+        }
+    });
 }
+
 
 // Функция для копирования текста в буфер обмена использую для 
 // неклассфицированных предложений в логике трансформации протоколов в динамике

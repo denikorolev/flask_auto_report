@@ -165,7 +165,7 @@ def clean_raw_text_route():
         logger.info("---------------------------------------------------")
         return jsonify({"status": "error", "message": str(e)}), 500
 
-    
+
 
 @openai_api_bp.route("/ocr_extract_text", methods=["POST"])
 @auth_required()
@@ -193,5 +193,4 @@ def ocr_extract_text():
         return jsonify({"status": "error", "message": str(e)}), 500
     
     
-    
-    
+

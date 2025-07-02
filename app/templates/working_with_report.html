@@ -168,15 +168,16 @@
 
         <!-- Кнопка для перехода к настройке текущего параграфа -->
         <a href="/editing_report/edit_report?report_id={{ report_data.id }}" target="_blank" class="btn"
-            title="Открывает этот протокол в новом окне">
+            title="Открывает этот протокол в новом окне" id="editReportButton">
             Редактировать протокол
         </a>
         <br>
         {% if user_max_rank == 4 %}
             <button class="btn" id="dynamicReportButton">Динамика</button>
         {% endif %}
-        
-       
+        <button class="btn" id="showPrevReportButton" style="display: none;">Показать предыдущий протокол</button>
+
+
         <ul class="report-controlpanel__inactive-paragraphs-list" id="inactiveParagraphsList">
             <h3 title="Параграфы, которые не участвуют в формировании заключения. Можно активировать нажав на имя параграфа">
                 Неактивные параграфы:
@@ -257,7 +258,13 @@
 
 
 <!-- Поле для вывода текста предыдущего протокола, если была оценка динамики -->
-<div id="ctrlPreviewOverlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:white; color:black; z-index:9999; overflow:auto; padding:40px; font-size:1.2rem; white-space:pre-wrap;"></div>
+<div id="prevReportOverlay" class="prevReportOverlay">
+    <button class="btn " id="closePrevReportButton" class="prevReportCloseButton">❌</button>
+    <div class="prevReportTextContainer">
+        <p class="prevReportTextTitle">Текст предыдущего протокола:</p>
+        <pre id="prevReportText" class="prevReportText"></pre>
+    </div>
+</div>
 
 {% endblock container %}
 {% block scripts %}

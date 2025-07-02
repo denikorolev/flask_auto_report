@@ -5,7 +5,7 @@ from flask_security import current_user
 from models import db, User, Report, Paragraph, HeadSentence, BodySentence, TailSentence, HeadSentenceGroup, TailSentenceGroup, BodySentenceGroup, ReportShare, ReportSubtype
 from app.utils.common import get_max_index, normalize_paragraph_indices
 from flask_security.decorators import auth_required
-from decorators import require_role_rank
+from app.utils.decorators import require_role_rank
 from logger import logger
 from app.utils.ai_processing import gramma_correction_ai
 

@@ -118,6 +118,7 @@ class Config:
     # Дефолтные настройки для профиля
     DEFAULT_PROFILE_SETTINGS = {"USE_WORD_REPORTS": False,
                                 "USE_SENTENCE_AUTOSAVE": True,
+                                "USE_SENTENCE_AUTOSAVE_FOR_DYNAMIC_REPORT": False,
                                 "APP_LANGUAGE": "ru",
                                 "APP_THEME": "light",
                                 "SIMILARITY_THRESHOLD_FUZZ": 95,
