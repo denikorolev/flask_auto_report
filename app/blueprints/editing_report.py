@@ -335,7 +335,7 @@ def add_paragraph():
         return jsonify({"status": "error", "message": "Протокол не найден или не соответствует данному профилю"}), 403
     
     if copy_paste:
-        logger.info(f"(Добавление нового параграфа) Параграф будет вставлен из буфера обмена")
+        logger.info(f"(Добавление нового параграфа) 💻 Параграф будет вставлен из буфера обмена")
         paragraph_id = data.get("object_id")
         exist_paragraph = Paragraph.get_by_id(paragraph_id)
         
@@ -352,6 +352,9 @@ def add_paragraph():
             "str_after": exist_paragraph.str_after,
             "is_active": exist_paragraph.is_active,
             "is_additional": exist_paragraph.is_additional,
+            "is_impression": exist_paragraph.is_impression,
+            "comment": exist_paragraph.comment,
+            "tags": exist_paragraph.tags,
         }
         
         try:

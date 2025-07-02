@@ -13,13 +13,6 @@ function bufferPopupListeners() {
     const clearBufferBtn = document.getElementById("clearBufferButton");
     
 
-    // // Открыть попап
-    // openBufferBtn?.addEventListener("click", function () {
-    //     refreshBufferPopup(); // Перед открытием — обновить содержимое
-    //     const isGroupLocked = isGroupLocked(); // Проверяем, заблокирована ли группа
-    //     bufferPopup.style.display = "block";
-    // });
-
     // Закрыть попап
     closeBufferBtn?.addEventListener("click", function () {
         bufferPopup.style.display = "none";

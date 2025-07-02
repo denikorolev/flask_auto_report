@@ -207,8 +207,8 @@ async function handleSaveChangesButtonClick() {
 function showBufferPopup(button) {
     const popup = document.getElementById("bufferPopup");
 
-    bufferPopupListeners(); // Инициализируем слушатели на кнопки попапа
-    refreshBufferPopup(); // Перед открытием — обновить содержимое
+    bufferPopupListeners(); // Инициализируем слушатели на кнопки попапа в файле buffer_popup.js
+    refreshBufferPopup(); // Перед открытием — обновить содержимое в файле buffer_popup.js
 
     popup.style.display = "block"
 }
@@ -596,7 +596,6 @@ function insertFromBuffer(index) {
         return;
     }
 
-    console.log("Вставка из буфера:", itemFromBuffer);
     // Создаем новый параграф
     addParagraph(itemFromBuffer);
 }
