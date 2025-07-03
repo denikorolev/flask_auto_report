@@ -20,7 +20,14 @@ export function pollTaskStatus(task_id, {
     onSuccess = () => {},
     onError = () => {},
     onTimeout = () => {},
+    abortController = null
 } = {}, attempt = 0) {
+
+    if (abortController?.signal?.aborted) {
+        onError("Запрос отменён пользователем.");
+        return;
+    }
+
     const progress = Math.min((attempt / maxAttempts) * 100, 99);
     onProgress(progress, attempt, maxAttempts);
 
@@ -33,13 +40,17 @@ export function pollTaskStatus(task_id, {
             onError("Ошибка при получении статуса задачи.", data);
             return;
         }
+        if (abortController && abortController.signal.aborted) {
+            onError("Запрос отменён пользователем.");
+            return;
+        }
 
         const status = (data.status || "").toLowerCase();
 
         if (status === "pending" || status === "started") {
             if (attempt < maxAttempts) {
                 setTimeout(() => pollTaskStatus(task_id, {
-                    maxAttempts, interval, onProgress, onSuccess, onError, onTimeout
+                    maxAttempts, interval, onProgress, onSuccess, onError, onTimeout, abortController
                 }, attempt + 1), interval);
             } else {
                 onTimeout();
@@ -58,7 +69,9 @@ export function pollTaskStatus(task_id, {
             onError("Ошибка: " + (data.details || "Неизвестный статус"), data);
         }
     }).catch(err => {
-        onError("Ошибка связи с сервером", err);
+        if (!abortController?.signal?.aborted) {
+            onError("Ошибка связи с сервером", err);
+        }
     });
 }
 
@@ -79,8 +92,11 @@ export function updateProgressBar({ bar, label, text }, percent, statusText = nu
     const textElem = text ? (typeof text === "string" ? document.getElementById(text) : text) : null;
 
     if (!barElem) return;
-    // Ширина через style или через CSS-переменную, зависит от реализации
-    barElem.style.width = `${Math.min(percent, 100)}%`;
-    if (labelElem) labelElem.textContent = `${Math.round(percent)}%`;
+    const clamped = Math.min(Math.max(percent, 0), 100);
+
+    // ⬅️ Меняем переменную CSS
+    barElem.style.setProperty('--progress-width', `${clamped}%`);
+
+    if (labelElem) labelElem.textContent = `${Math.round(clamped)}%`;
     if (textElem && statusText !== null) textElem.textContent = statusText;
 }

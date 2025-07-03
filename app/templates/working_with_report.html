@@ -9,7 +9,7 @@
 <input type="hidden" data-report-id=" {{report_data.id}} " id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
 
 {% from "macros/all_popups.html" import dynamics_popup %}
-{% from "macros/elements.html" import progress_bar %}
+{% from "macros/elements.html" import progress_bar, text_area_and_drop_zone %}
 
 <!-- Предзаполненная форма с ФИО и тд на странице протокола -->
 {% if user_settings.USE_WORD_REPORTS %}
@@ -231,27 +231,23 @@
 <!-- Попап для работы с динамикой -->
 <div id="dynamicsPopup" class="dynamics-popup" style="display: none;">
     <h3 class="dynamics-popup__title">Анализ динамики</h3>
-
-    <textarea id="dynamicsTextarea" class="dynamics-popup__textarea" placeholder="Вставьте текст предыдущего протокола сюда"></textarea>
-
     <div class="flex">
-        <div id="dynamicsDropZone" class="ai-generator__dropzone">
-            <p>Перетащи файл (JPG/PNG/PDF) сюда<br>или вставь скриншот из буфера (Ctrl+V)</p>
-            <div id="dynamicsPreview"></div>
-        </div>
-        <div class="flex_column">
-            {{ progress_bar() }}
-        </div>
+        {{ text_area_and_drop_zone() }}
     </div>
-
     <div class="dynamics-popup__footer">
+        
         <div class="dynamics-popup__actions">
             <button class="btn " id="pasteDynamicsButton">Вставить из буфера</button>
             <button class="btn" id="uploadFileDynamicsButton">Загрузить файл</button>
             <button class="btn " id="prepareTextDynamicsButton">Подготовить текст</button>
             <button class="btn" id="analyzeDynamicsButton">Анализировать</button>
         </div>
-        <button class="btn dynamics-popup__btn--close" id="closeDynamicsPopup">Закрыть</button>
+        <div>
+            {{ progress_bar() }}
+        </div>
+        <div>
+            <button class="btn" id="closeDynamicsPopup">Закрыть</button>
+        </div>
     </div>
     <input type="file" id="dynamicFileUploadInput" accept=".jpg,.jpeg,.png,.pdf,image/*,application/pdf" style="display: none;">
 </div>
@@ -278,7 +274,6 @@
 
 <script type="module" src="{{ url_for('static', filename='js/working_with_report.js') }}"></script>
 <script src="{{ url_for('static', filename='js/utils/popup_sentences.js') }}"></script>
-<script src="{{ url_for("static", filename="js/spacy_training_popup.js") }}"></script>
 <script src="{{ url_for('static', filename='js/firstGrammaSentence.js') }}"></script>
 
 {% endblock scripts %}

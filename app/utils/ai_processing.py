@@ -88,12 +88,11 @@ def _process_openai_request(text: str, assistant_id: str, user_id: int, file_id:
     
     run = client.beta.threads.runs.create(**run_args)
 
-    print("----------------------")
     while run.status in ["queued", "in_progress"]:
         run = client.beta.threads.runs.retrieve(thread_id=thread_id, run_id=run.id)
         print(f"Run status: {run.status}")
-        time.sleep(1)
-    print("----------------------")
+        time.sleep(1.5)
+        
     messages = client.beta.threads.messages.list(
         thread_id=thread_id,
         order="asc",
@@ -293,5 +292,35 @@ def structure_report_text(template_text: list, report_text: str, user_id: int, a
     logger.error("[structure_report_text] ❌ Все попытки структурирования отчета не удались")
     logger.info("---------------------------------------------------")
     raise ValueError("Все попытки структурирования отчета не удались.")
+
+
+
+def ai_template_generator(template_data: str, assistant_id: str, user_id: int) -> dict:
+    """
+    Generates a report template based on the provided template data.
+    """
+    logger.info("(Функция ai_template_generator) --------------------------------------")
+    logger.info("[ai_template_generator] 🚀 Начата генерация шаблона отчета.")
+    
+    generated_template = _process_openai_request(
+        text=template_data,
+        assistant_id=assistant_id,
+        user_id=user_id,
+        file_id=None,
+        clean_response=False
+    )
+    # распарсиваем ответ в JSON
+    try:
+        json_generated_template = pyjson.loads(generated_template)
+        logger.info(f"[ai_template_generator] ✅ Шаблон успешно сгенерирован: {generated_template}")
+        logger.info("---------------------------------------------------")
+        return json_generated_template
+    
+    except pyjson.JSONDecodeError as e:
+        logger.error(f"[ai_template_generator] ❌ Ошибка при распарсивании ответа ассистента: {e}")
+        raise ValueError("Ответ ассистента не является корректным JSON. Не удалось распарсить.")
+    
+    
+    
     
     

@@ -1215,8 +1215,8 @@ async function showDynamicReportPopup(boxForAiImpressionResponse, boxForAiRedact
 
     const closeDynamicsPopup = document.getElementById("closeDynamicsPopup");
     const analyzeDynamicsButton = document.getElementById("analyzeDynamicsButton");
-    const dynamicsTextarea = document.getElementById("dynamicsTextarea");
-    const dynamicsPreview = document.getElementById("dynamicsPreview");
+    const dynamicsTextarea = document.getElementById("Textarea");
+    const dynamicsPreview = document.getElementById("DropZonePreview");
     const pasteDynamicsButton = document.getElementById("pasteDynamicsButton");
     const prepareTextDynamicsButton = document.getElementById("prepareTextDynamicsButton");
     const dynamicFileUploadButton = document.getElementById("uploadFileDynamicsButton");
@@ -1229,15 +1229,19 @@ async function showDynamicReportPopup(boxForAiImpressionResponse, boxForAiRedact
 
     let detachDropZone = setupDynamicsDropZone(
         {
-            dropZoneId: "dynamicsDropZone",
-            previewId: "dynamicsPreview",
-            textareaId: "dynamicsTextarea"
+            dropZoneId: "DropZone",
+            previewId: "DropZonePreview",
+            textareaId: "Textarea"
         }
     );
 
     // Внутренняя функция, нужна чтобы не вводить каждый раз параметры 
     // bar, label, text для универсальной функции updateProgressBar
     function updateDynamicsProgressBar(percent, statusText = null) {
+        const progressBarContainer = document.getElementById("dynamicsProgressBarContainer");
+        if (progressBarContainer && progressBarContainer.style.display === "none") {
+            progressBarContainer.style.display = "block";
+        }
         updateProgressBar(
             {
                 bar: "dynamicsProgressBar",
@@ -1318,8 +1322,8 @@ async function showDynamicReportPopup(boxForAiImpressionResponse, boxForAiRedact
         const taskID = await prepareTextWithAI(dynamicsTextarea, prepareTextDynamicsButton);
 
         pollTaskStatus(taskID, {
-            maxAttempts: 10,
-            interval: 7000,
+            maxAttempts: 12,
+            interval: 4000,
             onProgress: (progress) => updateDynamicsProgressBar(progress, "Ожидание результата..."),
             onSuccess: (result) => {
                 updateDynamicsProgressBar(100, "Готово!");

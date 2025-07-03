@@ -11,6 +11,7 @@ from logger import logger
 import os
 import shutil 
 from flask_security.decorators import auth_required
+from tasks.celery_tasks import template_generating
 
 new_report_creation_bp = Blueprint('new_report_creation', __name__)
 
@@ -577,3 +578,39 @@ def create_report_from_shared_route():
     except Exception as e:
         logger.error(f"(create_report_from_shared_route) ❌ Ошибка: {e}")
         return jsonify({"status": "error", "message": "Не удалось создать протокол"}), 500
+    
+
+
+@new_report_creation_bp.route('/ai_generate_template', methods=['POST'])
+@auth_required()
+def ai_generate_template():
+    logger.info("(Маршрут: ai_generate_template) 🚀 Начата генерация шаблона с помощью AI")
+    data = request.get_json()
+    if not data:
+        return jsonify({"status": "error", "message": "Не получены данные для генерации шаблона"}), 400
+    template_text = data.get('origin_text', '')
+    template_name = data.get('template_name', '').strip()
+    template_type = data.get('template_type', '')
+    template_subtype = data.get('template_subtype', '')
+    
+    user_id = current_user.id if current_user.is_authenticated else None
+    
+
+    if not all([template_name, template_type, template_subtype]):
+        return jsonify({"status": "error", "message": "Не все данные для генерации шаблона предоставлены"}), 400
+
+    assistant_id = os.getenv("OPENAI_ASSISTANT_TEMPLATE_MAKER")
+    text = f"""
+
+    The text of the radiology report: {template_text}
+    The imaging modality: {template_type}
+    The anatomical area: {template_subtype}
+    The report title: {template_name}
+    """
+    try:
+        task = template_generating.delay(template_data=text, user_id=user_id, assistant_id=assistant_id)
+        logger.info(f"(Маршрут: ai_generate_template) ✅ Генерация шаблона успешно запущена.")
+        return jsonify({"status": "success", "message": "Генерация шаблона запущена.", "task_id": task.id}), 200
+    except Exception as e:
+        logger.error(f"(Маршрут: ai_generate_template) ❌ Ошибка при запуске генерации шаблона: {e}")
+        return jsonify({"status": "error", "message": "Не удалось запустить генерацию шаблона."}), 500

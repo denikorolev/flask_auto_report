@@ -2,7 +2,7 @@
 
 <!--Макрос прогресс бара использую в working_with_report и editing_report-->
 {% macro progress_bar() %}
-<div id="dynamicsProgressBarContainer" class="dynamics-progress-container">
+<div id="dynamicsProgressBarContainer" class="dynamics-progress-container" style="display: none;">
     <p id="dynamicsProgressBarText" class="dynamics-popup__progress-text">Загрузка...</p>
     <div id="dynamicsProgressBar" class="dynamics-progress-bar">
         <span id="dynamicsProgressBarLabel" class="dynamics-progress-bar__label"></span>
@@ -10,3 +10,15 @@
 </div>
 {% endmacro %}
 
+
+{% macro text_area_and_drop_zone() %}
+<textarea id="Textarea" class="dynamics-popup__textarea" placeholder="Вставьте текст предыдущего протокола сюда"></textarea>
+<div id="DropZone" class="ai-generator__dropzone">
+    <p>Перетащите файл (JPG/PNG/PDF) сюда<br>или вставьте скриншот из буфера (Ctrl+V)</p>
+    <div id="DropZonePreview"></div>
+    <div id="DropZoneAITextMarkerContainer" class="" title="рекомендуется использовать только если изображение плохого качества">
+        <label for="DropZoneAITextMarker" class="label">Использовать ИИ распознавание текста</label>
+        <input type="checkbox" id="DropZoneAITextMarker" class="checkbox">
+    </div>
+</div>
+{% endmacro %}

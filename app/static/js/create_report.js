@@ -2,6 +2,7 @@
 
 import { setupDynamicsDropZone, handleFileUpload, handlePasteFromClipboard } from "/static/js/utils/dynamicsDropZone.js";
 import { prepareTextWithAI } from "/static/js/utils/ai_handlers.js";
+import { pollTaskStatus, updateProgressBar } from "/static/js/utils/utils_module.js";      
 
 // Массив для хранения последовательности выбора отчетов
 let selectedReports = [];
@@ -230,8 +231,8 @@ function handleActionChange(selectedAction) {
         loadPublicReports();  
     } else if (selectedAction === "ai_generator") {
         aiGeneratorContainer.style.display = "block";
-        document.getElementById("aiGeneratorTextarea").value = "";
-        document.getElementById("aiGeneratorPreview").innerHTML = "";
+        document.getElementById("Textarea").value = "";
+        document.getElementById("DropZonePreview").innerHTML = "";
         activateUniversalSearch();
         showAiGeneratorBlock(); // Показываем блок ИИ-генерации
     }
@@ -410,14 +411,16 @@ function showAiGeneratorBlock() {
     }
 
     // Элементы
-    const textarea = document.getElementById("aiGeneratorTextarea");
-    const dropZone = document.getElementById("aiGeneratorDropZone");
-    const preview = document.getElementById("aiGeneratorPreview");
+    const textarea = document.getElementById("Textarea");
+    const dropZone = document.getElementById("DropZone");
+    const preview = document.getElementById("DropZonePreview");
     const pasteButton = document.getElementById("aiGeneratorPasteButton");
     const uploadBtn = document.getElementById("aiGeneratorUploadButton");
     const prepareButton = document.getElementById("aiGeneratorPrepareButton");
     const cancelButton = document.getElementById("aiGeneratorCancelButton");
     const fileInput = document.getElementById("aiGeneratorFileInput");
+    const generateTemplateButton = document.getElementById("aiGeneratorGenerateButton");
+    const pollingAbortController = new AbortController(); // Контроллер для отмены запросов
     // Для будущей загрузки файлов с input (пока не реализовано)
     // const fileInput = document.getElementById("aiGeneratorFileInput");
 
@@ -428,26 +431,126 @@ function showAiGeneratorBlock() {
     // Показываем сам блок (если скрыт)
     container.style.display = "block";
 
+    // Навешиваем MutationObserver
+    const observer = new MutationObserver(() => {
+        const style = window.getComputedStyle(container);
+        if (style.display === "none") {
+            detachHandlers();
+            observer.disconnect();
+            console.log("aiGeneratorContainer скрыт — сняты обработчики");
+        }
+    });
+
     // Инициализация dropzone (detach функция для снятия обработчиков)
     let detachDropZone = setupDynamicsDropZone({
-        dropZoneId: "aiGeneratorDropZone",
-        previewId: "aiGeneratorPreview",
-        textareaId: "aiGeneratorTextarea"
+        dropZoneId: "DropZone",
+        previewId: "DropZonePreview",
+        textareaId: "Textarea"
     });
+
+    // Внутренняя функция, нужна чтобы не вводить каждый раз параметры 
+    // bar, label, text для универсальной функции updateProgressBar
+    function updateDynamicsProgressBar(percent, statusText = null) {
+        const progressBarContainer = document.getElementById("dynamicsProgressBarContainer");
+        if (progressBarContainer && progressBarContainer.style.display === "none") {
+            progressBarContainer.style.display = "block";
+        }
+        updateProgressBar(
+            {
+                bar: "dynamicsProgressBar",
+                label: "dynamicsProgressBarLabel",
+                text: "dynamicsProgressBarText"
+            },
+            percent,
+            statusText
+        );
+    }
+
+    // Снятие обработчиков
+    function detachHandlers() {
+        pasteButton.removeEventListener("click", pasteHandler);
+        prepareButton.removeEventListener("click", prepareTextHandler);
+        cancelButton.removeEventListener("click", cancelHandler);
+        fileInput.removeEventListener("change", fileSelectHandler);
+        uploadBtn.removeEventListener("click", uploadBtnHandler);
+        generateTemplateButton.removeEventListener("click", generateTemplateHandler);
+        if (detachDropZone) detachDropZone();
+    }
+
 
     // Обработчик для вставки текста из буфера обмена
     const pasteHandler = async () => {
         await handlePasteFromClipboard(textarea, preview);
     };
 
+    // Обработчик для кнопки генерации шаблона при помощи ИИ
+    const generateTemplateHandler = async () => {
+        const rawText = textarea.value.trim();
+        const templateName = document.getElementById("reportName").value.trim();
+        const templateType = document.getElementById("reportType").value;
+        const templateSubtype = document.getElementById("reportSubtype").value;
+
+
+        if (!rawText) {
+            alert("Пожалуйста, введите текст для анализа.");
+            return;
+        }
+        // Блокируем кнопку анализа
+        generateTemplateButton.disabled = true;
+
+        const startResponse = await sendRequest({
+            url: "/new_report_creation/ai_generate_template",
+            data: {
+                origin_text: rawText,
+                template_name: templateName,
+                template_type: templateType,
+                template_subtype: templateSubtype
+            }
+        });
+        const {status, message, task_id} = startResponse || {};
+        if (status !== "success" || !task_id) {
+            console.error("Ошибка при отправке текста на анализ динамики:", message);
+            return;
+        }
+        
+        pollTaskStatus(task_id, {
+            maxAttempts: 20,
+            interval: 7000,
+            onProgress: (progress) => updateDynamicsProgressBar(progress, "Ожидание результата..."),
+            onSuccess: (result) => {
+                updateDynamicsProgressBar(100, "Готово!");
+                alert("Шаблон успешно сгенерирован!");
+            },
+            onError: (errMsg) => updateDynamicsProgressBar(100, errMsg),
+            onTimeout: () => updateDynamicsProgressBar(100, "Превышено время ожидания ответа. Попробуйте ещё раз позже."),
+            abortController: pollingAbortController // Передаем контроллер для отмены
+            
+        });
+
+    };
+
     // Обработчик "Подготовить текст" — просто вызывает уже существующую функцию
     const prepareTextHandler = async () => {
-        await prepareTextWithAI(textarea, prepareButton);
+
+        const taskID = await prepareTextWithAI(textarea, prepareButton);
+        console.log("Task ID:", taskID);
+        pollTaskStatus(taskID, {
+            maxAttempts: 12,
+            interval: 4000,
+            onProgress: (progress) => updateDynamicsProgressBar(progress, "Ожидание результата..."),
+            onSuccess: (result) => {
+                updateDynamicsProgressBar(100, "Готово!");
+                textarea.value = result || "";
+            },
+            onError: (errMsg) => updateDynamicsProgressBar(100, errMsg),
+            onTimeout: () => updateDynamicsProgressBar(100, "Превышено время ожидания ответа. Попробуйте ещё раз позже."),
+            abortController: pollingAbortController // Передаем контроллер для отмены
+        });
     };
 
     // Заглушка для "Отменить" (можно будет заменить на сброс блока/скрытие)
     const cancelHandler = () => {
-        alert("Отмена создания протокола через ИИ-генерацию. Блок будет скрыт.");
+        pollingAbortController.abort(); // 💥 Прерывает опрос
     };
 
     // Обработчик выбора файла
@@ -472,14 +575,17 @@ function showAiGeneratorBlock() {
     cancelButton.addEventListener("click", cancelHandler);
     fileInput.addEventListener("change", fileSelectHandler);
     uploadBtn.addEventListener("click", uploadBtnHandler);
+    generateTemplateButton.addEventListener("click", generateTemplateHandler);
+
+    observer.observe(container, { attributes: true, attributeFilter: ["style"] });
 
     // Вернуть функцию для снятия обработчиков если нужно внести контроль снаружи
-    return () => {
-        pasteButton.removeEventListener("click", pasteHandler);
-        prepareButton.removeEventListener("click", prepareTextHandler);
-        cancelButton.removeEventListener("click", cancelHandler);
-        if (detachDropZone) detachDropZone();
-    };
+    // return () => {
+    //     pasteButton.removeEventListener("click", pasteHandler);
+    //     prepareButton.removeEventListener("click", prepareTextHandler);
+    //     cancelButton.removeEventListener("click", cancelHandler);
+    //     if (detachDropZone) detachDropZone();
+    // };
 }
 
 
@@ -490,7 +596,7 @@ function showAiGeneratorBlock() {
  * Создание протокола вручную с валидацией
  */
 function createManualReport() {
-    const reportName = document.getElementById("report_name")?.value?.trim();
+    const reportName = document.getElementById("reportName")?.value?.trim();
     const reportSubtype = document.getElementById("reportSubtype")?.value;
     const comment = document.getElementById("reportCreationComment")?.value?.trim() || "";
     const reportSide = document.querySelector("input[name='report_side']:checked")?.value === "true";
@@ -521,7 +627,7 @@ function createManualReport() {
 // Создание протокола из файла с валидацией
 function createReportFromFile() {
     const reportForm = document.getElementById("reportCreationForm");
-    const reportName = document.getElementById("report_name")?.value?.trim();
+    const reportName = document.getElementById("reportName")?.value?.trim();
     const reportSubtype = document.getElementById("reportSubtype")?.value;
     const comment = document.getElementById("reportCreationComment")?.value?.trim() || "";
     const reportSide = document.querySelector("input[name='report_side']:checked")?.value === "true";
@@ -562,7 +668,7 @@ function createReportFromFile() {
 
 // Создание протокола на основе нескольких существующих с валидацией
 function createReportFromExistingFew() {
-    const reportName = document.getElementById("report_name")?.value?.trim();
+    const reportName = document.getElementById("reportName")?.value?.trim();
     const reportSubtype = document.getElementById("reportSubtype")?.value;
     const comment = document.getElementById("reportCreationComment")?.value?.trim() || "";
     const reportSide = document.querySelector("input[name='report_side']:checked")?.value === "true";
@@ -598,7 +704,7 @@ function createReportFromExistingFew() {
 }
 
 function createReportFromPublic() {
-    const reportName = document.getElementById("report_name")?.value?.trim();
+    const reportName = document.getElementById("reportName")?.value?.trim();
     const reportSubtype = document.getElementById("reportSubtype")?.value;
     const comment = document.getElementById("reportCreationComment")?.value?.trim() || "";
     const reportSide = document.querySelector("input[name='report_side']:checked")?.value === "true";
@@ -633,7 +739,7 @@ function createReportFromPublic() {
 
 // Создание протокола на протоколов, которые были поделены с пользователем
 function createReportFromShared() {
-    const reportName = document.getElementById("report_name")?.value?.trim();
+    const reportName = document.getElementById("reportName")?.value?.trim();
     const reportSubtype = document.getElementById("reportSubtype")?.value;
     const comment = document.getElementById("reportCreationComment")?.value?.trim() || "";
     const reportSide = document.querySelector("input[name='report_side']:checked")?.value === "true";

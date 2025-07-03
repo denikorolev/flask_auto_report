@@ -6,32 +6,34 @@
 
 <input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
 
+{% from "macros/elements.html" import progress_bar, text_area_and_drop_zone %}
+
 <!-- New report master -->
 <div class="container">
     
     <!-- Fields for creating report -->
     <div class="flex report-creation__data-container">
         <div class="report-creation__data-block">
-            <label class="report-creation__label" for="report_name">Название протокола:</label>
-            <input class="input report-creation__input form-control" type="text" id="report_name" name="report_name" required>
+            <label class="label" for="reportName">Название протокола:</label>
+            <input class="input" type="text" id="reportName" name="report_name" required>
         </div>
         <div class="report-creation__data-block">
-            <label class="report-creation__label" for="report_type">Модальность:</label>
-            <select class="select report-creation__select" id="reportType" name="report_type" required>
+            <label class="label" for="reportType">Модальность:</label>
+            <select class="select" id="reportType" name="report_type" required>
                 {% for type in report_types_and_subtypes %}
                 <option value="{{ type.type_id }}" data-type-text="{{ type.type_text }}">{{ type.type_text }}</option>
                 {% endfor %}
             </select>
         </div>
         <div class="report-creation__data-block">
-            <label class="report-creation__label" for="report_subtype">Область исследования:</label>
-            <select class="select report-creation__select" id="reportSubtype" name="report_subtype" required>
+            <label class="label" for="reportSubtype">Область исследования:</label>
+            <select class="select" id="reportSubtype" name="report_subtype" required>
                 <!-- option заполню в js-->
             </select>
         </div>
         <div class="report-creation__data-block">
-            <label class="report-creation__label" for="comment">Комментарий:</label>
-            <input class="input report-creation__input form-control" type="text" id="reportCreationComment" name="comment">
+            <label class="label" for="comment">Комментарий:</label>
+            <input class="input" type="text" id="reportCreationComment" name="comment">
         </div>
         
         <!-- переключатель выбора стороны -->
@@ -151,21 +153,13 @@
 
             <div id="aiGeneratorContainer" class="ai-generator__container" style="display: none;">
                 <h3 class="">ИИ генерация протокола</h3>
-                <textarea id="aiGeneratorTextarea" class="ai-generator__textarea" placeholder="Вставьте или введите шаблон для генерации"></textarea>
                 <div class="flex">
-                    <div id="aiGeneratorDropZone" class="ai-generator__dropzone">
-                        <p>Перетащи файл (JPG/PNG/PDF) сюда<br>или вставь скриншот из буфера (Ctrl+V)</p>
-                        <div id="aiGeneratorPreview" class="ai-generator__preview"></div>
-                    </div>
-                    <div class="flex_column">
-                        <div id="aiGeneratorProgressBarContainer" class="ai-generator__progress-bar-container" style="display:none;">
-                            <p id="aiGeneratorProgressBarText" class="ai-generator__progress-bar-text">Загрузка...</p>
-                            <div id="aiGeneratorProgressBar" class="ai-generator__progress-bar">
-                                <span id="aiGeneratorProgressBarLabel" class="ai-generator__progress-bar-label"></span>
-                            </div>
-                        </div>
-                    </div>
+                    {{ text_area_and_drop_zone() }}
                 </div>
+                <div>
+                    {{ progress_bar() }}
+                </div>
+
                 <div class="dynamics-popup__footer"> <!-- Согласовать со стилями попап в working_with_report.html -->
                     <div class="dynamics-popup__actions">
                         <button class="btn" id="aiGeneratorPasteButton">Вставить из буфера</button>
