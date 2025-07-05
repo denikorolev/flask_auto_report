@@ -371,6 +371,62 @@ def share_global_keywords():
     }), 200
     
     
-    
+
+@admin_bp.route("/categories", methods=["GET", "POST"])
+@auth_required()
+@roles_required("superadmin")
+def manage_categories():
+    logger.info(f"(Маршрут manage_categories) --------------------------------------")
+    logger.info("🚀 Начата обработка запроса на управление категориями отчетов.")
+    if request.method == "GET":
+        logger.info("Получен GET-запрос для получения списка категорий отчетов.")
+        cats = ReportCategory.query.order_by(ReportCategory.level, ReportCategory.category_index).all()
+        if not cats:
+            logger.info("Категории отчетов не найдены.")
+            return jsonify({"status": "success", "data": []})
+        data = [
+            {
+                "id": c.id,
+                "name": c.name,
+                "parent_id": c.parent_id,
+                "is_global": c.is_global,
+                "level": c.level,
+                "category_index": c.category_index
+            }
+            for c in cats if c.is_global
+        ]
+        return jsonify({"status": "success", "data": data})
+
+    if request.method == "POST":
+        data = request.json
+        try:
+            new_cat = ReportCategory.add_category(
+                name=data.get("name"),
+                parent_id=data.get("parent_id"),  # Можно добавить поле в форму позже
+                profile_id=None,                # Пока только глобальные
+                is_global=True,
+                level=int(data.get("level")),
+                category_index=int(data.get("category_index")),
+            )
+            return jsonify({"status": "success", "data": {"id": new_cat.id}})
+        except Exception as e:
+            return jsonify({"status": "error", "message": str(e)}), 400
+
+
+
+@admin_bp.route("/categories/<int:cat_id>", methods=["DELETE"])
+@auth_required()
+@roles_required("superadmin")
+def delete_category(cat_id):
+    cat = ReportCategory.query.get(cat_id)
+    if not cat:
+        return jsonify({"status": "error", "message": "Категория не найдена"}), 404
+    try:
+        db.session.delete(cat)
+        db.session.commit()
+        return jsonify({"status": "success"})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 400
     
     

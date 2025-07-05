@@ -355,6 +355,42 @@ class UserProfile(BaseModel):
         return cls.query.filter_by(id=profile_id, user_id=user_id).first()
 
 
+class ReportCategory(db.Model):
+    __tablename__ = 'report_categories'
+    id = db.Column(db.BigInteger, primary_key=True)
+    name = db.Column(db.String(128), nullable=False)
+    parent_id = db.Column(db.BigInteger, db.ForeignKey('report_categories.id'), nullable=True)
+    profile_id = db.Column(db.BigInteger, db.ForeignKey('user_profiles.id', ondelete='CASCADE'), nullable=True)
+    is_global = db.Column(db.Boolean, default=False, nullable=False)
+    level = db.Column(db.Integer, nullable=False)           # 1 — тип, 2 — подтип и т.д.
+    category_index = db.Column(db.Integer, default=0, nullable=False)  # порядок внутри уровня
+
+    parent = db.relationship(
+    'ReportCategory',
+    remote_side=[id],
+    backref=db.backref('children', cascade='all, delete-orphan', single_parent=True)
+        )# Каскадное удаление выше будет работать только через orm, напрямую в базе не удаляй!!!
+    
+    profile = db.relationship('UserProfile', backref='report_categories')
+
+    def __repr__(self):
+        return f"<ReportCategory: {self.name}>"
+    
+    @classmethod
+    def add_category(cls, name, parent_id=None, profile_id=None, is_global=False, level=1, category_index=0):
+        category = cls(
+            name=name,
+            parent_id=parent_id,
+            profile_id=profile_id,
+            is_global=is_global,
+            level=level,
+            category_index=category_index,
+        )
+        db.session.add(category)
+        db.session.commit()
+        return category
+
+
 class ReportType(BaseModel):
     __tablename__ = 'report_type'
     profile_id = db.Column(db.BigInteger, db.ForeignKey('user_profiles.id'), nullable=False)
@@ -677,7 +713,6 @@ class ReportShare(db.Model):
             return None
 
 
-    
 class Paragraph(BaseModel):
     __tablename__ = "report_paragraphs"
     id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
@@ -1437,8 +1472,6 @@ class SentenceBase(BaseModel):
         logger.debug(f"(Обновление позиции - set_sentence_index_or_weight)(тип предложения: {cls.__name__}) ✅ Обновление позиции завершено.")
 
 
-
-
 class HeadSentence(SentenceBase):
     __tablename__ = "head_sentences"
     body_sentence_group_id = db.Column(db.BigInteger, db.ForeignKey("body_sentence_groups.id", ondelete="SET NULL"))
@@ -1485,7 +1518,6 @@ class BodySentence(SentenceBase):
             raise ValueError(f"Ошибка при увеличении веса предложения ID={sentence_id} в группе ID={group_id}: {e}")
     
     
-
 class TailSentence(SentenceBase):
     __tablename__ = "tail_sentences"
 
@@ -1516,9 +1548,6 @@ class TailSentence(SentenceBase):
             raise ValueError(f"Ошибка при увеличении веса предложения ID={sentence_id} в группе ID={group_id}: {e}")
     
     
-  
-  
-        
 class SentenceGroupBase(BaseModel):
     """
     Базовый класс для групп предложений (HeadSentenceGroup, BodySentenceGroup, TailSentenceGroup).
@@ -1810,8 +1839,6 @@ class SentenceGroupBase(BaseModel):
         return sentence_data   
         
         
-        
-        
 class HeadSentenceGroup(SentenceGroupBase):
     __tablename__ = "head_sentence_groups"
 
@@ -1821,6 +1848,7 @@ class HeadSentenceGroup(SentenceGroupBase):
         back_populates="groups"
     )
     
+
 class BodySentenceGroup(SentenceGroupBase):
     __tablename__ = "body_sentence_groups"
 
@@ -1839,9 +1867,6 @@ class TailSentenceGroup(SentenceGroupBase):
         secondary="tail_sentence_group_link",
         back_populates="groups"
     )
-       
-       
-       
        
        
        

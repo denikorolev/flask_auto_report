@@ -144,6 +144,52 @@
     </div>
 </div>
 
+<!-- Управление категориями (ReportCategory) -->
+<div class="category-management">
+    <h2>Управление категориями</h2>
+
+    <!-- Добавить категорию -->
+    <form id="add-category-form" class="flex">
+        <div class="flex_column">
+            <label class="label" for="category-name">Название категории:</label>
+            <input class="input" type="text" id="category-name" placeholder="Название категории" required>
+        </div>
+        <div class="flex_column">
+            <label class="label" for="category-level">Уровень (level):</label>
+            <input class="input" type="number" id="category-level" placeholder="Уровень (level)" value="1" min="1" required>
+        </div>
+        <div class="flex_column">
+            <label class="label" for="category-index">Порядок (category_index):</label>
+            <input class="input" type="number" id="category-index" placeholder="Порядок (category_index)" value="0" min="0" required>
+        </div>
+        <div class="flex_column">
+            <label class="label" for="parent-id">Родительская категория:</label>
+            <select id="parent-id" class="select" disabled>
+                <option value="">Нет родителя</option>
+                <!-- Сюда опции будут добавлены через JS -->
+            </select>
+        </div>
+        <button type="submit" class="btn">Добавить</button>
+    </form>
+
+    <!-- Таблица для отображения категорий -->
+    <table id="category-table" class="admin-data__table-element">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Название</th>
+                <th>Уровень</th>
+                <th>Родитель</th>
+                <th>Порядок</th>
+                <th>Действие</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Динамически -->
+        </tbody>
+    </table>
+</div>
+
 
 <!-- Сделать все протоколы данного профиля общедоступными -->
 <div class="make-public">
@@ -173,5 +219,4 @@
 
 {% block scripts %}
 <script src="{{ url_for("static", filename="js/admin.js") }}"></script>
-<script src="{{ url_for("static", filename="js/spacy_training_popup.js") }}"></script>
 {% endblock scripts %}

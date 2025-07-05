@@ -4,6 +4,8 @@ document.addEventListener("DOMContentLoaded", function() {
 
     const tableCheckboxes = document.querySelectorAll(".admin-filter__checkbox--table");
 
+    initCategoriesHandlers();
+
     
     // Добавляем слушатели для чекбоксов таблиц
     tableCheckboxes.forEach(checkbox => {
@@ -150,9 +152,165 @@ function sendSelectedData() {
 }
 
 
+function initCategoriesHandlers() {
+    // Загрузка категорий
+    let categoriesCache = [];
+
+    const levelInput = document.getElementById("category-level");
+    const parentSelect = document.getElementById("parent-id");
+
+    // Загрузка категорий с сервера
+    const loadCategories = () => {
+        sendRequest({
+            url: "/admin/categories",
+            method: "GET"
+        }).then(response => {
+            if (response.status === "success") {
+                categoriesCache = response.data;
+                renderCategories(categoriesCache);
+            }
+        });
+    };
+
+    // Рендерит варианты родителей только с нужным level
+    const renderParentCategoryOptions = (categories, level) => {
+        parentSelect.innerHTML = `<option value="">Нет родителя</option>`;
+        if (!level || isNaN(level) || level <= 1) {
+            parentSelect.disabled = true;
+            parentSelect.value = "";
+            return;
+        }
+        categories.forEach(cat => {
+            if (cat.level === (level - 1)) {
+                parentSelect.innerHTML += `<option value="${cat.id}">${cat.name} (id: ${cat.id}, уровень: ${cat.level})</option>`;
+            }
+        });
+        parentSelect.disabled = false;
+    };
+
+    // Отрисовка таблицы категорий
+    const renderCategories = (categories) => {
+        const tbody = document.querySelector("#category-table tbody");
+        tbody.innerHTML = "";
+        categories.forEach(cat => {
+            const tr = document.createElement("tr");
+            const idToName = {};
+                categories.forEach(cat => {
+                    idToName[cat.id] = cat.name;
+                });
+            tr.innerHTML = `
+                <td>${cat.id}</td>
+                <td>${cat.name}</td>
+                <td>${cat.level}</td>
+                <td>${cat.parent_id ? (idToName[cat.parent_id] || cat.parent_id) : "<-->"}</td>
+                <td>${cat.category_index}</td>
+                <td>
+                    <button class="btn btn-delete-category" data-id="${cat.id}">Удалить</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        // Навешиваем обработчики на кнопки удаления
+        tbody.querySelectorAll(".btn-delete-category").forEach(btn => {
+            btn.addEventListener("click", function() {
+                if (confirm("Удалить категорию?")) {
+                    deleteCategory(this.dataset.id);
+                }
+            });
+        });
+    };
+
+    // Добавление новой категории
+    const addCategory = () => {
+        const name = document.getElementById("category-name").value.trim();
+        const level = parseInt(document.getElementById("category-level").value, 10);
+        const category_index = parseInt(document.getElementById("category-index").value, 10);
+        const parent_id_val = document.getElementById("parent-id").value;
+        const parent_id = parent_id_val ? parseInt(parent_id_val, 10) : null;
+
+        if (!name) {
+            alert("Введите название категории");
+            return;
+        }
+
+        if (isNaN(level) || level < 0) {
+            alert("Введите корректный уровень категории");
+            return;
+        }
+
+        if (isNaN(category_index) || category_index < 0) {
+            alert("Введите корректный индекс категории");
+            return;
+        }
+        // === Новая валидация: если уровень > 1 и не выбран родитель ===
+        if (level > 1 && !parent_id) {
+            alert("Для категории с уровнем больше 1 необходимо выбрать родительскую категорию.");
+            return;
+        }
 
 
+        // === ПРОВЕРКА НА УНИКАЛЬНОСТЬ  ===
+        
+        const nameLower = name.toLowerCase();
+        const exists = categoriesCache.some(cat =>
+            cat.level === level &&
+            cat.name.toLowerCase() === nameLower
+        );
+        if (exists) {
+            alert("Глобальная категория с таким именем уже существует на этом уровне.");
+            return;
+        }
+        
 
+        sendRequest({
+            url: "/admin/categories",
+            method: "POST",
+            data: { name, level, category_index, parent_id }
+        })
+        .then(response => {
+            if (response.status === "success") {
+                loadCategories();
+                document.getElementById("add-category-form").reset();
+            } else {
+                alert(response.message || "Ошибка при добавлении");
+            }
+        })
+        .catch(error => alert("Ошибка: " + error));
+    };
+
+    // Удаление категории
+    const deleteCategory = (id) => {
+        sendRequest({
+            url: `/admin/categories/${id}`,
+            method: "DELETE"
+        })
+        .then(response => {
+            if (response.status === "success") {
+                loadCategories();
+            } else {
+                alert(response.message || "Ошибка при удалении");
+            }
+        })
+        .catch(error => alert("Ошибка: " + error));
+    };
+
+    // Следим за изменением поля уровня
+    levelInput.addEventListener("input", function() {
+        const newLevel = parseInt(levelInput.value, 10);
+        renderParentCategoryOptions(categoriesCache, newLevel);
+    });
+
+    // Слушатель для формы добавления
+    document.getElementById("add-category-form").addEventListener("submit", function(e) {
+        e.preventDefault();
+        addCategory();
+    });
+
+    // Первичная загрузка категорий при инициализации
+    loadCategories();
+
+}
 
 // Вызываемые функции
 
