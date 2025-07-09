@@ -1,13 +1,12 @@
 # profile_settings.py
 
-from flask import Blueprint, render_template, request, redirect, url_for, current_app, session, g, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, current_app, session, jsonify
 from flask_login import current_user
-from models import User, UserProfile, db, AppConfig, Paragraph, ReportType, ReportShare
-from profile_constructor import ProfileSettingsManager
+from app.models.models import User, UserProfile, db, AppConfig, Paragraph, ReportType, ReportShare, ReportCategory
 from flask_security.decorators import auth_required
-from file_processing import sync_profile_files
-from models import Report
-from logger import logger
+from app.utils.file_processing import sync_profile_files
+from app.models.models import Report
+from app.utils.logger import logger
 
 profile_settings_bp = Blueprint('profile_settings', __name__)
 
@@ -54,8 +53,9 @@ def set_profile_as_default(profile_id):
 def profile_settings():
     logger.info(f"(route 'profile_settings') --------------------------------------")
     logger.info(f"(route 'profile_settings') 🚀 Profile settings started")
-    
-    profile = g.current_profile
+    profile_id = session.get("profile_id")
+
+    profile = UserProfile.query.filter_by(id=profile_id, user_id=current_user.id).first()
     profile_data = profile.get_profile_data()
     logger.debug(f"(route 'profile_settings') Profile data: {profile_data}")
     
@@ -76,23 +76,22 @@ def profile_settings():
 def choosing_profile():
    
     profile_id = request.args.get("profile_id") or None
-    logger.info(f"(route 'choosing_profile') Profile id from url: {profile_id}")
+    logger.info(f"(Маршрут 'choosing_profile') Получен id профиля из url: {profile_id}")
     if profile_id:
-        logger.info(f"(route 'choosing_profile') Starting profile id from url logic")
+        logger.info(f"(Маршрут 'choosing_profile') Начинаем логику выбора профиля по id из url")
         profile = UserProfile.find_by_id_and_user(profile_id, current_user.id)
+        print(f"Profile = {profile}")
         if profile:
             session["profile_id"] = profile.id
-            g.current_profile = profile
             user_id = current_user.id
             user_email = current_user.email
-            ProfileSettingsManager.load_profile_settings()
             # Синхронизацию файлов пока оставлю здесь, но ее нужно будет перенести
             sync_profile_files(profile.id, user_id, user_email)
-            logger.info(f"(route 'choosing_profile') Profile {profile.id} selected")
-            logger.info(f"(route 'choosing_profile') ✅ Profile settings loaded")
+            logger.info(f"(Маршрут 'choosing_profile') Профиль {profile.id} выбран")
+            logger.info(f"(Маршрут 'choosing_profile') ✅ Параметры профиля загружены")
             return redirect(url_for("working_with_reports.choosing_report"))
         else:
-            logger.error(f"(route 'choosing_profile') ❌ Profile {profile_id} not found or you do not have permission to access it")
+            logger.error(f"(Маршрут 'choosing_profile') ❌ Профиль {profile_id} не найден или у вас нет прав доступа к нему")
             return render_template(url_for("error"),
                            title="Данные о выбранном профиле не получены"
                            )
@@ -102,23 +101,24 @@ def choosing_profile():
 @profile_settings_bp.route("/new_profile_creation", methods=["GET"])
 @auth_required()
 def new_profile_creation():
-    logger.info(f"(route 'new_profile_creation') --------------------------------------")
-    logger.info(f"(route 'new_profile_creation') 🚀 New profile creation started")
+    logger.info(f"(Маршрут 'new_profile_creation') --------------------------------------")
+    logger.info(f"(Маршрут 'new_profile_creation') 🚀 Начато создание нового профиля")
+    modalities = ReportCategory.get_categories_tree(is_global=True)
     return render_template("new_profile_creation.html",
-                           title="Создание нового профиля")
+                           title="Создание нового профиля",
+                           modalities=modalities)
 
 
-
-# Маршрут для создания профиля
+# Маршрут для создания профиля (Нужно разобраться какой маршрут рабочий этот или тот что выше, возможно они оба рабочие)
 @profile_settings_bp.route("/create_profile", methods=["POST"])
 @auth_required()
 def create_profile():
-    logger.info(f"(route 'create_profile') 🚀 Profile creation started")
+    logger.info(f"(Маршрут 'create_profile') 🚀 Начато создание профиля")
     data = request.get_json()
     if not data:
-        logger.error(f"(route 'create_profile') ❌ No data received")
-        return jsonify({"status": "error", "message": "No data received."}), 400
-    
+        logger.error(f"(Маршрут 'create_profile') ❌ Не получены данные для создания профиля")
+        return jsonify({"status": "error", "message": "Не получены данные для создания профиля"}), 400
+
     profile_name = data.get('profile_name')
     description = data.get('description')
     is_default = data.get('is_default')
@@ -201,7 +201,6 @@ def delete_profile(profile_id):
             return jsonify({"status": "error", "message": str(e)}), 400
         
         session.pop("profile_id", None)
-        g.current_profile = None
         return jsonify({"status": "success", "message": "Profile deleted successfully!"}), 200
     else:
         return jsonify({"status": "error", "message": "Profile not found or you do not have permission to delete it."}), 400
@@ -224,7 +223,6 @@ def save_settings():
     if not save_settings:
         return jsonify({"status": "error", "message": "Не получилось сохранить настройки"}), 400
 
-    ProfileSettingsManager.load_profile_settings()
     return jsonify({"status": "success", "message": "Settings saved successfully!"})
 
 
@@ -263,7 +261,7 @@ def share_profile():
     
     try:
         user_id = current_user.id
-        profile_id = g.current_profile.id
+        profile_id = session.get("profile_id")
         all_reports = Report.find_by_profile(profile_id, user_id)
     except Exception as e:
         logger.error(f"(route 'share_profile') ❌ Error getting current user or current profile: {e}")

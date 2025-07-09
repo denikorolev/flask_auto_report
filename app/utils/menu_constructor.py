@@ -2,7 +2,7 @@
 
 from flask import url_for
 from flask_login import current_user
-from logger import logger
+from app.utils.logger import logger
 
 
 

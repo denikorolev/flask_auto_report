@@ -25,7 +25,7 @@
             
             <nav class="header__nav">
                 <ul class="header__menu">
-                    {% if g.current_profile %}
+                    {% if session.profile_id %}
                         {% for m in menu %}
                             <li class="header__menu-item">
                                 <a class="header__menu-link" href="{{ m.url }}" title="{{ m.title }}">{{ m.name }}</a>
@@ -38,10 +38,10 @@
             
             
             <!-- Сообщение о текущем профиле -->
-            {% if g.current_profile %}
+            {% if session.profile_id %}
                 <div class="header__user-box" id="changeProfileBlock" title="Здесь можно сменить профиль">
                     <p class="header__paragraph">Профиль:</p>
-                    <p class="header__paragraph header__paragraph--data">{{ g.current_profile.profile_name }}</p>
+                    <p class="header__paragraph header__paragraph--data">{{ session.get("profile_name") }}</p>
                 </div>
             {% else %}
                 <div class="header__user-box" id="changeProfileBlock" title="Здесь можно сменить профиль">

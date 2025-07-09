@@ -68,67 +68,71 @@
             <br>
             <ul class="settings-block__list" id="settings-block">
                 <li class="settings-block__item">
-                    <label class="settings-block__label" for="useWordReports">Использовать выгрузку протокола в word</label>
-                    <input class="settings-block__input" type="checkbox" id="useWordReports" name="USE_WORD_REPORTS"
+                    <label class="label" for="useWordReports">Использовать выгрузку протокола в word</label>
+                    <input class="checkbox" type="checkbox" id="useWordReports" name="USE_WORD_REPORTS"
                         {% if user_settings.USE_WORD_REPORTS %} checked {% endif %}>
                 </li>
                 <li class="settings-block__item">
-                    <label class="settings-block__label" for="useSentenceAutosaveForDynamicReport">Использовать автосохранение новых предложений при использовании динамического протокола</label>
-                    <input class="settings-block__input" type="checkbox" id="useSentenceAutosaveForDynamicReport" name="USE_SENTENCE_AUTOSAVE_FOR_DYNAMIC_REPORT"
+                    <label class="label" for="useSentenceAutosaveForDynamicReport">Использовать автосохранение новых предложений при использовании динамического протокола</label>
+                    <input class="checkbox" type="checkbox" id="useSentenceAutosaveForDynamicReport" name="USE_SENTENCE_AUTOSAVE_FOR_DYNAMIC_REPORT"
                         {% if user_settings.USE_SENTENCE_AUTOSAVE_FOR_DYNAMIC_REPORT %} checked {% endif %}>
                 </li>
                 <li class="settings-block__item">
-                    <label class="settings-block__label" for="useSentenceAutosave">Использовать автосохранение новых предложений</label>
-                    <input class="settings-block__input" type="checkbox" id="useSentenceAutosave" name="USE_SENTENCE_AUTOSAVE"
+                    <label class="label" for="useSentenceAutosave">Использовать автосохранение новых предложений</label>
+                    <input class="checkbox" type="checkbox" id="useSentenceAutosave" name="USE_SENTENCE_AUTOSAVE"
                         {% if user_settings.USE_SENTENCE_AUTOSAVE %} checked {% endif %}>
                 </li>
                 <li class="settings-block__item">
-                    <label class="settings-block__label" for="appLanguage">Язык приложения:</label>
-                    <select class="settings-block__select" id="appLanguage" name="APP_LANGUAGE">
+                    <label class="label" for="appLanguage">Язык приложения:</label>
+                    <select class="select" id="appLanguage" name="APP_LANGUAGE">
                         <option value="ru" {% if user_settings.APP_LANGUAGE == 'ru' %}selected{% endif %}>русский</option>
                         <option value="eng" {% if user_settings.APP_LANGUAGE == 'eng' %}selected{% endif %}>английский</option>
                     </select>
                 </li>
                 <li class="settings-block__item">
-                    <label class="settings-block__label" for="appTheme">Theme:</label>
-                    <select class="settings-block__select" id="appTheme" name="APP_THEME">
+                    <label class="label" for="appTheme">Theme:</label>
+                    <select class="select" id="appTheme" name="APP_THEME">
                         <option value="light" {% if user_settings.THEME == 'light' %}selected{% endif %}>Light</option>
                         <option value="dark" {% if user_settings.THEME == 'dark' %}selected{% endif %}>Dark</option>
                     </select>
                 </li>
                 <li class="settings-block__item">
-                    <label class="settings-block__label" for="similarityThesholdFuzz">Порог схождения для поиска дубликатов предложений:</label>
-                    <input class="settings-block__select" id="similarityThesholdFuzz" name="SIMILARITY_THRESHOLD_FUZZ" value="{{ user_settings.SIMILARITY_THRESHOLD_FUZZ }}">
+                    <label class="label" for="similarityThesholdFuzz">Порог схождения для поиска дубликатов предложений:</label>
+                    <input class="select" id="similarityThesholdFuzz" name="SIMILARITY_THRESHOLD_FUZZ" value="{{ user_settings.SIMILARITY_THRESHOLD_FUZZ }}">
                     
                 </li>
                 <li class="settings-block__item">
-                    <label class="settings-block__label" for="exceptWords">Слова исключения для фильтрации текста:</label>
-                    <input class="settings-block__input" id="exceptWords" name="EXCEPT_WORDS" value="{{ user_settings.EXCEPT_WORDS }}">
+                    <label class="label" for="exceptWords">Слова исключения для фильтрации текста:</label>
+                    <input type="text" class="input" id="exceptWords" name="EXCEPT_WORDS" value="{{ user_settings.EXCEPT_WORDS }}">
                    
                 </li>
                 <li class="settings-block__item">
-                    <label class="settings-block__label" for="exceptionsAfterPunctuation">Слова исключения аббревиатуры:</label>
-                    <input class="settings-block__input" id="exceptionsAfterPunctuation" name="EXCEPTIONS_AFTER_PUNCTUATION" value="{{ user_settings.EXCEPTIONS_AFTER_PUNCTUATION }}">
+                    <label class="label" for="exceptionsAfterPunctuation">Слова исключения аббревиатуры:</label>
+                    <input type="text" class="input" id="exceptionsAfterPunctuation" name="EXCEPTIONS_AFTER_PUNCTUATION" value="{{ user_settings.EXCEPTIONS_AFTER_PUNCTUATION }}">
                     
                 </li>
+                <li class="settings-block__item">
+                    <label class="label" for="categoriesSetup">Список категорий пользователя:</label>
+                    <input class="input" type="text" id="categoriesSetup" name="CATEGORIES_SETUP"
+                        value="{{ user_settings.CATEGORIES_SETUP | tojson | safe }}">
 
                 <li><h3>Пожалуйста не трогайте настройки выше. Ниже можно.</h3></li>
                 
                 <li class="settings-block__item">
-                    <label class="settings-block__label" for="useSentenceAICheckDefault">Использовать AI проверку предложений по умолчанию</label>
-                    <input class="settings-block__input" type="checkbox" id="useSentenceAICheckDefault" name="USE_SENTENCE_AI_CHECK_DEFAULT"
+                    <label class="label" for="useSentenceAICheckDefault">Использовать AI проверку предложений по умолчанию</label>
+                    <input class="checkbox" type="checkbox" id="useSentenceAICheckDefault" name="USE_SENTENCE_AI_CHECK_DEFAULT"
                         {% if user_settings.USE_SENTENCE_AI_CHECK_DEFAULT %} checked {% endif %}>
                         
                 </li>
                 <li class="settings-block__item">
-                    <label class="settings-block__label" for="useFirstGrammaSentenceDefault">Использовать автоматическую проверку предложений в браузере по умолчанию</label>
-                    <input class="settings-block__input" type="checkbox" id="useFirstGrammaSentenceDefault" name="USE_FIRST_GRAMMA_SENTENCE_DEFAULT"
+                    <label class="label" for="useFirstGrammaSentenceDefault">Использовать автоматическую проверку предложений в браузере по умолчанию</label>
+                    <input class="checkbox" type="checkbox" id="useFirstGrammaSentenceDefault" name="USE_FIRST_GRAMMA_SENTENCE_DEFAULT"
                         {% if user_settings.USE_FIRST_GRAMMA_SENTENCE_DEFAULT %} checked {% endif %}>
                         
                 </li>
                 <li class="settings-block__item">
-                    <label class="settings-block__label" for="useDublicateSearchDefault">Использовать поиск дубликатов по умолчанию</label>
-                    <input class="settings-block__input" type="checkbox" id="useDublicateSearchDefault" name="USE_DUBLICATE_SEARCH_DEFAULT"
+                    <label class="label" for="useDublicateSearchDefault">Использовать поиск дубликатов по умолчанию</label>
+                    <input class="checkbox" type="checkbox" id="useDublicateSearchDefault" name="USE_DUBLICATE_SEARCH_DEFAULT"
                         {% if user_settings.USE_DUBLICATE_SEARCH_DEFAULT %} checked {% endif %}>
                         
                 </li>

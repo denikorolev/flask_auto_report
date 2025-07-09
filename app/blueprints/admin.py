@@ -1,9 +1,10 @@
-from flask import Blueprint, render_template, request, jsonify, current_app, g
-from models import *
-from logger import logger
+from flask import Blueprint, render_template, request, jsonify, current_app, session
+from flask_security import current_user
+from app.models.models import *
+from app.utils.logger import logger
 import re
 from flask_security.decorators import auth_required, roles_required
-from sentence_processing import group_keywords, sort_key_words_group
+from app.utils.sentence_processing import group_keywords, sort_key_words_group
 import os
 
 
@@ -303,8 +304,8 @@ def update_user(user_id):
 @auth_required()
 @roles_required("superadmin")
 def make_all_public():
-    profile_id = g.current_profile.id
-    user_id = g.current_profile.user_id
+    profile_id = session.get("profile_id")
+    user_id = current_user.id
     if not profile_id:
         return jsonify({"status": "error", "message": " Не удалось получить profile_id."}), 400
 
@@ -344,7 +345,7 @@ def share_global_keywords():
         return jsonify({"status": "error", "message": "У пользователя нет подходящего профиля"}), 404
 
     # Получаем глобальные ключевые слова текущего профиля
-    global_keywords = KeyWord.find_without_reports(g.current_profile.id)
+    global_keywords = KeyWord.find_without_reports(session.get("profile_id"))
     if not global_keywords:
         return jsonify({"status": "error", "message": "Нет глобальных ключевых слов для копирования"}), 400
 
@@ -380,7 +381,7 @@ def manage_categories():
     logger.info("🚀 Начата обработка запроса на управление категориями отчетов.")
     if request.method == "GET":
         logger.info("Получен GET-запрос для получения списка категорий отчетов.")
-        cats = ReportCategory.query.order_by(ReportCategory.level, ReportCategory.category_index).all()
+        cats = ReportCategory.query.filter_by(is_global=True).order_by(ReportCategory.level).all()
         if not cats:
             logger.info("Категории отчетов не найдены.")
             return jsonify({"status": "success", "data": []})
@@ -389,9 +390,7 @@ def manage_categories():
                 "id": c.id,
                 "name": c.name,
                 "parent_id": c.parent_id,
-                "is_global": c.is_global,
                 "level": c.level,
-                "category_index": c.category_index
             }
             for c in cats if c.is_global
         ]
@@ -406,7 +405,6 @@ def manage_categories():
                 profile_id=None,                # Пока только глобальные
                 is_global=True,
                 level=int(data.get("level")),
-                category_index=int(data.get("category_index")),
             )
             return jsonify({"status": "success", "data": {"id": new_cat.id}})
         except Exception as e:

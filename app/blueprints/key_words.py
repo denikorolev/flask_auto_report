@@ -1,13 +1,13 @@
 # key_words.py
 
-from flask import Blueprint, render_template, request, current_app, jsonify, g
+from flask import Blueprint, render_template, request, jsonify, session
 from flask_login import current_user
-from models import db, KeyWord, Report
+from app.models.models import db, KeyWord, Report
 from itertools import chain
-from sentence_processing import group_keywords, sort_key_words_group, process_keywords, check_existing_keywords
+from app.utils.sentence_processing import group_keywords, sort_key_words_group, process_keywords, check_existing_keywords
 from app.utils.errors_processing import print_object_structure
 from app.utils.common import ensure_list
-from db_processing import add_keywords_to_db
+from app.utils.db_processing import add_keywords_to_db
 from flask_security.decorators import auth_required
 
 key_words_bp = Blueprint("key_words", __name__)
@@ -17,10 +17,11 @@ key_words_bp = Blueprint("key_words", __name__)
 @auth_required()
 def key_words():
     user_id = current_user.id
-    current_profile_reports=Report.find_by_profile(g.current_profile.id, user_id)
-    
+    profile_id = session.get("profile_id")
+    current_profile_reports=Report.find_by_profile(profile_id, user_id)
+
     # Prepare global key words
-    global_user_key_words = KeyWord.find_without_reports(g.current_profile.id)
+    global_user_key_words = KeyWord.find_without_reports(profile_id)
     unsorted_global_key_words = group_keywords(global_user_key_words, with_index=True)
     global_key_words = sort_key_words_group(unsorted_global_key_words)
     # Prepare key words linked to reports
@@ -49,6 +50,7 @@ def add_keywords():
     key_word_input = data.get('key_word_input').strip()
     report_ids = data.get('report_ids', [])  # Получаем список отчетов или пустой список
     ignore_unique_check = data.get('ignore_unique_check', False)
+    profile_id = session.get("profile_id")
     
     if not key_word_input:
         return {"status": "error", 
@@ -63,7 +65,7 @@ def add_keywords():
     # Если флаг игнорирования уникальности не установлен, выполняем проверку
     if not ignore_unique_check:
         # Проверяем, какие ключевые слова уже существуют у пользователя
-        existing_keywords_message = check_existing_keywords(key_words)
+        existing_keywords_message = check_existing_keywords(key_words, profile_id)
         
         # Если хотя бы одно ключевое слово уже существует, возвращаем ошибку
         if existing_keywords_message:
@@ -84,6 +86,7 @@ def add_word_to_exist_group():
     group_index = data.get("group_index")
     reports = ensure_list(data.get("report_id"))
     key_word_input = data.get("key_word_input", "").strip()
+    profile_id = session.get("profile_id")
     if not group_index:
         return {"status": "error", "message": "Group index is required"}, 400
 
@@ -97,16 +100,15 @@ def add_word_to_exist_group():
         return {"status": "error", "message": "Invalid keywords format"}, 400
 
     # Подсчитываем количество существующих ключевых слов в конкретной группе
-    num_of_exist_key_words = len(KeyWord.query.filter_by(group_index=group_index, profile_id=g.current_profile.id).all())
+    num_of_exist_key_words = len(KeyWord.query.filter_by(group_index=group_index, profile_id=profile_id).all())
 
-        
     # Добавляем ключевые слова в нужную группу
     for i, key_word in enumerate(key_words, start=1):
         KeyWord.create(
             group_index=group_index,
             index=num_of_exist_key_words + i,
             key_word=key_word,
-            profile_id=g.current_profile.id,
+            profile_id=profile_id,
             reports=reports
         )
     db.session.commit()
@@ -119,12 +121,13 @@ def add_word_to_exist_group():
 @auth_required()
 def delete_keywords():
     group_index = request.json.get("group_index")
+    profile_id = session.get("profile_id")
 
     if not group_index:
         return jsonify({"status": "error", "message": "Group index is required"}), 400
 
     # Удаление всех ключевых слов с данным group_index для текущего пользователя
-    KeyWord.query.filter_by(group_index=group_index, profile_id=g.current_profile.id).delete()
+    KeyWord.query.filter_by(group_index=group_index, profile_id=profile_id).delete()
     db.session.commit()
 
     return jsonify({"status": "success", "message": "Keywords group deleted successfully"}), 200
@@ -137,11 +140,12 @@ def unlink_keyword_from_report():
     data = request.json
     group_index = data.get("group_index")
     report_id = data.get("report_id")
+    profile_id = session.get("profile_id")
     if not group_index or not report_id:
         return jsonify({"status": "error", "message": "Group index and report ID are required"}), 400
 
     # Найдем ключевые слова в этой группе, связанные с данным отчетом
-    keywords = KeyWord.find_by_group_index(group_index, g.current_profile.id)
+    keywords = KeyWord.find_by_group_index(group_index, profile_id)
     if not keywords:
         return jsonify({"status": "error", "message": "No keywords found for this group"}), 404
 

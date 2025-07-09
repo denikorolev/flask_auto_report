@@ -203,7 +203,6 @@ function initCategoriesHandlers() {
                 <td>${cat.name}</td>
                 <td>${cat.level}</td>
                 <td>${cat.parent_id ? (idToName[cat.parent_id] || cat.parent_id) : "<-->"}</td>
-                <td>${cat.category_index}</td>
                 <td>
                     <button class="btn btn-delete-category" data-id="${cat.id}">Удалить</button>
                 </td>
@@ -225,7 +224,6 @@ function initCategoriesHandlers() {
     const addCategory = () => {
         const name = document.getElementById("category-name").value.trim();
         const level = parseInt(document.getElementById("category-level").value, 10);
-        const category_index = parseInt(document.getElementById("category-index").value, 10);
         const parent_id_val = document.getElementById("parent-id").value;
         const parent_id = parent_id_val ? parseInt(parent_id_val, 10) : null;
 
@@ -239,10 +237,6 @@ function initCategoriesHandlers() {
             return;
         }
 
-        if (isNaN(category_index) || category_index < 0) {
-            alert("Введите корректный индекс категории");
-            return;
-        }
         // === Новая валидация: если уровень > 1 и не выбран родитель ===
         if (level > 1 && !parent_id) {
             alert("Для категории с уровнем больше 1 необходимо выбрать родительскую категорию.");
@@ -266,7 +260,7 @@ function initCategoriesHandlers() {
         sendRequest({
             url: "/admin/categories",
             method: "POST",
-            data: { name, level, category_index, parent_id }
+            data: { name, level, parent_id }
         })
         .then(response => {
             if (response.status === "success") {

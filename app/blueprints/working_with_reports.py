@@ -1,16 +1,16 @@
 #working_with_reports.py
 
-from flask import Blueprint, render_template, request, jsonify, send_file, g, current_app, json
+from flask import Blueprint, render_template, request, jsonify, send_file, current_app, session
 from flask_security import current_user
 import os
 import json
-from models import db, Report, ReportType, KeyWord, TailSentence, BodySentence, ReportTextSnapshot
-from file_processing import save_to_word
-from sentence_processing import group_keywords, split_sentences_if_needed, clean_and_normalize_text, compare_sentences_by_paragraph, preprocess_sentence, split_report_structure_for_ai, replace_head_sentences_with_fuzzy_check, merge_ai_response_into_skeleton, convert_template_json_to_text
+from app.models.models import db, Report, ReportType, KeyWord, TailSentence, BodySentence, ReportTextSnapshot
+from app.utils.file_processing import save_to_word
+from app.utils.sentence_processing import group_keywords, split_sentences_if_needed, clean_and_normalize_text, compare_sentences_by_paragraph, preprocess_sentence, split_report_structure_for_ai, replace_head_sentences_with_fuzzy_check, merge_ai_response_into_skeleton, convert_template_json_to_text
 from app.utils.common import ensure_list
-from logger import logger
+from app.utils.logger import logger
 from flask_security.decorators import auth_required
-from spacy_manager import SpacyModel
+from app.utils.spacy_manager import SpacyModel
 from datetime import datetime
 from tasks.celery_tasks import async_analyze_dynamics
 from celery.result import AsyncResult
@@ -28,8 +28,8 @@ working_with_reports_bp = Blueprint('working_with_reports', __name__)
 def choosing_report(): 
     logger.info(f"(Выбор шаблона протокола) ------------------------------------")
     logger.info(f"(Выбор шаблона протокола) 🚀 Начинаю обработку запроса")
-    current_profile = g.current_profile
-    report_types_and_subtypes = ReportType.get_types_with_subtypes(current_profile.id) 
+    profile_id = session.get("profile_id")
+    report_types_and_subtypes = ReportType.get_types_with_subtypes(profile_id) 
     default_report_types = current_app.config.get("REPORT_TYPES_DEFAULT_RU", [])
 
     if request.method == "POST":
@@ -69,6 +69,7 @@ def working_with_reports():
     full_name = request.args.get("fullname")
     birthdate = request.args.get("birthdate")
     report_number = request.args.get("reportNumber")
+    profile_id = session.get("profile_id")
     
     if not current_report_id:
     
@@ -85,7 +86,7 @@ def working_with_reports():
     
     # Получаем ключевые слова для текущего пользователя
     try:
-        key_words_obj = KeyWord.get_keywords_for_report(g.current_profile.id, current_report_id)
+        key_words_obj = KeyWord.get_keywords_for_report(profile_id, current_report_id)
         key_words_groups = group_keywords(key_words_obj)
     except Exception as e:
         logger.error(f"(работа с протоколом) ❌ Не получилось получить ключевые слова для текущего пользователя: {e}")
@@ -115,7 +116,7 @@ def snapshots():
     logger.info(f"(Просмотр сохраненных снапшотов) 🚀 Начинаю обработку запроса на получение сохраненных снапшотов")
     
     user_id = current_user.id
-    current_profile = g.current_profile
+    profile_id = session.get("profile_id")
 
     date_str = request.args.get("date")
     report_type = request.args.get("report_type")
@@ -129,7 +130,7 @@ def snapshots():
         except Exception as e:
             logger.error(f"[report_snapshots] ❌ Ошибка фильтрации снапшотов: {e}")
 
-    report_types = ReportType.find_by_profile(current_profile.id)
+    report_types = ReportType.find_by_profile(profile_id)
 
     return render_template(
         "snapshots.html",
@@ -186,6 +187,8 @@ def save_modified_sentences():
         sentences = ensure_list(data.get("sentences"))
         user_id = current_user.id
         report_type_id = Report.get_report_type_id(report_id)
+        profile_id = session.get("profile_id")
+        language = session.get("lang", "default_language")
         
         if not sentences or not report_id:
             logger.error(f"(Сохранение измененных предложений) ❌ Не хватает текстов предложений или id протокола")
@@ -215,7 +218,7 @@ def save_modified_sentences():
                 continue  
             
             # Проверяем текст на наличие нескольких предложений
-            unsplited_sentences, splited_sentences = split_sentences_if_needed(before_split_text)
+            unsplited_sentences, splited_sentences = split_sentences_if_needed(before_split_text, language)
 
             if splited_sentences:
                 # Обрабатываем случаи с разделением
@@ -253,8 +256,9 @@ def save_modified_sentences():
         # Сначала сравниваем их с существующими предложениями в базе данных
         comparsion_result = compare_sentences_by_paragraph(
                                                         processed_sentences,
-                                                        report_id)
-        
+                                                        report_id,
+                                                        profile_id=profile_id)
+
         new_sentences = comparsion_result["unique"]
         duplicates = comparsion_result["duplicates"]
         errors_count = comparsion_result["errors_count"]
@@ -266,7 +270,7 @@ def save_modified_sentences():
         for sentence in new_sentences:
             processed_paragraph_id = sentence["paragraph_id"]
             head_sent_id = sentence["head_sentence_id"]
-            new_sentence_text = clean_and_normalize_text(sentence["text"])
+            new_sentence_text = clean_and_normalize_text(sentence["text"], profile_id)
             sentence_type = sentence["sentence_type"]
             related_id = processed_paragraph_id if sentence_type == "tail" else head_sent_id
             try:
@@ -485,6 +489,7 @@ def analyze_dynamics_finalize():
         result = data.get("result")  # результат работы celery задачи
         report_id = data.get("report_id")
         skeleton = data.get("skeleton")
+        profile_id = session.get("profile_id")
 
         if not result or not report_id:
             return jsonify({"status": "error", "message": "Missing required data"}), 400
@@ -492,7 +497,7 @@ def analyze_dynamics_finalize():
         report_data, sorted_parag = Report.get_report_data(report_id)
         
         try:
-            key_words_obj = KeyWord.get_keywords_for_report(g.current_profile.id, report_id)
+            key_words_obj = KeyWord.get_keywords_for_report(profile_id, report_id)
             key_words_groups = group_keywords(key_words_obj)
         except Exception as e:
             logger.warning(f"⚠️ Ошибка загрузки ключевых слов: {e}")

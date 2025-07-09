@@ -32,7 +32,6 @@ dist/
 
 
 # this is the test files
-test.py
 ind copy.html
 for_html_typing.html
 
@@ -43,3 +42,9 @@ start.sh
 # My folders
 uploads/
 backups/
+
+# Redis data
+dump.rdb
+
+# Scripts
+start.sh

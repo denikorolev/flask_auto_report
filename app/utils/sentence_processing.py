@@ -1,15 +1,13 @@
 # sentence_processing.py
 
-from flask import g, current_app
-from flask_login import current_user
+from flask_security import current_user
 from rapidfuzz import fuzz
 import re
 import json
-import copy
 from docx import Document
-from spacy_manager import SpacyModel
-from models import db, Paragraph, KeyWord, Report, HeadSentence, BodySentence, TailSentence, HeadSentenceGroup, BodySentenceGroup, TailSentenceGroup
-from logger import logger
+from app.utils.spacy_manager import SpacyModel
+from app.models.models import db, Paragraph, KeyWord, HeadSentence, BodySentence, TailSentence, HeadSentenceGroup, BodySentenceGroup, TailSentenceGroup, AppConfig
+from app.utils.logger import logger
 from collections import defaultdict
 
 
@@ -27,7 +25,7 @@ def process_keywords(key_word_input: str) -> list:
     return key_words
 
 
-def check_existing_keywords(key_words):
+def check_existing_keywords(key_words, profile_id):
     """
     Проверяет, какие ключевые слова уже существуют у текущего профиля и возвращает сообщение об ошибке
     в случае дублирования, или None, если ключевые слова уникальны.
@@ -38,8 +36,7 @@ def check_existing_keywords(key_words):
     Returns:
         string or None: Сообщение об ошибке, если дублирующиеся ключевые слова найдены, или None, если ключевые слова уникальны.
     """
-    
-    profile_key_words = KeyWord.find_by_profile(g.current_profile.id)
+    profile_key_words = KeyWord.find_by_profile(profile_id)
 
     # Создаем словарь для хранения результатов
     existing_keywords = {}
@@ -210,7 +207,7 @@ def clean_text_with_keywords(sentence, key_words, except_words=None):
 # в working_with_reports.py.
 # Она не очищает двойные знаки, лишние пробелы и не проверяется текст на наличие
 # Должна применяться после функции preprocess_sentence
-def clean_and_normalize_text(text):
+def clean_and_normalize_text(text, profile_id):
     """
     Cleans the input text by handling punctuation, spaces, and formatting issues.
     Args:
@@ -220,7 +217,7 @@ def clean_and_normalize_text(text):
     """
     
     # Исключения для слов, которые должны начинаться с заглавной буквы
-    exeptions_after_punctuation =current_app.config["PROFILE_SETTINGS"]["EXCEPTIONS_AFTER_PUNCTUATION"]
+    exeptions_after_punctuation = AppConfig.get_setting(profile_id, "EXCEPTIONS_AFTER_PUNCTUATION", "").split(",")
 
     # Убираем пронумерованные элементы с точкой или скобкой в начале строки
     # Это в тему именно тут, так как ниже я обрабатываю скобки
@@ -261,7 +258,7 @@ def clean_and_normalize_text(text):
 
 
 # разделяет текс по предложениям, функция используется в working_with_reports.py
-def split_sentences_if_needed(text):
+def split_sentences_if_needed(text, language=None):
     """
     Splits a sentence into multiple sentences using SpaCy tokenizer.
     Args:
@@ -271,7 +268,6 @@ def split_sentences_if_needed(text):
     """
     logger.info(f"(функция split_sentences_if_needed) -----------------------------------------")
     logger.info(f"(функция split_sentences_if_needed) 🚀 Начато разбиение текста на предложения")
-    language = current_app.config.get("PROFILE_SETTINGS", {}).get("APP_LANGUAGE", "ru")
     logger.info(f"(функция split_sentences_if_needed) получен текст: {text}")
     # Загружаем модель SpaCy для текущего языка
     try:
@@ -393,19 +389,19 @@ def group_keywords(keywords, with_index=False, with_report=False):
 
 # Сравниваю 2 предложения. Используется в working_with_report/save_modified_sentences. 
 # Ищет совпадения с заданным порогом, также очищает текст от чисел и ключевых слов
-def compare_sentences_by_paragraph(new_sentences, report_id):    
+def compare_sentences_by_paragraph(new_sentences, report_id, profile_id=None):    
     """
     Compares new sentences with existing sentences in their respective paragraphs to determine uniqueness.
     """
     logger.info(f"(функция compare_sentences_by_paragraph) 🚀 Начато сравнение новых предложений с существующими в базе данных")
     logger.debug(f"(функция compare_sentences_by_paragraph) Получены новые предложения - ({new_sentences})")
-    similarity_threshold_fuzz = int(current_app.config["PROFILE_SETTINGS"]["SIMILARITY_THRESHOLD_FUZZ"])
-    except_words = current_app.config["PROFILE_SETTINGS"]["EXCEPT_WORDS"]
+    similarity_threshold_fuzz = int(AppConfig.get_setting(profile_id, "SIMILARITY_THRESHOLD_FUZZ", 80))
+    except_words = AppConfig.get_setting(profile_id, "EXCEPT_WORDS", "").split(",")
     logger.debug(f"(функция compare_sentences_by_paragraph) Порог схожести: {similarity_threshold_fuzz}")
     logger.info(f"(функция compare_sentences_by_paragraph) Исключаемые слова: {except_words}")
     
     existing_paragraphs = Paragraph.query.filter_by(report_id=report_id).all()
-    key_words_obj = KeyWord.get_keywords_for_report(g.current_profile.id, report_id)
+    key_words_obj = KeyWord.get_keywords_for_report(profile_id, report_id)
     key_words = [keyword.key_word for keyword in key_words_obj]
     logger.debug(f"(функция compare_sentences_by_paragraph) Получено {len(key_words)} ключевых слов.")
     

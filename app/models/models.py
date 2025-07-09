@@ -16,7 +16,7 @@ from sqlalchemy import Index, event, func, cast, Date
 from app.utils.common import ensure_list
 from datetime import datetime, timezone  # Добавим для временных меток
 import json
-from logger import logger
+from app.utils.logger import logger
 from app.extensions import db
 
 
@@ -360,16 +360,25 @@ class ReportCategory(db.Model):
     id = db.Column(db.BigInteger, primary_key=True)
     name = db.Column(db.String(128), nullable=False)
     parent_id = db.Column(db.BigInteger, db.ForeignKey('report_categories.id'), nullable=True)
+    global_id = db.Column(db.BigInteger, db.ForeignKey('report_categories.id'), nullable=True)
     profile_id = db.Column(db.BigInteger, db.ForeignKey('user_profiles.id', ondelete='CASCADE'), nullable=True)
     is_global = db.Column(db.Boolean, default=False, nullable=False)
     level = db.Column(db.Integer, nullable=False)           # 1 — тип, 2 — подтип и т.д.
-    category_index = db.Column(db.Integer, default=0, nullable=False)  # порядок внутри уровня
 
     parent = db.relationship(
-    'ReportCategory',
-    remote_side=[id],
-    backref=db.backref('children', cascade='all, delete-orphan', single_parent=True)
-        )# Каскадное удаление выше будет работать только через orm, напрямую в базе не удаляй!!!
+        'ReportCategory',
+        foreign_keys=[parent_id],
+        remote_side=[id],
+        backref=db.backref('children', cascade='all, delete-orphan', single_parent=True)
+    ) # Каскадное удаление выше будет работать только через orm, напрямую в базе не удаляй!!!
+    
+    global_category = db.relationship(
+        'ReportCategory',
+        foreign_keys=[global_id],
+        remote_side=[id],
+        post_update=True,
+        backref='user_variants'
+    )
     
     profile = db.relationship('UserProfile', backref='report_categories')
 
@@ -377,18 +386,51 @@ class ReportCategory(db.Model):
         return f"<ReportCategory: {self.name}>"
     
     @classmethod
-    def add_category(cls, name, parent_id=None, profile_id=None, is_global=False, level=1, category_index=0):
+    def add_category(cls, name, parent_id=None, profile_id=None, is_global=False, level=1):
         category = cls(
             name=name,
             parent_id=parent_id,
             profile_id=profile_id,
             is_global=is_global,
             level=level,
-            category_index=category_index,
         )
         db.session.add(category)
         db.session.commit()
         return category
+
+
+    @classmethod
+    def get_categories_tree(cls, profile_id=None, is_global=None):
+        """
+        Рекурсивно собирает дерево категорий с вложенностью и данными по global_id.
+        Если задан profile_id — берёт только категории пользователя,
+        если is_global — только глобальные, если оба None — всё подряд.
+        """
+        # Фильтр по profile_id и/или is_global
+        query = cls.query
+        if profile_id is not None:
+            query = query.filter_by(profile_id=profile_id)
+        if is_global is not None:
+            query = query.filter_by(is_global=is_global)
+        categories = query.order_by(cls.level).all()
+
+        # Формируем словарь id → объект для быстрого доступа
+        cat_map = {cat.id: cat for cat in categories}
+
+        # Функция для рекурсивного построения дерева
+        def build_node(cat):
+            return {
+                "id": cat.id,
+                "name": cat.name,
+                "global_id": cat.global_id,
+                "children": [
+                    build_node(child) for child in categories if child.parent_id == cat.id
+                ]
+            }
+
+        # Собираем только корневые (level==1, parent_id==None)
+        tree = [build_node(cat) for cat in categories if cat.parent_id is None]
+        return tree
 
 
 class ReportType(BaseModel):
@@ -1026,7 +1068,7 @@ class SentenceBase(BaseModel):
             logger.debug(f"(метод edit_sentence класса SentenceBase) ⚠️ Не переданы новые данные для редактирования. Возвращаю предложение без изменений.")
             return sentence
     
-        from sentence_processing import find_similar_exist_sentence 
+        from app.utils.sentence_processing import find_similar_exist_sentence 
         logger.info(f"(метод edit_sentence класса SentenceBase) 🛠 Начинаю 'мягкое' редактирование предложения ID={sentence_id}")
         # определяем тип предложения
         if cls == HeadSentence:
@@ -1101,7 +1143,7 @@ class SentenceBase(BaseModel):
         Returns:
             tuple: (созданное предложение, использованная группа)
         """
-        from sentence_processing import find_similar_exist_sentence 
+        from app.utils.sentence_processing import find_similar_exist_sentence 
         
         if not sentence.strip():
             sentence = "Пустое предложение"
@@ -2078,7 +2120,7 @@ class ReportTextSnapshot(BaseModel):
             ReportTextSnapshot: созданный объект снапшота.
         """
         try:
-            from models import Report  # избегаем циклического импорта
+            from app.models.models import Report  # избегаем циклического импорта
             logger.info(f"(ReportTextSnapshot.create) 🚀 Начато создание снапшота текста отчета ID={report_id}")
             report = Report.query.get(report_id)
             if not report:

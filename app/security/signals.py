@@ -1,7 +1,7 @@
 # app/security/signals.py
 
 from flask_security.signals import user_registered
-from models import db, Role
+from app.models.models import db, Role
 
 @user_registered.connect_via(None)  
 def assign_default_role(sender, user, **extra):

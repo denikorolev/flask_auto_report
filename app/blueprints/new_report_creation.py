@@ -1,13 +1,13 @@
 # new_report_creation.py
 
-from flask import Blueprint, render_template, request, g, jsonify
+from flask import Blueprint, render_template, request, session, jsonify
 from flask_login import current_user
-from models import db, Report, ReportType, ReportSubtype, Paragraph, HeadSentence, BodySentence, TailSentence, ReportShare, HeadSentenceGroup, BodySentenceGroup, TailSentenceGroup
-from sentence_processing import extract_paragraphs_and_sentences
-from file_processing import allowed_file
+from app.models.models import db, Report, ReportType, ReportSubtype, Paragraph, HeadSentence, BodySentence, TailSentence, ReportShare, HeadSentenceGroup, BodySentenceGroup, TailSentenceGroup
+from app.utils.sentence_processing import extract_paragraphs_and_sentences
+from app.utils.file_processing import allowed_file
 from app.utils.common import ensure_list
 from werkzeug.utils import secure_filename
-from logger import logger
+from app.utils.logger import logger
 import os
 import shutil 
 from flask_security.decorators import auth_required
@@ -25,7 +25,7 @@ def create_report_from_existing(report_name, report_subtype, comment, report_sid
     """
     
     user_id = current_user.id
-    profile_id = g.current_profile.id
+    profile_id = session.get("profile_id")
     
     new_report = Report.create(
         profile_id=profile_id,
@@ -98,7 +98,9 @@ def create_report_from_existing(report_name, report_subtype, comment, report_sid
 @new_report_creation_bp.route('/create_report', methods=['GET', 'POST'])
 @auth_required()
 def create_report():
-    report_types_and_subtypes = ReportType.get_types_with_subtypes(g.current_profile.id)
+    profile_id = session.get("profile_id")
+    report_types_and_subtypes = ReportType.get_types_with_subtypes(profile_id)
+    
     return render_template("create_report.html",
                            title="Создание нового протокола",
                            report_types_and_subtypes=report_types_and_subtypes
@@ -112,7 +114,8 @@ def get_existing_reports():
     logger.info("[get_existing_reports] 🚀 Начат запрос существующих протоколов пользователя")
     try:
         type_id = request.args.get("type_id", type=int)
-        query = Report.query.filter_by(user_id=current_user.id, profile_id=g.current_profile.id)
+        profile_id = session.get("profile_id")
+        query = Report.query.filter_by(user_id=current_user.id, profile_id=profile_id)
         if type_id:
             # Подтянем только нужный тип
             query = query.join(ReportSubtype).filter(ReportSubtype.type_id == type_id)
@@ -236,7 +239,7 @@ def create_manual_report():
         comment = data.get('comment', "")
         report_side = data.get('report_side', False)
         
-        profile_id = g.current_profile.id
+        profile_id = session.get("profile_id")
         
         # Create new report
         new_report = Report.create(
@@ -269,8 +272,8 @@ def create_report_from_file():
         report_subtype = int(request.form.get('report_subtype'))
         comment = request.form.get('comment', "")
         report_side = request.form.get('report_side') == 'true'
-        
-        profile_id = g.current_profile.id
+
+        profile_id = session.get("profile_id")
         user_id = current_user.id
         
 
@@ -430,6 +433,7 @@ def create_report_from_public_route():
         comment = data.get("comment", "")
         report_side = data.get("report_side", False)
         public_report_id = int(data.get("selected_report_id"))
+        profile_id = session.get("profile_id")
 
         public_report = Report.get_by_id(public_report_id)
         if not public_report or not public_report.public:
@@ -438,7 +442,7 @@ def create_report_from_public_route():
 
         report_type_id = ReportSubtype.get_by_id(report_subtype).subtype_to_type.id
         new_report = Report.create(
-            profile_id=g.current_profile.id,
+            profile_id=profile_id,
             report_subtype=report_subtype,
             report_name=report_name,
             user_id=current_user.id,
@@ -495,6 +499,7 @@ def create_report_from_shared_route():
         comment = data.get("comment", "")
         report_side = data.get("report_side", False)
         shared_report_id = int(data.get("selected_report_id"))
+        profile_id = session.get("profile_id")
         
         # Ставлю ограничительь глубины копировния предложений сюда, возможно потом сделаю возможность его менять (например, в настройках)
         deep_limit = 10
@@ -506,7 +511,7 @@ def create_report_from_shared_route():
         shared_report = shared_record.report
         report_type_id = ReportSubtype.get_by_id(report_subtype).subtype_to_type.id
         new_report = Report.create(
-            profile_id=g.current_profile.id,
+            profile_id=profile_id,
             report_subtype=report_subtype,
             report_name=report_name,
             user_id=current_user.id,

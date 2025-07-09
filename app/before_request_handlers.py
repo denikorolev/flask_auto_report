@@ -1,66 +1,56 @@
 # app/before_request_handlers.py
 
-from flask import g, request, session, redirect, url_for, current_app
+from flask import request, session, redirect, url_for, current_app
 from flask_login import current_user
-from logger import logger
-from models import UserProfile
-from profile_constructor import ProfileSettingsManager
-from db_processing import sync_all_profiles_settings
+from .utils.logger import logger
+from .models.models import UserProfile, AppConfig, ReportCategory
+from .utils.db_processing import sync_all_profiles_settings
 from tasks.celery_tasks import async_prepare_impression_snippets
+import json
 
-# Логика для того, чтобы сделать данные профиля доступными 
-# в любом месте программы через g.current_profile
+# логика для 100% уверенности что данные профиля пользователя и настройки пользователя загружены
 def load_current_profile():
     # Исключения для статических файлов и маршрутов, которые не требуют профиля
-    if request.path.startswith('/static/') or request.endpoint in [
+    if request.path.startswith('/static/') or request.path.startswith("/_debug_toolbar/") or request.endpoint in [
         "security.login", "security.logout", "security.register", "custom_logout",
         "security.forgot_password", "security.reset_password", 
         "security.change_password","profile_settings.new_profile_creation", 
         "error", "main.index", "profile_settings.create_profile", "profile_settings.set_default_profile", "feedback_form"
     ]:
         return None
-    # Если пользователь не авторизован, удаляем профиль из g и сессии    
+    # Если пользователь не авторизован, удаляем профиль из сессии
     if not current_user.is_authenticated:
-        g.current_profile = None
         session.pop("profile_id", None)
+        session.pop("profile_name", None)
         logger.info("User is not authenticated")
         return
-    
-    # Если профиль уже установлен в g, пропускаем
-    if hasattr(g, "current_profile") and g.current_profile:
-        logger.info("Profile is already set in g")
-        return
-    
+
     profile_id = session.get("profile_id")
-    
+
+    # Если профиль уже в сессии то ничего не делаем
     if profile_id:
-        # Пытаемся загрузить профиль из базы тот профиль, который висит 
-        # в сессии и установить его в g
-        profile = UserProfile.find_by_id_and_user(profile_id, current_user.id)
-        if profile:
-            g.current_profile = profile
-            return
-        else:
-            # Если профиль из сессии не найден в базе или не 
-            # соответствует текущему пользователю, удаляем его из 
-            # сессии и идем ниже и ищем профиль текущего пользователя
-            print("Profile not found in db or doesn't belong to current user")
-            session.pop("profile_id", None)
-    
+        if not session.get("profile_name"):
+            print(f"Profile id from session: {profile_id} has no profile name in session")
+            profile = UserProfile.find_by_id_and_user(profile_id, current_user.id)
+            if profile:
+                session["profile_name"] = profile.profile_name
+                return
+        logger.info(f"😎 Профиль из сессии: {profile_id} с именем {session['profile_name']} присутствует в сессии")
+        return
+
     profile = UserProfile.get_default_profile(current_user.id)
-    # Если профиля нет ни в сессии ни в g то выясняем если ли вообще 
+    # Если профиля нет в сессии то выясняем есть ли вообще 
     # у пользователя профили, сколько их и в зависимости 
     # от этого маршрутизируем
     if not profile:
-        logger.info("User has no profiles")
+        logger.info("У пользователя нет ни одного профиля")
         # Если у пользователя нет профилей отпраляем его создавать профиль
         return redirect(url_for("profile_settings.new_profile_creation"))
     else:
-        logger.info(f"User has default profile {profile.profile_name}")
+        logger.info(f"У пользователя есть профиль по умолчанию {profile.profile_name}")
         session["profile_id"] = profile.id
-        g.current_profile = profile
-        ProfileSettingsManager.load_profile_settings()
-        return redirect(url_for("working_with_reports.choosing_report"))
+        session["profile_name"] = profile.profile_name
+        return 
     
 
 
@@ -74,29 +64,73 @@ def one_time_sync_tasks():
             
     if not current_user.is_authenticated:
         return  # Если пользователь не вошел — ничего не делаем
+    
+    profile_id = session.get("profile_id")
+    if not profile_id:
+        logger.info("Профиль не выбран!!! Пропускаем синхронизацию настроек профилей.")
+        return
 
-    if not session.get("synced"):  # Проверяем, была ли уже выполнена синхронизация
-        
+    if not session.get("user_data_synced"):  # Проверяем, была ли уже выполнена синхронизация
         logger.info("Синхронизация настроек профилей")
         sync_all_profiles_settings(current_user.id)
+        
+        
         try:
             # Установка настройки языка в зависимости от профиля
-            session["lang"] = current_app.config.get("PROFILE_SETTINGS", {}).get("APP_LANGUAGE", "ru")
+            session["lang"] = AppConfig.get_setting(profile_id, "LANGUAGE", "default_language")
             print(f"Установлен язык: {session['lang']}")
         except Exception as e: 
             logger.warning(f"⚠️ Ошибка при установке языка: {e}")
+            
         try:
-            except_words = current_app.config.get("PROFILE_SETTINGS", {}).get("EXCEPT_WORDS", [])
+            except_words = AppConfig.get_setting(profile_id, "EXCEPT_WORDS", [])
             user_id = current_user.id
             user_email = current_user.email
             # Запуск полной подготовки файлов (удаление старых + генерация новых + загрузка в OpenAI)
-            task = async_prepare_impression_snippets.delay(g.current_profile.id, user_id, user_email, except_words)
-            logger.info(f"📂 Начата подготовка Impression snippets для профиля {g.current_profile.profile_name}")
+            task = async_prepare_impression_snippets.delay(profile_id, user_id, user_email, except_words)
+            logger.info(f"📂 Начата подготовка Impression snippets для профиля {profile_id}")
             session["impression_snippets_task_id"] = task.id # не использую, просто бросаю задачу, автоматически редис 
             # вычистится от нее через 24 часа. Сохраняю в сессию, возможно потом сделаю обратную связь с пользователем, 
             # чтобы он видел прогресс задачи
         except Exception as e:
             logger.warning(f"⚠️ Ошибка при подготовке impression snippets: {e}")
         logger.debug("Synced profile settings")
-        session["synced"] = True  # Помечаем, что синхронизация выполнена
+        session["user_data_synced"] = True  # Помечаем, что синхронизация выполнена
+        
+        # ---- Проверка категорий пользователя ----
+        # 1. Проверка в session
+        if session.get("categories_setup"):
+            return  # всё есть, работаем дальше
+
+        profile_id = session.get("profile_id")
+        if not profile_id:
+            # Профиля нет — пусть обработает другая логика (ты уже так делаешь выше)
+            return
+
+        # 2. Пробуем взять из AppConfig (только если в session нет)
+        categories_json = AppConfig.get_setting(profile_id, "CATEGORIES_SETUP")
+        if categories_json:
+            try:
+                categories_data = json.loads(categories_json)
+                # Если не пустой и не [] — используем
+                if isinstance(categories_data, list) and categories_data:
+                    session["categories_setup"] = True
+                    return
+            except Exception as e:
+                logger.error(f"Ошибка разбора JSON категорий из AppConfig: {e}")
+
+        # 3. Если нет — пробуем собрать из базы (это может быть первый вход или reset)
+        categories = ReportCategory.get_categories_tree(profile_id=profile_id)
+        if categories:
+            try:
+                categories_json = json.dumps(categories, ensure_ascii=False)
+                AppConfig.set_setting(profile_id, "CATEGORIES_SETUP", categories_json)
+                session["categories_setup"] = True
+                # вот тут нужно будет сделать редирект на страницу настройки категорий
+                return
+            except Exception as e:
+                logger.error(f"Ошибка при сохранении категорий в AppConfig: {e}")
+
+        # 4. Если ни в базе, ни в AppConfig ничего нет — редиректим на настройку
+        return redirect(url_for("profile_settings.new_profile_creation",))
 

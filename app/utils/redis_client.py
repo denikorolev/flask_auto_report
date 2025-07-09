@@ -3,7 +3,7 @@
 from flask import current_app
 import os
 import redis
-from logger import logger
+from app.utils.logger import logger
 
 _redis_instance = None
 
@@ -21,7 +21,7 @@ def get_redis():
         host = current_app.config.get("REDIS_HOST")
         port = current_app.config.get("REDIS_PORT")
     except Exception:
-        logger.warning("Не удалось получить настройки Redis из Flask app context, используем переменные окружения.")
+        logger.debug("Не удалось получить настройки Redis из Flask app context, используем переменные окружения.")
         host = os.environ.get("REDIS_HOST", "localhost")
         port = os.environ.get("REDIS_PORT", 6379)
     db = int(os.environ.get("REDIS_DB", 0))
@@ -29,7 +29,7 @@ def get_redis():
 
     _redis_instance = redis.StrictRedis(
         host=host,
-        port=port,
+        port=int(port),
         db=db,
         password=password,
         decode_responses=True

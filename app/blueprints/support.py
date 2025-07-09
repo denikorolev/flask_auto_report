@@ -2,7 +2,7 @@
 
 from flask import Blueprint, render_template, request, session, redirect, url_for
 from flask_security import roles_required, auth_required, logout_user
-from logger import logger
+from app.utils.logger import logger
 
 
 

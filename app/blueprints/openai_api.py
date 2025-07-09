@@ -1,9 +1,9 @@
 # openai_api.py
 
-from flask import request, jsonify, current_app, Blueprint, render_template, g
+from flask import request, jsonify, current_app, Blueprint, render_template
 from flask_security.decorators import auth_required, roles_required
-from sentence_processing import convert_template_json_to_text
-from logger import logger
+from app.utils.sentence_processing import convert_template_json_to_text
+from app.utils.logger import logger
 from flask_security import current_user
 from app.utils.redis_client import redis_get, redis_set, redis_delete
 from tasks.celery_tasks import async_clean_raw_text
@@ -177,7 +177,7 @@ def ocr_extract_text():
         if not file:
             logger.error(f"(Извлечение текста из загруженного файла) ❌ Не получен файл для обработки")
             return jsonify({"status": "error", "message": "No file uploaded"}), 400
-        from file_processing import extract_text_from_uploaded_file
+        from app.utils.file_processing import extract_text_from_uploaded_file
         text, error = extract_text_from_uploaded_file(file)
         if error:
             # Если pdf — отдать код 200, но сообщить что не поддерживается

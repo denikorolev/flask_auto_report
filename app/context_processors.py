@@ -1,10 +1,10 @@
 # app/context_processors.py
 
-from flask import request, g
+from flask import request, session, g
 from flask_security import current_user
-from menu_constructor import build_menu
-from profile_constructor import ProfileSettingsManager
-from models import UserProfile
+from app.utils.menu_constructor import build_menu
+from app.utils.profile_constructor import ProfileSettingsManager
+from app.models.models import UserProfile
 
 
 def inject_menu():
@@ -21,11 +21,8 @@ def inject_user_settings():
     }
     if request.endpoint in excluded_endpoints:
         return {}
-
-    user_settings = g.get("profile_settings", None)
-    if not user_settings:
-        user_settings = ProfileSettingsManager.load_profile_settings()
-    return {"user_settings": user_settings}
+    ProfileSettingsManager.load_profile_settings()
+    return {"user_settings": g.profile_settings}
 
 
 def inject_app_info(version):
@@ -57,8 +54,8 @@ def inject_current_profile_data():
             "description": profile.description,
             "is_default": profile.default_profile,
             "is_active": (
-                getattr(g, "current_profile", None) and
-                profile.id == g.current_profile.id
+                session.get("profile_id") is not None and
+                profile.id == int(session["profile_id"])
             )
         })
     return {"profiles": profiles}

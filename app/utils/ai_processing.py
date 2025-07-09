@@ -7,9 +7,9 @@ import time
 import json as pyjson
 import re
 from flask_security import current_user
-from logger import logger
+from app.utils.logger import logger
 from app.utils.redis_client import redis_get, redis_set, redis_delete
-from sentence_processing import convert_template_json_to_text
+from app.utils.sentence_processing import convert_template_json_to_text
 
 
 

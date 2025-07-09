@@ -1,10 +1,10 @@
 # переименовать и закинуть в tasks/
 
 from tasks.extensions import celery
-from file_processing import prepare_impression_snippets
+from app.utils.file_processing import prepare_impression_snippets
 from app.utils.ai_processing import clean_raw_text, run_first_look_assistant, structure_report_text, ai_template_generator
 from tasks.celery_task_processing import cancel_stale_polled_tasks, cancel_stuck_tasks
-from logger import logger
+from app.utils.logger import logger
 from tasks.extensions import celery
 
 # Таск для вочдога который проверяет наличие поллинговых задач и отменяет 

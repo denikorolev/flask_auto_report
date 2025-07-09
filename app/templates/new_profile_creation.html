@@ -47,6 +47,19 @@
             <br>
             <button type="button" class="btn" id="addProfileButton" onclick="addProfileButtonHandler(this)">Сохранить</button>
         </form>
+
+        <div>
+            <p> Нужно также выбрать модальности, которые будут доступны в этом профиле. 
+                </p>
+                {% if modalities %}
+                    <ul>
+                    {% for modality in modalities %}
+                        <li><label>{{ modality.name }}</label>
+                            <input type="checkbox" name="modalities" value="{{ modality.id }}"></li>
+                    {% endfor %}
+                    </ul>
+                {% endif %}
+        </div>
 </div>
 
 

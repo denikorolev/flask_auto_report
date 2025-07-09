@@ -1,9 +1,9 @@
 # profile_constructor.py
 
-from flask import current_app, g, session
+from flask import current_app, session, g
 import json
-from models import AppConfig
-from logger import logger
+from app.models.models import AppConfig
+from app.utils.logger import logger
 
 
 class ProfileSettingsManager:
@@ -17,22 +17,20 @@ class ProfileSettingsManager:
         """
         logger.info("Loading profile settings...")
         try:
-            profile = getattr(g, "current_profile", None)
-            profile_id = profile.id if profile else session.get("profile_id") or None
+            profile_id = session.get("profile_id") or None
             if profile_id:
                 settings = AppConfig.query.filter_by(profile_id=profile_id).all()
                 profile_settings = {setting.config_key: ProfileSettingsManager._parse_value(setting) for setting in settings}
-                # Сохраняем все настройки в app.config под ключом PROFILE_SETTINGS
                 logger.info(f"Loaded settings for profile_id={profile_id} ✅ successfull.")
-                current_app.config["PROFILE_SETTINGS"] = profile_settings
-                
+                g.profile_settings = profile_settings
+
                 if not profile_settings:
                     logger.warning(f"No settings found for profile_id={profile_id}. ⚠️ Using default settings.")
                     profile_settings = current_app.config.get("DEFAULT_PROFILE_SETTINGS", {})
-                    current_app.config["PROFILE_SETTINGS"] = profile_settings
-                    
-                return profile_settings
-                
+                    g.profile_settings = profile_settings
+
+                return g.profile_settings
+
         except Exception as e:
             logger.error(f"Error loading settings for profile_id={profile_id}: {str(e)}")
         logger.warning("No profile settings loaded. Using empty dict.")
@@ -56,11 +54,4 @@ class ProfileSettingsManager:
         else:
             raise ValueError(f"Unknown config_type: {setting.config_type}")
 
-    # Пока нигде не используется
-    @staticmethod
-    def get_profile_setting(key, default=None):
-        """
-        Возвращает значение настройки профиля по ключу из app.config["PROFILE_SETTINGS"].
-        """
-        profile_settings = current_app.config.get("PROFILE_SETTINGS", {})
-        return profile_settings.get(key, default)
+    

@@ -1,7 +1,7 @@
 # file_processing.py
 
-from flask import g, current_app, session
-from flask_login import current_user
+from flask import session
+from flask_security import current_user
 from werkzeug.datastructures import FileStorage
 from werkzeug.utils import secure_filename
 from docx import Document
@@ -13,10 +13,10 @@ from docx.shared import Pt, Inches
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from docx.enum.table import WD_ALIGN_VERTICAL
 from config import get_config, Config
-from models import db, FileMetadata, Report, Paragraph, HeadSentenceGroup, TailSentenceGroup, BodySentenceGroup, KeyWord, ReportSubtype
-from sentence_processing import clean_text_with_keywords, _add_if_unique
+from app.models.models import db, FileMetadata, Report, HeadSentenceGroup, TailSentenceGroup, BodySentenceGroup, KeyWord, ReportSubtype
+from app.utils.sentence_processing import clean_text_with_keywords, _add_if_unique
 from openai import OpenAI
-from logger import logger
+from app.utils.logger import logger
 import easyocr
 from app.utils.redis_client import redis_get, redis_set, redis_delete
 
@@ -192,6 +192,7 @@ def save_to_word(text, name, subtype, report_type, birthdate, reportnumber, scan
     name = name.strip() or "NoName"
     subtype = subtype.strip() or "NoSubtype"
     report_type = report_type.strip() or "NoReportType"
+    profile_id = session.get("profile_id")
 
     try:
         date_str = datetime.now().strftime("%d_%m_%y")
@@ -204,9 +205,9 @@ def save_to_word(text, name, subtype, report_type, birthdate, reportnumber, scan
         logger.error("Error parsing birthdate, setting to 'unknown'")
         modified_birthdate = "unknown"
     try:
-        profile_id = g.current_profile.id
-        user_id = g.current_profile.user_id
-        
+        profile_id = profile_id
+        user_id = current_user.id
+
         signatura_metadata = FileMetadata.get_file_by_description(profile_id, "signatura")
         template_metadata = FileMetadata.get_file_by_description(profile_id, "word_template")
         

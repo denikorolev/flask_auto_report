@@ -2,11 +2,10 @@
 # Все переменные настроек пользователя сохранены в базе данных в 
 # таблице app_config их можно добавлять через AppConfig класс в models.py
 
-from flask import url_for, session, g, current_app
-from flask_login import current_user
+from flask import current_app
 import os
 from dotenv import load_dotenv
-from models import *
+from app.models.models import *
 import logging
 
 load_dotenv()
@@ -126,6 +125,7 @@ class Config:
                                 "SIMILARITY_THRESHOLD_FUZZ": 95,
                                 "EXCEPT_WORDS": ["мм", "см"],
                                 "EXCEPTIONS_AFTER_PUNCTUATION": ["МРТ", "КТ", "УЗИ", "РКТ", "ПЭТ", "ПЭТ-КТ", "МСКТ", "РГ", "ЭКГ", "ФГДС"],
+                                "CATEGORIES_SETUP": [],
                                 "USE_SENTENCE_AI_CHECK_DEFAULT": True,
                                 "USE_FIRST_GRAMMA_SENTENCE_DEFAULT": True,
                                 "USE_DUBLICATE_SEARCH_DEFAULT": True,

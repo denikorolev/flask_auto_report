@@ -1,9 +1,9 @@
 # app/blueprints/main.py
 
-from flask import Blueprint, render_template, g, session, redirect, url_for, request
+from flask import Blueprint, render_template, session, redirect, url_for, request
 from flask_security import logout_user
 import os
-from logger import logger
+from app.utils.logger import logger
 # Мои модули
 from app.utils.mail_helpers import send_email_via_zeptomail
 

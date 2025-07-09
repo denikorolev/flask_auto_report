@@ -1,12 +1,12 @@
 # editing_report.py
 
-from flask import Blueprint, render_template, request, current_app, jsonify, g
+from flask import Blueprint, render_template, request, current_app, jsonify, session
 from flask_security import current_user
-from models import db, User, Report, Paragraph, HeadSentence, BodySentence, TailSentence, HeadSentenceGroup, TailSentenceGroup, BodySentenceGroup, ReportShare, ReportSubtype
+from app.models.models import db, User, Report, Paragraph, HeadSentence, BodySentence, TailSentence, HeadSentenceGroup, TailSentenceGroup, BodySentenceGroup, ReportShare, ReportSubtype
 from app.utils.common import get_max_index, normalize_paragraph_indices
 from flask_security.decorators import auth_required
 from app.utils.decorators import require_role_rank
-from logger import logger
+from app.utils.logger import logger
 from app.utils.ai_processing import gramma_correction_ai
 
 
@@ -24,8 +24,9 @@ def edit_report():
     logger.info("(Страница редактирования протокола /edit_report) 🚀 Начинаю получения данных для формирования страницы.")
     report_id = request.args.get("report_id")
     report = Report.query.get(report_id)
-    
-    if not report or report.profile_id != g.current_profile.id:
+    profile_id = session.get("profile_id")
+
+    if not report or report.profile_id != profile_id:
         logger.error(f"(Страница редактирования протокола /edit_report) ❌ Протокол не найден или у вас нет прав на его редактирование")
         return jsonify({"status": "error", "message": "Протокол не найден или у вас нет прав на его редактирование"}), 403
     try:
@@ -176,8 +177,9 @@ def update_report():
     report_id = data.get("report_id")
     report = Report.query.get(report_id)
     report_subtype_id = data.get("report_subtype_id")
-    
-    if not report or report.profile_id != g.current_profile.id:
+    profile_id = session.get("profile_id")
+
+    if not report or report.profile_id != profile_id:
         logger.error(f"(Обновление протокола) ❌ Протокол не найден или не соответствует профилю")
         return jsonify({"status": "error", "message": "Протокол не найден или не соответствует профилю"}), 403
     
@@ -209,8 +211,9 @@ def update_paragraph_text():
     data = request.json
     paragraph_id = data.get("paragraph_id")
     paragraph = Paragraph.query.get(paragraph_id)
-    
-    if not paragraph or paragraph.paragraph_to_report.profile_id != g.current_profile.id:
+    profile_id = session.get("profile_id")
+
+    if not paragraph or paragraph.paragraph_to_report.profile_id != profile_id:
         logger.error(f"(Обновление текста параграфа) ❌ Параграф не найден или не соответствует профилю")
         return jsonify({"status": "error", "message": "Параграф не найден или не соответствует профилю"}), 403
     
@@ -240,13 +243,14 @@ def update_paragraph_flags():
     
     data = request.json
     paragraph_id = data.pop("paragraph_id", None)
+    profile_id = session.get("profile_id")
     if not paragraph_id:
         logger.error("(Обновление флагов параграфа) ❌ Не указан ID параграфа")
         return jsonify({"status": "error", "message": "Не указан ID параграфа"}), 400
 
     # Проверяем, существует ли параграф и принадлежит ли он текущему профилю
     paragraph = Paragraph.query.get(paragraph_id)
-    if not paragraph or paragraph.paragraph_to_report.profile_id != g.current_profile.id:
+    if not paragraph or paragraph.paragraph_to_report.profile_id != profile_id:
         logger.error("(Обновление флагов параграфа) ❌ Параграф не найден или не принадлежит профилю")
         return jsonify({"status": "error", "message": "Параграф не найден или не принадлежит вашему профилю"}), 403
     
@@ -329,8 +333,9 @@ def add_paragraph():
     
     copy_paste = data.get("object_type") == "paragraph"
     paragraph_index = get_max_index(Paragraph, "report_id", report_id, Paragraph.paragraph_index)
-    
-    if not report or report.profile_id != g.current_profile.id:
+    profile_id = session.get("profile_id")
+
+    if not report or report.profile_id != profile_id:
         logger.error(f"(Добавление нового параграфа) ❌ Протокол не найден или не соответствует данному профилю")
         return jsonify({"status": "error", "message": "Протокол не найден или не соответствует данному профилю"}), 403
     
@@ -477,8 +482,9 @@ def delete_paragraph():
     report_id = paragraph.report_id
     head_sentence_group = paragraph.head_sentence_group
     tail_sentence_group = paragraph.tail_sentence_group
+    profile_id = session.get("profile_id")
 
-    if not paragraph or paragraph.paragraph_to_report.profile_id != g.current_profile.id:
+    if not paragraph or paragraph.paragraph_to_report.profile_id != profile_id:
         logger.error(f"(Логика удаления параграфа) ❌ Параграф не найден или не соответствует профилю")
         return jsonify({"status": "error", "message": "Параграф не найден или не соответствует профилю"}), 404
     

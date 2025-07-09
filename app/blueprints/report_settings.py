@@ -1,11 +1,11 @@
 # report_settings.py
 
-from flask import Blueprint, render_template, request, current_app, jsonify, g
-from flask_login import login_required
-from models import db, ReportType, ReportSubtype, DatabaseDuplicateError
-from file_processing import file_uploader
+from flask import Blueprint, render_template, request, current_app, jsonify, session
+from flask_security import current_user
+from app.models.models import db, ReportType, ReportSubtype, DatabaseDuplicateError
+from app.utils.file_processing import file_uploader
 from flask_security.decorators import auth_required
-from logger import logger
+from app.utils.logger import logger
 
 report_settings_bp = Blueprint('report_settings', __name__)
 
@@ -17,8 +17,9 @@ report_settings_bp = Blueprint('report_settings', __name__)
 def report_settings():
     logger.info(f"(Report_settings)--------------------------------")
     logger.info(f"(Report_settings) 🚀 Начато получение настроек протоколов")
+    profile_id = session.get("profile_id")
     try:
-        profile_types_with_subtypes = ReportType.get_types_with_subtypes(g.current_profile.id)
+        profile_types_with_subtypes = ReportType.get_types_with_subtypes(profile_id)
         default_report_types = current_app.config.get("REPORT_TYPES_DEFAULT_RU")
         default_report_subtypes = current_app.config.get("REPORT_SUBTYPES_DEFAULT_RU")
         has_subtypes = any(t["subtypes"] for t in profile_types_with_subtypes)
@@ -49,13 +50,14 @@ def add_type():
     
     data = request.get_json()
     new_type = data.get("new_type", "").strip()
+    profile_id = session.get("profile_id")
 
     if not new_type:
         logger.error(f"(Add_new_type) ❌ Ошибка: Имя типа не может быть пустым")
         return jsonify({"status": "error", "message": "Имя типа не может быть пустым"}), 400
 
     try:
-        ReportType.create(type_text=new_type, profile_id=g.current_profile.id)
+        ReportType.create(type_text=new_type, profile_id=profile_id)
         logger.info(f"(Add_new_type) ✅ Новый тип протокола - '{new_type}' успешно добавлен")
         return jsonify({"status": "success", "message": "Новый тип протокола успешно добавлен"}), 200
     except DatabaseDuplicateError as e:
@@ -97,6 +99,7 @@ def edit_type():
     data = request.get_json()
     type_id = data.get("type_id")
     new_type_name = data.get("new_type_name", "").strip()
+    profile_id = session.get("profile_id")
 
     if not type_id or not new_type_name:
         logger.error(f"(Edit_type) ❌ Ошибка: Не переданы ID типа и новое имя типа.")
@@ -104,7 +107,7 @@ def edit_type():
 
     try:
         # Поиск типа по ID и обновление имени
-        type_for_editing = ReportType.query.filter_by(id=type_id, profile_id=g.current_profile.id).first()
+        type_for_editing = ReportType.query.filter_by(id=type_id, profile_id=profile_id).first()
 
         if not type_for_editing:
             logger.error(f"(Edit_type) ❌ Ошибка: У вас нет прав на редактирование этого типа.")
@@ -229,9 +232,9 @@ def upload_template():
         logger.error(f"(Upload_template) ❌ Ошибка: Неверный тип файла.")
         return jsonify({"status": "error", "message": "Неверный тип файла"}), 400
     
-    profile_id = g.current_profile.id if hasattr(g, 'current_profile') else None
-    user_id = g.current_profile.user_id if hasattr(g, 'current_profile') else None
-    user_email = g.current_profile.email if hasattr(g, 'current_profile') else None
+    profile_id = session.get("profile_id")
+    user_id = current_user.id if current_user.is_authenticated else None
+    user_email = current_user.email if current_user.is_authenticated else None
     # Загружаем файл с помощью функции file_uploader в папку "templates"
     upload_result, filepath = file_uploader(file, 
                                             file_ext, 

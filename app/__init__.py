@@ -11,7 +11,7 @@ import logging
 
 # Мои модули
 from .handlers.error import register_error_handlers
-from models import User, Role
+from .models.models import User, Role
 from .utils.mail_helpers import CustomMailUtil, ExtendedRegisterForm
 from .before_request_handlers import load_current_profile, one_time_sync_tasks
 from config import get_config
@@ -28,18 +28,18 @@ from .context_processors import (
     )
 
 # Импортирую блюпринты
-from app.blueprints.working_with_reports import working_with_reports_bp  
-from app.blueprints.my_reports import my_reports_bp 
-from app.blueprints.report_settings import report_settings_bp  
-from app.blueprints.new_report_creation import new_report_creation_bp
-from app.blueprints.editing_report import editing_report_bp
-from app.blueprints.profile_settings import profile_settings_bp
-from app.blueprints.openai_api import openai_api_bp
-from app.blueprints.key_words import key_words_bp
-from app.blueprints.admin import admin_bp
-from tasks.tasks_status import tasks_status_bp
-from app.blueprints.support import support_bp
-from app.blueprints.main import main_bp
+from .blueprints.working_with_reports import working_with_reports_bp  
+from .blueprints.my_reports import my_reports_bp 
+from .blueprints.report_settings import report_settings_bp  
+from .blueprints.new_report_creation import new_report_creation_bp
+from .blueprints.editing_report import editing_report_bp
+from .blueprints.profile_settings import profile_settings_bp
+from .blueprints.openai_api import openai_api_bp
+from .blueprints.key_words import key_words_bp
+from .blueprints.admin import admin_bp
+from .blueprints.support import support_bp
+from .blueprints.main import main_bp
+from .blueprints.tasks_status import tasks_status_bp
 
 
 
@@ -75,7 +75,7 @@ def create_app(config_object='config.Config'):
     app.context_processor(inject_user_rank)
     app.context_processor(inject_current_profile_data)
     # Для inject_app_info — нужно передать версию
-    app.context_processor(inject_app_info("0.10.4.5"))
+    app.context_processor(inject_app_info("0.10.4.6"))
     
    
     # Register Blueprints

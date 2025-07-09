@@ -1,8 +1,8 @@
 # db_processing.py
 
-from flask import g, current_app
-from models import KeyWord, db, AppConfig, UserProfile
-from logger import logger
+from flask import current_app, session
+from app.models.models import KeyWord, db, AppConfig, UserProfile
+from app.utils.logger import logger
 from app.utils.common import get_max_index
 
 
@@ -16,7 +16,8 @@ def add_keywords_to_db(key_words, report_ids):
         report_ids (list): Список идентификаторов отчетов, к которым привязываются ключевые слова.
     """
     # Определяем максимальный group_index для новой группы
-    new_group_index = get_max_index(KeyWord, "profile_id", g.current_profile.id, KeyWord.group_index)
+    profile_id = session.get("profile_id")
+    new_group_index = get_max_index(KeyWord, "profile_id", profile_id, KeyWord.group_index)
 
     # Добавляем ключевые слова с соответствующими индексами
     for i, key_word in enumerate(key_words):
@@ -24,7 +25,7 @@ def add_keywords_to_db(key_words, report_ids):
             group_index=new_group_index,
             index=i,
             key_word=key_word,
-            profile_id=g.current_profile.id,
+            profile_id=profile_id,
             reports=report_ids
         )
 

@@ -2,7 +2,7 @@
 
 import requests
 from flask import current_app
-from logger import logger
+from app.utils.logger import logger
 from flask_security.mail_util import MailUtil
 from flask_security.forms import RegisterForm
 from wtforms import StringField

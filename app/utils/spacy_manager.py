@@ -1,6 +1,6 @@
-from flask import current_app
+from flask import session
 import spacy
-from logger import logger
+from app.utils.logger import logger
 
 
 class SpacyModel:
@@ -27,7 +27,7 @@ class SpacyModel:
             return cls._instance  # Уже загружена
 
         if not language:
-            language = current_app.config.get("PROFILE_SETTINGS", {}).get("APP_LANGUAGE", "ru")
+            language = session.get("lang", "default_language")  # По умолчанию русский
         cls._language = language
 
         if language == "ru":

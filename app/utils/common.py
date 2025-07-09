@@ -1,8 +1,7 @@
 # common.py
 
 from sqlalchemy import func
-from logger import logger
-from flask import g
+from app.utils.logger import logger
 
 
 
@@ -38,7 +37,7 @@ def get_max_index(model, filter_field, filter_value, column):
 
 # Нормализация индексов параграфов
 def normalize_paragraph_indices(report_id):
-    from models import db, Report, Paragraph, HeadSentence
+    from app.models.models import db, Report, Paragraph, HeadSentence
 
     report = Report.get_by_id(report_id)
     if not report:
@@ -63,7 +62,7 @@ def normalize_paragraph_indices(report_id):
 
 # Нормализация индексов главных предложений
 def normalize_head_sentence_indices(paragraph_id):
-    from models import db, Paragraph, HeadSentenceGroup
+    from app.models.models import db, Paragraph, HeadSentenceGroup
 
     paragraph = Paragraph.get_by_id(paragraph_id)
     if not paragraph:
