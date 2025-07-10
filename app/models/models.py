@@ -94,6 +94,7 @@ class AppConfig(db.Model):
     def get_setting(profile_id, key, default=None):
         """Возвращает значение настройки для профиля."""
         try:
+            print(f"🔍 Получение настройки {key} для профиля {profile_id}")
             config = AppConfig.query.filter_by(profile_id=profile_id, config_key=key).first()
             return config.config_value if config else default
         except Exception as e:

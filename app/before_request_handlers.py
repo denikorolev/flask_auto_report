@@ -22,6 +22,7 @@ def load_current_profile():
     if not current_user.is_authenticated:
         session.pop("profile_id", None)
         session.pop("profile_name", None)
+        session.pop("lang", None)
         logger.info("User is not authenticated")
         return
 
@@ -34,8 +35,11 @@ def load_current_profile():
             profile = UserProfile.find_by_id_and_user(profile_id, current_user.id)
             if profile:
                 session["profile_name"] = profile.profile_name
-                return
-        logger.info(f"😎 Профиль из сессии: {profile_id} с именем {session['profile_name']} присутствует в сессии")
+        if not session.get("lang") or session.get("lang") == "default_language":
+            print("Profile id from session has no language in session")
+            language = AppConfig.get_setting(profile_id, "APP_LANGUAGE", "default_language")
+            session["lang"] = language
+        logger.info(f"😎 Профиль из сессии: {profile_id} с именем {session['profile_name']} и с языком {session.get('lang')} присутствует в сессии")
         return
 
     profile = UserProfile.get_default_profile(current_user.id)
@@ -50,6 +54,7 @@ def load_current_profile():
         logger.info(f"У пользователя есть профиль по умолчанию {profile.profile_name}")
         session["profile_id"] = profile.id
         session["profile_name"] = profile.profile_name
+        session["lang"] = AppConfig.get_setting(profile.id, "APP_LANGUAGE", "default_language")
         return 
     
 
@@ -73,14 +78,6 @@ def one_time_sync_tasks():
     if not session.get("user_data_synced"):  # Проверяем, была ли уже выполнена синхронизация
         logger.info("Синхронизация настроек профилей")
         sync_all_profiles_settings(current_user.id)
-        
-        
-        try:
-            # Установка настройки языка в зависимости от профиля
-            session["lang"] = AppConfig.get_setting(profile_id, "LANGUAGE", "default_language")
-            print(f"Установлен язык: {session['lang']}")
-        except Exception as e: 
-            logger.warning(f"⚠️ Ошибка при установке языка: {e}")
             
         try:
             except_words = AppConfig.get_setting(profile_id, "EXCEPT_WORDS", [])

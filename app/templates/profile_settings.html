@@ -92,8 +92,8 @@
                 <li class="settings-block__item">
                     <label class="label" for="appTheme">Theme:</label>
                     <select class="select" id="appTheme" name="APP_THEME">
-                        <option value="light" {% if user_settings.THEME == 'light' %}selected{% endif %}>Light</option>
-                        <option value="dark" {% if user_settings.THEME == 'dark' %}selected{% endif %}>Dark</option>
+                        <option value="light" {% if user_settings.APP_THEME == 'light' %}selected{% endif %}>Light</option>
+                        <option value="dark" {% if user_settings.APP_THEME == 'dark' %}selected{% endif %}>Dark</option>
                     </select>
                 </li>
                 <li class="settings-block__item">

@@ -223,7 +223,7 @@ def update_paragraph_text():
     
     try:
         if ai_gramma_check:
-            language = current_app.config.get("APP_LANGUAGE", "ru")
+            language = session.get("lang", "ru")
             assistant_id = current_app.config.get("OPENAI_ASSISTANT_GRAMMA_CORRECTOR_RU")
             new_paragraph_text = gramma_correction_ai(new_paragraph_text, language, assistant_id)
         paragraph.update(paragraph=new_paragraph_text)
@@ -298,7 +298,7 @@ def update_sentence_text():
     if ai_gramma_check:
         logger.info(f"(Обновление текста предложения /update_sentence_text) Проверка грамматики через ИИ")
         try:
-            language = current_app.config.get("APP_LANGUAGE", "ru")
+            language = session.get("lang", "ru")
             assistant_id = current_app.config.get("OPENAI_ASSISTANT_GRAMMA_CORRECTOR_RU")
             sentence_text = gramma_correction_ai(sentence_text, language, assistant_id)
         except Exception as e:
