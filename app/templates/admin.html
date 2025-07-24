@@ -8,6 +8,14 @@
 <!-- Блок с поиском и правкой пользователя -->
 <div class="user-management">
     <h2 class="user-management__title">Управление пользователями</h2>
+    <!-- Удаление всех пользователей, кроме тех чьи id перечислены в списке -->
+    <div class="user-management__delete">
+        <h3>Массовое удаление пользователей</h3>
+        <p>Внимание! Это действие удалит всех пользователей, кроме тех, чьи ID вы укажете ниже. Будьте осторожны!</p>
+        <p>Введите ID пользователей, которых нужно сохранить (через запятую):</p>
+        <input type="text" id="keep-user-ids" class="user-management__input">
+        <button type="button" id="delete-users-button" class="btn user-management__button">Удалить пользователей</button>
+    </div>
     
     <!-- Поиск пользователя -->
     <div class="user-management__search">
@@ -205,8 +213,26 @@
     </ul>
 
 
+<div class="flex_column">
+    <input type="text" id="superuser-id" name="superuser_id" placeholder="Введите ID суперюзера" required>
+    <button id="run-superuser-script" class="btn">
+        Запустить скрипт для суперюзера
+    </button>
+    <ul id="superuser-status" class="status-message">
+        <!-- Сюда JS вставит сообщения о статусе -->
+    </ul>
+</div>
 
 
+<div class="flex_column">
+    <input type="text" id="script-user-id" name="user_id" placeholder="Введите ID пользователя" required>
+    <button id="run-user-script" class="btn">
+        Запустить скрипт для пользователя
+    </button>
+    <ul id="user-status" class="status-message">
+        <!-- Сюда JS вставит сообщения о статусе -->
+    </ul>
+</div>
 
 
 

@@ -6,6 +6,11 @@ document.addEventListener("DOMContentLoaded", function() {
 
     initCategoriesHandlers();
 
+    // Слушатель для кнопки "Удалить пользователей"
+    document.getElementById("delete-users-button").addEventListener("click", function() {
+        deleteAllUsers();
+    });
+
     
     // Добавляем слушатели для чекбоксов таблиц
     tableCheckboxes.forEach(checkbox => {
@@ -20,6 +25,13 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // Слушатель для кнопки "Сохранить изменения" не видна, пока не найден пользователь
     document.getElementById("save-user-button").addEventListener("click", saveUserChanges);
+
+
+    // Слушатель для кнопки "запустить скрипт для суперюзера"
+    document.getElementById("run-superuser-script").addEventListener("click", runSuperuserScript);
+
+    // Слушатель для кнопки "запустить скрипт для пользователя"
+    document.getElementById("run-user-script").addEventListener("click", runUserScript);
 
 });
 
@@ -653,3 +665,89 @@ document.getElementById("share-keywords").addEventListener("click", function () 
 });
 
 
+function runSuperuserScript() {
+    const superuserIdInput = document.getElementById("superuser-id");
+    const superuserId = superuserIdInput.value.trim();
+    if (!superuserId) {
+        alert("Введите ID суперюзера.");
+        return;
+    }
+    sendRequest({
+        url: "/admin/run_superuser_script",
+        data: { superuser_id: superuserId }
+    }).then(result => {
+        const statusBox = document.getElementById("superuser-status");
+        if (statusBox) {
+            statusBox.innerHTML = ""; // очищаем старые сообщения
+            const li = document.createElement("li");
+            if (result && result.status === "success") {
+                li.textContent = result.message || "Операция выполнена успешно";
+                li.style.color = "green";
+                superuserIdInput.value = "";
+            } else {
+                li.textContent = (result && result.message) ? result.message : "Произошла ошибка";
+                li.style.color = "red";
+            }
+            statusBox.appendChild(li);
+        }
+    });
+}
+
+
+function runUserScript() {
+    const userIdInput = document.getElementById("script-user-id");
+    const userId = userIdInput.value.trim();
+
+    if (!userId) {
+        alert("Введите ID пользователя.");
+        return;
+    }
+
+    sendRequest({
+        url: "/admin/run_user_script",
+        data: { user_id: userId }
+    }).then(result => {
+        const statusBox = document.getElementById("user-status");
+        if (statusBox) {
+            statusBox.innerHTML = ""; // очищаем старые сообщения
+            const li = document.createElement("li");
+            if (result && result.status === "success") {
+                li.textContent = result.message || "Операция выполнена успешно";
+                li.style.color = "green";
+                userIdInput.value = "";
+            } else {
+                li.textContent = (result && result.message) ? result.message : "Произошла ошибка";
+                li.style.color = "red";
+            }
+            statusBox.appendChild(li);
+        }
+    });
+}
+
+function deleteAllUsers() {
+    const keepIdsString = document.getElementById("keep-user-ids").value.trim();
+    const keepIds = keepIdsString
+    .split(",")                     // разбить по запятой
+    .map(id => id.trim())           // убрать пробелы
+    .filter(id => id)               // убрать пустые
+    .map(Number)                    // привести к числам
+    .filter(id => !isNaN(id));      // оставить только числа
+    // Тут мы предлагаем одуматься перед удалением
+    if (!keepIds) {
+        alert("Введите ID пользователей, которых нужно оставить.");
+        return;
+    }
+    if (!confirm("Вы уверены, что хотите удалить всех пользователей, кроме указанных? Это действие нельзя отменить.")) {
+        return;
+    }
+    sendRequest({
+        url: "/admin/delete_all_users",
+        data: { keep_ids: keepIds }
+    }).then(result => {
+            if (result && result.status === "success") {
+                console.log(result.message || "Пользователи удалены успешно.");
+            } else {
+                console.log((result && result.message) ? result.message : "Произошла ошибка");
+            }
+    });
+}

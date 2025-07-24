@@ -31,7 +31,10 @@ document.addEventListener("DOMContentLoaded", function(){
         shareProfileButtonHandler();
     });
 
-    
+    // Слушатель на кнопку "Пересобрать модальности из БД"
+    document.getElementById("rebuildModalitiesFromDB").addEventListener("click", () => {
+        rebuildModalitiesFromDB();
+    });
 });
 
 
@@ -188,3 +191,17 @@ async function shareAllProfileProtocols(email) {
 
 
 
+// Функция для пересборки модальностей из базы данных
+async function rebuildModalitiesFromDB() {
+    const response = await sendRequest({
+        url: `/profile_settings/rebuild_modalities_from_db`,
+        method: "POST",
+    });
+
+    if (response.status === "success") {
+        console.log(response.message || "Modalities rebuilt successfully.");
+        window.location.reload(); // Перезагружаем страницу для обновления данных
+    } else {
+        console.error("Failed to rebuild modalities:", response.message);
+    }
+}

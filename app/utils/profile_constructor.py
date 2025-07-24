@@ -1,6 +1,6 @@
 # profile_constructor.py
 
-from flask import current_app, session, g
+from flask import current_app, session
 import json
 from app.models.models import AppConfig
 from app.utils.logger import logger
@@ -21,15 +21,14 @@ class ProfileSettingsManager:
             if profile_id:
                 settings = AppConfig.query.filter_by(profile_id=profile_id).all()
                 profile_settings = {setting.config_key: ProfileSettingsManager._parse_value(setting) for setting in settings}
-                logger.info(f"Loaded settings for profile_id={profile_id} ✅ successfull.")
-                g.profile_settings = profile_settings
+                if profile_settings:
+                    logger.info(f"Loaded settings for profile_id={profile_id} ✅ successfull.")
+                    return profile_settings
 
-                if not profile_settings:
+                else:
                     logger.warning(f"No settings found for profile_id={profile_id}. ⚠️ Using default settings.")
                     profile_settings = current_app.config.get("DEFAULT_PROFILE_SETTINGS", {})
-                    g.profile_settings = profile_settings
-
-                return g.profile_settings
+                    return profile_settings
 
         except Exception as e:
             logger.error(f"Error loading settings for profile_id={profile_id}: {str(e)}")
@@ -54,4 +53,5 @@ class ProfileSettingsManager:
         else:
             raise ValueError(f"Unknown config_type: {setting.config_type}")
 
+    
     

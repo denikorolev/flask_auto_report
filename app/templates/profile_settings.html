@@ -52,6 +52,9 @@
                     <input type="email" id="shareEmailInput" placeholder="Введите email" class="share-popup__input">
                     <button class="btn profile-settings-block__btn" type="button" id="submitShareProfileButton">Отправить</button>
                 </div>
+                <button class="btn  profile-settings-block__btn" id="rebuildModalitiesFromDB" type="button">Пересобрать модальности
+                    
+                </button>
             </div>
         </div>
     </div>
@@ -63,6 +66,7 @@
       в DEFAULT_PROFILE_SETTINGS в config.py  -->
     {% if user_max_rank > 2 %}
     <div class="flex container">
+        {% if user_settings %}
         <div class="settings-block">
             <h3 class="settings-block__title">Настройки</h3>
             <br>
@@ -142,6 +146,9 @@
             <span>--------------------------------------------------------------</span><br>
             <button class="btn  settings-block__btn" type="button" id="saveSettings">Сохранить</button>
         </div>
+        {% else %}
+        <p>Настройки не найдены</p>
+        {% endif %}
         
         <!-- Временный блок визуализации настроек -->
         <div class="settings-block">

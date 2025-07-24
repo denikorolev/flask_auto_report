@@ -6,6 +6,7 @@ import re
 from flask_security.decorators import auth_required, roles_required
 from app.utils.sentence_processing import group_keywords, sort_key_words_group
 import os
+from app.utils.db_processing import migrate_superuser_types_to_global_categories, migrate_user_types_to_profile_categories, delete_all_User_except
 
 
 
@@ -427,4 +428,59 @@ def delete_category(cat_id):
         db.session.rollback()
         return jsonify({"status": "error", "message": str(e)}), 400
     
+# Маршрут для запуска скрипта миграции глобальных категорий
+@admin_bp.route("/run_superuser_script", methods=["POST"])
+@auth_required()
+@roles_required("superadmin")
+def run_superuser_script():
+    data = request.json
+    superuser_id = data.get("superuser_id")
+    if not superuser_id:
+        return jsonify({"status": "error", "message": "Не указан ID суперюзера"}), 400
+
+    try:
+        # Здесь можно добавить логику для запуска скрипта миграции
+        migrate_superuser_types_to_global_categories(superuser_id)
+        return jsonify({"status": "success", "message": "Скрипт успешно выполнен"}), 200
+    except Exception as e:
+        logger.error(f"Ошибка при выполнении скрипта для суперюзера {superuser_id}: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
     
+    
+# Маршрут для запуска скрипта миграции категорий для пользователя
+@admin_bp.route("/run_user_script", methods=["POST"])
+@auth_required()
+@roles_required("superadmin")
+def run_user_script():
+    data = request.json
+    user_id = data.get("user_id")
+    if not user_id:
+        return jsonify({"status": "error", "message": "Не указан ID пользователя"}), 400
+
+    try:
+        # Здесь можно добавить логику для запуска скрипта миграции категорий
+        migrate_user_types_to_profile_categories(user_id)
+        return jsonify({"status": "success", "message": "Скрипт успешно выполнен"}), 200
+    except Exception as e:
+        logger.error(f"Ошибка при выполнении скрипта для пользователя {user_id}: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+    
+    
+
+@admin_bp.route("/delete_all_users", methods=["POST"])
+@auth_required()
+@roles_required("superadmin")
+def delete_all_users():
+    data = request.json
+    keep_ids = data.get("keep_ids", [])
+    if not isinstance(keep_ids, list):
+        return jsonify({"status": "error", "message": "keep_ids должен быть списком"}), 400
+
+    try:
+        # Удаляем всех пользователей, кроме тех, чьи ID указаны в keep_ids
+        count = delete_all_User_except(keep_ids)
+        logger.info(f"Удалены все пользователи, кроме указанных ID: {keep_ids}")
+        return jsonify({"status": "success", "message": f"Все пользователи удалены, кроме указанных. Всего удалено: {count}"}), 200
+    except Exception as e:
+        logger.error(f"Ошибка при удалении пользователей: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500

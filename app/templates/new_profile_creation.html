@@ -5,100 +5,149 @@
 {% block container %}
 <input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
 
+
 <div class="container">
-    
-        {% if profiles %}
-            <div class="choosing-profile">
-                <p>Здесь вы можете создать новый профиль.</p>
-            </div>
-            <br>
-            <br>
-        {% else %}
-            <h3>Не найдено ни одного профиля:</h3>
-            <p>Здесь вы можете создать новый профиль. Профили позволяют сохранять
-                индивидуальные настройки ваших шаблонов — внешний вид, способ отображения,
-                набор доступных функций и сами шаблоны. Это удобно, если вы работаете в
-                нескольких учреждениях, где используются разные стандарты оформления протоколов
-                или разные модальности исследований.</p>
-                <p>С помощью отдельных профилей вы сможете быстро переключаться между рабочими сценариями,
-                    скрывать ненужные кнопки и функции, которые не используются в текущей роли, а также
-                    настраивать разные цветовые темы для удобства. Такой подход делает работу с программой
-                    более гибкой и комфортной.</p>
-            <p>После создания профиля вы сможете выбрать его в выпадающем списке в верхней части страницы.</p>
-    
-        {% endif %}
-    
-        <!-- Блок для создания нового профиля -->
-        <form class="creation-profile" id="profileCreationForm" style="display: block;">
-    
+    <div id="wizard-progress">
+        <div class="progress-bar" style="width: 20%;">
+            <span class="progress-bar__label">Шаг 1 из 5</span>
+        </div>
+    </div>
+
+    <!-- Шаг 1 -->
+    <div id="step-1" class="creation-profile__step">
+        <!-- Имя и описание профиля -->
+        <h3>Шаг 1: Название профиля</h3 >
+        {% if user_profile %}
+            <p>Вы редактируете профиль</p>
             <div class="creation-profile__block">
                 <label for="profileName">Название профиля:</label>
-                <input type="text" id="profileName" name="profile_name" class="input" required placeholder="Введите имя профиля" minlength="3" maxlength="50">
+                <input type="text" id="profile-name" name="profile_name" class="input" value="{{ user_profile.profile_name }}" readonly data-profile-id="{{ user_profile.id }}">
             </div>
             <div class="creation-profile__block">
                 <label for="profileDescription">Описание:</label>
-                <textarea id="profileDescription" name="description" class="textarea"></textarea>
+                <textarea id="profile-desc" name="description" class="textarea" readonly>{{ user_profile.description }}</textarea>
             </div>
+        {% else %}
+            <p>Пожалуйста, введите название профиля это обязательный шаг. Описание профиля можно оставить пустым, но оно поможет лучше понять его назначение если вы планируете несколько профилей.</p>
+            <div class="creation-profile__block">
+                <label for="profileName">Название профиля:</label>
+                <input type="text" id="profile-name" name="profile_name" class="input" required placeholder="Введите имя профиля" minlength="3" maxlength="50">
+            </div>
+            <div class="creation-profile__block">
+                <label for="profileDescription">Описание:</label>
+                <textarea id="profile-desc" name="description" class="textarea"></textarea>
+            </div>
+        {% endif %}
+        <button type="button" class="btn btn-primary" id="to-step-2">Далее</button>
+    </div>
+
+    <!-- Шаг 2 -->
+    <div id="step-2" class="creation-profile__step hide">
+        <!-- Чекбокс профиля по умолчанию -->
+        <h3>Шаг 2: Установка профиля "по умолчанию"</h3>
+        {% if user_profile %}
+            <p>Вы редактируете существующий профиль. Установка профиля по умолчанию не требуется.</p>
+            <div class="creation-profile__block">
+                <label for="isDefault">Профиль по умолчанию?</label>
+                <input type="checkbox" id="isDefault" name="is_default" class="checkbox" {% if user_profile.default_profile %}checked{% endif %} readonly></input>
+            </div>
+        {% else %}
             <div class="creation-profile__block">
                 <label for="isDefault">Сделать этот профиль, профилем по умолчанию?</label>
                 <input type="checkbox" id="isDefault" name="is_default" class="checkbox"></input>
             </div>
-            <br>
-            <br>
-            <button type="button" class="btn" id="addProfileButton" onclick="addProfileButtonHandler(this)">Сохранить</button>
-        </form>
-
-        <div>
-            <p> Нужно также выбрать модальности, которые будут доступны в этом профиле. 
-                </p>
-                {% if modalities %}
-                    <ul>
-                    {% for modality in modalities %}
-                        <li><label>{{ modality.name }}</label>
-                            <input type="checkbox" name="modalities" value="{{ modality.id }}"></li>
-                    {% endfor %}
-                    </ul>
-                {% endif %}
+        {% endif %}
+        <div class="flex">
+            <button type="button" class="btn btn-secondary" id="back-to-1">Назад</button>
+            <button type="button" class="btn btn-primary" id="to-step-3">Далее</button>
         </div>
+    </div>
+
+    <!-- Шаг 3 -->
+    <div id="step-3" class="creation-profile__step hide">
+        <!-- Чекбоксы модальностей -->
+        <h3>Шаг 3: Выбор модальностей</h3>
+        
+        <p> Выберите модальности, которые будут доступны в этом профиле.</p>
+        {% if modalities %}
+            <ul id="globalModalities">
+            {% for modality in modalities %}
+                <li class="creation-profile__modalities-item">
+                    <label>
+                        {{ modality.name }}
+                        {% if modality.global_name %}
+                            <span class="modality-global-name">(глобальное: {{ modality.global_name }})</span>
+                        {% endif %}
+                    </label>
+                    <input class="checkbox" type="checkbox" name="modalities" value="{{ modality.id }}">
+                </li>
+            {% endfor %}
+            </ul>
+        {% else %}
+            <p>Нет доступных модальностей для выбора.</p>
+        {% endif %}
+        <div class="flex">
+            <button type="button" class="btn btn-secondary" id="back-to-2">Назад</button>
+            <button type="button" class="btn btn-primary" id="to-step-4">Далее</button>
+        </div>
+    </div>
+
+    <!-- Шаг 4 -->
+    <div id="step-4" class="creation-profile__step hide">
+        <!-- Чекбоксы областей для выбранных модальностей -->
+        <h3>Шаг 4: Выбор областей исследования</h3>
+        
+        <p>Выберите области для выбранных модальностей.</p>
+        <p>По умолчанию будут выбраны все области для которых есть предустановленные шаблоны. Если какие-то области не нужны, просто снимите с них галочки.</p>
+        <br>
+        <p>Позже вы сможете настроить области в настройках профиля.</p>
+        <div id="areasContainer" class="flex">
+            <!-- буду заполнять через JavaScript -->
+        </div>
+
+        <div class="flex">
+            <button type="button" class="btn btn-secondary" id="back-to-3">Назад</button>
+            <button type="button" class="btn btn-primary" id="to-step-5">Далее</button>
+        </div>
+    </div>
+
+    <!-- Шаг 5 -->
+    <div id="step-5" class="creation-profile__step hide">
+        <!-- Согласие с правилами -->
+        <h3>Шаг 5: Согласие с правилами</h3>
+        {% if user_profile %}
+            <p>Вы редактируете существующий профиль. Согласие с правилами не требуется.</p>
+            <input type="checkbox" id="agreeRules" name="agree_rules" style="display: none;" checked>
+        {% else %}
+            <p>Пожалуйста, ознакомьтесь с правилами использования:</p>
+            <br>
+            <p> Правила </p>
+            <br>
+            <label>
+            <input type="checkbox" id="agreeRules" name="agree_rules" class="checkbox" required>
+            Я прочитал(а) правила использования и согласен(на) с ними.
+            </label>
+        {% endif %}
+            <br>
+        <p>После создания профиля, вы сможете настроить его в разделе "Настройки профиля"</p>
+        <br>
+        <div class="flex">
+            <button type="button" class="btn btn-secondary" id="back-to-4">Назад</button>
+            <button type="button" class="btn btn-primary" id="finish-wizard">Создать профиль</button>
+        </div>
+    </div>
 </div>
+
 
 
 {% endblock container %}
 
 
+
 {% block scripts %}
-
 <script>
-    function addProfileButtonHandler(button) {
-    const profileCreationBlock = document.getElementById("profileCreationForm");
-    
-    const profileData = {
-        profile_name: profileCreationBlock.querySelector("#profileName").value,
-        description: profileCreationBlock.querySelector("#profileDescription").value,
-        is_default: profileCreationBlock.querySelector("#isDefault").checked
-    };
-
-    if (!profileData.profile_name) {
-        alert("Пожалуйста, введите имя профиля.");
-        return;
-    }
-    if (profileData.profile_name.length < 3 || profileData.profile_name.length > 50) {
-        alert("Имя профиля должно быть от 3 до 50 символов.");
-        return;
-    }
-
-    sendRequest({
-        url: "/profile_settings/create_profile",
-        data: profileData
-    }).then(response => { 
-        if (response.status === "success") {
-            window.location.href = "/profile_settings/choosing_profile?profile_id=" + response.data;
-        }
-        
-    }).catch(error => {
-        console.error("Failed to create profile:", error);
-    });
-}
+   window.globalModalitiesTree = {{ modalities|tojson }};
 </script>
+<script src="{{ url_for('static', filename='js/new_profile_creation.js') }}"></script>
 
 {% endblock scripts %}

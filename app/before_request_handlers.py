@@ -66,6 +66,14 @@ def one_time_sync_tasks():
     - Синхронизация настроек профилей.
     - (В будущем) другие одноразовые задачи, например, обновления данных.
     """
+    
+    if request.path.startswith('/static/') or request.path.startswith("/_debug_toolbar/") or request.endpoint in [
+        "security.login", "security.logout", "security.register", "custom_logout",
+        "security.forgot_password", "security.reset_password", 
+        "security.change_password","profile_settings.new_profile_creation", 
+        "error", "main.index", "profile_settings.create_profile", "profile_settings.set_default_profile", "feedback_form"
+    ]:
+        return
             
     if not current_user.is_authenticated:
         return  # Если пользователь не вошел — ничего не делаем
@@ -94,32 +102,34 @@ def one_time_sync_tasks():
         logger.debug("Synced profile settings")
         session["user_data_synced"] = True  # Помечаем, что синхронизация выполнена
         
-        # ---- Проверка категорий пользователя ----
-        # 1. Проверка в session
-        if session.get("categories_setup"):
-            return  # всё есть, работаем дальше
-
-        profile_id = session.get("profile_id")
-        if not profile_id:
-            # Профиля нет — пусть обработает другая логика (ты уже так делаешь выше)
-            return
+    # ---- Проверка категорий пользователя ----
+    # 1. Проверка в session
+    if not session.get("categories_setup"):
+        logger.info("Категории не настроены в сессии. Начинаем настройку...")
+        # Здесь можно добавить логику для настройки категорий
 
         # 2. Пробуем взять из AppConfig (только если в session нет)
         categories_json = AppConfig.get_setting(profile_id, "CATEGORIES_SETUP")
+        if categories_json and categories_json in ('None', ''):
+            categories_json = "[]"
         if categories_json:
             try:
                 categories_data = json.loads(categories_json)
+                print(f"Категории из AppConfig: {categories_data}")
                 # Если не пустой и не [] — используем
                 if isinstance(categories_data, list) and categories_data:
                     session["categories_setup"] = True
+                    print("удалось загрузить категории из AppConfig")
                     return
             except Exception as e:
                 logger.error(f"Ошибка разбора JSON категорий из AppConfig: {e}")
-
+        print(f"Категории из AppConfig пустые или невалидные: {categories_json} будем искать в базе")
         # 3. Если нет — пробуем собрать из базы (это может быть первый вход или reset)
         categories = ReportCategory.get_categories_tree(profile_id=profile_id)
+        print(f"Категории из базы: {categories}")
         if categories:
             try:
+                print(f"будем грузить категории из базы тогда")
                 categories_json = json.dumps(categories, ensure_ascii=False)
                 AppConfig.set_setting(profile_id, "CATEGORIES_SETUP", categories_json)
                 session["categories_setup"] = True
@@ -129,5 +139,6 @@ def one_time_sync_tasks():
                 logger.error(f"Ошибка при сохранении категорий в AppConfig: {e}")
 
         # 4. Если ни в базе, ни в AppConfig ничего нет — редиректим на настройку
-        return redirect(url_for("profile_settings.new_profile_creation",))
+        logger.info("Категории не найдены ни в базе, ни в AppConfig. Редирект на страницу создания профиля.")
+        return redirect(url_for("profile_settings.new_profile_creation", profile_id=profile_id))
 

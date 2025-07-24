@@ -83,8 +83,8 @@ class AppConfig(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     profile_id = db.Column(db.BigInteger, db.ForeignKey('user_profiles.id', ondelete="CASCADE"), nullable=False) 
-    config_key = db.Column(db.String(50), nullable=False)
-    config_value = db.Column(db.String(200), nullable=False)
+    config_key = db.Column(db.String(150), nullable=False)
+    config_value = db.Column(db.Text, nullable=False)
     config_type = db.Column(db.String(50), nullable=True)  # необязательный
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)  
     updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)  
@@ -237,8 +237,8 @@ class User(BaseModel, db.Model, UserMixin):
 
 
     roles = db.relationship('Role', secondary=roles_users, backref=db.backref('users', lazy='dynamic'))
-    user_to_profiles = db.relationship('UserProfile', lazy="joined", backref=db.backref("profile_to_user"), cascade="all, delete-orphan")
-    user_to_reports = db.relationship('Report', lazy=True)
+    user_to_profiles = db.relationship('UserProfile', lazy="joined", backref=db.backref("profile_to_user"), cascade="all, delete-orphan", passive_deletes=True)
+    user_to_reports = db.relationship('Report', lazy=True, cascade="all, delete-orphan", passive_deletes=True)
 
 
     def get_max_rank(self):
@@ -278,12 +278,12 @@ class UserProfile(BaseModel):
     profile_name = db.Column(db.String(255), nullable=False)
     description = db.Column(db.String(500), nullable=True)
     default_profile = db.Column(db.Boolean, default=False, nullable=False)
-    
-    profile_to_configs = db.relationship("AppConfig", lazy=True, backref="profile", cascade="all, delete-orphan")
-    profile_to_reports = db.relationship('Report', lazy=True, backref=db.backref("report_to_profile"), cascade="all, delete-orphan")
-    profile_to_files = db.relationship("FileMetadata", lazy=True, backref=db.backref("file_to_profile"), cascade="all, delete-orphan")
-    profile_to_key_words = db.relationship("KeyWord", lazy=True, backref=db.backref("key_word_to_profile"), cascade="all, delete-orphan")
-    profile_to_report_types = db.relationship("ReportType", lazy=True, backref=db.backref("report_type_to_profile"), cascade="all, delete-orphan")
+
+    profile_to_configs = db.relationship("AppConfig", lazy=True, backref="profile", cascade="all, delete-orphan", passive_deletes=True)
+    profile_to_reports = db.relationship('Report', lazy=True, backref=db.backref("report_to_profile"), cascade="all, delete-orphan", passive_deletes=True)
+    profile_to_files = db.relationship("FileMetadata", lazy=True, backref=db.backref("file_to_profile"), cascade="all, delete-orphan", passive_deletes=True)
+    profile_to_key_words = db.relationship("KeyWord", lazy=True, backref=db.backref("key_word_to_profile"), cascade="all, delete-orphan", passive_deletes=True)
+    profile_to_report_types = db.relationship("ReportType", lazy=True, backref=db.backref("report_type_to_profile"), cascade="all, delete-orphan", passive_deletes=True)
     
     def __repr__(self):
         return f"<UserProfile - {self.profile_name}>"
@@ -335,13 +335,22 @@ class UserProfile(BaseModel):
     @classmethod
     def get_default_profile(cls, user_id):
         """
-        Возвращает профиль по умолчанию для пользователя.
+        Возвращает профиль по умолчанию для пользователя. Если нет профиля 
+        по умолчанию то находит первый профиль пользователя в базе и назначает 
+        его профилем по умолчанию.
         Args:
             user_id (int): ID пользователя.
         Returns:
             UserProfile: Профиль по умолчанию или None, если его нет.
         """
-        return cls.query.filter_by(user_id=user_id, default_profile=True).first() or None
+        default_profile = cls.query.filter_by(user_id=user_id, default_profile=True).first() or None
+        if not default_profile:
+            new_default = cls.query.filter_by(user_id=user_id).first()
+            if new_default:
+                new_default.default_profile = True
+                new_default.save()
+                return new_default
+        return default_profile
 
 
     @classmethod
@@ -387,13 +396,14 @@ class ReportCategory(db.Model):
         return f"<ReportCategory: {self.name}>"
     
     @classmethod
-    def add_category(cls, name, parent_id=None, profile_id=None, is_global=False, level=1):
+    def add_category(cls, name, parent_id=None, profile_id=None, is_global=False, level=1, global_id=None):
         category = cls(
             name=name,
             parent_id=parent_id,
             profile_id=profile_id,
             is_global=is_global,
             level=level,
+            global_id=global_id
         )
         db.session.add(category)
         db.session.commit()
@@ -408,27 +418,35 @@ class ReportCategory(db.Model):
         если is_global — только глобальные, если оба None — всё подряд.
         """
         # Фильтр по profile_id и/или is_global
+        logger.info(f"Получение дерева категорий для profile_id={profile_id}, is_global={is_global}")
         query = cls.query
         if profile_id is not None:
             query = query.filter_by(profile_id=profile_id)
         if is_global is not None:
             query = query.filter_by(is_global=is_global)
         categories = query.order_by(cls.level).all()
-
+        if not categories:
+            logger.warning("Нет категорий для формирования дерева.")
+            return []
         # Формируем словарь id → объект для быстрого доступа
         cat_map = {cat.id: cat for cat in categories}
-
         # Функция для рекурсивного построения дерева
         def build_node(cat):
+            if not cat:
+                print(f"Категория {cat} не найдена в словаре, пропускаем")
+                return None
+            global_name = cls.query.get(cat.global_id).name if cat.global_id else None
+            print(f"Категория {cat.id} - глобальное имя: {global_name}")
             return {
                 "id": cat.id,
                 "name": cat.name,
                 "global_id": cat.global_id,
+                "global_name": global_name,
                 "children": [
                     build_node(child) for child in categories if child.parent_id == cat.id
                 ]
             }
-
+        
         # Собираем только корневые (level==1, parent_id==None)
         tree = [build_node(cat) for cat in categories if cat.parent_id is None]
         return tree
@@ -436,7 +454,7 @@ class ReportCategory(db.Model):
 
 class ReportType(BaseModel):
     __tablename__ = 'report_type'
-    profile_id = db.Column(db.BigInteger, db.ForeignKey('user_profiles.id'), nullable=False)
+    profile_id = db.Column(db.BigInteger, db.ForeignKey('user_profiles.id', ondelete='CASCADE'), nullable=False)
     type_text = db.Column(db.String(50), nullable=False)
     type_index = db.Column(db.Integer, nullable=False)
     
@@ -505,12 +523,12 @@ class ReportType(BaseModel):
 
 class ReportSubtype(BaseModel):
     __tablename__ = "report_subtype"
-    type_id = db.Column(db.SmallInteger, db.ForeignKey("report_type.id"), nullable=False)
+    type_id = db.Column(db.SmallInteger, db.ForeignKey("report_type.id", ondelete="CASCADE"), nullable=False)
     subtype_text = db.Column(db.String(250), nullable=False)
     subtype_index = db.Column(db.Integer, nullable=False)
-    
-    subtype_to_reports = db.relationship('Report', lazy=True, backref=db.backref("report_to_subtype"), cascade="all, delete-orphan")
-    
+
+    subtype_to_reports = db.relationship('Report', lazy=True, backref=db.backref("report_to_subtype"), cascade="all, delete-orphan", passive_deletes=True)
+
     @classmethod
     def create(cls, type_id, subtype_text, subtype_index=None): # subtype_index должен быть None чтобы ниже зайти в if и вычислить его
         """
@@ -552,17 +570,17 @@ class ReportSubtype(BaseModel):
 
 class Report(BaseModel):
     __tablename__ = "reports"
-    profile_id = db.Column(db.BigInteger, db.ForeignKey('user_profiles.id'), nullable=False)
-    user_id = db.Column(db.BigInteger, db.ForeignKey('users.id'), nullable=False)
-    report_subtype = db.Column(db.Integer, db.ForeignKey('report_subtype.id'), nullable=False)
+    profile_id = db.Column(db.BigInteger, db.ForeignKey('user_profiles.id', ondelete='CASCADE'), nullable=False)
+    user_id = db.Column(db.BigInteger, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    report_subtype = db.Column(db.Integer, db.ForeignKey('report_subtype.id', ondelete='CASCADE'), nullable=False)
     comment = db.Column(db.String(255), nullable=True)
     report_name = db.Column(db.String(255), nullable=False)
     public = db.Column(db.Boolean, default=False, nullable=False)
     report_side = db.Column(db.Boolean, nullable=False, default=False)
-    
-   
-    report_to_paragraphs = db.relationship('Paragraph', lazy=True, backref=db.backref("paragraph_to_report"), cascade="all, delete-orphan")
-    
+
+
+    report_to_paragraphs = db.relationship('Paragraph', lazy=True, backref=db.backref("paragraph_to_report"), cascade="all, delete-orphan", passive_deletes=True)
+
     @classmethod
     def create(cls, profile_id, report_subtype, report_name,  user_id, comment=None, public=False, report_side=False):
         new_report = cls(
@@ -759,7 +777,7 @@ class ReportShare(db.Model):
 class Paragraph(BaseModel):
     __tablename__ = "report_paragraphs"
     id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
-    report_id = db.Column(db.BigInteger, db.ForeignKey("reports.id"), nullable=False)
+    report_id = db.Column(db.BigInteger, db.ForeignKey("reports.id", ondelete="CASCADE"), nullable=False)
     paragraph_index = db.Column(db.Integer, nullable=False)
     paragraph = db.Column(db.String(255), nullable=False)
     
@@ -771,10 +789,10 @@ class Paragraph(BaseModel):
     is_additional = db.Column(db.Boolean, nullable=False)
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     is_impression = db.Column(db.Boolean, default=False, nullable=False)
-    
     comment = db.Column(db.String(255), nullable=True)
     paragraph_weight = db.Column(db.SmallInteger, nullable=False) 
     tags = db.Column(db.String(255), nullable=True)
+    
     head_sentence_group_id = db.Column(db.BigInteger, db.ForeignKey("head_sentence_groups.id", ondelete="SET NULL"))
     tail_sentence_group_id = db.Column(db.BigInteger, db.ForeignKey("tail_sentence_groups.id", ondelete="SET NULL"))
 
@@ -916,7 +934,7 @@ class SentenceBase(BaseModel):
     __abstract__ = True  
     
     report_type_id = db.Column(db.SmallInteger, nullable=True)  
-    user_id = db.Column(db.BigInteger, db.ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    user_id = db.Column(db.BigInteger, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
     sentence = db.Column(db.String(600), nullable=False)
     tags = db.Column(db.String(100), nullable=True)
     comment = db.Column(db.String(255), nullable=True) 
@@ -1916,7 +1934,7 @@ class TailSentenceGroup(SentenceGroupBase):
         
 class KeyWord(BaseModel):
     __tablename__ = 'key_words_group'
-    profile_id = db.Column(db.BigInteger, db.ForeignKey('user_profiles.id'), nullable=False)
+    profile_id = db.Column(db.BigInteger, db.ForeignKey('user_profiles.id', ondelete='CASCADE'), nullable=False)
     group_index = db.Column(db.Integer, nullable=False)
     index = db.Column(db.Integer, nullable=False)
     key_word = db.Column(db.String(50), nullable=False)
@@ -2048,8 +2066,8 @@ class KeyWord(BaseModel):
 
 class FileMetadata(BaseModel):
     __tablename__ = "file_metadata"
-    
-    profile_id = db.Column(db.BigInteger, db.ForeignKey("user_profiles.id"), nullable=False)  # Связь с профилем
+
+    profile_id = db.Column(db.BigInteger, db.ForeignKey("user_profiles.id", ondelete="CASCADE"), nullable=False)  # Связь с профилем
     file_name = db.Column(db.String(255), nullable=False)  # Имя файла
     file_path = db.Column(db.String(500), nullable=False)  # Путь к файлу
     file_type = db.Column(db.String(50), nullable=False)  # Тип файла (например, "docx", "jpg")
@@ -2101,7 +2119,7 @@ class ReportTextSnapshot(BaseModel):
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
 
     report = db.relationship("Report", backref=db.backref("snapshots", lazy=True))
-    user = db.relationship("User", backref=db.backref("text_snapshots", lazy=True))
+    user = db.relationship("User", backref=db.backref("text_snapshots", lazy=True, passive_deletes=True))
 
     def __repr__(self):
         return f"<ReportTextSnapshot id={self.id} report_id={self.report_id} created_at={self.created_at}>"

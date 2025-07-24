@@ -1,14 +1,15 @@
 # app/context_processors.py
 
-from flask import request, session, g
+from flask import request, session
 from flask_security import current_user
 from app.utils.menu_constructor import build_menu
 from app.utils.profile_constructor import ProfileSettingsManager
 from app.models.models import UserProfile
+from app.utils.logger import logger
 
 
 def inject_menu():
-    excluded_endpoints = {"error", "security.login", "security.logout", "main.index"}
+    excluded_endpoints = {"error", "security.login", "security.logout", "main.index", "profile_settings.new_profile_creation"}
     if request.endpoint in excluded_endpoints:
         return {}
     return {"menu": build_menu()}
@@ -17,12 +18,15 @@ def inject_menu():
 def inject_user_settings():
     excluded_endpoints = {
         "error", "security.login", "security.logout", "custom_logout",
-        "main.index", "profile_settings.create_profile"
+        "main.index"
     }
     if request.endpoint in excluded_endpoints:
         return {}
-    ProfileSettingsManager.load_profile_settings()
-    return {"user_settings": g.profile_settings}
+    profile_settings = ProfileSettingsManager.load_profile_settings()
+    if not profile_settings:
+        logger.warning("No profile settings found, returning empty dict")
+        return {"user_settings": {}}
+    return {"user_settings": profile_settings}
 
 
 def inject_app_info(version):
