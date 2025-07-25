@@ -23,6 +23,9 @@ document.addEventListener("DOMContentLoaded", function() {
     // Слушатель для кнопки "Найти пользователя"
     document.getElementById("search-user-button").addEventListener("click", searchUser);
 
+    // Слушатель для кнопки "Удалить пользователя"
+    document.getElementById("delete-user-button").addEventListener("click", deleteUser);
+
     // Слушатель для кнопки "Сохранить изменения" не видна, пока не найден пользователь
     document.getElementById("save-user-button").addEventListener("click", saveUserChanges);
 
@@ -58,9 +61,11 @@ function searchUser() {
 
                 if (users.length === 1) {
                     // Если только один пользователь найден, сразу отображаем его детали
+                    userDetailsSection = document.getElementById("user-details");
+                    // Вначале очищаем предыдущие данные
+                    userDetailsSection.setAttribute("data-user-id", users[0].id);
                     populateUserDetails(users[0]);
                 } else if (users.length > 1) {
-                    // Если найдено несколько пользователей, отображаем таблицу
                     displayUserResults(users);
                 } else {
                     console.warn("Пользователи не найдены.");
@@ -106,6 +111,38 @@ function saveUserChanges() {
 }
 
 
+// Функция для удаления пользователя
+function deleteUser() {
+    const userId = document.getElementById("user-details").getAttribute("data-user-id");
+
+    if (!userId) {
+        console.warn("Данные об ID пользователя отсутствуют. Попробуйте повторить поиск.");
+        return;
+    }
+
+    if (!confirm("Вы уверены, что хотите удалить этого пользователя? Это действие нельзя отменить.")) {
+        return;
+    }
+
+    // Отправляем запрос на сервер для удаления пользователя
+    sendRequest({
+        url: `/admin/delete_user/${userId}`,
+        method: "DELETE",
+        csrfToken: csrfToken
+    })
+        .then(response => {
+            if (response.status === "success") {
+                console.info("Пользователь успешно удален.");
+                // Скрываем детали пользователя
+                const userDetailsSection = document.getElementById("user-details");
+                userDetailsSection.setAttribute("data-user-id", "");
+                hideUserDetails();
+            }
+        })
+        .catch(error => {
+            console.error("Ошибка при удалении пользователя:", error);
+        });
+}
 
 // Функция отвечающая за появление полей таблицы при выборе таблицы
 function handleTableToggle(event) {

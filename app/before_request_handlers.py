@@ -2,7 +2,7 @@
 
 from flask import request, session, redirect, url_for, current_app
 from flask_login import current_user
-from .utils.logger import logger
+from app.utils.logger import logger
 from .models.models import UserProfile, AppConfig, ReportCategory
 from .utils.db_processing import sync_all_profiles_settings
 from tasks.celery_tasks import async_prepare_impression_snippets
@@ -10,6 +10,8 @@ import json
 
 # логика для 100% уверенности что данные профиля пользователя и настройки пользователя загружены
 def load_current_profile():
+    
+
     # Исключения для статических файлов и маршрутов, которые не требуют профиля
     if request.path.startswith('/static/') or request.path.startswith("/_debug_toolbar/") or request.endpoint in [
         "security.login", "security.logout", "security.register", "custom_logout",
@@ -28,6 +30,12 @@ def load_current_profile():
 
     profile_id = session.get("profile_id")
 
+    # Временный хак для тестов, чтобы не грузить профиль с ID 120
+    # if session.get("profile_id") == 120:
+    #     logger.info("Профиль с ID 120 уже в сессии, пропускаем загрузку профиля")
+    #     session.pop("profile_id", None)
+    #     return redirect(url_for("main.custom_logout"))
+    
     # Если профиль уже в сессии то ничего не делаем
     if profile_id:
         if not session.get("profile_name"):

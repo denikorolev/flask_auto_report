@@ -298,7 +298,26 @@ def update_user(user_id):
 
     
 
-    
+@admin_bp.route("/delete_user/<int:user_id>", methods=["DELETE"])
+@auth_required()
+@roles_required("superadmin")  # Доступ только для суперадминов
+def delete_user(user_id):
+    """Удаляет пользователя по ID."""
+    try:
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({"status": "error", "message": "Пользователь не найден."}), 404
+
+        # Удаляем пользователя
+        db.session.delete(user)
+        db.session.commit()
+
+        return jsonify({"status": "success", "message": "Пользователь успешно удален."}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Ошибка удаления пользователя: {str(e)}")
+        return jsonify({"status": "error", "message": "Ошибка сервера."}), 500
 
     
 @admin_bp.route("/make_all_public", methods=["POST"])
