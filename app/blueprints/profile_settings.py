@@ -6,6 +6,7 @@ from flask_login import current_user
 from app.models.models import User, UserProfile, db, AppConfig, Paragraph, ReportType, ReportShare, ReportCategory
 from flask_security.decorators import auth_required
 from app.utils.file_processing import sync_profile_files
+from app.utils.db_processing import sync_modalities_from_db
 from app.models.models import Report
 from app.utils.logger import logger
 
@@ -46,6 +47,8 @@ def set_profile_as_default(profile_id):
     logger.info(f"set_profile_as_default end work successfull")
     return True
     
+    
+
 # Routes
 
 # Маршрут для загрузки страницы настроек профиля 
@@ -57,18 +60,36 @@ def profile_settings():
     profile_id = session.get("profile_id")
 
     profile = UserProfile.query.filter_by(id=profile_id, user_id=current_user.id).first()
+    if not profile:
+        logger.error(f"(route 'profile_settings') ❌ Profile not found for user {current_user.id}")
+        return redirect(url_for('main.index'))
     profile_data = profile.get_profile_data()
     logger.debug(f"(route 'profile_settings') Profile data: {profile_data}")
     
-    if profile_data:
-        logger.info(f"(route 'profile_settings') ✅ Profile settings loaded")
-        logger.info(f"(route 'profile_settings') -----------------------------")
-        return render_template('profile_settings.html', 
-                               title="Настройки профиля", 
-                               profile=profile_data)
-    else:
+    if not profile_data:
         logger.error(f"(route 'profile_settings') ❌ Profile not found")
         return redirect(url_for('main.index'))
+    
+    categories_json = AppConfig.get_setting(profile_id, "CATEGORIES_SETUP")
+    try:
+        categories = json.loads(categories_json) if categories_json else []
+        if categories:
+            logger.info(f"(route 'profile_settings') ✅ Categories loaded: {categories}")
+        else:
+            logger.warning(f"(route 'profile_settings') ⚠️ No categories found")
+    except Exception as e:
+        logger.error(f"(route 'profile_settings') ❌ Error parsing categories JSON: {e}")
+        categories = []
+    
+    logger.info(f"(route 'profile_settings') ✅ Profile settings loaded")
+    logger.info(f"(route 'profile_settings') -----------------------------")
+    return render_template('profile_settings.html', 
+                            title="Настройки профиля", 
+                            profile=profile_data,
+                            categories=categories,
+                            )
+    
+        
 
 
 # Маршрут для выбора существующего профиля
@@ -395,17 +416,9 @@ def rebuild_modalities_from_db():
         logger.error(f"(route 'rebuild_modalities_from_db') ❌ Профиль не выбран")
         return jsonify({"status": "error", "message": "Профиль не выбран"}), 400
     
-    try:
-        modalities = ReportCategory.get_categories_tree(profile_id=profile_id, is_global=False)
-        if not modalities:
-            logger.warning(f"(route 'rebuild_modalities_from_db') ❌ Нет модальностей для профиля {profile_id}")
-            return jsonify({"status": "warning", "message": "Нет модальностей для пересборки"}), 200
-        
-        # Сохраняем модальности в сессию
-        logger.info(f"(route 'rebuild_modalities_from_db') ✅ Модальности успешно пересобраны")
-        return jsonify({"status": "success", "message": "Модальности успешно пересобраны"}), 200
-    except Exception as e:
-        logger.error(f"(route 'rebuild_modalities_from_db') ❌ Ошибка при пересборке модальностей: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 400
+    success = sync_modalities_from_db(profile_id)
+    if not success:
+        logger.error(f"(route 'rebuild_modalities_from_db') ❌ Ошибка при пересборке модальностей из БД")
+        return jsonify({"status": "error", "message": "Ошибка при пересборке модальностей из БД"}), 500
 
-
+    return jsonify({"status": "success", "message": "Модальности успешно пересобраны"}), 200

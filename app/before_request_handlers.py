@@ -4,7 +4,7 @@ from flask import request, session, redirect, url_for, current_app
 from flask_login import current_user
 from app.utils.logger import logger
 from .models.models import UserProfile, AppConfig, ReportCategory
-from .utils.db_processing import sync_all_profiles_settings
+from .utils.db_processing import sync_all_profiles_settings, sync_modalities_from_db
 from tasks.celery_tasks import async_prepare_impression_snippets
 import json
 
@@ -114,9 +114,9 @@ def one_time_sync_tasks():
     # 1. Проверка в session
     if not session.get("categories_setup"):
         logger.info("Категории не настроены в сессии. Начинаем настройку...")
-        # Здесь можно добавить логику для настройки категорий
+       
 
-        # 2. Пробуем взять из AppConfig (только если в session нет)
+        # 2. Пробуем взять из AppConfig 
         categories_json = AppConfig.get_setting(profile_id, "CATEGORIES_SETUP")
         if categories_json and categories_json in ('None', ''):
             categories_json = "[]"
@@ -133,18 +133,12 @@ def one_time_sync_tasks():
                 logger.error(f"Ошибка разбора JSON категорий из AppConfig: {e}")
         print(f"Категории из AppConfig пустые или невалидные: {categories_json} будем искать в базе")
         # 3. Если нет — пробуем собрать из базы (это может быть первый вход или reset)
-        categories = ReportCategory.get_categories_tree(profile_id=profile_id)
-        print(f"Категории из базы: {categories}")
-        if categories:
-            try:
-                print(f"будем грузить категории из базы тогда")
-                categories_json = json.dumps(categories, ensure_ascii=False)
-                AppConfig.set_setting(profile_id, "CATEGORIES_SETUP", categories_json)
-                session["categories_setup"] = True
-                # вот тут нужно будет сделать редирект на страницу настройки категорий
-                return
-            except Exception as e:
-                logger.error(f"Ошибка при сохранении категорий в AppConfig: {e}")
+        
+        try:
+            sync_modalities_from_db(profile_id)
+            return
+        except Exception as e:
+            logger.error(f"Ошибка при пересборке категорий из базы: {e}")
 
         # 4. Если ни в базе, ни в AppConfig ничего нет — редиректим на настройку
         logger.info("Категории не найдены ни в базе, ни в AppConfig. Редирект на страницу создания профиля.")

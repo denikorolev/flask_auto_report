@@ -5,6 +5,7 @@ from flask_security import current_user
 from app.models.models import KeyWord, db, AppConfig, UserProfile, ReportType, ReportSubtype, ReportCategory, User
 from app.utils.logger import logger
 from app.utils.common import get_max_index
+import json
 
 
 def add_keywords_to_db(key_words, report_ids):
@@ -74,17 +75,13 @@ def sync_all_profiles_settings(user_id):
     
     
     
-    
+# Временная функция для миграции типов и подтипов суперюзера в глобальные категории
 def migrate_superuser_types_to_global_categories(super_user_id):
     """
     Создаёт глобальные категории 1 и 2 уровня на основе типов и подтипов суперюзера.
     Если в базе уже есть хотя бы одну глобальную категорию уровня 2, функция не выполняется.
     """
-    # Проверка на наличие глобальных категорий 2 уровня
-    existing_level2 = ReportCategory.query.filter_by(is_global=True, level=2).first()
-    if existing_level2:
-        print("⚠️ Миграция не запущена: в базе уже есть хотя бы одна глобальная категория второго уровня.")
-        return
+    
 
     # 1. Все типы (ReportType) суперюзера
     report_types = ReportType.find_by_profile(super_user_id)
@@ -148,7 +145,7 @@ def migrate_superuser_types_to_global_categories(super_user_id):
     print("✅ Миграция глобальных категорий завершена.")
     
     
-    
+# Временная функция для миграции пользовательских категорий (типов и подтипов) в ReportCategory
 def migrate_user_types_to_profile_categories(user_id):
     """
     Для всех профилей пользователя создает категории 1 и 2 уровня на основе ReportType и ReportSubtype.
@@ -230,9 +227,31 @@ def migrate_user_types_to_profile_categories(user_id):
     # Можно добавить уведомление
     session["user_data_synced"] = False  # Сбрасываем флаг синхронизации данных пользователя
     print(f"✅ Миграция пользовательских категорий для user_id={user_id} завершена.")
-    
-    
 
+
+# Функция для пересборки модальностей и областей исследования из базы данных
+def sync_modalities_from_db(profile_id):
+    """
+    Пересобирает модальности и области исследования из базы данных.
+    """
+    try:
+        logger.info(f"sync_modalities_from_db started for profile_id = {profile_id}")
+        modalities = ReportCategory.get_categories_tree(profile_id=profile_id, is_global=False)
+        if not modalities:
+            logger.warning(f"Нет модальностей для профиля {profile_id}")
+            return False
+        # Сохраняем модальности в AppConfig
+        AppConfig.set_setting(profile_id, "CATEGORIES_SETUP", json.dumps(modalities, ensure_ascii=False))
+        logger.info(f"Модальности успешно пересобраны для профиля {profile_id}")
+        return True
+    except Exception as e:
+        logger.error(f"sync_modalities_from_db error {e}")
+        return False
+
+
+
+
+# Временная функция для удаления всех пользователей, кроме текущего и указанных в keep_ids
 def delete_all_User_except(keep_ids=None):
     """
     Удаляет всех пользователей, кроме текущего и кроме id, указанных в keep_ids.

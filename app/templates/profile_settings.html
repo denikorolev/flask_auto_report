@@ -4,7 +4,8 @@
 {% block container %}
 
 <input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
-
+<div class="container flex_column">
+    
     <!-- Блок глобальных настроек самого профиля -->
     <div class="profile-settings-block">
         <h3 class="profile-settings-block__title">Настройки профиля</h3>
@@ -53,143 +54,186 @@
                     <button class="btn profile-settings-block__btn" type="button" id="submitShareProfileButton">Отправить</button>
                 </div>
                 <button class="btn  profile-settings-block__btn" id="rebuildModalitiesFromDB" type="button">Пересобрать модальности
-                    
+
                 </button>
             </div>
         </div>
     </div>
     
-
-
-    <!-- Блок настроек для сохранения настроек профиля в БД -->
-     <!-- Имя инпута должно обязательно совпадать с ключом настройки 
-      в DEFAULT_PROFILE_SETTINGS в config.py  -->
-    {% if user_max_rank > 2 %}
-    <div class="flex container">
-        {% if user_settings %}
-        <div class="settings-block">
-            <h3 class="settings-block__title">Настройки</h3>
-            <br>
-            <ul class="settings-block__list" id="settings-block">
-                <li class="settings-block__item">
-                    <label class="label" for="useWordReports">Использовать выгрузку протокола в word</label>
-                    <input class="checkbox" type="checkbox" id="useWordReports" name="USE_WORD_REPORTS"
-                        {% if user_settings.USE_WORD_REPORTS %} checked {% endif %}>
-                </li>
-                <li class="settings-block__item">
-                    <label class="label" for="useSentenceAutosaveForDynamicReport">Использовать автосохранение новых предложений при использовании динамического протокола</label>
-                    <input class="checkbox" type="checkbox" id="useSentenceAutosaveForDynamicReport" name="USE_SENTENCE_AUTOSAVE_FOR_DYNAMIC_REPORT"
-                        {% if user_settings.USE_SENTENCE_AUTOSAVE_FOR_DYNAMIC_REPORT %} checked {% endif %}>
-                </li>
-                <li class="settings-block__item">
-                    <label class="label" for="useSentenceAutosave">Использовать автосохранение новых предложений</label>
-                    <input class="checkbox" type="checkbox" id="useSentenceAutosave" name="USE_SENTENCE_AUTOSAVE"
-                        {% if user_settings.USE_SENTENCE_AUTOSAVE %} checked {% endif %}>
-                </li>
-                <li class="settings-block__item">
-                    <label class="label" for="appLanguage">Язык приложения:</label>
-                    <select class="select" id="appLanguage" name="APP_LANGUAGE">
-                        <option value="ru" {% if user_settings.APP_LANGUAGE == 'ru' %}selected{% endif %}>русский</option>
-                        <option value="eng" {% if user_settings.APP_LANGUAGE == 'eng' %}selected{% endif %}>английский</option>
-                    </select>
-                </li>
-                <li class="settings-block__item">
-                    <label class="label" for="appTheme">Theme:</label>
-                    <select class="select" id="appTheme" name="APP_THEME">
-                        <option value="light" {% if user_settings.APP_THEME == 'light' %}selected{% endif %}>Light</option>
-                        <option value="dark" {% if user_settings.APP_THEME == 'dark' %}selected{% endif %}>Dark</option>
-                    </select>
-                </li>
-                <li class="settings-block__item">
-                    <label class="label" for="similarityThesholdFuzz">Порог схождения для поиска дубликатов предложений:</label>
-                    <input class="select" id="similarityThesholdFuzz" name="SIMILARITY_THRESHOLD_FUZZ" value="{{ user_settings.SIMILARITY_THRESHOLD_FUZZ }}">
-                    
-                </li>
-                <li class="settings-block__item">
-                    <label class="label" for="exceptWords">Слова исключения для фильтрации текста:</label>
-                    <input type="text" class="input" id="exceptWords" name="EXCEPT_WORDS" value="{{ user_settings.EXCEPT_WORDS }}">
-                   
-                </li>
-                <li class="settings-block__item">
-                    <label class="label" for="exceptionsAfterPunctuation">Слова исключения аббревиатуры:</label>
-                    <input type="text" class="input" id="exceptionsAfterPunctuation" name="EXCEPTIONS_AFTER_PUNCTUATION" value="{{ user_settings.EXCEPTIONS_AFTER_PUNCTUATION }}">
-                    
-                </li>
-                <li class="settings-block__item">
-                    <label class="label" for="categoriesSetup">Список категорий пользователя:</label>
-                    <input class="input" type="text" id="categoriesSetup" name="CATEGORIES_SETUP"
-                        value="{{ user_settings.CATEGORIES_SETUP | tojson | safe }}">
-
-                <li><h3>Пожалуйста не трогайте настройки выше. Ниже можно.</h3></li>
-                
-                <li class="settings-block__item">
-                    <label class="label" for="useSentenceAICheckDefault">Использовать AI проверку предложений по умолчанию</label>
-                    <input class="checkbox" type="checkbox" id="useSentenceAICheckDefault" name="USE_SENTENCE_AI_CHECK_DEFAULT"
-                        {% if user_settings.USE_SENTENCE_AI_CHECK_DEFAULT %} checked {% endif %}>
-                        
-                </li>
-                <li class="settings-block__item">
-                    <label class="label" for="useFirstGrammaSentenceDefault">Использовать автоматическую проверку предложений в браузере по умолчанию</label>
-                    <input class="checkbox" type="checkbox" id="useFirstGrammaSentenceDefault" name="USE_FIRST_GRAMMA_SENTENCE_DEFAULT"
-                        {% if user_settings.USE_FIRST_GRAMMA_SENTENCE_DEFAULT %} checked {% endif %}>
-                        
-                </li>
-                <li class="settings-block__item">
-                    <label class="label" for="useDublicateSearchDefault">Использовать поиск дубликатов по умолчанию</label>
-                    <input class="checkbox" type="checkbox" id="useDublicateSearchDefault" name="USE_DUBLICATE_SEARCH_DEFAULT"
-                        {% if user_settings.USE_DUBLICATE_SEARCH_DEFAULT %} checked {% endif %}>
-                        
-                </li>
+    
+    <!-- Блок настроек модальностей и областей исследования -->
+    <div class="flex">
+        <div id="modalitiesContainer">
+            <h3 class="settings-block__title">Модальности</h3>
+            {% if categories %}
+            <ul class="categories-tree">
+                {% for cat in categories %}
+                    <li>
+                        <label>
+                            <input type="radio"
+                                   name="modality_radio"
+                                   class="modality-radio"
+                                   value="{{ cat.id }}">
+                            <span class="category-name">{{ cat.name }}</span>
+                            <span class="category-id">({{ cat.global_name }})</span>
+                        </label>
+                        <span class="category-actions">
+                            <button class="edit-category-btn" data-id="{{ cat.id }}" title="Редактировать категорию">✏️</button>
+                            <button class="delete-category-btn" data-id="{{ cat.id }}" title="Удалить категорию">🗑️</button>
+                            <button class="change-global-category-btn" data-id="{{ cat.id }}" title="Поменять глобальную категорию">💻</button>
+                        </span>
+                    </li>
+                {% endfor %}
             </ul>
-            <br>
-            <br>
-            <span>--------------------------------------------------------------</span><br>
-            <button class="btn  settings-block__btn" type="button" id="saveSettings">Сохранить</button>
-        </div>
-        {% else %}
-        <p>Настройки не найдены</p>
-        {% endif %}
-        
-        <!-- Временный блок визуализации настроек -->
-        <div class="settings-block">
-            {% if user_settings %}
-                <ul>
-                    {% for key, value in user_settings.items() %}
-        
-                        <li class="flex">
-                            <p>{{ key }}: </p> <p>{{ value }}</p>
-                        </li>
-                    {% endfor %}
-                </ul>
+            <button class="btn" id="addModalityButton">Добавить модальность</button>
             {% else %}
-                <p>Настройки не найдены</p>
+            <div>Категории не найдены.</div>
             {% endif %}
         </div>
+    
+        <div id="areasContainer">
+            <h3 class="settings-block__title">Области исследования</h3>
+            <ul class="areas-list" id="areasList">
+                <!-- Заполню в js -->
+            </ul>
+            <div id="areasActions">
+                <button class="btn" id="addAreaButton">Добавить область исследования</button>
+            </div>
+        </div>
     </div>
-    {% else %}
-    <p>У вас недостаточно прав для изменения настроек профиля (временная блокировка).</p>
-    {% endif %}
     
 
+    <!-- Блок настроек для сохранения настроек профиля в БД -->
+        <!-- Имя инпута должно обязательно совпадать с ключом настройки
+        в DEFAULT_PROFILE_SETTINGS в config.py  -->
+    <div class="flex container">
+        {% if user_max_rank > 2 %}
+            {% if user_settings %}
+                <div class="settings-block">
+                    <h3 class="settings-block__title">Настройки</h3>
+                    <br>
+                    <ul class="settings-block__list" id="settings-block">
+                        <li class="settings-block__item">
+                            <label class="label" for="useWordReports">Использовать выгрузку протокола в word</label>
+                            <input class="checkbox" type="checkbox" id="useWordReports" name="USE_WORD_REPORTS"
+                                {% if user_settings.USE_WORD_REPORTS %} checked {% endif %}>
+                        </li>
+                        <li class="settings-block__item">
+                            <label class="label" for="useSentenceAutosaveForDynamicReport">Использовать автосохранение новых предложений при использовании динамического протокола</label>
+                            <input class="checkbox" type="checkbox" id="useSentenceAutosaveForDynamicReport" name="USE_SENTENCE_AUTOSAVE_FOR_DYNAMIC_REPORT"
+                                {% if user_settings.USE_SENTENCE_AUTOSAVE_FOR_DYNAMIC_REPORT %} checked {% endif %}>
+                        </li>
+                        <li class="settings-block__item">
+                            <label class="label" for="useSentenceAutosave">Использовать автосохранение новых предложений</label>
+                            <input class="checkbox" type="checkbox" id="useSentenceAutosave" name="USE_SENTENCE_AUTOSAVE"
+                                {% if user_settings.USE_SENTENCE_AUTOSAVE %} checked {% endif %}>
+                        </li>
+                        <li class="settings-block__item">
+                            <label class="label" for="appLanguage">Язык приложения:</label>
+                            <select class="select" id="appLanguage" name="APP_LANGUAGE">
+                                <option value="ru" {% if user_settings.APP_LANGUAGE == 'ru' %}selected{% endif %}>русский</option>
+                                <option value="eng" {% if user_settings.APP_LANGUAGE == 'eng' %}selected{% endif %}>английский</option>
+                            </select>
+                        </li>
+                        <li class="settings-block__item">
+                            <label class="label" for="appTheme">Theme:</label>
+                            <select class="select" id="appTheme" name="APP_THEME">
+                                <option value="light" {% if user_settings.APP_THEME == 'light' %}selected{% endif %}>Light</option>
+                                <option value="dark" {% if user_settings.APP_THEME == 'dark' %}selected{% endif %}>Dark</option>
+                            </select>
+                        </li>
+                        <li class="settings-block__item">
+                            <label class="label" for="similarityThesholdFuzz">Порог схождения для поиска дубликатов предложений:</label>
+                            <input class="select" id="similarityThesholdFuzz" name="SIMILARITY_THRESHOLD_FUZZ" value="{{ user_settings.SIMILARITY_THRESHOLD_FUZZ }}">
+
+                        </li>
+                        <li class="settings-block__item">
+                            <label class="label" for="exceptWords">Слова исключения для фильтрации текста:</label>
+                            <input type="text" class="input" id="exceptWords" name="EXCEPT_WORDS" value="{{ user_settings.EXCEPT_WORDS }}">
+
+                        </li>
+                        <li class="settings-block__item">
+                            <label class="label" for="exceptionsAfterPunctuation">Слова исключения аббревиатуры:</label>
+                            <input type="text" class="input" id="exceptionsAfterPunctuation" name="EXCEPTIONS_AFTER_PUNCTUATION" value="{{ user_settings.EXCEPTIONS_AFTER_PUNCTUATION }}">
+
+                        </li>
+                        <li class="settings-block__item">
+                            <label class="label" for="categoriesSetup">Список категорий пользователя:</label>
+                            <input class="input" type="text" id="categoriesSetup" name="CATEGORIES_SETUP"
+                                value="{{ user_settings.CATEGORIES_SETUP | tojson | safe }}">
+                        <li><h3>Пожалуйста не трогайте настройки выше. Ниже можно.</h3></li>
+
+                        <li class="settings-block__item">
+                            <label class="label" for="useSentenceAICheckDefault">Использовать AI проверку предложений по умолчанию</label>
+                            <input class="checkbox" type="checkbox" id="useSentenceAICheckDefault" name="USE_SENTENCE_AI_CHECK_DEFAULT"
+                                {% if user_settings.USE_SENTENCE_AI_CHECK_DEFAULT %} checked {% endif %}>
+
+                        </li>
+                        <li class="settings-block__item">
+                            <label class="label" for="useFirstGrammaSentenceDefault">Использовать автоматическую проверку предложений в браузере по умолчанию</label>
+                            <input class="checkbox" type="checkbox" id="useFirstGrammaSentenceDefault" name="USE_FIRST_GRAMMA_SENTENCE_DEFAULT"
+                                {% if user_settings.USE_FIRST_GRAMMA_SENTENCE_DEFAULT %} checked {% endif %}>
+
+                        </li>
+                        <li class="settings-block__item">
+                            <label class="label" for="useDublicateSearchDefault">Использовать поиск дубликатов по умолчанию</label>
+                            <input class="checkbox" type="checkbox" id="useDublicateSearchDefault" name="USE_DUBLICATE_SEARCH_DEFAULT"
+                                {% if user_settings.USE_DUBLICATE_SEARCH_DEFAULT %} checked {% endif %}>
+
+                        </li>
+                    </ul>
+                    <br>
+                    <br>
+                    <span>--------------------------------------------------------------</span><br>
+                    <button class="btn  settings-block__btn" type="button" id="saveSettings">Сохранить</button>
+                </div>
+            {% else %}
+            <p>Настройки не найдены</p>
+            {% endif %}
+
+            <!-- Временный блок визуализации настроек -->
+            <div class="settings-block profile-settings-block">
+                {% if user_settings %}
+                    <ul>
+                        {% for key, value in user_settings.items() %}
+                            <li class="flex">
+                                <p>{{ key }}: </p> <p>{{ value }}</p>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p>Настройки не найдены</p>
+                {% endif %}
+            </div>
+        {% else %}
+        <p>У вас недостаточно прав для изменения настроек профиля (временная блокировка).</p>
+        {% endif %}
+    </div>
+
     <!-- Блок различных чекеров -->
-     {% if user_max_rank == 4 %}
     <div class="report-check">
+        {% if user_max_rank == 4 %}
         <div class="report-check__buttons-block">
             <h3 class="report-check_title">Различные глобальные проверки профиля</h3>
             <p> Нет доступных проверок</p>
             <button class"btn  report-check__btn" id="startCheckersButton">Запуск проверок </button>
         </div>
-        
+
+        {% else %}
+        <p>У вас недостаточно прав для запуска проверок профиля (временная блокировка).</p>
+        {% endif %}
     </div>
-    {% else %}
-    <p>У вас недостаточно прав для запуска проверок профиля (временная блокировка).</p>
-    {% endif %}
+
+</div>
     
 
 {% endblock container %}
 
 
 {% block scripts %}
+<script>
+    window.globalCategoriesTree = {{ categories | tojson | safe }};
+</script>
 
 <script src="{{ url_for('static', filename='js/profile_settings.js') }}"></script>
 

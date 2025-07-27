@@ -5,6 +5,8 @@ document.addEventListener("DOMContentLoaded", function(){
     // Инициализация слушателей изменения для элементов настроек, 
     // чтобы отправлять только измененные данные
     initializeChangeListeners(); 
+    // Инициализация логики для модальностей
+    initModalitySettings();
 
     // Слушатель на кнопку Сохранить (сохранить настройки профиля) с учетом того, что она может быть скрыта
     saveSettingsButton = document.getElementById("saveSettings");
@@ -129,6 +131,74 @@ function initializeChangeListeners() {
         });
     }
 }
+
+
+// Функция для обработки изменения модальности (при выборе radio кнопки)
+function initModalitySettings() {
+    // 1. Навешиваем слушатели на radio кнопки (модальности)
+    const radios = document.querySelectorAll('input.modality-radio');
+    radios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            handleModalityChange(radio.value);
+        });
+    });
+
+    // 2. Навешиваем слушатели на кнопки "✏️" и "🗑️" (пока просто console.log)
+    document.querySelectorAll('.edit-category-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const id = btn.getAttribute('data-id');
+            // TODO: открыть модалку/попап для редактирования
+            console.log('Редактировать модальность', id);
+        });
+    });
+
+    document.querySelectorAll('.delete-category-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const id = btn.getAttribute('data-id');
+            // TODO: подтвердить удаление
+            console.log('Удалить модальность', id);
+        });
+    });
+
+    // 3. Выбираем первую модальность (если есть) и отображаем её области
+    if (radios.length) {
+        radios[0].checked = true;
+        handleModalityChange(radios[0].value);
+    }
+}
+
+
+// Обработка выбора модальности — отрисовка областей
+function handleModalityChange(modalityId) {
+    const tree = window.globalCategoriesTree || [];
+    const modality = tree.find(m => String(m.id) === String(modalityId));
+    const container = document.getElementById('areasList');
+    container.innerHTML = '';
+
+    if (modality && modality.children && modality.children.length) {
+        modality.children.forEach(child => {
+            const li = document.createElement('li');
+            li.className = 'area-item';
+            li.innerHTML = `
+                <span>${child.name}</span>
+                <button class="edit-area-btn" data-id="${child.id}" title="Редактировать область исследования">✏️</button>
+                <button class="delete-area-btn" data-id="${child.id}" title="Удалить область исследования">🗑️</button>
+                <button class="change-global-category-btn" data-id="${child.id}" title="Поменять глобальную категорию области исследования">💻</button>
+            `;
+            container.appendChild(li);
+        });
+    } else {
+        const li = document.createElement('li');
+        li.textContent = 'Нет областей для выбранной модальности';
+        li.style.color = '#888';
+        container.appendChild(li);
+    }
+}
+
+
+
 
 
 /**
