@@ -4,10 +4,12 @@
 {% block container %}
 
 <input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
+{% from "macros/all_popups.html" import category_edit_popup %}
+
 <div class="container flex_column">
     
     <!-- Блок глобальных настроек самого профиля -->
-    <div class="profile-settings-block">
+    <div class="profile-settings-block container">
         <h3 class="profile-settings-block__title">Настройки профиля</h3>
         <div class="profile-settings-block__container">
             <ul class="profile-settings-block__list" data-profile-id="{{ profile.id }}" id="profileSettingBlock">
@@ -53,55 +55,59 @@
                     <input type="email" id="shareEmailInput" placeholder="Введите email" class="share-popup__input">
                     <button class="btn profile-settings-block__btn" type="button" id="submitShareProfileButton">Отправить</button>
                 </div>
-                <button class="btn  profile-settings-block__btn" id="rebuildModalitiesFromDB" type="button">Пересобрать модальности
-
+                <button class="btn  profile-settings-block__btn" id="rebuildModalitiesFromDB" type="button">
+                    Пересобрать модальности
                 </button>
             </div>
         </div>
     </div>
     
+    <div class="sentence-separator"></div>
     
     <!-- Блок настроек модальностей и областей исследования -->
-    <div class="flex">
-        <div id="modalitiesContainer">
-            <h3 class="settings-block__title">Модальности</h3>
-            {% if categories %}
-            <ul class="categories-tree">
-                {% for cat in categories %}
-                    <li>
-                        <label>
-                            <input type="radio"
-                                   name="modality_radio"
-                                   class="modality-radio"
-                                   value="{{ cat.id }}">
-                            <span class="category-name">{{ cat.name }}</span>
-                            <span class="category-id">({{ cat.global_name }})</span>
-                        </label>
-                        <span class="category-actions">
-                            <button class="edit-category-btn" data-id="{{ cat.id }}" title="Редактировать категорию">✏️</button>
-                            <button class="delete-category-btn" data-id="{{ cat.id }}" title="Удалить категорию">🗑️</button>
-                            <button class="change-global-category-btn" data-id="{{ cat.id }}" title="Поменять глобальную категорию">💻</button>
-                        </span>
-                    </li>
-                {% endfor %}
-            </ul>
-            <button class="btn" id="addModalityButton">Добавить модальность</button>
-            {% else %}
-            <div>Категории не найдены.</div>
-            {% endif %}
-        </div>
-    
-        <div id="areasContainer">
-            <h3 class="settings-block__title">Области исследования</h3>
-            <ul class="areas-list" id="areasList">
-                <!-- Заполню в js -->
-            </ul>
-            <div id="areasActions">
-                <button class="btn" id="addAreaButton">Добавить область исследования</button>
+    <div class="flex_column container" >
+        <h3 class="settings-block__title">Управление категориями</h3>
+        <input type="text" id="filterAreaInput" class="input" placeholder="Фильтр категорий...">
+        <br>
+        <div class="flex">
+            <div id="modalitiesContainer">
+                <h3 class="settings-block__title">Модальности</h3>
+                {% if categories %}
+                <ul class="categories-tree">
+                    {% for cat in categories %}
+                        <li>
+                            <label>
+                                <input type="radio"
+                                       name="modality_radio"
+                                       class="modality-radio"
+                                       value="{{ cat.id }}">
+                                <span class="category-name">{{ cat.name }}</span>
+                                <span class="category-id">({{ cat.global_name }})</span>
+                            </label>
+                            <span class="category-actions">
+                                <button class="edit-modality-btn" data-id="{{ cat.id }}" title="Редактировать категорию">✏️</button>
+                            </span>
+                        </li>
+                    {% endfor %}
+                </ul>
+                <button class="btn" id="addModalityButton">Добавить модальность</button>
+                {% else %}
+                <div>Категории не найдены.</div>
+                {% endif %}
+            </div>
+            <div id="areasContainer">
+                <h3 class="settings-block__title">Области исследования</h3>
+                <ul class="areas-list" id="areasList">
+                    <!-- Заполню в js -->
+                </ul>
+                <div id="areasActions">
+                    <button class="btn" id="addAreaButton">Добавить область исследования</button>
+                </div>
             </div>
         </div>
     </div>
     
+    <div class="sentence-separator"></div>
 
     <!-- Блок настроек для сохранения настроек профиля в БД -->
         <!-- Имя инпута должно обязательно совпадать с ключом настройки
@@ -210,8 +216,10 @@
         {% endif %}
     </div>
 
+    <div class="sentence-separator"></div>
+
     <!-- Блок различных чекеров -->
-    <div class="report-check">
+    <div class="report-check container">
         {% if user_max_rank == 4 %}
         <div class="report-check__buttons-block">
             <h3 class="report-check_title">Различные глобальные проверки профиля</h3>
@@ -227,12 +235,18 @@
 </div>
     
 
+
+
+{{ category_edit_popup() }}
+
+
 {% endblock container %}
 
 
 {% block scripts %}
 <script>
-    window.globalCategoriesTree = {{ categories | tojson | safe }};
+    window.categoriesTree = {{ categories | tojson | safe }};
+    window.globalCategoriesTree = {{ global_categories | tojson | safe }};
 </script>
 
 <script src="{{ url_for('static', filename='js/profile_settings.js') }}"></script>

@@ -118,6 +118,7 @@ function onTripleClick(element, callback) {
 function hideElement(element) {
     if (element && element.style.display === "block") {
         element.style.display = "none";
+        if (typeof element.onhide === "function") element.onhide();
     }
 }
 /**

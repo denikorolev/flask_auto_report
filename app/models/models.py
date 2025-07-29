@@ -428,15 +428,12 @@ class ReportCategory(db.Model):
         if not categories:
             logger.warning("Нет категорий для формирования дерева.")
             return []
-        # Формируем словарь id → объект для быстрого доступа
-        cat_map = {cat.id: cat for cat in categories}
         # Функция для рекурсивного построения дерева
         def build_node(cat):
             if not cat:
                 print(f"Категория {cat} не найдена в словаре, пропускаем")
                 return None
             global_name = cls.query.get(cat.global_id).name if cat.global_id else None
-            print(f"Категория {cat.id} - глобальное имя: {global_name}")
             return {
                 "id": cat.id,
                 "name": cat.name,

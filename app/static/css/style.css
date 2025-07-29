@@ -2027,3 +2027,58 @@ body {
     min-width: 300px;
     margin: 0;
 }
+
+/* попап для редактирования категорий */
+
+.popup-category-edit {
+    position: fixed;
+    left: 50%;
+    top: 24%;
+    transform: translate(-50%, 0);
+    background: var(--main-background-color-light);
+    border: 2px solid var(--main-btn-color);
+    border-radius: 8px;
+    z-index: 9001;
+    min-width: 340px;
+    padding: 22px 30px 22px 30px;
+    box-shadow: 0 6px 30px 0 rgba(50,40,25,0.22);
+    color: var(--dark-text-color);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.popup-category-edit h3 {
+    margin-top: 0;
+    margin-bottom: 8px;
+    color: var(--main-btn-color);
+    font-size: 1.25rem;
+    font-weight: 600;
+    text-align: left;
+}
+
+.popup-category-edit__close {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: var(--accent-attention);
+    cursor: pointer;
+}
+
+.popup-category-edit__actions {
+    display: flex;
+    gap: 18px;
+    justify-content: flex-end;
+}
+
+.btn-attention {
+    background: var(--accent-attention);
+    color: var(--light-text-color);
+}
+
+.btn-attention:hover {
+    background: var(--accent-attention-light);
+}

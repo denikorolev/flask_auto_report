@@ -95,3 +95,22 @@
 {% endmacro %}
 
 
+{% macro category_edit_popup() %}
+<div id="categoryEditPopup" class="popup-category-edit" style="display:none;">
+    <button class="popup-category-edit__close" id="closeCategoryEditPopup" title="Закрыть">&times;</button>
+    <h3>Редактировать категорию</h3>
+    <label for="editCategoryName">Имя категории:</label>
+    <input type="text" id="editCategoryName" class="input" />
+
+    <label for="editCategoryGlobal">Глобальная категория:</label>
+    <select id="editCategoryGlobal" class="select">
+        <option value="">— &lt;пусто&gt; —</option>
+        <!-- Заполним через JS -->
+    </select>
+
+    <div class="popup-category-edit__actions">
+        <button class="btn" id="saveCategoryEditBtn">Сохранить</button>
+        <button class="btn btn-attention" id="deleteCategoryBtn">Удалить</button>
+    </div>
+</div>
+{% endmacro %}

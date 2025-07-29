@@ -37,6 +37,7 @@ document.addEventListener("DOMContentLoaded", function(){
     document.getElementById("rebuildModalitiesFromDB").addEventListener("click", () => {
         rebuildModalitiesFromDB();
     });
+
 });
 
 
@@ -143,22 +144,11 @@ function initModalitySettings() {
         });
     });
 
-    // 2. Навешиваем слушатели на кнопки "✏️" и "🗑️" (пока просто console.log)
-    document.querySelectorAll('.edit-category-btn').forEach(btn => {
+    // 2. Навешиваем слушатели на кнопки "✏️" )
+    document.querySelectorAll('.edit-modality-btn').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.preventDefault();
-            const id = btn.getAttribute('data-id');
-            // TODO: открыть модалку/попап для редактирования
-            console.log('Редактировать модальность', id);
-        });
-    });
-
-    document.querySelectorAll('.delete-category-btn').forEach(btn => {
-        btn.addEventListener('click', function(e) {
-            e.preventDefault();
-            const id = btn.getAttribute('data-id');
-            // TODO: подтвердить удаление
-            console.log('Удалить модальность', id);
+            openCategoryEditPopup(btn.getAttribute('data-id'), false);
         });
     });
 
@@ -167,12 +157,33 @@ function initModalitySettings() {
         radios[0].checked = true;
         handleModalityChange(radios[0].value);
     }
+
+    // Вешаю слушатели на кнопку Добавить модальность
+    document.getElementById('addModalityButton').onclick = function() {
+        openCategoryCreatePopup(false);
+    };
+
+
+    // Вешаю слушатель на кнопку Добавить область исследования
+    document.getElementById('addAreaButton').onclick = function() {
+        const selectedModalityId = document.querySelector('input.modality-radio:checked')?.value;
+        if (!selectedModalityId) {
+            alert("Сначала выберите модальность");
+            return;
+        }
+        openCategoryCreatePopup(true, selectedModalityId);
+    };
+
+    // Фильтр областей исследования по имени
+    document.getElementById('filterAreaInput').addEventListener('input', function() {
+        filterAreasByName(this.value.trim());
+    });
 }
 
 
 // Обработка выбора модальности — отрисовка областей
 function handleModalityChange(modalityId) {
-    const tree = window.globalCategoriesTree || [];
+    const tree = window.categoriesTree || [];
     const modality = tree.find(m => String(m.id) === String(modalityId));
     const container = document.getElementById('areasList');
     container.innerHTML = '';
@@ -183,11 +194,17 @@ function handleModalityChange(modalityId) {
             li.className = 'area-item';
             li.innerHTML = `
                 <span>${child.name}</span>
+                <span>(${child.global_name})</span>
                 <button class="edit-area-btn" data-id="${child.id}" title="Редактировать область исследования">✏️</button>
-                <button class="delete-area-btn" data-id="${child.id}" title="Удалить область исследования">🗑️</button>
-                <button class="change-global-category-btn" data-id="${child.id}" title="Поменять глобальную категорию области исследования">💻</button>
             `;
             container.appendChild(li);
+        });
+        // Добавляем слушатель на кнопки редактирования областей
+        container.querySelectorAll('.edit-area-btn').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                openCategoryEditPopup(btn.getAttribute('data-id'), true);
+            });
         });
     } else {
         const li = document.createElement('li');
@@ -199,6 +216,343 @@ function handleModalityChange(modalityId) {
 
 
 
+// Функция для открытия попапа редактирования категории
+function openCategoryEditPopup(categoryId, isArea = false) {
+    // 1. Найти категорию в дереве
+    const popup = document.getElementById('categoryEditPopup');
+    if (!popup) return;
+
+    const tree = window.categoriesTree || [];
+    const globalTree = window.globalCategoriesTree || [];
+    let category;
+    let globalCategories = [];
+    let parentModality = null;
+
+    if (isArea) {
+        // 1. Находим область у пользователя и её родителя-модальность
+        for (const mod of tree) {
+            const found = (mod.children || []).find(child => String(child.id) === String(categoryId));
+            if (found) {
+                category = found;
+                parentModality = mod;
+                console.log("parentModality", parentModality);
+                break;
+            }
+        }
+        // 2. Ищем global_id модальности у пользователя
+        let globalModality = null;
+        if (parentModality && parentModality.global_id) {
+            globalModality = (globalTree || []).find(gm => String(gm.id) === String(parentModality.global_id));
+        }
+        // 3. Если нашли — берём её children как глобальные области, иначе []
+        globalCategories = globalModality ? (globalModality.children || []) : [];
+    } else {
+        // Находим модальность у пользователя
+        category = tree.find(m => String(m.id) === String(categoryId));
+        // Все глобальные модальности (level 1)
+        globalCategories = globalTree;
+    }
+    if (!category) return;
+
+    // Заполнить инпут
+    document.getElementById('editCategoryName').value = category.name || "";
+
+    // Заполнить селект
+    const select = document.getElementById('editCategoryGlobal');
+    select.innerHTML = `<option value="">— &lt;пусто&gt; —</option>`;
+    globalCategories.forEach(gc => {
+        select.innerHTML += `<option value="${gc.id}">${gc.name}</option>`;
+    });
+    // Выбрать нужную глобалку
+    if (category.global_id && globalCategories.find(gc => gc.id == category.global_id)) {
+        select.value = category.global_id;
+    } else {
+        select.value = "";
+    }
+
+    // Кнопки
+    // Сохранение изменений
+    document.getElementById('saveCategoryEditBtn').onclick = () => {
+        const name = document.getElementById('editCategoryName').value.trim();
+        console.log("global_id", select.value);
+        return sendRequest({
+            url: "/profile_settings/category_update",
+            method: "POST",
+            data: { "id": category.id, 
+                    "name": name,
+                    "global_id": select.value,
+            }
+        }).then(response => {
+            if (response.status === "success") {
+                // Обновляем категорию в дереве
+                if (isArea) {
+                    const area = (parentModality.children || []).find(child => String(child.id) === String(category.id));
+                    console.log("area", area);
+                    if (area) {
+                        Object.assign(area, { name, global_id: select.value });
+                    }
+                    // --- Обновить DOM ---
+                    const li = document.querySelector(
+                        `#areasList li.area-item button.edit-area-btn[data-id="${category.id}"]`
+                    )?.closest('li');
+                    if (li) {
+                        // Можно просто пересобрать innerHTML, но лучше только поменять что нужно:
+                        const spans = li.querySelectorAll('span');
+                        if (spans.length > 0) spans[0].textContent = name;
+                        if (spans.length > 1) {
+                            // Найди глобальное имя по глобальному id:
+                            const globalName = (globalCategories.find(gc => String(gc.id) === String(select.value)) || {}).name || '-пусто-';
+                            spans[1].textContent = `(${globalName})`;
+                        }
+                    }
+                } else {
+                    Object.assign(category, { name, global_id: select.value });
+                    // Найти <li> по радиобатону
+                    const li = document.querySelector(
+                        `ul.categories-tree li input.modality-radio[value="${category.id}"]`
+                    )?.closest('li');
+                    if (li) {
+                        // label > span.category-name
+                        const spanName = li.querySelector('span.category-name');
+                        if (spanName) spanName.textContent = name;
+                        // label > span.category-id 
+                        const spanGlobal = li.querySelector('span.category-id');
+                        if (spanGlobal) {
+                            const globalName = (globalCategories.find(gc => String(gc.id) === String(select.value)) || {}).name || '-пусто-';
+                            spanGlobal.textContent = `(${globalName})`;
+                        }
+                    }
+                }
+                // Закрываем попап
+                hideElement(popup);
+            } else {
+                alert("Ошибка при сохранении категории!");
+                console.error("Failed to update category:", response.message);
+            }
+        });
+    };
+    // Удаление категории
+    document.getElementById('deleteCategoryBtn').onclick = () => {
+        return sendRequest({
+            url: "/profile_settings/category_delete",
+            method: "POST",
+            data: { "id": category.id }
+        }).then(response => {
+            if (response.status === "success") {
+                // Удаляем категорию из дерева
+                if (isArea) {
+                    const parentModality = tree.find(mod => mod.children && mod.children.some(child => String(child.id) === String(category.id)));
+                    if (parentModality) {
+                        parentModality.children = parentModality.children.filter(child => String(child.id) !== String(category.id));
+                    }
+                    // 2. Удаляем <li> из DOM
+                    const li = document.querySelector(
+                        `#areasList li.area-item button.edit-area-btn[data-id="${category.id}"]`
+                    )?.closest('li');
+                    if (li) li.remove();
+
+                    // 3. Если областей не осталось — показать заглушку
+                    const areasLeft = parentModality ? parentModality.children.length : 0;
+                    if (areasLeft === 0) {
+                        const container = document.getElementById('areasList');
+                        const emptyLi = document.createElement('li');
+                        emptyLi.textContent = 'Нет областей для выбранной модальности';
+                        emptyLi.style.color = '#888';
+                        container.appendChild(emptyLi);
+                    }
+                } else {
+                    const index = tree.findIndex(m => String(m.id) === String(category.id));
+                    if (index !== -1) {
+                        tree.splice(index, 1);
+                    }
+                    const li = document.querySelector(
+                        `ul.categories-tree li input.modality-radio[value="${category.id}"]`
+                    )?.closest('li');
+                    if (li) li.remove();
+                    const firstRadio = document.querySelector('input.modality-radio');
+                    if (firstRadio) {
+                        firstRadio.checked = true;
+                        handleModalityChange(firstRadio.value);
+                    } else {
+                        // Нет модальностей — очищаем области
+                        document.getElementById('areasList').innerHTML = '';
+                    }
+                } 
+                // Закрываем попап
+                hideElement(popup);
+            } else {
+                alert("Ошибка при удалении категории!");
+                console.error("Failed to delete category:", response.message);
+            }
+        });
+    };
+
+    const closeCategoryPopupButton = document.getElementById('closeCategoryEditPopup');
+    closeCategoryPopupButton.onclick = () => {
+        hideElement(popup);
+    };
+
+    // Показать попап
+    showElement(popup);
+}
+
+// Функция для добавления новой категории (модальности или области в зависимости от нажатой кнопки)
+function openCategoryCreatePopup(isArea = false, parentModalityId = null) {
+    const popup = document.getElementById('categoryEditPopup');
+    if (!popup) return;
+
+    // Очищаем поля
+    document.getElementById('editCategoryName').value = "";
+
+    // Глобальный селект
+    const select = document.getElementById('editCategoryGlobal');
+    select.innerHTML = `<option value="">— &lt;пусто&gt; —</option>`;
+
+    const globalTree = window.globalCategoriesTree || [];
+    let globalCategories = [];
+
+    if (isArea) {
+        // Для области — находим нужную глобальную модальность
+        let parentModality = (window.categoriesTree || []).find(m => String(m.id) === String(parentModalityId));
+        let globalModality = null;
+        if (parentModality && parentModality.global_id) {
+            globalModality = globalTree.find(gm => String(gm.id) === String(parentModality.global_id));
+        }
+        globalCategories = globalModality ? (globalModality.children || []) : [];
+    } else {
+        // Для модальности — все глобальные модальности (level 1)
+        globalCategories = globalTree;
+    }
+
+    globalCategories.forEach(gc => {
+        select.innerHTML += `<option value="${gc.id}">${gc.name}</option>`;
+    });
+    select.value = "";
+
+    // Меняем текст кнопки
+    document.getElementById('saveCategoryEditBtn').textContent = "Добавить";
+
+    // Скрыть кнопку удалить
+    document.getElementById('deleteCategoryBtn').classList.add("hide");
+
+    // Сохранение новой категории
+    document.getElementById('saveCategoryEditBtn').onclick = () => {
+        const name = document.getElementById('editCategoryName').value.trim();
+        const global_id = select.value || null;
+        if (!name) {
+            alert("Введите имя категории");
+            return;
+        }
+        if(!global_id) {
+            alert("Выберите глобальную категорию. Глобальная категория это то, как программа видит вашу категорию в системе и, в зависимости от выбранного вами значения, будет обрабатывать протоколы, принадлежащие данной категории.");
+            return;
+        }
+        // Собираем данные для запроса
+        const data = {
+            name,
+            global_id,
+            level: isArea ? 2 : 1
+        };
+        if (isArea) data.parent_id = parentModalityId;
+
+        sendRequest({
+            url: "/profile_settings/category_create",
+            method: "POST",
+            data: data
+        }).then(response => {
+            if (response.status === "success" && response.category) {
+                // Добавить в дерево (и в DOM)
+                if (isArea) {
+                    // Найти модальность и добавить
+                    let modality = (window.categoriesTree || []).find(m => String(m.id) === String(parentModalityId));
+                    if (modality) {
+                        modality.children = modality.children || [];
+                        modality.children.push(response.category);
+                        handleModalityChange(modality.id); // перерисовать области
+                    }
+                } else {
+                    (window.categoriesTree || []).push(response.category);
+                    
+                    // Формируем новый li
+                    const ul = document.querySelector('#modalitiesContainer ul.categories-tree');
+                    if (ul) {
+                        const li = document.createElement('li');
+                        li.innerHTML = `
+                            <label>
+                                <input type="radio"
+                                    name="modality_radio"
+                                    class="modality-radio"
+                                    value="${response.category.id}">
+                                <span class="category-name">${response.category.name}</span>
+                                <span class="category-id">(${response.category.global_name || ''})</span>
+                            </label>
+                            <span class="category-actions">
+                                <button class="edit-modality-btn" data-id="${response.category.id}" title="Редактировать категорию">✏️</button>
+                            </span>
+                        `;
+                        ul.appendChild(li);
+
+                        // 3. Навешиваем слушатели
+                        li.querySelector('input.modality-radio').addEventListener('change', function() {
+                            handleModalityChange(response.category.id);
+                        });
+                        li.querySelector('.edit-modality-btn').addEventListener('click', function(e) {
+                            e.preventDefault();
+                            openCategoryEditPopup(response.category.id, false);
+                        });
+
+                        // 4. Сразу выбираем новую модальность
+                        li.querySelector('input.modality-radio').checked = true;
+                        handleModalityChange(response.category.id);
+                    }
+                }
+                hideElement(popup);
+            } else {
+                alert("Ошибка при добавлении категории");
+            }
+        });
+    };
+
+    // Крестик — просто закрыть
+    document.getElementById('closeCategoryEditPopup').onclick = () => {
+        hideElement(popup);
+    };
+
+    // Показываем попап
+    showElement(popup);
+
+    // Вернуть стандартные кнопки после закрытия
+    popup.onhide = () => {
+        console.log("Popup closed, resetting buttons");
+        document.getElementById('saveCategoryEditBtn').textContent = "Сохранить";
+        document.getElementById('deleteCategoryBtn').classList.remove("hide");
+        document.getElementById('saveCategoryEditBtn').onclick = null;
+        document.getElementById('deleteCategoryBtn').onclick = null;
+    };
+}
+
+// Фильтр областей исследования по имени
+function filterAreasByName(query) {
+    const minLength = 2; // Минимальная длина запроса для фильтрации
+    const areasList = document.getElementById('areasList');
+    if (!areasList) return;
+    const items = areasList.querySelectorAll('li.area-item');
+
+    if (query.length <= minLength) {
+        // Показываем всё, если символов мало
+        items.forEach(li => li.style.display = '');
+        // Если была заглушка "нет областей", не трогаем
+        return;
+    }
+
+    const lowered = query.toLowerCase();
+    items.forEach(li => {
+        // Имя области — это первый <span>
+        const areaNameSpan = li.querySelector('span');
+        const areaName = areaNameSpan ? areaNameSpan.textContent.toLowerCase() : '';
+        li.style.display = areaName.includes(lowered) ? '' : 'none';
+    });
+}
 
 
 /**

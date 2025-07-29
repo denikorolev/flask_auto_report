@@ -73,10 +73,11 @@ def profile_settings():
     categories_json = AppConfig.get_setting(profile_id, "CATEGORIES_SETUP")
     try:
         categories = json.loads(categories_json) if categories_json else []
-        if categories:
+        global_categories = ReportCategory.get_categories_tree(is_global=True)
+        if categories and global_categories:
             logger.info(f"(route 'profile_settings') ✅ Categories loaded: {categories}")
         else:
-            logger.warning(f"(route 'profile_settings') ⚠️ No categories found")
+            logger.warning(f"(route 'profile_settings') ⚠️ No categories or global categories found")
     except Exception as e:
         logger.error(f"(route 'profile_settings') ❌ Error parsing categories JSON: {e}")
         categories = []
@@ -87,6 +88,7 @@ def profile_settings():
                             title="Настройки профиля", 
                             profile=profile_data,
                             categories=categories,
+                            global_categories=global_categories,
                             )
     
         
@@ -325,6 +327,113 @@ def delete_profile(profile_id):
         return jsonify({"status": "success", "message": "Profile deleted successfully!"}), 200
     else:
         return jsonify({"status": "error", "message": "Profile not found or you do not have permission to delete it."}), 400
+
+
+# Маршрут для редактирования категории
+@profile_settings_bp.route("/category_update", methods=["POST"])
+@auth_required()
+def category_update():
+    logger.info(f"(route 'category_update') --------------------------------------")
+    logger.info(f"(route 'category_update') 🚀 Category update started")
+    data = request.get_json()
+    category_id = data.get("id")
+    new_name = data.get("name")
+    global_id = data.get("global_id")
+    profile_id = session.get("profile_id")
+
+    category = ReportCategory.query.filter_by(id=category_id).first()
+    if not category:
+        logger.error(f"Category {category_id} not found or you do not have permission to update it.")
+        return jsonify({"status": "error", "message": "Категория не найдена или у вас нет разрешения на ее обновление."}), 400
+
+    try:
+        category.name = new_name
+        category.global_id = global_id if global_id else None
+        db.session.add(category)
+        db.session.commit()
+        logger.info(f"Category {category_id} updated successfully with new name: {new_name} and global_id: {global_id}")
+        # Синхронизируем категории в AppConfig c ReportCategory
+        success = sync_modalities_from_db(profile_id)
+        if not success:
+            logger.error(f"Error syncing modalities from DB after updating category {category_id}")
+            return jsonify({"status": "error", "message": "Ошибка синхронизации модальностей после обновления категории"}), 500
+        return jsonify({"status": "success", "message": "Категория успешно обновлена!"}), 200
+    except Exception as e:
+        logger.error(f"Error updating category {category_id}: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 400
+    
+    
+# Маршрут для удаления категории
+@profile_settings_bp.route("/category_delete", methods=["POST"])
+@auth_required()
+def category_delete():
+    logger.info(f"(route 'category_delete') --------------------------------------")
+    logger.info(f"(route 'category_delete') 🚀 Category deletion started")
+    data = request.get_json()
+    category_id = data.get("id")
+    profile_id = session.get("profile_id")
+
+    category = ReportCategory.query.filter_by(id=category_id).first()
+    if not category:
+        logger.error(f"Category {category_id} not found or you do not have permission to delete it.")
+        return jsonify({"status": "error", "message": "Категория не найдена или у вас нет разрешения на ее удаление."}), 400
+
+    try:
+        db.session.delete(category)
+        db.session.commit()
+        logger.info(f"Category {category_id} deleted successfully")
+        # Синхронизируем категории в AppConfig c ReportCategory
+        success = sync_modalities_from_db(profile_id)
+        if not success:
+            logger.error(f"Error syncing modalities from DB after updating category {category_id}")
+            return jsonify({"status": "error", "message": "Ошибка синхронизации модальностей после обновления категории"}), 500
+        return jsonify({"status": "success", "message": "Категория успешно удалена!"}), 200
+    except Exception as e:
+        logger.error(f"Error deleting category {category_id}: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+
+@profile_settings_bp.route('/category_create', methods=['POST'])
+@auth_required()
+def category_create():
+    logger.info(f"(route 'category_create') --------------------------------------")
+    logger.info(f"(route 'category_create') 🚀 Category creation started")
+    data = request.get_json()
+    name = data.get('name')
+    global_id = data.get('global_id', None)  # global_id может быть None для пользовательской категории
+    level = data.get('level')
+    parent_id = data.get('parent_id', None)  # parent_id может быть None для модальности
+    profile_id = session.get("profile_id")
+
+    try:
+        # Для модальности parent_id=None, для области обязательно
+        cat = ReportCategory.add_category(
+            name=name,
+            parent_id=parent_id,
+            profile_id=profile_id,
+            is_global=False,
+            level=level,
+            global_id=global_id
+        )
+
+        # Формируем для отдачи структуру как в дереве
+        resp = {
+            "id": cat.id,
+            "name": cat.name,
+            "global_id": cat.global_id,
+            "global_name": cat.global_category.name if cat.global_category else None,
+            "children": []
+        }
+        if cat:
+            logger.info(f"(route 'category_create') ✅ Category {cat.id} created successfully with name: {name} and global_id: {global_id}")
+            success = sync_modalities_from_db(profile_id)
+            if not success:
+                logger.error(f"(route 'category_create') ❌ Error syncing modalities from DB after creating category {cat.id}")
+                return jsonify({"status": "error", "message": "Ошибка синхронизации модальностей после создания категории"}), 500
+        return jsonify(status="success", message="Категория создана", category=resp)
+    except Exception as e:
+        logger.error(f"(route 'category_create') ❌ Error creating category: {e}")
+        return jsonify(status="error", message=str(e)), 400
 
 
 # Маршрут для сохранения настроек профиля
