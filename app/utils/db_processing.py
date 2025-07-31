@@ -73,19 +73,29 @@ def sync_all_profiles_settings(user_id):
     
     
     
-    
-    
 # Временная функция для миграции типов и подтипов суперюзера в глобальные категории
 def migrate_superuser_types_to_global_categories(super_user_id):
     """
     Создаёт глобальные категории 1 и 2 уровня на основе типов и подтипов суперюзера.
     Если в базе уже есть хотя бы одну глобальную категорию уровня 2, функция не выполняется.
     """
-    
+    PROFILE_ID = 1
 
     # 1. Все типы (ReportType) суперюзера
-    report_types = ReportType.find_by_profile(super_user_id)
+    report_types = ReportType.find_by_profile(PROFILE_ID)
     created_categories = {}
+
+    # Создаю модальность "Другое" если её нет
+    if not ReportType.query.filter_by(
+        type_text="Другое", profile_id=PROFILE_ID
+    ).first():
+        # Создаю новую модальность "Другое"
+        other_modality = ReportType.create(
+            type_text="Другое",
+            profile_id=PROFILE_ID
+        )
+        # Добавляю ее в созданные категории
+        report_types.append(other_modality)
 
     # 1.1. Миграция типов (уровень 1)
     for rtype in report_types:
@@ -121,6 +131,18 @@ def migrate_superuser_types_to_global_categories(super_user_id):
                 continue
 
         subtypes = ReportSubtype.find_by_report_type(rtype.id)
+        # Создать глобальную категорию "Другое" если её нет
+        if not ReportSubtype.query.filter_by(
+            type_id=rtype.id,
+            subtype_text="Другое",
+        ).first():
+            other_area = ReportSubtype.create(
+                type_id=rtype.id,
+                subtype_text="Другое",
+            )
+            # Добавить "Другое" в список подтипов
+            subtypes.append(other_area)
+        
         for subtype in subtypes:
             # Проверить на дубль по name+level+parent_id
             exists = ReportCategory.query.filter_by(
@@ -152,23 +174,8 @@ def migrate_user_types_to_profile_categories(user_id):
     global_id подставляет по совпадению name с глобальными категориями соответствующего уровня и родителя.
     Если не найдено — подставляет 11111.
     """
-    GLOBAL_PLACEHOLDER_ID = 11111
+    logger.info(f"Миграция пользовательских категорий для user_id={user_id} начата.")
     
-    # Выполнить один раз, до запуска основной миграции!
-    if not ReportCategory.query.get(11111):
-        print("⚠️ Создаю глобальную категорию-заглушку для ReportCategory с id=11111")
-        cat = ReportCategory(
-            id=11111,
-            name="UNKNOWN_GLOBAL_CATEGORY",
-            parent_id=None,
-            global_id=None,
-            profile_id=None,
-            is_global=True,
-            level=0
-        )
-        db.session.add(cat)
-        db.session.commit()
-
     profiles = UserProfile.query.filter_by(user_id=user_id).all()
     global_types = {cat.name: cat for cat in ReportCategory.query.filter_by(is_global=True, level=1).all()}
     global_subtypes = {}  # (parent_name, name) -> cat
@@ -180,10 +187,19 @@ def migrate_user_types_to_profile_categories(user_id):
             global_subtypes[(parent.name, cat.name)] = cat
 
     for profile in profiles:
+        if not profile:
+            logger.warning(f"Профиль с user_id={user_id} не найден.")
+            continue
         # Типы (уровень 1)
         for rtype in ReportType.find_by_profile(profile.id):
             global_cat = global_types.get(rtype.type_text)
-            global_id = global_cat.id if global_cat else GLOBAL_PLACEHOLDER_ID
+            if global_cat is not None and global_cat.id:
+                global_id = global_cat.id
+            else:
+                other_cat = ReportCategory.query.filter_by(name="Другое", is_global=True, level=1).first()
+                if not other_cat:
+                    raise Exception("Не найдена глобальная категория 'Другое' уровня 1!")
+                global_id = other_cat.id
 
             # Проверить дубль
             user_cat = ReportCategory.query.filter_by(
@@ -204,7 +220,18 @@ def migrate_user_types_to_profile_categories(user_id):
                 # Найти глобальный subtype по паре (тип, подтип)
                 key = (rtype.type_text, subtype.subtype_text)
                 global_subcat = global_subtypes.get(key)
-                global_subcat_id = global_subcat.id if global_subcat else GLOBAL_PLACEHOLDER_ID
+                print(f"User_cat ID: {user_cat.id}, Global_subcat: {global_subcat}, Key: {key}")
+                if global_subcat is not None and global_subcat.id:
+                    global_subcat_id = global_subcat.id
+                else:
+                    # ищем категорию "Другое"
+                    global_parent = global_types.get(user_cat.name)
+                    print(f"Global parent: {global_parent}")
+                    other_cat = ReportCategory.query.filter_by(name="Другое", is_global=True, level=2, parent_id=global_parent.id).first()
+                    print(f"      Other_cat: {other_cat}")
+                    if not other_cat:
+                        raise Exception(f"Не найдена категория 'Другое' для parent_id={user_cat.id}!")
+                    global_subcat_id = other_cat.id
 
                 # Проверить дубль
                 user_subcat = ReportCategory.query.filter_by(

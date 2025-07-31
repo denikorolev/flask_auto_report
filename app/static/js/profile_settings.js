@@ -183,7 +183,7 @@ function initModalitySettings() {
 
 // Обработка выбора модальности — отрисовка областей
 function handleModalityChange(modalityId) {
-    const tree = window.categoriesTree || [];
+    const tree = Array.isArray(window.categoriesTree) ? window.categoriesTree : [];
     const modality = tree.find(m => String(m.id) === String(modalityId));
     const container = document.getElementById('areasList');
     container.innerHTML = '';

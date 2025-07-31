@@ -38,7 +38,12 @@
                 <textarea id="profile-desc" name="description" class="textarea"></textarea>
             </div>
         {% endif %}
-        <button type="button" class="btn btn-primary" id="to-step-2">Далее</button>
+        <div class="flex">
+            <button type="button" class="btn btn-primary" id="to-step-2">Далее</button>
+            {% if profiles %}
+                <a href="{{ url_for('working_with_reports.choosing_report') }}" type="button" class="btn btn-secondary" id="cancelCreateProfile" title="Отмена создания профиля">Отмена</a>
+            {% endif %}
+        </div>
     </div>
 
     <!-- Шаг 2 -->
@@ -134,6 +139,9 @@
         <div class="flex">
             <button type="button" class="btn btn-secondary" id="back-to-4">Назад</button>
             <button type="button" class="btn btn-primary" id="finish-wizard">Создать профиль</button>
+            {% if profiles %}
+                <a href="{{ url_for('working_with_reports.choosing_report') }}" type="button" class="btn btn-secondary" id="cancelCreateProfile" title="Отмена создания профиля">Отмена</a>
+            {% endif %}
         </div>
     </div>
 </div>

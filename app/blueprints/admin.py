@@ -484,7 +484,24 @@ def run_user_script():
         logger.error(f"Ошибка при выполнении скрипта для пользователя {user_id}: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
     
-    
+
+
+@admin_bp.route("/clear_all_categories", methods=["DELETE"])
+@auth_required()
+@roles_required("superadmin")
+def clear_all_categories():
+    try:
+        # Удаляем все категории!!!
+        count = ReportCategory.query.delete()
+        db.session.commit()
+        logger.info(f"Удалено {count} категорий отчетов.")
+        return jsonify({"status": "success", "message": f"Удалено {count} категорий отчетов."}), 200
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Ошибка при удалении категорий: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
 
 @admin_bp.route("/delete_all_users", methods=["POST"])
 @auth_required()

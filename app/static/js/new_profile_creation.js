@@ -3,17 +3,15 @@
 
 document.addEventListener("DOMContentLoaded", function() {
 
-    wizardInit();
+    // Показываем первый шаг и обновляем прогресс-бар
+    showWizardStep(1);
+    
+    // Навешиваю слушатели на кнопки
     wizardBindListeners();
 
 });
 
-// Инициализация мастера
-function wizardInit() {
-    // Показываем первый шаг
-    showWizardStep(1);
-    // Можно еще инициализировать прогрессбар, если потребуется
-}
+
 
 
 function wizardBindListeners() {
@@ -36,6 +34,7 @@ function safeOn(id, event, handler) {
     const el = document.getElementById(id);
     if (el) el.addEventListener(event, handler);
 }
+
 
 // Показать нужный шаг, остальные скрыть
 function showWizardStep(step) {
@@ -90,6 +89,57 @@ function toStep4Handler() {
     showWizardStep(4);
 }
 
+function toStep5Handler() { 
+    showWizardStep(5); 
+}
+
+
+// Финальная отправка профиля (после всех шагов)
+function finishWizardHandler() {
+    const name = document.getElementById("profile-name").value.trim();
+    const description = document.getElementById("profile-desc").value;
+    const is_default = document.getElementById("isDefault").checked;
+    const agree = document.getElementById("agreeRules").checked;
+    const existingProfileId = document.getElementById("profile-name").getAttribute("data-profile-id");
+
+    // --- ВАЖНО: Собираем выбранные модальности ---
+    const selectedModalityIds = Array.from(document.querySelectorAll('input[name="modalities"]:checked')).map(cb => cb.value);
+
+    // --- Собираем выбранные области для каждой модальности ---
+    const selectedAreas = {};
+    selectedModalityIds.forEach(modId => {
+        selectedAreas[modId] = Array.from(document.querySelectorAll(`input[name="area-${modId}"]:checked`)).map(cb => cb.value);
+    });
+
+    if (!agree) {
+        alert("Если вы хотите продолжить работать с программой, вы должны согласиться с правилами использования.");
+        return;
+    }
+
+    // Собираем итоговый объект
+    const profileData = {
+        profile_name: name,
+        description: description,
+        is_default: is_default,
+        modalities: selectedModalityIds,   // массив id
+        areas: selectedAreas,               // объект: {modalityId: [areaId, ...], ...}
+        existing_profile_id: existingProfileId || null
+    };
+
+    sendRequest({
+        url: "/profile_settings/create_profile",
+        data: profileData
+    }).then(response => {
+        if (response.status === "success") {
+            window.location.href = "/profile_settings/choosing_profile?profile_id=" + response.data;
+        }
+    }).catch(error => {
+        console.error("Failed to create profile:", error);
+    });
+}
+
+
+
 // функция для отрисовки областей в зависимости от выбранных модальностей
 function renderAreasForModalities(selectedModalityIds) {
     const tree = window.globalModalitiesTree;
@@ -141,53 +191,4 @@ function renderAreasForModalities(selectedModalityIds) {
     });
     // Вставляем flex-row контейнер в основной контейнер
     container.appendChild(row);
-}
-
-
-function toStep5Handler() { 
-    showWizardStep(5); 
-}
-
-// Финальная отправка профиля (после всех шагов)
-function finishWizardHandler() {
-    const name = document.getElementById("profile-name").value.trim();
-    const description = document.getElementById("profile-desc").value;
-    const is_default = document.getElementById("isDefault").checked;
-    const agree = document.getElementById("agreeRules").checked;
-    const existingProfileId = document.getElementById("profile-name").getAttribute("data-profile-id");
-
-    // --- ВАЖНО: Собираем выбранные модальности ---
-    const selectedModalityIds = Array.from(document.querySelectorAll('input[name="modalities"]:checked')).map(cb => cb.value);
-
-    // --- Собираем выбранные области для каждой модальности ---
-    const selectedAreas = {};
-    selectedModalityIds.forEach(modId => {
-        selectedAreas[modId] = Array.from(document.querySelectorAll(`input[name="area-${modId}"]:checked`)).map(cb => cb.value);
-    });
-
-    if (!agree) {
-        alert("Если вы хотите продолжить работать с программой, вы должны согласиться с правилами использования.");
-        return;
-    }
-
-    // Собираем итоговый объект
-    const profileData = {
-        profile_name: name,
-        description: description,
-        is_default: is_default,
-        modalities: selectedModalityIds,   // массив id
-        areas: selectedAreas,               // объект: {modalityId: [areaId, ...], ...}
-        existing_profile_id: existingProfileId || null
-    };
-
-    sendRequest({
-        url: "/profile_settings/create_profile",
-        data: profileData
-    }).then(response => {
-        if (response.status === "success") {
-            window.location.href = "/profile_settings/choosing_profile?profile_id=" + response.data;
-        }
-    }).catch(error => {
-        console.error("Failed to create profile:", error);
-    });
 }

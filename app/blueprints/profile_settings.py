@@ -162,7 +162,6 @@ def new_profile_creation():
 def create_profile():
     logger.info(f"(Маршрут 'create_profile') 🚀 Начато создание профиля")
     data = request.get_json()
-    print(f"Data from request: {data}")
     if not data:
         logger.error(f"(Маршрут 'create_profile') ❌ Не получены данные для создания профиля")
         return jsonify({"status": "error", "message": "Не получены данные для создания профиля"}), 400
@@ -173,9 +172,6 @@ def create_profile():
     modalities = data.get('modalities', [])
     areas = data.get('areas', {})
     existing_profile_id = data.get('existing_profile_id', None)
-
-    print(f"modalities: {modalities}")
-    print(f"areas: {areas}")
 
     if not profile_name:
         logger.error(f"(route 'create_profile') ❌ Profile name is required.")
@@ -206,66 +202,69 @@ def create_profile():
     try:
         # --- Добавляем модальности и области профиля ---
         logger.info(f"(route 'create_profile') Начинаем добавление модальностей и областей исследования в профиль {profile.profile_name}")
-        created_categories = {}
         for modality_id in modalities:
-            global_modality = ReportCategory.query.get(int(modality_id))
-            if not global_modality:
-                logger.warning(f"(route 'create_profile') Модальность id={modality_id} не найдена.")
+            selected_modality = ReportCategory.query.get(int(modality_id))
+            if not selected_modality:
+                logger.warning(f"(route 'create_profile') Модальность с id={modality_id} не найдена в базе данных.")
                 continue
-
-            # Копируем модальность
+            global_modality = None
+            if selected_modality.is_global:
+                global_modality = selected_modality
+                logger.info(f"(route 'create_profile') Модальность {selected_modality.name} действительно глобальная, продолжаем")
+            else:
+                global_modality = ReportCategory.query.get(int(selected_modality.global_id)) if selected_modality.global_id else None
+                logger.info(f"(route 'create_profile') Модальность {global_modality.name} не глобальная, ищем глобальную модальность по ее global_id: {global_modality.global_id}")
+            
             modality_cat = ReportCategory.add_category(
-                name=global_modality.name,
+                name=selected_modality.name,
                 parent_id=None,
                 profile_id=profile.id,
                 is_global=False,
                 level=1,
-                global_id=global_modality.global_id if global_modality.global_id else None
+                global_id=global_modality.id 
             )
-            created_categories[str(global_modality.id)] = {
-                "modality_id": modality_cat.id,
-                "modality_name": global_modality.name,
-                "modality_global_id": global_modality.global_id if global_modality.global_id else global_modality.id,
-                "modality_global_name": ReportCategory.query.get(int(global_modality.global_id)).name if global_modality.global_id else global_modality.name,
-                "areas": {}
-            }
 
             # Добавляем области исследования для этой модальности
             area_ids = areas.get(str(modality_id), [])
             for area_id in area_ids:
                 # child-область только среди детей выбранной модальности
-                child_area = next((child for child in global_modality.children if str(child.id) == str(area_id)), None)
+                child_area = next((child for child in selected_modality.children if str(child.id) == str(area_id)), None)
                 if not child_area:
                     logger.warning(f"(route 'create_profile') Область id={area_id} не найдена в модальности id={modality_id}.")
                     continue
+                global_area = None
+                if child_area.is_global:
+                    global_area = child_area
+                    logger.info(f"(route 'create_profile') Область {child_area.name} действительно глобальная, продолжаем")
+                else:
+                    global_area = ReportCategory.query.get(int(child_area.global_id)) if child_area.global_id else None
+                    logger.info(f"(route 'create_profile') Область {child_area.name} не глобальная, ищем глобальную область по ее global_id: {child_area.global_id}")
                 area_cat = ReportCategory.add_category(
                     name=child_area.name,
                     parent_id=modality_cat.id,
                     profile_id=profile.id,
                     is_global=False,
                     level=2,
-                    global_id=child_area.global_id if child_area.global_id else None
+                    global_id=global_area.id 
                 )
-                # Сохраняем область исследования по её id
-                created_categories[str(global_modality.id)]["areas"][str(child_area.id)] = {
-                    "area_id": area_cat.id,
-                    "area_name": child_area.name,
-                    "area_global_id": child_area.global_id if child_area.global_id else child_area.id,
-                    "area_global_name": ReportCategory.query.get(int(child_area.global_id)).name if child_area.global_id else child_area.name
-                }
 
-        logger.info(f"(route 'create_profile') Profile {profile.id} created")
-        
-        default_settings = dict(current_app.config.get("DEFAULT_PROFILE_SETTINGS", {}))
-        default_settings["CATEGORIES_SETUP"] = created_categories  # <-- Сохраняем созданную структуру модальностей и областей
-        save_settings = set_profile_settings(profile.id, default_settings)
-        session["profile_id"] = profile.id  # Сохраняем id нового профиля в сессии
-        session["profile_name"] = profile.profile_name  # Сохраняем имя профиля в сессии
+        logger.info(f"(route 'create_profile') Profile {profile.id} created and {len(modalities)} modalities with their areas added successfully")
+        try:
+            default_settings = dict(current_app.config.get("DEFAULT_PROFILE_SETTINGS", {}))
+            save_settings = set_profile_settings(profile.id, default_settings)
+            if not save_settings:
+                logger.error(f"(route 'create_profile') ❌ Не удалось сохранить настройки профиля {profile.id}")
+                return jsonify({"status": "error", "message": "Не удалось сохранить настройки профиля"}), 400
+            success = sync_modalities_from_db(profile.id)
+            if not success:
+                logger.error(f"(route 'create_profile') ❌ Error syncing modalities for profile {profile.id}")
+            session["profile_id"] = profile.id  # Сохраняем id нового профиля в сессии
+            session["profile_name"] = profile.profile_name  # Сохраняем имя профиля в сессии
+        except Exception as e:
+            logger.error(f"(route 'create_profile') ❌ Error adding settings for this profile: {str(e)}")
+            return jsonify({"status": "error", "message": str(e)}), 400
 
         logger.info(f"(route 'create_profile') ✅ Профиль {profile.profile_name} успешно создан!")
-        if not save_settings:
-            logger.error(f"(route 'create_profile') ❌ Не получилось сохранить настройки по умолчанию для нового профиля")
-            return jsonify({"status": "error", "message": "Не получилось сохранить настройки по умолчанию для нового профиля"}), 400
         return jsonify({"status": "success", "message": f"Профиль {profile.profile_name} успешно создан!", "data": profile.id}), 200
 
     except Exception as e:

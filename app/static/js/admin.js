@@ -30,6 +30,9 @@ document.addEventListener("DOMContentLoaded", function() {
     document.getElementById("save-user-button").addEventListener("click", saveUserChanges);
 
 
+    // Все что касается категорий в отдельной функции initCategoriesHandlers !!!!!!!!!!
+    
+
     // Слушатель для кнопки "запустить скрипт для суперюзера"
     document.getElementById("run-superuser-script").addEventListener("click", runSuperuserScript);
 
@@ -338,6 +341,25 @@ function initCategoriesHandlers() {
         .catch(error => alert("Ошибка: " + error));
     };
 
+    const clearAllCategories = () => {
+        if (!confirm("Вы уверены, что хотите удалить все категории? Это действие нельзя отменить.")) {
+            return;
+        }
+        sendRequest({
+            url: "/admin/clear_all_categories",
+            method: "DELETE"
+        })
+        .then(response => {
+            if (response.status === "success") {
+                loadCategories();
+                console.log("Все категории успешно удалены.");
+            } else {
+                alert(response.message || "Ошибка при удалении всех категорий");
+            }
+        })
+        .catch(error => alert("Ошибка: " + error));
+    };
+
     // Следим за изменением поля уровня
     levelInput.addEventListener("input", function() {
         const newLevel = parseInt(levelInput.value, 10);
@@ -349,6 +371,8 @@ function initCategoriesHandlers() {
         e.preventDefault();
         addCategory();
     });
+    // Слушатель для кнопки "Удалить все категории"
+    document.getElementById("clearAllCategories").addEventListener("click", clearAllCategories);
 
     // Первичная загрузка категорий при инициализации
     loadCategories();
