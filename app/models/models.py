@@ -570,6 +570,8 @@ class Report(BaseModel):
     profile_id = db.Column(db.BigInteger, db.ForeignKey('user_profiles.id', ondelete='CASCADE'), nullable=False)
     user_id = db.Column(db.BigInteger, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
     report_subtype = db.Column(db.Integer, db.ForeignKey('report_subtype.id', ondelete='CASCADE'), nullable=False)
+    category_1_id = db.Column(db.BigInteger, db.ForeignKey('report_categories.id', ondelete='SET NULL'), nullable=True)
+    category_2_id = db.Column(db.BigInteger, db.ForeignKey('report_categories.id', ondelete='SET NULL'), nullable=True)
     comment = db.Column(db.String(255), nullable=True)
     report_name = db.Column(db.String(255), nullable=False)
     public = db.Column(db.Boolean, default=False, nullable=False)
@@ -2204,3 +2206,7 @@ db.Index("ix_head_sentence_body_sentence_group", HeadSentence.body_sentence_grou
 # Индексы для связей параграфов и групп
 db.Index("ix_paragraph_head_sentence_group", Paragraph.head_sentence_group_id)
 db.Index("ix_head_sentence_group_link_group", head_sentence_group_link.c.group_id)
+
+# Индексы для категорий
+db.Index('ix_report_category_1_id', 'category_1_id')
+db.Index('ix_report_category_2_id', 'category_2_id')
