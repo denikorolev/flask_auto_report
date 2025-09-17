@@ -14,7 +14,6 @@ def build_menu():
         {"name": "Протокол", "url": url_for("working_with_reports.choosing_report"), "min_rank": 3, "title": "Выбор протокола"},
         {"name": "Список протоколов", "url": url_for("my_reports.reports_list"), "min_rank": 3, "title": "Список всех протоколов для данного профиля"},
         {"name": "Новый протокол", "url": url_for("new_report_creation.create_report"), "min_rank": 3, "title": "Создание нового протокола"},
-        {"name": "Настройки протоколов", "url": url_for("report_settings.report_settings"), "min_rank": 3, "title": "Настройки протоколов"},
         {"name": "ИИ", "url": url_for("openai_api.start_openai_api"), "min_rank": 3, "title": "Чат с искусственным интеллектом"},
         {"name": "Ключевые слова", "url": url_for("key_words.key_words"), "min_rank": 3, "title": "Настройка ключевых слов"},
         {"name": "Админ", "url": url_for("admin.admin"), "min_rank": 4, "title": "Админка"},

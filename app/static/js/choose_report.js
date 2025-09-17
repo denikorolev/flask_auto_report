@@ -1,103 +1,92 @@
 // choose_report.js
 
-
-
-
-// Логика обновления подтипов в зависимости от выбранного типа
 document.addEventListener("DOMContentLoaded", function () {
-    const exportForm = document.getElementById("exportForm");
-    if (!exportForm) {
-        // Получаем параметры из URL, для заполнения формы с ФИО если мы пришли сюда из working with report
-        const urlParams = new URLSearchParams(window.location.search);
-        const surname = urlParams.get('patient_surname');
-        const name = urlParams.get('patient_name');
-        const patronymicname = urlParams.get('patient_patronymicname');
-        const birthdate = urlParams.get('patient_birthdate');
-        const reportNumber = urlParams.get('report_number');
 
-        // Устанавливаем значения полей, если они переданы
-        if (surname) document.getElementById("patient-surname").value = surname;
-        if (name) document.getElementById("patient-name").value = name;
-        if (patronymicname) document.getElementById("patient-patronymicname").value = patronymicname;
-        if (birthdate) document.getElementById("patient-birthdate").value = birthdate;
-        if (reportNumber) document.getElementById("report-number").value = reportNumber;
-    }
-    
-    // Инициализируем логику типа и подтипа через utils/utils.js
-    initializeSubtypeLogic("report_type", "report_subtype", "report-types-data");
+    // Инициализируем логику типа и подтипа
+    initializeCategoryLogic();
+
+    // Обработчик нажатия на кнопку "Протоколы"
+     document.getElementById("select_report_type_subtype").addEventListener("click", function (event) {
+        event.preventDefault();
+        getReportsForSelectedCategory();
+    });
+
 });
+
 
 /**
  * Инициализирует логику выбора подтипа отчета на основе выбранного типа.
   */
-function initializeSubtypeLogic(reportTypeSelectId, reportSubtypeSelectId, subtypesDataScriptId) {
-    const subtypesDataScript = document.getElementById(subtypesDataScriptId);
-    if (!subtypesDataScript) {
+function initializeCategoryLogic() {
+    console.log("Initializing category logic...");
+    const userSettings = window.userSettings || {};
+    const categories = Array.isArray(userSettings.CATEGORIES_SETUP) ? userSettings.CATEGORIES_SETUP : [];
+    if (!categories.length) {
+        console.warn("No categories found in user settings.");
         return;
     }
-    const reportTypesAndSubtypes = JSON.parse(subtypesDataScript.textContent);
-    const allSubtypes = {};
-
-    // Store subtypes grouped by their type_id
-    reportTypesAndSubtypes.forEach(type => {
-        allSubtypes[type.type_id] = type.subtypes;
+    // Мапим children по id родителя
+    const allAreas = {};
+    categories.forEach(cat => {
+        allAreas[String(cat.id)] = Array.isArray(cat.children) ? cat.children : [];
     });
 
-    const reportTypeSelect = document.getElementById(reportTypeSelectId);
-
-    if (!reportTypeSelect) {
+    const reportModalitySelect = document.getElementById("reportModality");
+    const reportAreaSelect = document.getElementById("reportArea");
+    if (!reportModalitySelect || !reportAreaSelect) {
+        console.warn("Report modality or area select element not found.");
         return;
     }
 
-    reportTypeSelect.addEventListener("change", function() {
-        updateSubtypes(reportTypeSelectId, reportSubtypeSelectId, allSubtypes);
+    // Перестраховка: если селект пустой — наполним его из userSettings (на случай SSR-обрезок)
+    if (!reportModalitySelect.options.length && categories.length) {
+        categories.forEach(cat => {
+            const opt = document.createElement("option");
+            opt.value = cat.id;
+            opt.textContent = cat.name;
+            reportModalitySelect.appendChild(opt);
+        });
+    }
+
+    reportModalitySelect.addEventListener("change", function () {
+        updateAreasFromCategories(reportModalitySelect, reportAreaSelect, allAreas);
+        console.log("Selected modality:", reportModalitySelect.value);
     });
 
-    // Initial update of subtypes
-    updateSubtypes(reportTypeSelectId, reportSubtypeSelectId, allSubtypes);
+    // Первая инициализация
+    updateAreasFromCategories(reportModalitySelect, reportAreaSelect, allAreas);
 }
 
 
 /**
  * Обновляет список подтипов отчета в зависимости от выбранного типа.
 */
-function updateSubtypes(reportTypeSelectId, reportSubtypeSelectId, allSubtypes) {
-    const reportTypeSelect = document.getElementById(reportTypeSelectId);
-    const reportSubtypeSelect = document.getElementById(reportSubtypeSelectId);
+function updateAreasFromCategories(reportModalitySelect, reportAreaSelect, allAreas) {
+    console.log("start updateAreasFromCategories");
+    if (!reportModalitySelect || !reportAreaSelect) return;
+    console.log("Updating areas...");
+    const selectedModalityId = String(reportModalitySelect.value || "").trim();
+    reportAreaSelect.innerHTML = "";
 
+    const areas = allAreas[selectedModalityId] || [];
 
-    if (!reportTypeSelect || !reportSubtypeSelect) {
-        return;
-    }
-
-    const selectedTypeId = reportTypeSelect.value.trim();
-    reportSubtypeSelect.innerHTML = '';
-
-    const subtypes = allSubtypes[selectedTypeId] || [];
-
-    subtypes.forEach(subtype => {
-        const option = document.createElement("option");
-        option.value = subtype.subtype_id || subtype.id;
-        option.textContent = subtype.subtype_text || subtype.subtype;
-        reportSubtypeSelect.appendChild(option);
+    areas.forEach(area => {
+        const opt = document.createElement("option");
+        opt.value = area.id;
+        opt.textContent = area.name;
+        reportAreaSelect.appendChild(opt);
     });
 
-    if (subtypes.length > 0) {
-        reportSubtypeSelect.selectedIndex = 0;
+    if (areas.length) {
+        reportAreaSelect.selectedIndex = 0;
     }
 }
 
 
-// Логика нажатия на кнопку "Протоколы", обработки имени фамилии и тд
-document.addEventListener("DOMContentLoaded", function () {
-    const reportForm = document.getElementById("reportForm");
-    const reportTypeSelect = document.getElementById("report_type");
-    const reportSubtypeSelect = document.getElementById("report_subtype");
-    const reportsListContainer = document.getElementById("reports-list");
-
-    // Функция для обновления списка отчетов
-    function updateReportsList(reports) {
-        reportsListContainer.innerHTML = ''; // Очищаем предыдущие результаты
+// Функция для обновления списка отчетов
+function updateReportsList(reports) {
+    const reportsListContainer = document.getElementById("reportsListContainer") || document.createElement("div");
+    reportsListContainer.innerHTML = ''; // Очищаем предыдущие результаты
 
         if (reports.length > 0) {
             const reportsDiv = document.createElement("div");
@@ -125,98 +114,46 @@ document.addEventListener("DOMContentLoaded", function () {
         addReportLinkEventListeners();
     }
 
-    // Функция для обработки кликов по ссылкам отчетов
-    function addReportLinkEventListeners() {
-        document.querySelectorAll(".report-link").forEach(link => {
-            link.addEventListener("click", function (event) {
-                event.preventDefault(); // Останавливаем стандартное поведение ссылки
 
-                let fullname = "";
-                let birthdate = "";
-                let reportNumber = "";
-
-                // Проверяем наличие формы exportForm
-                const exportForm = document.getElementById("exportForm");
-                if (exportForm) {
-                    // Собираем данные формы, если она существует
-                    const surnameField = document.getElementById("patient-surname");
-                    const nameField = document.getElementById("patient-name");
-                    const patronymicField = document.getElementById("patient-patronymicname");
-                    const birthdateField = document.getElementById("patient-birthdate");
-                    const reportNumberField = document.getElementById("report-number");
-
-                    // Получаем значения полей с проверкой на их наличие
-                    let surname = surnameField ? surnameField.value.trim() : "";
-                    let name = nameField ? nameField.value.trim() : "";
-                    let patronymic = patronymicField ? patronymicField.value.trim() : "";
-                    birthdate = birthdateField ? birthdateField.value : "";
-                    reportNumber = reportNumberField ? reportNumberField.value : "";
-
-                    // Форматируем ФИО, если значения есть
-                    surname = surname ? surname.charAt(0).toUpperCase() + surname.slice(1).toLowerCase() : "";
-                    name = name ? name.charAt(0).toUpperCase() + name.slice(1).toLowerCase() : "";
-                    patronymic = patronymic ? patronymic.charAt(0).toUpperCase() + patronymic.slice(1).toLowerCase() : "";
-
-                    fullname = `${surname} ${name} ${patronymic}`.trim();
-                }
-
-                const reportId = this.getAttribute("data-report-id");
-
-                // Формируем URL с параметрами
-                const url = `/working_with_reports/working_with_reports?fullname=${encodeURIComponent(fullname)}&birthdate=${encodeURIComponent(birthdate)}&reportNumber=${encodeURIComponent(reportNumber)}&reportId=${reportId}`;
-                window.location.href = url;
-            });
+// Функция для обработки кликов по ссылкам отчетов
+function addReportLinkEventListeners() {
+    document.querySelectorAll(".report-link").forEach(link => {
+        link.addEventListener("click", function (event) {
+            event.preventDefault(); // Останавливаем стандартное поведение ссылки
+            const reportId = this.getAttribute("data-report-id");
+            // Формируем URL с параметрами
+            const url = `/working_with_reports/working_with_reports?reportId=${reportId}`;
+            window.location.href = url;
         });
-    }
+    });
+}
 
 
-    // Обработка нажатия на кнопку "Протоколы"
-    document.getElementById("select_report_type_subtype").addEventListener("click", function (event) {
-        event.preventDefault();
+    // Функция для обработки клика на кнопку "Протоколы" и загрузки списка отчетов
+function getReportsForSelectedCategory () {
+    const areaId = document.getElementById("reportArea").value;
+    console.log("Fetching reports for areaId:", areaId);
 
-        const reportType = reportTypeSelect.value;
-        const reportSubtype = reportSubtypeSelect.value;
-
-        // Отправляем запрос на сервер для получения отчетов через sendRequest
-        sendRequest({
-            url: "/working_with_reports/choosing_report",
-            method: "POST",
-            data: {
-                report_type: reportType,
-                report_subtype: reportSubtype
-            },
-            csrfToken: csrfToken
-        })
-        .then(data => {
-            if (data.reports) {
-                updateReportsList(data.reports); // Обновляем список отчетов
-            } else {
-                console.error("No reports found.");
-            }
-        })
-        .catch(error => {
-            console.error("Error:", error);
-        });
+    // Отправляем запрос на сервер для получения отчетов через sendRequest
+    sendRequest({
+        url: "/working_with_reports/choosing_report",
+        data: {
+            report_area: areaId
+        },
+    })
+    .then(data => {
+        if (data.reports) {
+            updateReportsList(data.reports); // Обновляем список отчетов
+        } else {
+            console.error("No reports found.");
+        }
+    })
+    .catch(error => {
+        console.error("Error:", error);
     });
 
     // Инициализация начальных событий
     addReportLinkEventListeners();
-});
+}
 
-// Устанавливаем фокус на поле "Surname" после загрузки страницы
-document.addEventListener("DOMContentLoaded", function() {
-    const surnameField = document.getElementById("patient-surname");
 
-    if (surnameField) {
-        // Проверяем, что элемент видим
-        const isVisible = surnameField.offsetWidth > 0 && surnameField.offsetHeight > 0;
-
-        if (isVisible) {
-            surnameField.focus();
-        } else {
-            console.log("Поле 'patient-surname' существует, но невидимо.");
-        }
-    } else {
-        console.log("Поле 'patient-surname' не найдено на странице.");
-    }
-});

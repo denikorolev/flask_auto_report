@@ -5,87 +5,39 @@
 {% block container %}
 
 <input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
-
-<!-- fields group with name, date of birth etc -->
- {% if user_settings.USE_WORD_REPORTS %}
-    <h3>Данные пациента для протокола в формате Word</h3>
-    <form class="flex" id="exportForm" style="margin-bottom: 30px;">
-        <div class="flex_column">
-            <label for="patient-surname">Фамилия:</label>
-            <input class="input" type="text" id="patient-surname" name="patient_surname" value="{{ request.form.get('patient_surname', '') }}" required>
-        </div>
-        <div class="flex_column">
-            <label for="patient-name">Имя:</label>
-            <input class="input" type="text" id="patient-name" name="patient_name" value="{{ request.form.get('patient_name', '') }}" required>
-        </div>
-        <div class="flex_column">
-            <label for="patient-patronymicname">Отчество (если применимо):</label>
-            <input class="input" type="text" id="patient-patronymicname" name="patient_patronymicname" value="{{ request.form.get('patient_patronymicname', '') }}" required>
-        </div>
-        <div class="flex_column">
-            <label for="patient-birthdate">Дата рождения:</label>
-            <input class="input" type="date" id="patient-birthdate" name="patient_birthdate" value="{{ request.form.get('patient_birthdate', '') }}" required>
-        </div>
-        <div class="flex_column">
-            <label for="report-number">Номер протокола (если применимо):</label>
-            <input class="input" type="text" id="report-number" name="report_number" value="{{ request.form.get('report_number', '') }}" required>
-        </div>
-    </form>
- {% endif %}
-
+<!-- Задаю переменную из user_settings -->
+{% set categories = user_settings.CATEGORIES_SETUP or [] %}
 
 
 <!-- Группа управления для выбора протокола -->
- {% if report_types_and_subtypes %}
-    <div class="container choosing-report-block">
-        <h3 class="choosing-report-block__title">Выбор шаблона протокола для работы</h3>
 
-        <form class="flex" id="reportForm" method="POST">
-            <div class="flex_column" id="reports-container">
-                <label class="label" for="report_type"> Тип протокола:</label>
-                <select class="report__select" id="report_type" name="report_type" required>
-                    {% for rt in report_types_and_subtypes %}
-                        <option value="{{ rt.type_id }}">{{ rt.type_text }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-        
-            <div class="flex_column" id="reports-container">
-                <label class="label" for="report_subtype">Подтип протокола:</label>
-                <select class="report__select" id="report_subtype" name="report_subtype" required>
-                        <!-- Подтипы будут динамически обновляться с помощью JS -->
-                </select>
-            </div>
-            <button class="btn " type="button" id="select_report_type_subtype" name="select_report_type_subtype">Протоколы</button>
-        </form>
-        
-        <div id="reports-list">
-            {% for report in reports %}
-                <a class="flex report-link" href="#" data-report-id="{{ report.id }}">
-                    <p class="report__sentence">{{ report.report_name }}</p>
-                </a>
-            {% endfor %}
+<div class="container choosing-report-block">
+    <h3 class="choosing-report-block__title">Выбор шаблона протокола для работы</h3>
+
+    <form class="flex" id="reportForm" method="POST">
+        <div class="flex_column" id="reports-container">
+            <label class="label" for="reportModality"> Модальность:</label>
+            <select class="report__select" id="reportModality" name="report_type" required>
+                {% for modality in categories %}
+                    <option value="{{ modality.id }}">{{ modality.name }}</option>
+                {% endfor %}
+            </select>
         </div>
+    
+        <div class="flex_column" id="reports-container">
+            <label class="label" for="reportArea">Область исследования:</label>
+            <select class="report__select" id="reportArea" name="report_subtype" required>
+                    <!-- Подтипы будут динамически обновляться с помощью JS -->
+            </select>
+        </div>
+        <button class="btn " type="button" id="select_report_type_subtype" name="select_report_type_subtype">Протоколы</button>
+    </form>
+    
+    <div id="reportsListContainer">
+        <!-- Здесь будут отображаться загруженные отчеты, код сформирую в js-->
     </div>
-{% else %}
-    <div class="container">
-        <h3>У вас пока не задано ни одного <span class="highlighted_text">типа</span> или <span class="highlighted_text">подтипа</span> протокола в этом профиле. </h3>
-        <p class="help-text">Типы протоколов обычно определяют к какой модальности относится протокол.</p>
-        <p class="help-text">По умолчанию это один из следующих типов:
-            {% for type in default_report_types %}
-                <span class="report__sentence">"{{ type }}"{% if not loop.last %}, {% endif %}</span>
-            {% endfor %}
-        </p>
-        <p class="help-text"><span class="highlighted_text">Подтипы</span> протоколов обычно определяют область исследования, например Тип протокола "МРТ", <span class="highlighted_text">подтип</span> "голова и шея".</p>
-        <p class="help-text">Хотя по умолчанию и подразумевается, что это будет модальность и область исследования, Вы можете придумать свою логику создания типов и подтипов протокола, которая может быть абсолютно любой. </p>
-        
-        <p class="help-text">Для перехода к созданию типов и подтипов перейдите в
-            <a href="{{ url_for('report_settings.report_settings') }}" class="choosing-report-block__link" style="color: blue">
-                настройки протоколов.
-            </a>
-        </p class="help-text">
-    </div>
- {% endif %}
+</div>
+
 
 
 
@@ -93,9 +45,7 @@
 {% endblock container %}
 
 {% block scripts %}
-<script id="report-types-data" type="application/json">
-    {{ report_types_and_subtypes|tojson }}
-</script>
+
 <!-- Подключаем js файл для этой страницы -->
 <script src="/static/js/choose_report.js"></script>
 {% endblock scripts %}

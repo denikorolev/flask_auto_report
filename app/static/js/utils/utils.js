@@ -174,6 +174,7 @@ function onEnter(element, callback, preventDefault = true) {
     });
 }
 
+
 function validateInputText(text, maxLength = 600, minLength = 1) {
     // Удаляем лишние пробелы в начале и конце строки
     const trimmedText = text.trim();

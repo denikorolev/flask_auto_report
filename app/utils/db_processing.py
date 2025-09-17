@@ -2,7 +2,7 @@
 
 from flask import current_app, session
 from flask_security import current_user
-from app.models.models import KeyWord, db, AppConfig, UserProfile, ReportType, ReportSubtype, ReportCategory, User
+from app.models.models import KeyWord, db, AppConfig, UserProfile, ReportType, ReportSubtype, ReportCategory, User, Report
 from app.utils.logger import logger
 from app.utils.common import get_max_index
 import json
@@ -71,6 +71,20 @@ def sync_all_profiles_settings(user_id):
 
     logger.info(f"Синхронизация настроек для всех профилей пользователя {user_id} завершена")
     
+
+# Функция для получения всех модалльностей и областей исследования для данного профиля из AppConfig
+def get_categories_setup_from_appconfig(profile_id):
+    categories = AppConfig.get_setting(profile_id, "CATEGORIES_SETUP")
+    if categories:
+        logger.info(f"Loaded CATEGORIES_SETUP for profile_id={profile_id} from AppConfig.")
+        try:
+            categories = json.loads(categories)
+            logger.info(f"Successfully decoded CATEGORIES_SETUP")
+            return categories
+        except json.JSONDecodeError as e:
+            logger.error(f"Error decoding CATEGORIES_SETUP for profile_id={profile_id}: {str(e)}")
+            return []
+    return []
     
     
 # Временная функция для миграции типов и подтипов суперюзера в глобальные категории
@@ -268,7 +282,7 @@ def sync_modalities_from_db(profile_id):
             logger.warning(f"Нет модальностей для профиля {profile_id}")
             return False
         # Сохраняем модальности в AppConfig
-        AppConfig.set_setting(profile_id, "CATEGORIES_SETUP", json.dumps(modalities, ensure_ascii=False))
+        AppConfig.set_setting(profile_id, "CATEGORIES_SETUP", modalities)
         logger.info(f"Модальности успешно пересобраны для профиля {profile_id}")
         return True
     except Exception as e:
@@ -300,3 +314,115 @@ def delete_all_User_except(keep_ids=None):
     db.session.commit()
     print(f"Удалено пользователей: {count}")
     return count
+
+
+# Временная функция для миграции отчётов пользователя в новые категории
+def migrate_reports_for_user(user_id):
+    profiles = UserProfile.query.filter_by(user_id=user_id).all()
+    total = 0
+    updated = 0
+    errors = []
+
+    for profile in profiles:
+        # Получаем дерево категорий для профиля (уровень 1 и 2)
+        categories_tree = ReportCategory.get_categories_tree(profile_id=profile.id)
+        # Словарь для быстрого поиска по имени модальности (type)
+        modalities_by_name = {mod["name"]: mod for mod in categories_tree}
+
+        def find_category_1(type_name):
+            return modalities_by_name.get(type_name)
+
+        def find_category_2(modality, subtype_name):
+            if not modality or not modality.get("children"):
+                return None
+            return next((area for area in modality["children"] if area["name"] == subtype_name), None)
+
+        # Берём все отчёты профиля
+        reports = Report.find_by_profile(profile.id, user_id)
+        for report in reports:
+            total += 1
+            try:
+                # Достаём старые связи
+                subtype_obj = getattr(report, "report_to_subtype", None)
+                if not subtype_obj:
+                    errors.append((report.id, "Нет связи с report_to_subtype"))
+                    continue
+
+                type_obj = getattr(subtype_obj, "subtype_to_type", None)
+                type_name = getattr(type_obj, "type_text", None)
+                subtype_name = getattr(subtype_obj, "subtype_text", None)
+
+                if not type_name:
+                    errors.append((report.id, "Не найден type_text"))
+                    continue
+                if not subtype_name:
+                    errors.append((report.id, "Не найден subtype_text"))
+                    continue
+
+                category_1 = find_category_1(type_name)
+                if not category_1:
+                    errors.append((report.id, f"Не найдена категория 1 уровня для типа: {type_name}"))
+                    continue
+
+                category_2 = find_category_2(category_1, subtype_name)
+                if not category_2:
+                    errors.append((report.id, f"Не найдена категория 2 уровня для подтипа: {subtype_name} (тип: {type_name})"))
+                    continue
+
+                # Проставляем новые поля
+                report.category_1_id = category_1["id"]
+                report.category_2_id = category_2["id"]
+                db.session.add(report)
+                updated += 1
+
+            except Exception as e:
+                errors.append((report.id, str(e)))
+
+        db.session.commit()
+        logger.info(f"Профиль {profile.id} - {updated} отчётов обновлено из {total}")
+
+    logger.info(f"\nМиграция завершена. Всего отчётов: {total}, обновлено: {updated}")
+    if errors:
+        logger.error(f"\nОшибки миграции:")
+        for rid, msg in errors:
+            logger.error(f"Report {rid}: {msg}")
+
+    return {"updated": updated, "errors": errors, "total": total}
+
+
+# app/utils/maintenance.py
+import sqlalchemy as sa
+from app.models.models import db, Report, ReportCategory
+from app.utils.logger import logger
+
+def sync_report_global_category_id() -> int:
+    """
+    global_category_id = COALESCE(category_1.global_id, category_1.id)
+    Обновляет только те строки, где сейчас NULL или значение отличается.
+    Возвращает кол-во обновлённых строк.
+    """
+    subq_global = (
+        sa.select(ReportCategory.global_id)
+        .where(ReportCategory.id == Report.category_1_id)
+        .scalar_subquery()
+    )
+    new_value = sa.func.coalesce(subq_global, Report.category_1_id)
+
+    stmt = (
+        sa.update(Report)
+        .where(Report.category_1_id.isnot(None))
+        .where(
+            sa.or_(
+                Report.global_category_id.is_(None),
+                Report.global_category_id != new_value,
+            )
+        )
+        .values(global_category_id=new_value)
+    )
+
+    res = db.session.execute(stmt)
+    db.session.commit()
+    updated = res.rowcount or 0
+    logger.info(f"[sync_report_global_category_id] ✅ обновлено строк: {updated}")
+    return updated
+

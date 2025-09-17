@@ -11,53 +11,6 @@
 {% from "macros/all_popups.html" import dynamics_popup %}
 {% from "macros/elements.html" import progress_bar, text_area_and_drop_zone %}
 
-<!-- Предзаполненная форма с ФИО и тд на странице протокола -->
-{% if user_settings.USE_WORD_REPORTS %}
-    <form class="flex" id="exportForm" data-report-type="{{ report_data.report_type }}" data-subtype="{{ report_data.report_subtype }}" data-comment="{{ report_data.comment }}">
-        <div>
-            <label for="patient-name">ФИО:</label>
-            <input style="margin-right: 10px;" type="text" id="patient-name" name="patient_name" value="{{ full_name }}"readonly>
-        </div>
-        <div>
-            <label for="patient-birthdate">Дата рождения:</label>
-            <input style="margin-right: 10px;" type="date" id="patient-birthdate" name="patient_birthdate" value="{{ birthdate }}"readonly>
-        </div>
-        <div>
-            <label for="report-number">Номер протокола:</label>
-            <input style="margin-right: 10px;" type="text" id="report-number" name="report_number" value="{{ report_number }}"readonly>
-        </div>
-
-        <!-- Контейнер для поля выбора стороны, скрыт по умолчанию -->
-        {% if report_data.report_side == True %}
-        <div>
-            <label for="report-side">Сторона:</label>
-            <select id="report-side" name="report_side">
-                <option value=""></option>
-                <option value="right">Right</option>
-                <option value="left">Left</option>
-            </select>
-        </div>
-        {% endif %}
-
-        <!-- Кнопка "Edit Form" -->
-        <button class="icon-btn icon-btn--edit-form" type="button"
-            style="background: url('{{ url_for('static', filename='pic/edit_button.svg') }}') no-repeat center center;"
-            title="Edit Form">
-        </button>
-
-        <!-- Кнопка "Add Report" -->
-        <button class="btn  icon-btn--add-report" id="addReportButton" type="button"
-        title="Add Report">
-        + протокол
-        </button>
-
-        <!-- Кнопка "Next" -->
-        <button class="btn  icon-btn--next-report" id="nextPatientButton" type="button" 
-        title="При нажатии на эту кнопку данные из формы будут отправлены на сервер и загружен следующий пациент">
-            следующий пациент
-        </button>
-    </form>
-{% endif %}
 
 <!-- Сам протокол -->
 <div class="flex">

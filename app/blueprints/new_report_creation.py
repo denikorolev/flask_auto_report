@@ -2,9 +2,10 @@
 
 from flask import Blueprint, render_template, request, session, jsonify
 from flask_login import current_user
-from app.models.models import db, Report, ReportType, ReportSubtype, Paragraph, HeadSentence, BodySentence, TailSentence, ReportShare, HeadSentenceGroup, BodySentenceGroup, TailSentenceGroup
+from app.models.models import db, Report, ReportCategory, ReportSubtype, Paragraph, HeadSentence, BodySentence, TailSentence, ReportShare, HeadSentenceGroup, BodySentenceGroup, TailSentenceGroup
 from app.utils.sentence_processing import extract_paragraphs_and_sentences
 from app.utils.file_processing import allowed_file
+from app.utils.db_processing import get_categories_setup_from_appconfig
 from app.utils.common import ensure_list
 from werkzeug.utils import secure_filename
 from app.utils.logger import logger
@@ -99,11 +100,11 @@ def create_report_from_existing(report_name, report_subtype, comment, report_sid
 @auth_required()
 def create_report():
     profile_id = session.get("profile_id")
-    report_types_and_subtypes = ReportType.get_types_with_subtypes(profile_id)
+    categories = get_categories_setup_from_appconfig(profile_id)
     
     return render_template("create_report.html",
                            title="Создание нового протокола",
-                           report_types_and_subtypes=report_types_and_subtypes
+                           categories=categories
                            )
     
     
@@ -113,26 +114,22 @@ def get_existing_reports():
     logger.info("[get_existing_reports]------------------------")
     logger.info("[get_existing_reports] 🚀 Начат запрос существующих протоколов пользователя")
     try:
-        type_id = request.args.get("type_id", type=int)
+        category_1_id = request.args.get("modality_id", type=int)
         profile_id = session.get("profile_id")
+        # базовый запрос
         query = Report.query.filter_by(user_id=current_user.id, profile_id=profile_id)
-        if type_id:
-            # Подтянем только нужный тип
-            query = query.join(ReportSubtype).filter(ReportSubtype.type_id == type_id)
+        # узкий фильтр только по категории первого уровня (если передана)
+        if category_1_id:
+            query = query.filter(Report.category_1_id == category_1_id)
         user_reports = query.all()
 
         if not user_reports:
             return jsonify({"status": "success", "reports": []})
 
-        reports_data = []
-        for report in user_reports:
-            reports_data.append({
-                "id": report.id,
-                "report_name": report.report_name,
-                "report_type": report.report_to_subtype.subtype_to_type.type_text,
-                
-            })
-        print(reports_data)
+        reports_data = [{
+            "id": r.id,
+            "report_name": r.report_name,
+        } for r in user_reports]
         return jsonify({"status": "success", "reports": reports_data})
 
     except Exception as e:
@@ -148,7 +145,7 @@ def get_shared_reports():
     logger.info("[get_shared_reports] 🚀 Начат запрос расшаренных протоколов")
 
     try:
-        type_text = request.args.get("type_text", type=str)
+        modality_name = request.args.get("modality_name", type=str)
         shared_records = ReportShare.query.filter_by(shared_with_user_id=current_user.id).all()
 
         if not shared_records:
@@ -161,13 +158,13 @@ def get_shared_reports():
             if not report:
                 continue  # на случай, если отчет удалён
             # Фильтруем по типу, если указан
-            if type_text and report.report_to_subtype.subtype_to_type.type_text != type_text:
+            if modality_name and report.category_1.name != modality_name:
                 continue
 
             shared_reports.append({
                 "id": report.id,
                 "report_name": report.report_name,
-                "report_type": report.report_to_subtype.subtype_to_type.type_text,
+                "modality": report.category_1.name if report.category_1 else "Неизвестно",
                 "shared_by_email": record.shared_by.email
             })
         if not shared_reports:
@@ -190,10 +187,10 @@ def get_public_reports():
     logger.info("(Маршрут: get_public_reports)------------------------")
     logger.info("(Маршрут: get_public_reports) 🚀 Запрос общедоступных протоколов")
     try:
-        type_text = request.args.get("type_text", type=str)
+        modality_name = request.args.get("modality_name", type=str)
         query = Report.query.filter(Report.public == True)
-        if type_text:
-            query = query.join(ReportSubtype).join(ReportType).filter(ReportType.type_text == type_text)
+        if modality_name:
+            query = query.filter(Report.category_1_name.has(name=modality_name))
         public_reports = query.all()
         
         if not public_reports:
@@ -207,7 +204,7 @@ def get_public_reports():
             public_reports_data.append({
                 "id": report.id,
                 "report_name": report.report_name,
-                "report_type": report.report_to_subtype.subtype_to_type.type_text
+                "modality": report.category_1_name if report.category_1_name else "Неизвестно",
             })
 
         logger.info(f"(Маршрут: get_public_reports) ✅ Найдено {len(public_reports)} общедоступных протоколов")
@@ -619,3 +616,6 @@ def ai_generate_template():
     except Exception as e:
         logger.error(f"(Маршрут: ai_generate_template) ❌ Ошибка при запуске генерации шаблона: {e}")
         return jsonify({"status": "error", "message": "Не удалось запустить генерацию шаблона."}), 500
+
+
+

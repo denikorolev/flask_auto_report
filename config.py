@@ -100,7 +100,6 @@ class Config:
 
 
     REPORT_TYPES_DEFAULT_RU = ["МРТ", "КТ", "Рентгенография", "ПЭТ-КТ", "Сцинтиграфия", "УЗИ"]
-    REPORT_SUBTYPES_DEFAULT_RU = ["Голова и шея", "Органы грудной клетки", "Органы брюшной полости", "Органы малого таза", "Верхние конечности", "Нижние конечности", "Позвоночник", "Сердечно-сосудистая система", "Опорно-двигательный аппарат", "Мягкие ткани", "Суставы", "Комбинированные протоколы", "Педиатрия", "Прочее" ]
     
     # OpenAI API configuration
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -119,8 +118,7 @@ class Config:
     OPENAI_ASSISTANT_TEMPLATE_MAKER = os.getenv("OPENAI_ASSISTANT_TEMPLATE_MAKER")  # Новый ассистент для создания шаблонов
     
     # Дефолтные настройки для профиля
-    DEFAULT_PROFILE_SETTINGS = {"USE_WORD_REPORTS": False,
-                                "USE_SENTENCE_AUTOSAVE": True,
+    DEFAULT_PROFILE_SETTINGS = {"USE_SENTENCE_AUTOSAVE": True,
                                 "USE_SENTENCE_AUTOSAVE_FOR_DYNAMIC_REPORT": False,
                                 "APP_LANGUAGE": "ru",
                                 "APP_THEME": "light",

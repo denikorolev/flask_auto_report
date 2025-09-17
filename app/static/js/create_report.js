@@ -12,9 +12,9 @@ let detachCurrentFilter = null; // Переменная для хранения 
 document.addEventListener("DOMContentLoaded", function() {
     
     // Вешаем обработчик на изменение типа отчета
-    document.getElementById("reportType").addEventListener("change", handleReportTypeChange);
+    document.getElementById("reportModality").addEventListener("change", handleReportModalityChange);
     // Триггерим для начальной настройки(имитируем нажатие от пользователя, чтобы запустить логику выбора)
-    document.getElementById("reportType").dispatchEvent(new Event("change"));
+    document.getElementById("reportModality").dispatchEvent(new Event("change"));
 
     // Вешаем обработчик на изменение способа создания отчета
     document.querySelectorAll('input[name="action"]').forEach(radio => {
@@ -35,33 +35,41 @@ document.addEventListener("DOMContentLoaded", function() {
 
 
 //Фильтрует подтипы в зависимости от выбранного типа.
-function handleReportTypeChange() {
-    const reportType = parseInt(document.getElementById("reportType").value, 10); // приводим к числу   
-    const reportSubtypeSelect = document.getElementById("reportSubtype");
+function handleReportModalityChange() {
+    const modality = parseInt(document.getElementById("reportModality").value, 10); // приводим к числу   
+    const reportAreas = document.getElementById("reportArea");
 
-    reportSubtypeSelect.innerHTML = ''; // Очищаем select
+    reportAreas.innerHTML = ''; // Очищаем select
 
     // Получаем подтипы для выбранного типа
-    const selectedType = reportTypesAndSubtypes.find(type => type.type_id === reportType);
-    const currentSubtypes = selectedType ? selectedType.subtypes : [];
+    const selectedModality = Array.isArray(categories)
+        ? categories.find(t => Number(t.id) === Number(modality))
+        : null;
+    const currentAreas = (selectedModality && Array.isArray(selectedModality.children))
+        ? selectedModality.children
+        : [];
 
     // Если нет подтипов, добавлям заглушку
-    if (currentSubtypes.length === 0) {
-        const emptyOption = document.createElement("option");
-        emptyOption.value = "";
-        emptyOption.textContent = "Нет доступных подтипов";
-        emptyOption.disabled = true;
-        emptyOption.selected = true;
-        reportSubtypeSelect.appendChild(emptyOption);
+    if (!currentAreas.length) {
+        const opt = document.createElement("option");
+        opt.value = "";
+        opt.textContent = "Нет доступных подтипов";
+        opt.disabled = true;
+        opt.selected = true;
+        reportAreas.appendChild(opt);
+        // сбрасываем выбор отчетов и чекбоксы (если надо)
+        selectedReports = [];
+        document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+        updateOrderCircles();
         return;
     }
 
     // Добавляем новые options
-    currentSubtypes.forEach(subtype => {
+    currentAreas.forEach(area => {
         const option = document.createElement("option");
-        option.value = subtype.subtype_id;
-        option.textContent = subtype.subtype_text;
-        reportSubtypeSelect.appendChild(option);
+        option.value = area.id;
+        option.textContent = area.name;
+        reportAreas.appendChild(option);
     });
     
     // Сбрасываем выбор отчетов и чекбоксы (если надо)
@@ -250,12 +258,12 @@ function handleActionChange(selectedAction) {
 
 
 // Получает информацию о выбранном типе отчета (для быстрого закидывания в JSON и переменные)
-function getReportTypeInfo() {
-    const select = document.getElementById("reportType");
+function getReportModalityInfo() {
+    const select = document.getElementById("reportModality");
     const option = select.options[select.selectedIndex];
     return {
-        typeId: select.value,
-        typeText: option.getAttribute("data-type-text"),
+        modalityID: select.value,
+        modalityName: option.getAttribute("data-modality-name"),
         option,
         select,
     };
@@ -270,12 +278,12 @@ async function loadExistingReports() {
 
     // Получаем выбранный тип
 
-    const { typeId } = getReportTypeInfo();
+    const { modalityID } = getReportModalityInfo();
 
     try {
         const response = await sendRequest({
             method: "GET",
-            url: `/new_report_creation/get_existing_reports?type_id=${typeId}`,
+            url: `/new_report_creation/get_existing_reports?modality_id=${modalityID}`,
         });
 
         if (response.status !== "success") {
@@ -290,12 +298,11 @@ async function loadExistingReports() {
         // Заполняем список
         response.reports.forEach(report => {
             const li = document.createElement("li");
-            li.setAttribute("data-report-type", report.report_type); // Для логики выбора, если нужно
             li.classList.add("existing-fewreports__item");
             li.innerHTML = `
                 <input class="existing-fewreports__input--checkbox" type="checkbox" id="report_${report.id}" name="existing_report_id" value="${report.id}">
                 <label class="existing-fewreports__label--checkbox" for="report_${report.id}">${report.report_name}</label>
-                <span class="existing-fewreports__order-circle></span>
+                <span class="existing-fewreports__order-circle"></span>
             `;
             list.appendChild(li);
         });
@@ -319,11 +326,11 @@ async function loadSharedReports() {
     const list = document.getElementById("sharedReportList");
     list.innerHTML = ""; // очистим
 
-    const { typeText } = getReportTypeInfo(); // получаем тип отчета
+    const { modalityName } = getReportModalityInfo(); // получаем тип отчета
 
     try {
         const response = await sendRequest({
-            url: `/new_report_creation/get_shared_reports?type_text=${encodeURIComponent(typeText)}`,
+            url: `/new_report_creation/get_shared_reports?modality_name=${encodeURIComponent(modalityName)}`,
             method: "GET"
         });
 
@@ -334,12 +341,11 @@ async function loadSharedReports() {
             }
             response.reports.forEach(report => {
                 const li = document.createElement("li");
-                li.setAttribute("data-report-type", report.report_type);
                 li.classList.add("existing-fewreports__item");
                 li.innerHTML = `
                     <label>
                         <input type="radio" name="shared_report_radio" value="${report.id}" />
-                        ${report.report_name} - ${report.report_type}  (${report.shared_by_email})
+                        ${report.report_name} - ${report.modality}  (${report.shared_by_email})
                     </label>
                 `;
                 list.appendChild(li);
@@ -358,12 +364,12 @@ async function loadPublicReports() {
     const list = document.getElementById("publicReportList");
     list.innerHTML = ""; // сброс
 
-    const { typeText } = getReportTypeInfo(); // получаем тип отчета
+    const { modalityName } = getReportModalityInfo(); // получаем тип отчета
 
     try {
         const response = await sendRequest({
             method: "GET",
-            url: `/new_report_creation/get_public_reports?type_text=${encodeURIComponent(typeText)}`
+            url: `/new_report_creation/get_public_reports?modality_name=${encodeURIComponent(modalityName)}`
         });
 
         if (response.status === "success" && !response.reports.length) {
@@ -372,19 +378,18 @@ async function loadPublicReports() {
         }
 
         if (response.status === "success") {
-            const reportTypeSelect = document.getElementById("reportType");
-            const selectedOption = reportTypeSelect.options[reportTypeSelect.selectedIndex];
-            const selectedReportType = selectedOption.getAttribute("data-type-text");
+            const reportModalitySelect = document.getElementById("reportModality");
+            const selectedOption = reportModalitySelect.options[reportModalitySelect.selectedIndex];
+            const selectedReportModality = selectedOption.getAttribute("data-modality-name");
 
             // Заполнение списка протоколов
             response.reports.forEach(report => {
                 const li = document.createElement("li");
-                li.setAttribute("data-report-type", report.report_type);
                 li.classList.add("public-reports__item");
                 li.innerHTML = `
                     <label>
                         <input type="radio" name="public_report_radio" value="${report.id}">
-                        ${report.report_name} - ${report.report_type}
+                        ${report.report_name} - ${report.modality}
                     </label>
                 `;
                 list.appendChild(li);
@@ -487,8 +492,8 @@ function showAiGeneratorBlock() {
     const generateTemplateHandler = async () => {
         const rawText = textarea.value.trim();
         const templateName = document.getElementById("reportName").value.trim();
-        const templateType = document.getElementById("reportType").value;
-        const templateSubtype = document.getElementById("reportSubtype").value;
+        const templateModality = document.getElementById("reportModality").value;
+        const templateSubtype = document.getElementById("reportArea").value;
 
 
         if (!rawText) {
@@ -503,7 +508,7 @@ function showAiGeneratorBlock() {
             data: {
                 origin_text: rawText,
                 template_name: templateName,
-                template_type: templateType,
+                template_type: templateModality,
                 template_subtype: templateSubtype
             }
         });
@@ -597,7 +602,7 @@ function showAiGeneratorBlock() {
  */
 function createManualReport() {
     const reportName = document.getElementById("reportName")?.value?.trim();
-    const reportSubtype = document.getElementById("reportSubtype")?.value;
+    const reportSubtype = document.getElementById("reportArea")?.value;
     const comment = document.getElementById("reportCreationComment")?.value?.trim() || "";
     const reportSide = document.querySelector("input[name='report_side']:checked")?.value === "true";
 
@@ -628,7 +633,7 @@ function createManualReport() {
 function createReportFromFile() {
     const reportForm = document.getElementById("reportCreationForm");
     const reportName = document.getElementById("reportName")?.value?.trim();
-    const reportSubtype = document.getElementById("reportSubtype")?.value;
+    const reportSubtype = document.getElementById("reportArea")?.value;
     const comment = document.getElementById("reportCreationComment")?.value?.trim() || "";
     const reportSide = document.querySelector("input[name='report_side']:checked")?.value === "true";
     const reportFile = document.getElementById("report_file")?.files[0];
@@ -669,7 +674,7 @@ function createReportFromFile() {
 // Создание протокола на основе нескольких существующих с валидацией
 function createReportFromExistingFew() {
     const reportName = document.getElementById("reportName")?.value?.trim();
-    const reportSubtype = document.getElementById("reportSubtype")?.value;
+    const reportSubtype = document.getElementById("reportArea")?.value;
     const comment = document.getElementById("reportCreationComment")?.value?.trim() || "";
     const reportSide = document.querySelector("input[name='report_side']:checked")?.value === "true";
 
@@ -705,7 +710,7 @@ function createReportFromExistingFew() {
 
 function createReportFromPublic() {
     const reportName = document.getElementById("reportName")?.value?.trim();
-    const reportSubtype = document.getElementById("reportSubtype")?.value;
+    const reportSubtype = document.getElementById("reportArea")?.value;
     const comment = document.getElementById("reportCreationComment")?.value?.trim() || "";
     const reportSide = document.querySelector("input[name='report_side']:checked")?.value === "true";
     const selectedReportId = document.querySelector("input[name='public_report_radio']:checked").value;
@@ -740,7 +745,7 @@ function createReportFromPublic() {
 // Создание протокола на протоколов, которые были поделены с пользователем
 function createReportFromShared() {
     const reportName = document.getElementById("reportName")?.value?.trim();
-    const reportSubtype = document.getElementById("reportSubtype")?.value;
+    const reportSubtype = document.getElementById("reportArea")?.value;
     const comment = document.getElementById("reportCreationComment")?.value?.trim() || "";
     const reportSide = document.querySelector("input[name='report_side']:checked")?.value === "true";
     const selectedReport = document.querySelector("input[name='shared_report_radio']:checked");

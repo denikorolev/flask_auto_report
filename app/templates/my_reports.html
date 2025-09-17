@@ -2,7 +2,8 @@
 
 {% block container %}
 <input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
-
+<!--Задаю переменную с категориями из настроек пользователя-->
+{% set categories = user_settings['CATEGORIES_SETUP'] if user_settings and 'CATEGORIES_SETUP' in user_settings else [] %}
 
 <div class="container my-reports-list">
     {% if profile_reports %}
@@ -14,8 +15,8 @@
             <label for="filter_type">Отфильтровать по типу протокола:</label>
             <select class="report__select report__select--type" id="filter_type" name="filter_type">
                 <option value="">Все</option>
-                {% for type in reports_type_with_subtypes %}
-                    <option value="{{ type.type_id }}">{{ type.type_text }}</option>
+                {% for category in categories %}
+                    <option value="{{ category.id }}">{{ category.name }}</option>
                 {% endfor %}
             </select>
 
@@ -34,26 +35,26 @@
     <!-- Список всех протоколов -->
     <ul id="myReportList" class="my-report-list__list">
         {% for report in profile_reports %}
-            <li data-report-type="{{ report.report_to_subtype.subtype_to_type.id }}" class="my-report-list__item">
-                <ul class="wrapper__card report-card" data-report-type = "{{report.report_to_subtype.subtype_to_type.id}}">
-                    <li class="report-card__item report-card__item--short" data-report-type="{{ report.report_to_subtype.subtype_to_type.id }}">
-                        <label class="label report-card__label" for="report_type">Тип протокола:</label>
-                        <input class="input report-card__input" value="{{ report.report_to_subtype.subtype_to_type.type_text }}" name="report_type" readonly>
-                    </li data-report-type="{{ report.report_to_subtype.subtype_to_type.id }}">
-                    <li class="report-card__item" data-report-type="{{ report.report_to_subtype.subtype_to_type.id }}">
-                        <label class="label report-card__label" for="report_subtype">Подтип протокола:</label>
-                        <input class="input report-card__input" value="{{ report.report_to_subtype.subtype_text }}" name="report_subtype" readonly>
+            <li data-report-type="{{ report.category_1_id }}" class="my-report-list__item">
+                <ul class="wrapper__card report-card" data-report-type = "{{report.category_1_id}}">
+                    <li class="report-card__item report-card__item--short" data-report-type="{{ report.category_1_id }}">
+                        <label class="label report-card__label" for="report_type">Модальность:</label>
+                        <input class="input report-card__input" value="{{ report.category_1_name }}" name="report_type" readonly>
+                    </li data-report-type="{{ report.category_1_id }}">
+                    <li class="report-card__item" data-report-type="{{ report.category_1_id }}">
+                        <label class="label report-card__label" for="report_subtype">Область исследования:</label>
+                        <input class="input report-card__input" value="{{ report.category_2_name }}" name="report_subtype" readonly>
                     </li>
-                    <li class="report-card__item" data-report-type="{{ report.report_to_subtype.subtype_to_type.id }}">
+                    <li class="report-card__item" data-report-type="{{ report.category_2_id }}">
                         <label class="label report-card__label" for="report_name">Название протокола:</label>
                         <input class="input report-card__input" value="{{ report.report_name }}" name="report_name" readonly>
                     </li>
-                    <li class="report-card__item" data-report-type="{{ report.report_to_subtype.subtype_to_type.id }}">
+                    <li class="report-card__item" data-report-type="{{ report.category_1_id }}">
                         <label class="label report-card__label" for="comment">Комментарий:</label>
                         <input class="input report-card__input" value="{{ report.comment }}" name="comment" readonly>
                     </li>
                     <!-- Чекбоксы для связывания протоколов -->
-                    <li class="flex report-card__item report-card__item--button-group" data-report-type="{{ report.report_to_subtype.subtype_to_type.id }}">
+                    <li class="flex report-card__item report-card__item--button-group" data-report-type="{{ report.category_1_id }}">
                         <button class="btn  my-report-list__button my-report-list__button--delete" type="button" data-report-id="{{ report.id }}" name="report_delete">Удалить</button>
                         <a class="btn  my-report-list__button my-report-list__button--edit" href="{{ url_for("editing_report.edit_report", report_id=report.id) }}">Изменить</a>
                     </li>

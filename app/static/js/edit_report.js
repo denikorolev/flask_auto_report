@@ -389,7 +389,7 @@ async function handleUpdateReportButtonClick() {
              report_id: reportData.id,
              report_comment: document.getElementById("reportComment").value,
              report_side: document.querySelector('input[name="report_side"]:checked').value,
-             report_subtype_id: document.querySelector('select[name="report_subtype"]').value,
+             report_category_2_id: document.querySelector('select[name="reportCategory2"]').value,
             };
 
     console.log("Обновление протокола:", data);
@@ -584,7 +584,7 @@ function deleteSubsidiaries (button) {
 // Функция для вставки параграфа из буфера, буду использовать функцию создания нового параграфа, но с данными из буфера
 function insertFromBuffer(index) {
     const itemFromBuffer = getFromBuffer(index);
-    const reportType = reportData.report_type;
+    const reportType = reportData.category_1_id;
     const bufferReportType = itemFromBuffer.report_type;
 
     if (!itemFromBuffer) {

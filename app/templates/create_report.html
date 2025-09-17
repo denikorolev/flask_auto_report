@@ -18,16 +18,16 @@
             <input class="input" type="text" id="reportName" name="report_name" required>
         </div>
         <div class="report-creation__data-block">
-            <label class="label" for="reportType">Модальность:</label>
-            <select class="select" id="reportType" name="report_type" required>
-                {% for type in report_types_and_subtypes %}
-                <option value="{{ type.type_id }}" data-type-text="{{ type.type_text }}">{{ type.type_text }}</option>
+            <label class="label" for="reportModality">Модальность:</label>
+            <select class="select" id="reportModality" name="report_modality" required>
+                {% for cat_1 in categories %}
+                <option value="{{ cat_1.id }}" data-modality-name="{{ cat_1.name }}">{{ cat_1.name }}</option>
                 {% endfor %}
             </select>
         </div>
         <div class="report-creation__data-block">
-            <label class="label" for="reportSubtype">Область исследования:</label>
-            <select class="select" id="reportSubtype" name="report_subtype" required>
+            <label class="label" for="reportArea">Область исследования:</label>
+            <select class="select" id="reportArea" name="report_area" required>
                 <!-- option заполню в js-->
             </select>
         </div>
@@ -190,7 +190,7 @@
 {% endblock container %}
 
 {% block scripts %}
-    <script>const reportTypesAndSubtypes = {{ report_types_and_subtypes | tojson | safe }};</script>
+    <script>const categories = {{ categories | tojson | safe }};</script>
     <script type="module" src="{{ url_for('static', filename='js/create_report.js') }}"></script>
     <script src="{{ url_for('static', filename='js/utils/textFiltrator.js') }}"></script>
 {% endblock scripts %}

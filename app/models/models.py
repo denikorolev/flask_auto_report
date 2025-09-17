@@ -94,7 +94,7 @@ class AppConfig(db.Model):
     def get_setting(profile_id, key, default=None):
         """Возвращает значение настройки для профиля."""
         try:
-            print(f"🔍 Получение настройки {key} для профиля {profile_id}")
+            logger.info(f"🔍 Получение настройки {key} для профиля {profile_id}")
             config = AppConfig.query.filter_by(profile_id=profile_id, config_key=key).first()
             return config.config_value if config else default
         except Exception as e:
@@ -218,7 +218,7 @@ class Role(db.Model, RoleMixin):
     rank = db.Column(db.Integer, nullable=False)  
 
 
-class User(BaseModel, db.Model, UserMixin):
+class User(BaseModel, UserMixin):
     __tablename__ = 'users'
     id = db.Column(db.BigInteger, primary_key=True)
     username = db.Column(db.String(80), nullable=True, default='User')
@@ -365,9 +365,8 @@ class UserProfile(BaseModel):
         return cls.query.filter_by(id=profile_id, user_id=user_id).first()
 
 
-class ReportCategory(db.Model):
+class ReportCategory(BaseModel):
     __tablename__ = 'report_categories'
-    id = db.Column(db.BigInteger, primary_key=True)
     name = db.Column(db.String(128), nullable=False)
     parent_id = db.Column(db.BigInteger, db.ForeignKey('report_categories.id'), nullable=True)
     global_id = db.Column(db.BigInteger, db.ForeignKey('report_categories.id'), nullable=True)
@@ -378,14 +377,14 @@ class ReportCategory(db.Model):
     parent = db.relationship(
         'ReportCategory',
         foreign_keys=[parent_id],
-        remote_side=[id],
+        remote_side=lambda: [ReportCategory.id],
         backref=db.backref('children', cascade='all, delete-orphan', single_parent=True)
     ) # Каскадное удаление выше будет работать только через orm, напрямую в базе не удаляй!!!
     
     global_category = db.relationship(
         'ReportCategory',
         foreign_keys=[global_id],
-        remote_side=[id],
+        remote_side=lambda: [ReportCategory.id],
         post_update=True,
         backref='user_variants'
     )
@@ -411,6 +410,23 @@ class ReportCategory(db.Model):
 
 
     @classmethod
+    def get_global_id(cls, category_id: int):
+        """
+        Возвращает global_id для указанной категории.
+        Args:
+            category_id (int): ID категории.
+        Returns:
+            int | None: global_id категории или None, если не найдено.
+        """
+        if not category_id:
+            return None
+        cat = cls.query.get(category_id)
+        if not cat:
+            return None
+        return cat.global_id
+
+
+    @classmethod
     def get_categories_tree(cls, profile_id=None, is_global=None):
         """
         Рекурсивно собирает дерево категорий с вложенностью и данными по global_id.
@@ -431,7 +447,7 @@ class ReportCategory(db.Model):
         # Функция для рекурсивного построения дерева
         def build_node(cat):
             if not cat:
-                print(f"Категория {cat} не найдена в словаре, пропускаем")
+                logger.warning(f"Категория {cat} не найдена в словаре, пропускаем")
                 return None
             global_name = cls.query.get(cat.global_id).name if cat.global_id else None
             return {
@@ -572,6 +588,7 @@ class Report(BaseModel):
     report_subtype = db.Column(db.Integer, db.ForeignKey('report_subtype.id', ondelete='CASCADE'), nullable=False)
     category_1_id = db.Column(db.BigInteger, db.ForeignKey('report_categories.id', ondelete='SET NULL'), nullable=True)
     category_2_id = db.Column(db.BigInteger, db.ForeignKey('report_categories.id', ondelete='SET NULL'), nullable=True)
+    global_category_id = db.Column(db.BigInteger, db.ForeignKey('report_categories.id', ondelete='SET NULL'), nullable=True)
     comment = db.Column(db.String(255), nullable=True)
     report_name = db.Column(db.String(255), nullable=False)
     public = db.Column(db.Boolean, default=False, nullable=False)
@@ -581,10 +598,13 @@ class Report(BaseModel):
     report_to_paragraphs = db.relationship('Paragraph', lazy=True, backref=db.backref("paragraph_to_report"), cascade="all, delete-orphan", passive_deletes=True)
 
     @classmethod
-    def create(cls, profile_id, report_subtype, report_name,  user_id, comment=None, public=False, report_side=False):
+    def create(cls, profile_id, report_subtype, report_name, user_id, category_1_id=None, category_2_id=None, global_category_id=None, comment=None, public=False, report_side=False):
         new_report = cls(
             profile_id=profile_id,
             report_subtype=report_subtype,
+            category_1_id=category_1_id,
+            category_2_id=category_2_id,
+            global_category_id=global_category_id,
             report_name=report_name,
             user_id=user_id,
             comment=comment,
@@ -616,14 +636,20 @@ class Report(BaseModel):
         """Возвращает текстовое представление типа отчета"""
         report = cls.query.filter_by(id=report_id).first()
         return report.report_to_subtype.subtype_to_type.type_text
-    
+
     
     @classmethod
-    def find_by_subtypes(cls, report_subtype):
-        """Возвращает все отчеты, связанные с данным подтипом"""
-        return cls.query.filter_by(report_subtype=report_subtype).all()
+    def find_by_category_1(cls, category_1_id, profile_id):
+        """Возвращает все отчеты, связанные с данной категорией 1 уровня (модальность)"""
+        return cls.query.filter_by(category_1_id=category_1_id, profile_id=profile_id).all()
+
     
-    
+    @classmethod
+    def find_by_category_2(cls, category_2_id, profile_id):
+        """Возвращает все отчеты, связанные с данной категорией 2 уровня (область исследования)"""
+        return cls.query.filter_by(category_2_id=category_2_id, profile_id=profile_id).all()
+
+
     @classmethod
     def get_report_info(cls, report_id):
         """
@@ -640,12 +666,21 @@ class Report(BaseModel):
         if not report:
             logger.error(f"(get_report_info)❌ Протокол не найден.")
             return None  
+        
+        report_category_1 = ReportCategory.query.get(report.category_1_id)
+        report_category_2 = ReportCategory.query.get(report.category_2_id)
+        
 
         report_data = {
             "id": report.id,
             "report_name": report.report_name,
             "report_type": report.report_to_subtype.subtype_to_type.type_text,
             "report_subtype": report.report_to_subtype.subtype_text,
+            "category_1_id": report_category_1.id if report.category_1_id else None,
+            "category_1_name": report_category_1.name if report.category_1_id else None,
+            "category_2_id": report_category_2.id if report.category_2_id else None,
+            "category_2_name": report_category_2.name if report.category_2_id else None,
+            "profile_id": report.profile_id,
             "comment": report.comment,
             "report_side": report.report_side,
             "user_id": report.user_id,
@@ -932,7 +967,7 @@ class Paragraph(BaseModel):
 class SentenceBase(BaseModel):
     __abstract__ = True  
     
-    report_type_id = db.Column(db.SmallInteger, nullable=True)  
+    report_type_id = db.Column(db.BigInteger, nullable=True)  
     user_id = db.Column(db.BigInteger, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
     sentence = db.Column(db.String(600), nullable=False)
     tags = db.Column(db.String(100), nullable=True)
@@ -1191,7 +1226,7 @@ class SentenceBase(BaseModel):
 
             group = head_sentence.body_sentence_group or BodySentenceGroup.create()
             head_sentence.body_sentence_group_id = group.id
-            print(f"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!    Группа body предложения для данного head {head_sentence.id} существует и это ID: {group.id}")
+            logger.warning(f"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!    Группа body предложения для данного head {head_sentence.id} существует и это ID: {group.id}")
             sentence_type = "body"
 
         elif cls == TailSentence:

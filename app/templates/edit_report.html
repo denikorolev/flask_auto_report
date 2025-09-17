@@ -16,15 +16,15 @@
     <form class="edit-report__form--report" id="edit-report-form">
         <div class="flex">
             <div class="edit-report__input-block">
-                <label class="label" for="report_type">Тип:</label>
-                <input class="input report_input__item report_input__item--type" id="report_type" name="report_type" value="{{ report_data.report_type }}" readonly>
+                <label class="label" for="report_type">Модальность:</label>
+                <input class="input report_input__item report_input__item--type" id="report_type" name="report_type" value="{{ report_data.category_1_name }}" readonly>
             </div>
             <div class="edit-report__input-block">
-                <label class="label" for="report_subtype">Подтип:</label>
-                <select class="select" id="report_subtype" name="report_subtype">
-                    {% for subtype in subtypes %}
-                        <option value="{{ subtype.id }}" {% if subtype.name == report_data.report_subtype %}selected{% endif %}>
-                            {{ subtype.name }}
+                <label class="label" for="reportCategory2">Область исследования:</label>
+                <select class="select" id="reportCategory2" name="reportCategory2">
+                    {% for area in areas %}
+                        <option value="{{ area.id }}" {% if area.id == report_data.category_2_id %}selected{% endif %}>
+                            {{ area.name }}
                         </option>
                     {% endfor %}
                 </select>

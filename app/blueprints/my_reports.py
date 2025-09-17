@@ -3,7 +3,7 @@
 from flask import Blueprint, render_template, request, jsonify, session
 from flask_security import current_user
 from collections import defaultdict
-from app.models.models import db, Report, ReportType, Paragraph
+from app.models.models import db, Report, ReportType, Paragraph, AppConfig
 from app.utils.logger import logger
 from rapidfuzz import fuzz
 from flask_security.decorators import auth_required
@@ -17,12 +17,10 @@ def reports_list():
     profile_id = session.get("profile_id")
     user_id = current_user.id if current_user.is_authenticated else None
     # Initialize config variables
-    reports_type_with_subtypes = ReportType.get_types_with_subtypes(profile_id)
-    profile_reports = Report.find_by_profile(profile_id, user_id=user_id)
-
+    all_reports_obj = Report.find_by_profile(profile_id, user_id=user_id)
+    profile_reports = [Report.get_report_info(report.id) for report in all_reports_obj] if all_reports_obj else []
     return render_template("my_reports.html",
                            title="Список протоколов текущего профиля",
-                           reports_type_with_subtypes=reports_type_with_subtypes,
                            profile_reports=profile_reports,
                            )
 

@@ -240,6 +240,21 @@
     </ul>
 </div>
 
+<div> 
+    <h2>Запуск скрипта миграции отчётов для конкретного пользователя</h2>
+    <p>Этот скрипт перенесет все типы и подтипы для каждого отчета каждого профиля пользователя в поля категория1 и категория2.</p>
+    <input type="text" id="report-user-id" name="user_id" placeholder="Введите ID пользователя" required>
+    <button id="run-report-script" class="btn">
+        Запустить скрипт для пользователя
+    </button>
+    <button id="sync-global-category" class="btn">
+        Синхронизировать global_category_id для всех отчётов
+    </button>
+    <ul id="report-status" class="status-message">
+        <!-- Сюда JS вставит сообщения о статусе -->
+    </ul>
+</div>
+
 
 
 {% endblock container %}

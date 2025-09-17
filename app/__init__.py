@@ -30,7 +30,6 @@ from .context_processors import (
 # Импортирую блюпринты
 from .blueprints.working_with_reports import working_with_reports_bp  
 from .blueprints.my_reports import my_reports_bp 
-from .blueprints.report_settings import report_settings_bp  
 from .blueprints.new_report_creation import new_report_creation_bp
 from .blueprints.editing_report import editing_report_bp
 from .blueprints.profile_settings import profile_settings_bp
@@ -81,7 +80,6 @@ def create_app(config_object='config.Config'):
     # Register Blueprints
     app.register_blueprint(working_with_reports_bp, url_prefix="/working_with_reports")
     app.register_blueprint(my_reports_bp, url_prefix="/my_reports")
-    app.register_blueprint(report_settings_bp, url_prefix="/report_settings")
     app.register_blueprint(editing_report_bp, url_prefix="/editing_report")
     app.register_blueprint(new_report_creation_bp, url_prefix="/new_report_creation")
     app.register_blueprint(profile_settings_bp, url_prefix="/profile_settings")

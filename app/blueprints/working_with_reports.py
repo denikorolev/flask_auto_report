@@ -5,7 +5,6 @@ from flask_security import current_user
 import os
 import json
 from app.models.models import db, Report, ReportType, KeyWord, TailSentence, BodySentence, ReportTextSnapshot
-from app.utils.file_processing import save_to_word
 from app.utils.sentence_processing import group_keywords, split_sentences_if_needed, clean_and_normalize_text, compare_sentences_by_paragraph, preprocess_sentence, split_report_structure_for_ai, replace_head_sentences_with_fuzzy_check, merge_ai_response_into_skeleton, convert_template_json_to_text
 from app.utils.common import ensure_list
 from app.utils.logger import logger
@@ -29,15 +28,14 @@ def choosing_report():
     logger.info(f"(Выбор шаблона протокола) ------------------------------------")
     logger.info(f"(Выбор шаблона протокола) 🚀 Начинаю обработку запроса")
     profile_id = session.get("profile_id")
-    report_types_and_subtypes = ReportType.get_types_with_subtypes(profile_id) 
-    default_report_types = current_app.config.get("REPORT_TYPES_DEFAULT_RU", [])
 
     if request.method == "POST":
         logger.info("(Выбор шаблона протокола) Получен POST-запрос на выбор шаблона протокола.")
         if request.is_json:
             data = request.get_json()
-            rep_subtype = data.get("report_subtype")
-            reports = Report.find_by_subtypes(rep_subtype)
+            logger.info(f"(Выбор шаблона протокола) Полученные данные: {data}")
+            rep_area = data.get("report_area")
+            reports = Report.find_by_category_2(rep_area, profile_id) if rep_area else []
             if not reports:
                 logger.error("(Выбор шаблона протокола) ❌ Не найдено шаблонов протоколов для выбранного типа")
                 return jsonify({"status": "error", "message": "Не найдено шаблонов протоколов для выбранного типа"}), 404
@@ -55,8 +53,6 @@ def choosing_report():
     return render_template(
         "choose_report.html",
         title="Выбор шаблона протокола",
-        report_types_and_subtypes=report_types_and_subtypes,
-        default_report_types=default_report_types,
     )
 
 
@@ -66,9 +62,6 @@ def working_with_reports():
     logger.info(f"(работа с протоколом) ------------------------------------") 
     logger.info(f"(работа с протоколом) 🚀 Начинаю обработку запроса для вывода данных протокола")
     current_report_id = int(request.args.get("reportId"))
-    full_name = request.args.get("fullname")
-    birthdate = request.args.get("birthdate")
-    report_number = request.args.get("reportNumber")
     profile_id = session.get("profile_id")
     
     if not current_report_id:
@@ -101,9 +94,6 @@ def working_with_reports():
         title=report_data["report_name"],
         report_data=report_data,
         paragraphs_data=paragraphs_data,
-        full_name=full_name,
-        birthdate=birthdate,
-        report_number=report_number,
         key_words_groups=key_words_groups,
     )
 
@@ -139,7 +129,7 @@ def snapshots():
     )
 
 
-
+# Маршрут для фильтрации сохраненных снапшотов по дате и типу отчета (AJAX)
 @working_with_reports_bp.route("/snapshots_json", methods=["POST"])
 @auth_required()
 def snapshots_json():
@@ -329,39 +319,6 @@ def save_modified_sentences():
     except Exception as e:
         logger.error(f"(Сохранение измененных предложений) ❌ При попытке сохранения предложений произошла ошибка: {str(e)}")
         return jsonify({"status": "error", "message": f"При попытке автоматического сохранения предложений произошла ошибка: {str(e)}"}), 500
-
-
-
-@working_with_reports_bp.route("/export_to_word", methods=["POST"])
-@auth_required()
-def export_to_word():
-    try:
-        data = request.get_json()
-        if data is None:
-                return jsonify({"status": "error", "message": "No JSON data received"}), 400
-        text = data.get("text")
-        name = data.get("name") or "noname"
-        subtype = data.get("subtype")
-        report_type = data.get("report_type")
-        birthdate = data.get("birthdate")
-        reportnumber = data.get("reportnumber")
-        scanParam = data.get("scanParam")
-        side = data.get("side")
-
-        if not text or not name or not subtype:
-            return jsonify({"status": "error", "message": "Missing required information."}), 400
-    except Exception as e:
-        return jsonify({"status": "error", "message": f"Error processing request: {e}"}), 500
-
-    try:
-        file_path = save_to_word(text, name, subtype, report_type, birthdate, reportnumber, scanParam, side=side)
-        # Проверяем, существует ли файл
-        if not os.path.exists(file_path):
-            return jsonify({"status": "error", "message": "File not found"}), 500
-        
-        return send_file(file_path, as_attachment=True)
-    except Exception as e:
-        return jsonify({"status": "error", "message": f"Failed to export to Word: {e}"}), 500
 
 
 

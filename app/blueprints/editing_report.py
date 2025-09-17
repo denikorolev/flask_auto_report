@@ -8,6 +8,7 @@ from flask_security.decorators import auth_required
 from app.utils.decorators import require_role_rank
 from app.utils.logger import logger
 from app.utils.ai_processing import gramma_correction_ai
+from app.utils.db_processing import get_categories_setup_from_appconfig
 
 
 editing_report_bp = Blueprint('editing_report', __name__)
@@ -38,22 +39,20 @@ def edit_report():
         logger.error(f"(Страница редактирования протокола /edit_report) ❌ Ошибка при получении данных протокола: {str(e)}")
         return jsonify({"status": "error", "message": f"Ошибка при получении данных протокола: {str(e)}"}), 500
     
-    subtypes = []
-    
-    subtypes_obj = ReportSubtype.find_by_report_type(report.report_to_subtype.subtype_to_type.id) if report.report_to_subtype.subtype_to_type else None
-    if subtypes_obj:
-        for subtype in subtypes_obj:
-            subtypes.append({
-                "id": subtype.id,
-                "name": subtype.subtype_text
-            })
-    print(subtypes)
+    categories = get_categories_setup_from_appconfig(profile_id)
+    modality_id = report_data.get("category_1_id")
+    areas = []
+    for category in categories:
+        if category.get("id") == modality_id:
+            areas = category.get("children", [])
+            break
+    print(f"areas: {areas} for modality_id: {modality_id}")
 
     return render_template('edit_report.html', 
                            title=f"Редактирование протокола {report.report_name}", 
                            report_data=report_data,
                            report_paragraphs=report_paragraphs,
-                           subtypes=subtypes,
+                           areas=areas,
                            )
 
 
@@ -176,7 +175,7 @@ def update_report():
     data = request.json
     report_id = data.get("report_id")
     report = Report.query.get(report_id)
-    report_subtype_id = data.get("report_subtype_id")
+    report_category_2_id = data.get("report_category_2_id")
     profile_id = session.get("profile_id")
 
     if not report or report.profile_id != profile_id:
@@ -188,7 +187,7 @@ def update_report():
         "comment": data.get("report_comment"),
         "report_side": data.get("report_side") == "True",
         "public": report.public,
-        "report_subtype": report_subtype_id
+        "category_2_id": report_category_2_id
     }
     logger.info(f"(Обновление протокола) Получены данные для обновления протокола: {new_report_data}")
 

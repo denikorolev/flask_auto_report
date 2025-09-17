@@ -39,6 +39,12 @@ document.addEventListener("DOMContentLoaded", function() {
     // Слушатель для кнопки "запустить скрипт для пользователя"
     document.getElementById("run-user-script").addEventListener("click", runUserScript);
 
+    // Слушатель для кнопки "запустить миграцию отчётов пользователя"
+    document.getElementById("run-report-script").addEventListener("click", runUserCategoryMigration); 
+
+    // Слушатель на кнопку Синхронизировать global_category_id для всех отчётов
+    document.getElementById("sync-global-category").addEventListener("click", syncGlobalCategoryToReports);
+
 });
 
 
@@ -785,6 +791,7 @@ function runUserScript() {
     });
 }
 
+
 function deleteAllUsers() {
     const keepIdsString = document.getElementById("keep-user-ids").value.trim();
     const keepIds = keepIdsString
@@ -812,3 +819,81 @@ function deleteAllUsers() {
             }
     });
 }
+
+function runUserCategoryMigration() {
+    const userIdInput = document.getElementById("report-user-id");
+    const userId = userIdInput.value.trim();
+
+    if (!userId) {
+        alert("Введите ID пользователя.");
+        return;
+    }
+
+    sendRequest({
+        url: "/admin/migrate_reports",
+        data: { user_id: userId }
+    }).then(result => {
+        const statusBox = document.getElementById("report-status");
+        if (statusBox) {
+            statusBox.innerHTML = ""; // очищаем старые сообщения
+
+            const li = document.createElement("li");
+            li.style.color = result && result.status === "success" ? "green" : "red";
+            li.textContent = result.message || (result.status === "success" ? "Операция выполнена успешно" : "Произошла ошибка");
+            statusBox.appendChild(li);
+
+            // Если есть data (подробнее)
+            if (result.data) {
+                const liTotal = document.createElement("li");
+                liTotal.style.fontWeight = "bold";
+                liTotal.style.color = "blue";
+                liTotal.textContent = `Всего отчётов: ${result.data.total}, обновлено: ${result.data.updated}`;
+                statusBox.appendChild(liTotal);
+
+                if (result.data.errors && result.data.errors.length > 0) {
+                    const errorsHeader = document.createElement("li");
+                    errorsHeader.style.color = "red";
+                    errorsHeader.textContent = `Ошибки: ${result.data.errors.length}`;
+                    statusBox.appendChild(errorsHeader);
+
+                    // Для списка ошибок делаем отдельный список
+                    const errorsList = document.createElement("ul");
+                    result.data.errors.forEach(error => {
+                        const errorLi = document.createElement("li");
+                        errorLi.textContent = `Report ${error[0]}: ${error[1]}`;
+                        errorsList.appendChild(errorLi);
+                    });
+                    statusBox.appendChild(errorsList);
+                }
+            }
+
+            // Очищаем поле только если нет ошибок
+            if (result.status === "success" && result.data && (!result.data.errors || result.data.errors.length === 0)) {
+                userIdInput.value = "";
+            }
+        }
+    });
+}
+
+// Функция для запуска функции, которая обновит всем отчетам поле global_category_id, запускает маршрут set_global_category_to_reports, работает от кнопки sync-global-category
+function syncGlobalCategoryToReports() {
+    if (!confirm("Вы уверены, что хотите обновить всем отчётам поле global_category_id?")) return;
+    sendRequest({
+        url: "/admin/set_global_category_to_reports",
+    }).then(result => {
+        const statusBox = document.getElementById("report-status");
+        if (statusBox) {
+            statusBox.innerHTML = ""; // очищаем старые сообщения
+            const li = document.createElement("li");
+            if (result && result.status === "success") {
+                li.textContent = result.message || "Операция выполнена успешно";
+                li.style.color = "green";
+            } else {
+                li.textContent = (result && result.message) ? result.message : "Произошла ошибка";
+                li.style.color = "red";
+            }
+            statusBox.appendChild(li);
+        }
+    });
+}
+

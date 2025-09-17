@@ -19,11 +19,7 @@ function initWorkingWithReport() {
     console.log(userSettings);
 
     const popupList = document.getElementById("popupList");  // Для обращения к PopUp
-    const exportButton = document.getElementById("exportButton"); // Для обращения к кнопке "Экспорт в Word"
     const copyButton = document.getElementById("copyButton"); // Для обращения к кнопке "Копировать текст"
-    const nextReportButton = document.getElementById("nextPatientButton"); // Для обращения к кнопке "Следующий пациент"
-    const editButton = document.getElementById("editFormButton"); // Для обращения к кнопке Edit Form
-    const addReportButton = document.getElementById("addReportButton"); // Для обращения к кнопке Add Report
     const generateButton = document.getElementById("generateImpression"); // Для обращения к кнопке Generate Impression
     const boxForAiImpressionResponse = document.getElementById("aiImpressionResponseBlock"); // Для обращения к блоку с ответом ИИ по заключению
     const boxForAiRedactorResponse = document.getElementById("aiRedactorResponseBlock"); // Для обращения к блоку с ответом ИИ по редактированию
@@ -60,32 +56,15 @@ function initWorkingWithReport() {
 
 
     // Проверяем наличие кнопки экспорт в Word и при ее наличии запускаем логику связанную с данным экспортом
-    if (exportButton) {
-        wordButtonLogic(exportButton);
-    }
+
 
     // Проверяем наличие кнопки "Копировать текст" и при ее наличии запускаем логику связанную с копированием текста
     if (copyButton) {
         copyButtonLogic(copyButton);
     }
 
-    // Проверяем наличие кнопки "Следующий пациент и при ее наличии запускаем логику связанную 
-    // с созданием нового пациента и автоматическим увеличением номера отчета" Это для работы в рамках логики Word
-    if (nextReportButton) {
-        nextButtonLogic(nextReportButton);
-    }
+    
 
-    // Проверяем наличие кнопки "Edit Form" и при ее наличии запускаем логику связанную 
-    // с редактированием формы. Это для формы, которая используется для работы с Word
-    if (editButton) {
-        editButtonLogic(editButton);
-    }
-
-    // Проверяем наличие кнопки "Add Report" и при ее наличии запускаем логику связанную 
-    // с добавлением нового отчета для текущего пациента (работа в рамках логики Word)
-    if (addReportButton) {
-        addReportButtonLogic(addReportButton);
-    }
 
     if (generateButton) {
         generateButton.addEventListener("click", async function() {
@@ -555,96 +534,10 @@ function increaseSentenceWeight({ sentence_id, group_id, sentence_type }) {
 }
 
 
-// Обрабатывает логику кнопки "Next". Это для работы в рамках логики Word
-function nextButtonLogic(nextReportButton) {
-    nextReportButton.addEventListener("click", function() {
-        // Получаем текущий номер протокола и вычисляем новый номер
-        const reportNumberField = document.getElementById("report-number");
-        if (!reportNumberField) {
-            console.error("Поле 'report-number' не найдено.");
-            return;
-        }
-        const reportNumber = reportNumberField.value.trim();
-        const maxReportNumber = getMaxReportNumber(reportNumber);
-        const newReportNumber = maxReportNumber.toString();
-
-        // Формируем URL для перехода на страницу choosing_report с новым номером протокола
-        const url = `choosing_report?report_number=${encodeURIComponent(newReportNumber)}`;
-
-        // Переходим на страницу choosing_report и ставим фокус на поле фамилии
-        window.location.href = url;
-
-        // Устанавливаем таймер, чтобы поставить фокус на поле после загрузки страницы
-        setTimeout(() => {
-            const surnameField = document.getElementById("patient-surname");
-            if (surnameField) {
-                surnameField.focus();
-            }
-        }, 600); // Настройте время таймера по необходимости
-    });
-}
 
 
 
-// Логика для кнопки "Add Report". Это для работы в рамках логики Word
-function addReportButtonLogic(addReportButton) {
-    addReportButton.addEventListener("click", function() {
-        // Получаем значение из поля "surname" и разбиваем его на части
-        const surnameInput = document.getElementById("patient-name")?.value.trim() || "";
-        const [surname = "", name = "", patronymic = ""] = surnameInput.split(" ");
 
-        const birthdate = document.getElementById("patient-birthdate")?.value || "";
-        const reportNumberField = document.getElementById("report-number");
-
-        if (!reportNumberField) {
-            console.error("Поле 'report-number' не найдено.");
-            return;
-        }
-
-        const reportNumber = reportNumberField.value.trim();
-        const maxReportNumber = getMaxReportNumber(reportNumber);
-        const newReportNumber = maxReportNumber.toString();
-
-        // Формируем строку для передачи параметров через URL
-        const url = `choosing_report?patient_surname=${encodeURIComponent(surname)}
-        &patient_name=${encodeURIComponent(name)}
-        &patient_patronymicname=${encodeURIComponent(patronymic)}
-        &patient_birthdate=${encodeURIComponent(birthdate)}
-        &report_number=${encodeURIComponent(newReportNumber)}`;
-
-        // Переходим на страницу choosing_report
-        window.location.href = url;
-    });
-}
-
-
-
-// Логика для кнопки "Edit Form". Это для работы в рамках логики Word
-function editButtonLogic(editButton) {
-    const formInputs = document.querySelectorAll("#exportForm input");
-
-    editButton.addEventListener("click", function() {
-        // Проверяем, являются ли поля формы только для чтения
-        const isReadOnly = formInputs[0]?.hasAttribute("readonly");
-
-        formInputs.forEach(input => {
-            if (isReadOnly) {
-                input.removeAttribute("readonly"); // Делаем поля формы редактируемыми
-            } else {
-                input.setAttribute("readonly", true); // Делаем поля формы только для чтения
-            }
-        });
-
-        // Меняем иконку кнопки и текст подсказки
-        if (isReadOnly) {
-            editButton.style.background = "url('/static/pic/save_button.svg') no-repeat center center";
-            editButton.title = "Save Changes";
-        } else {
-            editButton.style.background = "url('/static/pic/edit_button.svg') no-repeat center center";
-            editButton.title = "Edit Form";
-        }
-    });
-}
 
 // Функция для поиска по введенным в поисковое поле словам среди прикрепленных 
 // предложений. Используется в showPopupSentences и addSentenceButtonLogic
@@ -747,87 +640,6 @@ function copyButtonLogic(copyButton) {
     });
 }
 
-
-
-// Логика для кнопки "Export to Word". Сильно поменялось, может не работать
-function wordButtonLogic(exportButton) {
-    
-    exportButton.addEventListener("click", async function() {
-        // Собираем текст из разных списков абзацев
-        const coreText = collectTextFromParagraphs("paragraph__item--core");
-        const impressionText = collectTextFromParagraphs("paragraph__item--impression");
-
-        const textToExport = `${coreText}\n\n${impressionText}`.trim();
-
-        // Формируем данные абзацев
-        // const paragraphsData = collectParagraphsData();
-
-        try {
-            await sendModifiedSentencesToServer();
-        } catch (error) {
-            console.error("Ошибка обработки абзацев:", error);
-            alert(error.message || "Не удалось обработать абзацы.");
-            return;
-        }
-
-        // Если обработка абзацев успешна, выполняем экспорт в Word
-        try {
-            const name = document.getElementById("patient-name").value;
-            const birthdate = document.getElementById("patient-birthdate").value;
-            const reportnumber = document.getElementById("report-number").value;
-
-            const exportForm = document.getElementById("exportForm");
-            const subtype = exportForm.getAttribute("data-subtype");
-            const reportType = exportForm.getAttribute("data-report-type");
-
-            const reportSideElement = document.getElementById("report-side");
-            const reportSide = reportSideElement ? reportSideElement.value : "";
-
-            const blob = await sendRequest({
-                url: "/working_with_reports/export_to_word",
-                method: "POST",
-                data: {
-                    text: textToExport,
-                    name: name,
-                    birthdate: birthdate,
-                    subtype: subtype,
-                    report_type: reportType,
-                    reportnumber: reportnumber,
-                    side: reportSide
-                },
-                responseType: "blob",
-                csrfToken: csrfToken
-            });
-
-            // Создаем ссылку для скачивания файла
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            const currentDate = new Date();
-            const day = currentDate.getDate();
-            const month = currentDate.getMonth() + 1;
-            const year = currentDate.getFullYear();
-            const formattedDate = `${day.toString().padStart(2, '0')}${month.toString().padStart(2, '0')}${year}`;
-
-            let fileReportSide = "";
-            if (reportSide === "right") {
-                fileReportSide = " правая сторона";
-            } else if (reportSide === "left") {
-                fileReportSide = " левая сторона";
-            }
-
-            a.style.display = "none";
-            a.href = url;
-            a.download = `${name} ${reportType} ${subtype}${fileReportSide} ${formattedDate}.docx`;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-
-        } catch (error) {
-            console.error("Ошибка экспорта в Word:", error);
-            alert(error.message || "Не удалось выполнить экспорт в Word.");
-        }
-    });
-}
 
 
 // Логика для кнопки "Generate Impression". Возможно нужно объединить с логикой generateImpressionRequest

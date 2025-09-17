@@ -107,6 +107,7 @@
         window.csrfToken = document.getElementById("csrf_token").value;
     })
     const userSettings = {{ user_settings | tojson | safe }};
+    window.userSettings = userSettings;
 </script>
 
 <script src="{{ url_for("static", filename='js/jquery.js') }}"></script>

@@ -120,11 +120,6 @@
                     <br>
                     <ul class="settings-block__list" id="settings-block">
                         <li class="settings-block__item">
-                            <label class="label" for="useWordReports">Использовать выгрузку протокола в word</label>
-                            <input class="checkbox" type="checkbox" id="useWordReports" name="USE_WORD_REPORTS"
-                                {% if user_settings.USE_WORD_REPORTS %} checked {% endif %}>
-                        </li>
-                        <li class="settings-block__item">
                             <label class="label" for="useSentenceAutosaveForDynamicReport">Использовать автосохранение новых предложений при использовании динамического протокола</label>
                             <input class="checkbox" type="checkbox" id="useSentenceAutosaveForDynamicReport" name="USE_SENTENCE_AUTOSAVE_FOR_DYNAMIC_REPORT"
                                 {% if user_settings.USE_SENTENCE_AUTOSAVE_FOR_DYNAMIC_REPORT %} checked {% endif %}>
