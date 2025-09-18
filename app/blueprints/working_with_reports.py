@@ -176,7 +176,7 @@ def save_modified_sentences():
         report_id = int(data.get("report_id"))
         sentences = ensure_list(data.get("sentences"))
         user_id = current_user.id
-        report_type_id = Report.get_report_type_id(report_id)
+        report_global_modality_id = Report.get_by_id(report_id).global_category_id
         profile_id = session.get("profile_id")
         language = session.get("lang", "default_language")
         
@@ -269,7 +269,7 @@ def save_modified_sentences():
                         sentence=new_sentence_text,
                         related_id=related_id,
                         user_id=user_id,
-                        report_type_id=report_type_id,
+                        report_global_modality_id=report_global_modality_id,
                         comment="Added automatically"
                     )
                 # Сохраняем предложение в базу данных в качестве body_sentence 
@@ -280,7 +280,7 @@ def save_modified_sentences():
                         sentence=new_sentence_text,
                         related_id=related_id,
                         user_id=user_id,
-                        report_type_id=report_type_id,
+                        report_global_modality_id=report_global_modality_id,
                         comment="Added automatically",
                         )
                     else:

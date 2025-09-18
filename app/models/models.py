@@ -585,7 +585,7 @@ class Report(BaseModel):
     __tablename__ = "reports"
     profile_id = db.Column(db.BigInteger, db.ForeignKey('user_profiles.id', ondelete='CASCADE'), nullable=False)
     user_id = db.Column(db.BigInteger, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
-    report_subtype = db.Column(db.Integer, db.ForeignKey('report_subtype.id', ondelete='CASCADE'), nullable=False)
+    report_subtype = db.Column(db.Integer, db.ForeignKey('report_subtype.id', ondelete='CASCADE'), nullable=True)
     category_1_id = db.Column(db.BigInteger, db.ForeignKey('report_categories.id', ondelete='SET NULL'), nullable=True)
     category_2_id = db.Column(db.BigInteger, db.ForeignKey('report_categories.id', ondelete='SET NULL'), nullable=True)
     global_category_id = db.Column(db.BigInteger, db.ForeignKey('report_categories.id', ondelete='SET NULL'), nullable=True)
@@ -598,10 +598,9 @@ class Report(BaseModel):
     report_to_paragraphs = db.relationship('Paragraph', lazy=True, backref=db.backref("paragraph_to_report"), cascade="all, delete-orphan", passive_deletes=True)
 
     @classmethod
-    def create(cls, profile_id, report_subtype, report_name, user_id, category_1_id=None, category_2_id=None, global_category_id=None, comment=None, public=False, report_side=False):
+    def create(cls, profile_id, report_name, user_id, category_1_id=None, category_2_id=None, global_category_id=None, comment=None, public=False, report_side=False):
         new_report = cls(
             profile_id=profile_id,
-            report_subtype=report_subtype,
             category_1_id=category_1_id,
             category_2_id=category_2_id,
             global_category_id=global_category_id,
@@ -624,19 +623,6 @@ class Report(BaseModel):
         return reports
     
     
-    @classmethod
-    def get_report_type_id (cls, report_id):
-        """Возвращает тип отчета"""
-        report = cls.query.filter_by(id=report_id).first()
-        return report.report_to_subtype.subtype_to_type.id
-    
-    
-    @classmethod
-    def get_report_type_name (cls, report_id):
-        """Возвращает текстовое представление типа отчета"""
-        report = cls.query.filter_by(id=report_id).first()
-        return report.report_to_subtype.subtype_to_type.type_text
-
     
     @classmethod
     def find_by_category_1(cls, category_1_id, profile_id):
@@ -674,12 +660,11 @@ class Report(BaseModel):
         report_data = {
             "id": report.id,
             "report_name": report.report_name,
-            "report_type": report.report_to_subtype.subtype_to_type.type_text,
-            "report_subtype": report.report_to_subtype.subtype_text,
             "category_1_id": report_category_1.id if report.category_1_id else None,
             "category_1_name": report_category_1.name if report.category_1_id else None,
             "category_2_id": report_category_2.id if report.category_2_id else None,
             "category_2_name": report_category_2.name if report.category_2_id else None,
+            "global_category_id": report.global_category_id,
             "profile_id": report.profile_id,
             "comment": report.comment,
             "report_side": report.report_side,
@@ -967,7 +952,7 @@ class Paragraph(BaseModel):
 class SentenceBase(BaseModel):
     __abstract__ = True  
     
-    report_type_id = db.Column(db.BigInteger, nullable=True)  
+    report_global_modality_id = db.Column(db.BigInteger, nullable=True)
     user_id = db.Column(db.BigInteger, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
     sentence = db.Column(db.String(600), nullable=False)
     tags = db.Column(db.String(100), nullable=True)
@@ -1137,7 +1122,7 @@ class SentenceBase(BaseModel):
         new_sentence_data = {
             "sentence_text": new_text if new_text is not None else sentence.sentence,
             "sentence_type": sentence_type,
-            "report_type_id": sentence.report_type_id
+            "report_global_modality_id": sentence.report_global_modality_id
             }
         similar_sentence = None
         if use_dublicate:
@@ -1168,7 +1153,7 @@ class SentenceBase(BaseModel):
     @classmethod
     def create(cls, 
                user_id, 
-               report_type_id, 
+               report_global_modality_id,
                sentence, 
                related_id, 
                sentence_index=None, 
@@ -1184,7 +1169,7 @@ class SentenceBase(BaseModel):
 
         Args:
             user_id (int): ID пользователя.
-            report_type_id (int): ID типа отчета.
+            report_global_modality_id (int): ID глобальной модальности отчета.
             sentence (str): Текст предложения.
             related_id (int): ID родительской сущности (параграфа для head/tail, head-предложения для body).
             sentence_index (int, optional): Индекс предложения (только для head).
@@ -1251,7 +1236,7 @@ class SentenceBase(BaseModel):
             similar_sentence = find_similar_exist_sentence(
                 sentence_text=sentence, 
                 sentence_type=sentence_type, 
-                report_type_id=report_type_id
+                report_global_modality_id=report_global_modality_id
             )
             if similar_sentence:
                 logger.info(f"(метод create класса SentenceBase) 🧩🧩🧩 Найдено похожее предложение с ID {similar_sentence.id} в базе данных. Создание нового предложения не требуется.")
@@ -1272,7 +1257,7 @@ class SentenceBase(BaseModel):
             "sentence": sentence.strip(),
             "tags": tags,
             "comment": comment,
-            "report_type_id": report_type_id,
+            "report_global_modality_id": report_global_modality_id,
             "user_id": user_id
         }
         

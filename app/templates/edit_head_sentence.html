@@ -15,7 +15,7 @@
     <button class="btn " id="backToReportButton" type="button">Вернуться к редактированию протокола</button>
 </div>
 
-<div class="container edit-sentence" id="editSentenceContainer" data-sentence-id="{{ head_sentence.id }}" data-paragraph-id="{{ paragraph_id }}" data-report-id="{{ report_id }}" data-report-type="{{report_type}}">
+<div class="container edit-sentence" id="editSentenceContainer" data-sentence-id="{{ head_sentence.id }}" data-paragraph-id="{{ paragraph_id }}">
     <div class="flex_column edit-sentence__sentence-data-block">
         
 
@@ -73,7 +73,7 @@
                    
                     <!-- Кнопки управления из макроса -->
                 <div class="control-buttons__wrapper">
-                    {{ control_buttons(sentence.id, 'sentence', head_sentence.id, sentence.sentence, report_type, sentence_type="body", group_id=sentence.group_id) }}
+                    {{ control_buttons(sentence.id, 'sentence', head_sentence.id, sentence.sentence, report_info.global_category_id, sentence_type="body", group_id=sentence.group_id) }}
                     <!-- Блок информационных значков из макроса -->
                     {{ info_icons(sentence.is_linked) }}
                 </div>
@@ -101,6 +101,7 @@
 
 {% block scripts %}
 <script>
+    const reportInfo = {{ report_info | tojson | safe }};
     const sentenceData = {{ head_sentence | tojson | safe }};
 </script>
 

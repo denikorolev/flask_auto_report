@@ -19,18 +19,23 @@ new_report_creation_bp = Blueprint('new_report_creation', __name__)
 
 # Функции
 
-def create_report_from_existing(report_name, report_subtype, comment, report_side, selected_reports):
+def create_report_from_existing(report_name, category_2_id, comment, report_side, selected_reports):
     """
     Создает новый отчет на основе одного или нескольких существующих.
     Возвращает созданный объект отчета или выбрасывает исключение при ошибке.
     """
+    cat_1_id, global_cat_id = get_parent_categories(category_2_id)
+    if not cat_1_id or not global_cat_id:
+        raise ValueError("Неверная категория протокола")
     
     user_id = current_user.id
     profile_id = session.get("profile_id")
     
     new_report = Report.create(
         profile_id=profile_id,
-        report_subtype=report_subtype,
+        category_1_id=cat_1_id,
+        category_2_id=category_2_id,
+        global_category_id=global_cat_id,
         report_name=report_name,
         user_id=user_id,
         comment=comment,
@@ -92,19 +97,38 @@ def create_report_from_existing(report_name, report_subtype, comment, report_sid
     return new_report
 
 
-
+# Функция принимает id категории второго уровня и возвращает id категории первого уровня и глобальной категории
+def get_parent_categories(category_2_id: int):
+    """
+    Получает категорию 2 уровня (область исследования), возвращает 
+    ее родительскую категорию и глобальную категорию для модальности.
+    Args:
+        category_2_id (int): ID категории второго уровня.
+    Returns:
+        tuple: (category_1_id, global_category_id)
+    """
+    
+    category_2 = ReportCategory.get_by_id(category_2_id)
+    if not category_2:
+        logger.warning(f"[get_parent_categories] ❌ Категория второго уровня с ID {category_2_id} не найдена")
+        return None, None
+    category_1 = ReportCategory.get_by_id(category_2.parent_id) if category_2.parent_id else None
+    if not category_1:
+        logger.warning(f"[get_parent_categories] ❌ Родительская категория для категории второго уровня с ID {category_2_id} не найдена")
+        return None, None
+    global_category = ReportCategory.get_by_id(category_1.global_id) if category_1.global_id else None
+    if not global_category:
+        logger.warning(f"[get_parent_categories] ⚠️ Глобальная категория для категории первого уровня с ID {category_1.id} не найдена")
+        return category_1.id, None
+    return category_1.id, global_category.id
 # Routes
 
 # Загрузка основной страницы создания отчета
-@new_report_creation_bp.route('/create_report', methods=['GET', 'POST'])
+@new_report_creation_bp.route('/create_report', methods=['GET'])
 @auth_required()
 def create_report():
-    profile_id = session.get("profile_id")
-    categories = get_categories_setup_from_appconfig(profile_id)
-    
     return render_template("create_report.html",
                            title="Создание нового протокола",
-                           categories=categories
                            )
     
     
@@ -115,12 +139,14 @@ def get_existing_reports():
     logger.info("[get_existing_reports] 🚀 Начат запрос существующих протоколов пользователя")
     try:
         category_1_id = request.args.get("modality_id", type=int)
+        global_category_id = request.args.get("global_modality_id", type=int)
+         # Получаем profile_id из сессии
         profile_id = session.get("profile_id")
         # базовый запрос
         query = Report.query.filter_by(user_id=current_user.id, profile_id=profile_id)
         # узкий фильтр только по категории первого уровня (если передана)
         if category_1_id:
-            query = query.filter(Report.category_1_id == category_1_id)
+            query = query.filter(Report.global_category_id == global_category_id)
         user_reports = query.all()
 
         if not user_reports:
@@ -145,7 +171,8 @@ def get_shared_reports():
     logger.info("[get_shared_reports] 🚀 Начат запрос расшаренных протоколов")
 
     try:
-        modality_name = request.args.get("modality_name", type=str)
+        global_category_id = request.args.get("global_modality_id", type=int)
+        category_name = request.args.get("modality_name", type=str)
         shared_records = ReportShare.query.filter_by(shared_with_user_id=current_user.id).all()
 
         if not shared_records:
@@ -153,19 +180,19 @@ def get_shared_reports():
             return jsonify({"status": "warning", "message": "Нет протоколов, которыми кто-либо поделился с данным пользователем.", "reports": []})
 
         shared_reports = []
-        for record in shared_records:
-            report = record.report
+        for rec in shared_records:
+            report = rec.report
             if not report:
                 continue  # на случай, если отчет удалён
             # Фильтруем по типу, если указан
-            if modality_name and report.category_1.name != modality_name:
+            if global_category_id and report.global_category_id != global_category_id:
                 continue
 
             shared_reports.append({
                 "id": report.id,
                 "report_name": report.report_name,
-                "modality": report.category_1.name if report.category_1 else "Неизвестно",
-                "shared_by_email": record.shared_by.email
+                "modality": category_name,
+                "shared_by": rec.shared_by.username if rec.shared_by else "Неизвестно",
             })
         if not shared_reports:
             logger.info("[get_shared_reports] ⚠️ Нет расшаренных протоколов для данной модальности.")
@@ -188,9 +215,10 @@ def get_public_reports():
     logger.info("(Маршрут: get_public_reports) 🚀 Запрос общедоступных протоколов")
     try:
         modality_name = request.args.get("modality_name", type=str)
+        global_modality_id = request.args.get("global_modality_id", type=int)
         query = Report.query.filter(Report.public == True)
-        if modality_name:
-            query = query.filter(Report.category_1_name.has(name=modality_name))
+        if global_modality_id:
+            query = query.filter(Report.global_category_id == global_modality_id)
         public_reports = query.all()
         
         if not public_reports:
@@ -204,7 +232,7 @@ def get_public_reports():
             public_reports_data.append({
                 "id": report.id,
                 "report_name": report.report_name,
-                "modality": report.category_1_name if report.category_1_name else "Неизвестно",
+                "modality": modality_name,
             })
 
         logger.info(f"(Маршрут: get_public_reports) ✅ Найдено {len(public_reports)} общедоступных протоколов")
@@ -225,6 +253,8 @@ def get_public_reports():
 @new_report_creation_bp.route('/create_manual_report', methods=['POST'])
 @auth_required()
 def create_manual_report():
+    logger.info("[create_manual_report] 🚀 Начато создание протокола вручную")
+    logger.info("[create_manual_report]------------------------")
     
     try:
         data = request.get_json()
@@ -232,16 +262,25 @@ def create_manual_report():
             return jsonify({"status": "error", "message": "Не получены данные для создания протокола"}), 400
         
         report_name = data.get('report_name')
-        report_subtype = data.get('report_subtype')
+        category_2_id = data.get('report_area')
+        if not report_name:
+            logger.warning("[create_manual_report] ❌ Необходимо указать название протокола")
+            return jsonify({"status": "error", "message": "Необходимо указать название протокола"}), 400
         comment = data.get('comment', "")
         report_side = data.get('report_side', False)
-        
+        cat_1_id, global_cat_id = get_parent_categories(category_2_id)
+        if not cat_1_id or not global_cat_id:
+            logger.warning("[create_manual_report] ❌ Неверная категория протокола")
+            return jsonify({"status": "error", "message": "Неверная категория протокола"}), 400
+
         profile_id = session.get("profile_id")
         
         # Create new report
         new_report = Report.create(
             profile_id=profile_id,
-            report_subtype=report_subtype,
+            category_1_id=cat_1_id,
+            category_2_id=category_2_id,
+            global_category_id=global_cat_id,
             report_name=report_name,
             user_id=current_user.id,
             comment=comment,
@@ -263,15 +302,27 @@ def create_manual_report():
 @new_report_creation_bp.route('/create_report_from_file', methods=['POST'])
 @auth_required()
 def create_report_from_file():
+    logger.info("[create_report_from_file] 🚀 Начато создание протокола из файла")
+    logger.info("[create_report_from_file]------------------------")
     
     try:
         report_name = request.form.get('report_name')
-        report_subtype = int(request.form.get('report_subtype'))
+        category_2_id = int(request.form.get('report_area'))
+        if not report_name or not category_2_id:
+            logger.warning("[create_report_from_file] ❌ Необходимо указать название протокола и его область исследования")
+            return jsonify({"status": "error", 
+                            "message": "Необходимо указать название протокола и его область исследования"}), 400
         comment = request.form.get('comment', "")
         report_side = request.form.get('report_side') == 'true'
 
         profile_id = session.get("profile_id")
         user_id = current_user.id
+        
+        cat_1_id, global_cat_id = get_parent_categories(category_2_id)
+        if not cat_1_id or not global_cat_id:
+            logger.warning("[create_report_from_file] ❌ Неверная категория протокола")
+            return jsonify({"status": "error", 
+                            "message": "Неверная категория протокола"}), 400
         
 
         # Обрабатываем загруженный файл
@@ -299,7 +350,9 @@ def create_report_from_file():
                 # Создаем новый отчет
                 new_report = Report.create(
                         profile_id=profile_id,
-                        report_subtype=report_subtype,
+                        category_1_id=cat_1_id,
+                        category_2_id=category_2_id,
+                        global_category_id=global_cat_id,
                         report_name=report_name,
                         user_id=current_user.id,
                         comment=comment,
@@ -307,8 +360,6 @@ def create_report_from_file():
                         report_side=report_side
                     )
 
-                # Определяем тип протокола
-                report_type_id = Report.get_report_type_id(new_report.id)
                 # Добавляем абзацы и предложения в отчет
                 for idx, paragraph in enumerate(paragraphs_from_file, start=1):
 
@@ -326,7 +377,7 @@ def create_report_from_file():
                                 if weight == 1:
                                     new_head_sentence, _ = HeadSentence.create(
                                         user_id=user_id,
-                                        report_type_id=report_type_id,
+                                        report_global_modality_id=cat_1_id,
                                         sentence=split_sentence.strip(),
                                         related_id=new_paragraph.id,
                                         sentence_index=sentence_index
@@ -335,7 +386,7 @@ def create_report_from_file():
                                 else:
                                     BodySentence.create(
                                         user_id=user_id,
-                                        report_type_id=report_type_id,
+                                        report_global_modality_id=cat_1_id,
                                         sentence=split_sentence.strip(),
                                         related_id=new_head_sentence.id,
                                         sentence_index=sentence_index
@@ -343,7 +394,7 @@ def create_report_from_file():
                         else:
                             HeadSentence.create(
                                 user_id=user_id,
-                                report_type_id=report_type_id,
+                                report_global_modality_id=cat_1_id,
                                 sentence=sentence_data.strip(),
                                 related_id=new_paragraph.id,
                                 sentence_index=sentence_index
@@ -384,7 +435,7 @@ def create_report_from_existing_few():
         logger.debug(f"(Маршрут: создание протокола из существующих) Получены данные: {data}")
 
         report_name = data.get("report_name")
-        report_subtype = int(data.get("report_subtype"))
+        category_2_id = int(data.get("report_area"))
         comment = data.get("comment", "")
         report_side = data.get("report_side", False)
         selected_reports = ensure_list(data.get("selected_reports", []))
@@ -397,7 +448,7 @@ def create_report_from_existing_few():
 
         new_report = create_report_from_existing(
             report_name=report_name,
-            report_subtype=report_subtype,
+            category_2_id=category_2_id,
             comment=comment,
             report_side=report_side,
             selected_reports=selected_reports
@@ -417,7 +468,7 @@ def create_report_from_existing_few():
 
 
 
-# Создание нового протокола на основе публичного или расшаренного
+# Создание нового протокола на основе публичного 
 @new_report_creation_bp.route('/create_report_from_public', methods=['POST'])
 @auth_required()
 def create_report_from_public_route():
@@ -426,21 +477,29 @@ def create_report_from_public_route():
     try:
         data = request.get_json()
         report_name = data.get("report_name")
-        report_subtype = int(data.get("report_subtype"))
+        category_2_id = int(data.get("report_area"))
+        if not report_name or not category_2_id:
+            logger.warning("(Маршрут: создание протокола из публичного) ❌ Необходимо указать название протокола и его область исследования")
+            return jsonify({"status": "error", "message": "Необходимо указать название протокола и его область исследования"}), 400
         comment = data.get("comment", "")
         report_side = data.get("report_side", False)
         public_report_id = int(data.get("selected_report_id"))
         profile_id = session.get("profile_id")
+        cat_1_id, global_cat_id = get_parent_categories(category_2_id)
+        if not cat_1_id or not global_cat_id:
+            logger.warning("(Маршрут: создание протокола из публичного) ❌ Неверная категория протокола")
+            return jsonify({"status": "error", "message": "Неверная категория протокола"}), 400
 
         public_report = Report.get_by_id(public_report_id)
         if not public_report or not public_report.public:
             logger.error("(Маршрут: создание протокола из публичного) ❌ Выбранный протокол не является общедоступным")
             return jsonify({"status": "error", "message": "Выбранный протокол не является общедоступным"}), 400
 
-        report_type_id = ReportSubtype.get_by_id(report_subtype).subtype_to_type.id
         new_report = Report.create(
             profile_id=profile_id,
-            report_subtype=report_subtype,
+            category_1_id=cat_1_id,
+            category_2_id=category_2_id,
+            global_category_id=global_cat_id,
             report_name=report_name,
             user_id=current_user.id,
             comment=comment,
@@ -468,7 +527,7 @@ def create_report_from_public_route():
             for s in sentences:
                 HeadSentence.create(
                     user_id=current_user.id,
-                    report_type_id=report_type_id,
+                    report_global_modality_id=global_cat_id,
                     sentence=s["sentence"],
                     related_id=new_paragraph.id,
                     sentence_index=s["sentence_index"],
@@ -483,7 +542,7 @@ def create_report_from_public_route():
         return jsonify({"status": "error", "message": "Не удалось создать протокол"}), 500
 
    
-        
+# Создание нового протокола на основе расшаренного
 @new_report_creation_bp.route('/create_report_from_shared', methods=['POST'])
 @auth_required()
 def create_report_from_shared_route():
@@ -492,11 +551,16 @@ def create_report_from_shared_route():
     try:
         data = request.get_json()
         report_name = data.get("report_name")
-        report_subtype = int(data.get("report_subtype"))
+        category_2_id = int(data.get("report_area"))
+        if not report_name or not category_2_id:
+            logger.warning("(Маршрут: создание протокола из shared) ❌ Необходимо указать название протокола и его область исследования")
+            return jsonify({"status": "error", "message": "Необходимо указать название протокола и его область исследования"}), 400
         comment = data.get("comment", "")
         report_side = data.get("report_side", False)
         shared_report_id = int(data.get("selected_report_id"))
         profile_id = session.get("profile_id")
+        
+        cat_1_id, global_cat_id = get_parent_categories(category_2_id)
         
         # Ставлю ограничительь глубины копировния предложений сюда, возможно потом сделаю возможность его менять (например, в настройках)
         deep_limit = 10
@@ -506,10 +570,12 @@ def create_report_from_shared_route():
             return jsonify({"status": "error", "message": "Выбранный расшаренный протокол не найден"}), 400
 
         shared_report = shared_record.report
-        report_type_id = ReportSubtype.get_by_id(report_subtype).subtype_to_type.id
+        
         new_report = Report.create(
             profile_id=profile_id,
-            report_subtype=report_subtype,
+            category_1_id=cat_1_id,
+            category_2_id=category_2_id,
+            global_category_id=global_cat_id,
             report_name=report_name,
             user_id=current_user.id,
             comment=comment,
@@ -537,7 +603,7 @@ def create_report_from_shared_route():
             for hs in head_sentences:
                 new_hs, _ = HeadSentence.create(
                     user_id=current_user.id,
-                    report_type_id=report_type_id,
+                    report_global_modality_id=global_cat_id,
                     sentence=hs["sentence"],
                     related_id=new_paragraph.id,
                     sentence_index=hs["sentence_index"],
@@ -552,7 +618,7 @@ def create_report_from_shared_route():
                         logger.info(f"(!!!!!!!!!!!!!!!!!!!!!!) родительское предложение для данного имеет ID: {hs['id']}")
                         BodySentence.create(
                             user_id=current_user.id,
-                            report_type_id=report_type_id,
+                            report_global_modality_id=global_cat_id,
                             sentence=bs["sentence"],
                             related_id=new_hs.id,
                             sentence_weight=bs["sentence_weight"],
@@ -564,7 +630,7 @@ def create_report_from_shared_route():
                 for ts in tail_sentences[:deep_limit]:
                     TailSentence.create(
                         user_id=current_user.id,
-                        report_type_id=report_type_id,
+                        report_global_modality_id=global_cat_id,
                         sentence=ts["sentence"],
                         related_id=new_paragraph.id,
                         sentence_weight=ts["sentence_weight"],

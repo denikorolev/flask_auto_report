@@ -547,14 +547,14 @@ function addGroupDataToBuffer(button, sentenceType) {
     const objectType = button.closest(".control-buttons").getAttribute("data-object-type");
     const relatedId = button.closest(".control-buttons").getAttribute("data-related-id");
     const objectText = button.closest(".control-buttons").getAttribute("data-text");
-    const reportType = button.closest(".control-buttons").getAttribute("data-report-type");
 
     dataToBuffer = {
         object_id: objectId,
         object_type: objectType,
         related_id: relatedId,
         object_text: objectText,
-        report_type: reportType,
+        report_modality: reportData.global_category_id, 
+        report_modality_name: reportData.category_1_name,
     };
 
     addToBuffer(dataToBuffer);
@@ -584,14 +584,14 @@ function deleteSubsidiaries (button) {
 // Функция для вставки параграфа из буфера, буду использовать функцию создания нового параграфа, но с данными из буфера
 function insertFromBuffer(index) {
     const itemFromBuffer = getFromBuffer(index);
-    const reportType = reportData.category_1_id;
-    const bufferReportType = itemFromBuffer.report_type;
+    const globalReportModality = parseInt(reportData.global_category_id);
+    const bufferReportModality = parseInt(itemFromBuffer.report_modality);
 
     if (!itemFromBuffer) {
         alert("Элемент не найден в буфере");
         return;
     }
-    if (reportType !== bufferReportType) {
+    if (globalReportModality !== bufferReportModality) {
         alert("Нельзя вставить параграф принадлежащий другому типу протокола (например нельзя вставить параграф из протокола с типом КТ в протокол с типом МРТ).");
         return;
     }

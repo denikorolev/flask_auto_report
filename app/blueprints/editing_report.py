@@ -64,7 +64,7 @@ def edit_paragraph():
     logger.info("(Страница редактирования параграфа /edit_paragraph) 🚀 Начинаю получения данных для формирования страницы.")
     paragraph_id = int(request.args.get("paragraph_id"))
     report_id = int(request.args.get("report_id"))
-    report_type = Report.get_report_type_name(report_id)
+    report_info = Report.get_report_info(report_id)
    
     paragraph_data = Paragraph.get_paragraph_data(paragraph_id)
     logger.info(f"(Страница редактирования параграфа /edit_paragraph) ----------------------------------------------")
@@ -73,8 +73,7 @@ def edit_paragraph():
     return render_template('edit_paragraph.html',
                             title=f"Редактирование параграфа {paragraph_data['paragraph']}",
                             paragraph=paragraph_data,
-                            report_id=report_id,
-                            report_type=report_type,
+                            report_info=report_info
                             )
 
 
@@ -88,7 +87,7 @@ def edit_head_sentence():
     sentence_id = request.args.get("sentence_id")
     paragraph_id = request.args.get("paragraph_id")
     report_id = request.args.get("report_id")
-    report_type = Report.get_report_type_name(report_id)
+    report_info = Report.get_report_info(report_id)
     
     group_id = Paragraph.get_by_id(paragraph_id).head_sentence_group_id
     if not group_id:
@@ -103,8 +102,7 @@ def edit_head_sentence():
                            title=f"Редактирование главного предложения: {sentence_data['sentence']}",
                            head_sentence=sentence_data,
                            paragraph_id=paragraph_id,
-                           report_id=report_id,
-                           report_type=report_type,
+                           report_info=report_info
                            )
 
 
@@ -424,17 +422,17 @@ def add_new_sentence():
         logger.error(f"(Создание нового предложения) ❌ Неизвестный тип предложения")
         return jsonify({"status": "error", "message": "Неизвестный тип предложения"}), 400
     
-    report_type_id = Report.get_report_type_id(int(data.get("report_id")))
+    report_global_modality_id = Report.get_by_id(int(data.get("report_id"))).global_category_id
     related_id = data.get("related_id")
     sentence_index = data.get("sentence_index")
-    if not report_type_id or not related_id:
+    if not report_global_modality_id or not related_id:
         logger.error(f"(Создание нового предложения) ❌ Отсутствуют необходимые данные для создания предложения")
         return jsonify({"status": "error", "message": "Отсутствуют необходимые данные для создания предложения"}), 400
     
     sentence_id = data.get("sentence_id")
     sentence_data = {
             "user_id": current_user.id,
-            "report_type_id": report_type_id,
+            "report_global_modality_id": report_global_modality_id,
             "sentence": "Введите текст предложения",
             "related_id": related_id,
             "sentence_index": sentence_index,
@@ -800,7 +798,7 @@ def unlink_sentence():
     
     new_sentence_data = {
         "user_id": current_user.id,
-        "report_type_id": sentence.report_type_id,
+        "report_global_modality_id": sentence.report_global_modality_id,
         "sentence": sentence.sentence,
         "related_id": related_id,
         "sentence_index": sentence_index if sentence_type == "head" else None,

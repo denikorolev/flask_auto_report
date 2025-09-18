@@ -7,10 +7,18 @@ import { pollTaskStatus, updateProgressBar } from "/static/js/utils/utils_module
 // Массив для хранения последовательности выбора отчетов
 let selectedReports = [];
 let detachCurrentFilter = null; // Переменная для хранения функции фильтрации отчетов
-
+let CATEGORIES = []; // Глобальная переменная для хранения категорий
 
 document.addEventListener("DOMContentLoaded", function() {
-    
+
+    const userSettings = window.userSettings || {};
+    CATEGORIES = Array.isArray(userSettings.CATEGORIES_SETUP) ? userSettings.CATEGORIES_SETUP : [];
+    console.log("Categories from userSettings:", CATEGORIES);
+    if (!CATEGORIES.length) {
+        console.warn("No categories found in user settings.");
+        return;
+    }
+
     // Вешаем обработчик на изменение типа отчета
     document.getElementById("reportModality").addEventListener("change", handleReportModalityChange);
     // Триггерим для начальной настройки(имитируем нажатие от пользователя, чтобы запустить логику выбора)
@@ -42,8 +50,8 @@ function handleReportModalityChange() {
     reportAreas.innerHTML = ''; // Очищаем select
 
     // Получаем подтипы для выбранного типа
-    const selectedModality = Array.isArray(categories)
-        ? categories.find(t => Number(t.id) === Number(modality))
+    const selectedModality = CATEGORIES
+        ? CATEGORIES.find(t => Number(t.id) === Number(modality))
         : null;
     const currentAreas = (selectedModality && Array.isArray(selectedModality.children))
         ? selectedModality.children
@@ -261,9 +269,13 @@ function handleActionChange(selectedAction) {
 function getReportModalityInfo() {
     const select = document.getElementById("reportModality");
     const option = select.options[select.selectedIndex];
+    const modalityID = select.value;
+    const globalModalityID = CATEGORIES.find(cat => String(cat.id) === String(modalityID))?.global_id || null;
+    const modalityName = option.getAttribute("data-modality-name");
     return {
-        modalityID: select.value,
-        modalityName: option.getAttribute("data-modality-name"),
+        modalityID: modalityID,
+        globalModalityID: globalModalityID,
+        modalityName: modalityName,
         option,
         select,
     };
@@ -279,11 +291,17 @@ async function loadExistingReports() {
     // Получаем выбранный тип
 
     const { modalityID } = getReportModalityInfo();
+    const { globalModalityID } = getReportModalityInfo(); // получаем тип отчета
+
+    if (!modalityID || !globalModalityID) {
+        list.innerHTML = `<li>Ошибка: Не выбран тип отчета.</li>`;
+        return;
+    }
 
     try {
         const response = await sendRequest({
             method: "GET",
-            url: `/new_report_creation/get_existing_reports?modality_id=${modalityID}`,
+            url: `/new_report_creation/get_existing_reports?modality_id=${modalityID}&global_modality_id=${globalModalityID}`,
         });
 
         if (response.status !== "success") {
@@ -327,10 +345,11 @@ async function loadSharedReports() {
     list.innerHTML = ""; // очистим
 
     const { modalityName } = getReportModalityInfo(); // получаем тип отчета
+    const { globalModalityID } = getReportModalityInfo(); // получаем тип отчета
 
     try {
         const response = await sendRequest({
-            url: `/new_report_creation/get_shared_reports?modality_name=${encodeURIComponent(modalityName)}`,
+            url: `/new_report_creation/get_shared_reports?global_modality_id=${encodeURIComponent(globalModalityID)}&modality_name=${encodeURIComponent(modalityName)}`,
             method: "GET"
         });
 
@@ -345,7 +364,7 @@ async function loadSharedReports() {
                 li.innerHTML = `
                     <label>
                         <input type="radio" name="shared_report_radio" value="${report.id}" />
-                        ${report.report_name} - ${report.modality}  (${report.shared_by_email})
+                        ${report.report_name} - ${report.modality}  (${report.shared_by})
                     </label>
                 `;
                 list.appendChild(li);
@@ -365,11 +384,12 @@ async function loadPublicReports() {
     list.innerHTML = ""; // сброс
 
     const { modalityName } = getReportModalityInfo(); // получаем тип отчета
+    const { globalModalityID } = getReportModalityInfo(); // получаем тип отчета
 
     try {
         const response = await sendRequest({
             method: "GET",
-            url: `/new_report_creation/get_public_reports?modality_name=${encodeURIComponent(modalityName)}`
+            url: `/new_report_creation/get_public_reports?modality_name=${encodeURIComponent(modalityName)}&global_modality_id=${encodeURIComponent(globalModalityID)}`,
         });
 
         if (response.status === "success" && !response.reports.length) {
@@ -602,18 +622,18 @@ function showAiGeneratorBlock() {
  */
 function createManualReport() {
     const reportName = document.getElementById("reportName")?.value?.trim();
-    const reportSubtype = document.getElementById("reportArea")?.value;
+    const reportArea = document.getElementById("reportArea")?.value;
     const comment = document.getElementById("reportCreationComment")?.value?.trim() || "";
     const reportSide = document.querySelector("input[name='report_side']:checked")?.value === "true";
 
-    if (!reportName || !reportSubtype) {
+    if (!reportName || !reportArea) {
         alert("Заполните все обязательные поля: название протокола и его подтип!");
         return;
     }
 
     const jsonData = {
         report_name: reportName,
-        report_subtype: reportSubtype,
+        report_area: reportArea,
         comment: comment,
         report_side: reportSide
     };
@@ -633,14 +653,14 @@ function createManualReport() {
 function createReportFromFile() {
     const reportForm = document.getElementById("reportCreationForm");
     const reportName = document.getElementById("reportName")?.value?.trim();
-    const reportSubtype = document.getElementById("reportArea")?.value;
+    const reportArea = document.getElementById("reportArea")?.value;
     const comment = document.getElementById("reportCreationComment")?.value?.trim() || "";
     const reportSide = document.querySelector("input[name='report_side']:checked")?.value === "true";
     const reportFile = document.getElementById("report_file")?.files[0];
 
     // Валидация обязательных полей
-    if (!reportName || !reportSubtype) {
-        alert("Заполните все обязательные поля: название протокола и его подтип!");
+    if (!reportName || !reportArea) {
+        alert("Заполните все обязательные поля: название протокола и его область исследования!");
         return;
     }
 
@@ -655,7 +675,7 @@ function createReportFromFile() {
 
     // Добавляем остальные поля вручную
     formData.append("report_name", reportName);
-    formData.append("report_subtype", reportSubtype);
+    formData.append("report_area", reportArea);
     formData.append("comment", comment);
     formData.append("report_side", reportSide); // булево значение преобразуется автоматически
     
@@ -671,10 +691,10 @@ function createReportFromFile() {
 
 
 
-// Создание протокола на основе нескольких существующих с валидацией
+// Создание протокола на основе нескольких существующих с валидацией (NEEDS TO BE TESTED)
 function createReportFromExistingFew() {
     const reportName = document.getElementById("reportName")?.value?.trim();
-    const reportSubtype = document.getElementById("reportArea")?.value;
+    const reportArea = document.getElementById("reportArea")?.value;
     const comment = document.getElementById("reportCreationComment")?.value?.trim() || "";
     const reportSide = document.querySelector("input[name='report_side']:checked")?.value === "true";
 
@@ -684,7 +704,7 @@ function createReportFromExistingFew() {
         return;
     }
 
-    if (!reportName || !reportSubtype) {
+    if (!reportName || !reportArea) {
         alert("Заполните все обязательные поля: название протокола и его подтип!");
         return;
     }
@@ -692,7 +712,7 @@ function createReportFromExistingFew() {
 
     const jsonData = {
         report_name: reportName,
-        report_subtype: reportSubtype,
+        report_area: reportArea,
         comment: comment,
         report_side: reportSide,
         selected_reports: selectedReports
@@ -708,9 +728,11 @@ function createReportFromExistingFew() {
     });
 }
 
+
+
 function createReportFromPublic() {
     const reportName = document.getElementById("reportName")?.value?.trim();
-    const reportSubtype = document.getElementById("reportArea")?.value;
+    const reportArea = document.getElementById("reportArea")?.value;
     const comment = document.getElementById("reportCreationComment")?.value?.trim() || "";
     const reportSide = document.querySelector("input[name='report_side']:checked")?.value === "true";
     const selectedReportId = document.querySelector("input[name='public_report_radio']:checked").value;
@@ -721,13 +743,13 @@ function createReportFromPublic() {
         return;
     }
 
-    if (!reportName || !reportSubtype) {
+    if (!reportName || !reportArea) {
         alert("Заполните все обязательные поля: название протокола и его подтип!");
         return;
     }
     const jsonData = {
         report_name: reportName,
-        report_subtype: reportSubtype,
+        report_area: reportArea,
         comment: comment,
         report_side: reportSide,
         selected_report_id: selectedReportId
@@ -745,7 +767,7 @@ function createReportFromPublic() {
 // Создание протокола на протоколов, которые были поделены с пользователем
 function createReportFromShared() {
     const reportName = document.getElementById("reportName")?.value?.trim();
-    const reportSubtype = document.getElementById("reportArea")?.value;
+    const reportArea = document.getElementById("reportArea")?.value;
     const comment = document.getElementById("reportCreationComment")?.value?.trim() || "";
     const reportSide = document.querySelector("input[name='report_side']:checked")?.value === "true";
     const selectedReport = document.querySelector("input[name='shared_report_radio']:checked");
@@ -756,13 +778,13 @@ function createReportFromShared() {
         return;
     }
 
-    if (!reportName || !reportSubtype) {
+    if (!reportName || !reportArea) {
         alert("Заполните все обязательные поля: название протокола и его подтип!");
         return;
     }
     const jsonData = {
         report_name: reportName,
-        report_subtype: reportSubtype,
+        report_area: reportArea,
         comment: comment,
         report_side: reportSide,
         selected_report_id: selectedReportId,

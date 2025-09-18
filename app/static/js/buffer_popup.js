@@ -48,7 +48,7 @@ function refreshBufferPopup() {
         li.setAttribute("data-buffer-index", index);
         li.innerHTML = `
             <div class="buffer-popup__content">
-                <span class="buffer-popup__text buffer-popup__text--report-type">${item.report_type}</span>
+                <span class="buffer-popup__text buffer-popup__text--report-type">${item.report_modality_name}</span>
                 <span class="buffer-popup__text"><strong>${item.object_type === 'paragraph' ? 'Параграф' : 'Предложение'} (${item.object_type === 'sentence' ? item.sentence_type : item.object_id})</strong></span>
                 <span class="buffer-popup__text">${item.object_text || 'Нет текста'}</span>
             </div>

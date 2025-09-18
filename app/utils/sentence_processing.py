@@ -491,7 +491,7 @@ def compare_sentences_by_paragraph(new_sentences, report_id, profile_id=None):
 
 # Функция для поиска существующих аналогичных предложений того же типа в базе данных 
 # использую в models.py. Ищет 100% совпадения
-def find_similar_exist_sentence(sentence_text, sentence_type, report_type_id):
+def find_similar_exist_sentence(sentence_text, sentence_type, report_global_modality_id):
     """
     Ищет похожие предложения в базе данных.
     """
@@ -501,11 +501,11 @@ def find_similar_exist_sentence(sentence_text, sentence_type, report_type_id):
     
     # Получаем все предложения того же типа и с такими же базовыми параметрами из базы данных
     if sentence_type == "head":
-        similar_type_sentences = HeadSentence.query.filter_by(tags=tags, report_type_id=report_type_id, user_id = user_id).all()
+        similar_type_sentences = HeadSentence.query.filter_by(tags=tags, report_global_modality_id=report_global_modality_id, user_id = user_id).all()
     elif sentence_type == "body":
-        similar_type_sentences = BodySentence.query.filter_by(tags=tags, report_type_id=report_type_id, user_id = user_id).all()
+        similar_type_sentences = BodySentence.query.filter_by(tags=tags, report_global_modality_id=report_global_modality_id, user_id = user_id).all()
     elif sentence_type == "tail":
-        similar_type_sentences = TailSentence.query.filter_by(tags=tags, report_type_id=report_type_id, user_id = user_id).all()
+        similar_type_sentences = TailSentence.query.filter_by(tags=tags, report_global_modality_id=report_global_modality_id, user_id = user_id).all()
     else:
         raise ValueError(f"Invalid sentence type: {sentence_type}")
 

@@ -110,7 +110,7 @@ async function addBodySentence(itemFromBuffer) {
 
     const bodySentenceList = document.getElementById("editBodySentenceList");
     const headSentenceId = bodySentenceList.getAttribute("data-head-sentence-id");
-    const reportId = document.getElementById("editSentenceContainer").getAttribute("data-report-id");
+    const reportId = reportInfo.id;
     const uniqueSentence = !document.getElementById("useDuplicate").checked;
 
     data = {
@@ -522,7 +522,6 @@ function addSentenceDataToBuffer(button) {
     const objectText = button.closest(".control-buttons").getAttribute("data-text");
     const sentenceType = button.closest(".control-buttons").getAttribute("data-sentence-type");
     const sentenceGroupId = button.closest(".control-buttons").getAttribute("data-group-id");
-    const reportType = button.closest(".control-buttons").getAttribute("data-report-type");
 
     dataToBuffer = {
         object_id: objectId,
@@ -531,7 +530,8 @@ function addSentenceDataToBuffer(button) {
         object_text: objectText,
         sentence_type: sentenceType,
         group_id: sentenceGroupId,
-        report_type: reportType
+        report_modality: reportInfo.global_category_id,
+        report_modality_name: reportInfo.category_1_name
     };
 
     addToBuffer(dataToBuffer);
@@ -542,8 +542,8 @@ function addSentenceDataToBuffer(button) {
 // Функция для вставки предложения из буфера, буду использовать функцию создания нового предложения, но с данными из буфера
 function insertFromBuffer(index) {
     const itemFromBuffer = getFromBuffer(index);
-    const reportType = document.getElementById("editSentenceContainer").getAttribute("data-report-type");
-    const bufferReportType = itemFromBuffer.report_type;
+    const reportType = parseInt(reportInfo.global_category_id);
+    const bufferReportType = parseInt(itemFromBuffer.report_modality);
 
     if (!itemFromBuffer) {
         console.error("Элемент из буфера не найден.");
@@ -699,10 +699,10 @@ function saveBodySentencesOrder(evt) {
 function insertAllFromBuffer() {
     console.log("Вставка всех элементов из буфера в конец списка предложений");
     const itemsFromBuffer = getBuffer();
-    const reportType = document.getElementById("editSentenceContainer").getAttribute("data-report-type");
-    console.log("Тип протокола:", reportType);
+    const globalReportModality = parseInt(reportInfo.global_category_id);
+    console.log("Тип протокола:", globalReportModality);
     acceptableItems = itemsFromBuffer.filter(item => {
-        return item.object_type === "sentence" && item.sentence_type === "body" && item.report_type === reportType;
+        return item.object_type === "sentence" && item.sentence_type === "body" && parseInt(item.report_modality) === globalReportModality;
     });
     console.log("Подходящие элементы из буфера:", acceptableItems);
 

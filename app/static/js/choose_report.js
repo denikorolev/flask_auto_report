@@ -2,6 +2,8 @@
 
 document.addEventListener("DOMContentLoaded", function () {
 
+    const userSettings = window.userSettings || {};
+
     // Инициализируем логику типа и подтипа
     initializeCategoryLogic();
 
@@ -19,7 +21,6 @@ document.addEventListener("DOMContentLoaded", function () {
   */
 function initializeCategoryLogic() {
     console.log("Initializing category logic...");
-    const userSettings = window.userSettings || {};
     const categories = Array.isArray(userSettings.CATEGORIES_SETUP) ? userSettings.CATEGORIES_SETUP : [];
     if (!categories.length) {
         console.warn("No categories found in user settings.");

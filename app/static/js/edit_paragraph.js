@@ -440,7 +440,7 @@ function editSentence(button) {
     
     const sentenceId = button.closest(".control-buttons").getAttribute("data-object-id");
     const paragraphId = button.closest(".control-buttons").getAttribute("data-related-id");
-    const reportId = document.getElementById("editParagraphContainer").getAttribute("data-report-id");
+    const reportId = reportInfo.id;
 
     window.location.href = `/editing_report/edit_head_sentence?sentence_id=${sentenceId}&paragraph_id=${paragraphId}&report_id=${reportId}`;
     
@@ -457,7 +457,7 @@ async function addHeadSentence(itemFromBuffer) {
     
     const headSentenceList = document.getElementById("editHeadSentenceList");
     const paragraphId = parseInt(headSentenceList.getAttribute("data-paragraph-id"));
-    const reportId = document.getElementById("editParagraphContainer").getAttribute("data-report-id");
+    const reportId = reportInfo.id;
     const sentences = paragraphData.head_sentences;
     const sentenceIndexes = sentences.map(sentence => sentence.sentence_index);
     const maxIndex = findMaxIndex(sentenceIndexes);
@@ -512,7 +512,7 @@ async function addTailSentence(itemFromBuffer) {
 
     const tailSentenceList = document.getElementById("editTailSentenceList");
     const paragraphId = tailSentenceList.getAttribute("data-paragraph-id");
-    const reportId = document.getElementById("editParagraphContainer").getAttribute("data-report-id");
+    const reportId = reportInfo.id;
     const uniqueSentence = !document.getElementById("useDuplicate").checked;
 
     if (itemFromBuffer) {
@@ -756,7 +756,6 @@ function addSentenceToBuffer(button) {
     const objectText = button.closest(".control-buttons").getAttribute("data-text");
     const sentenceType = button.closest(".control-buttons").getAttribute("data-sentence-type");
     const sentenceGroupId = button.closest(".control-buttons").getAttribute("data-group-id");
-    const reportType = button.closest(".control-buttons").getAttribute("data-report-type");
 
     dataToBuffer = {
         object_id: objectId,
@@ -765,7 +764,10 @@ function addSentenceToBuffer(button) {
         object_text: objectText,
         sentence_type: sentenceType,
         group_id: sentenceGroupId,
-        report_type: reportType
+        report_modality: reportInfo.global_category_id, 
+        report_modality_name: reportInfo.category_1_name
+
+
     };
 
     addToBuffer(dataToBuffer);
@@ -811,15 +813,15 @@ function deleteSubsidiaries (button) {
 // Функция для вставки предложения из буфера, буду использовать функцию создания нового предложения, но с данными из буфера
 function insertFromBuffer(index) {
     const itemFromBuffer = getFromBuffer(index);
-    const bufferReportType = itemFromBuffer.report_type;
-    const reportType = document.getElementById("editParagraphContainer").getAttribute("data-report-type");
+    const bufferReportModality = parseInt(itemFromBuffer.report_modality);
+    const globalReportModality = parseInt(reportInfo.global_category_id);
 
     if (!itemFromBuffer) {
         console.error("Элемент из буфера не найден.");
         return;
     }
 
-    if (bufferReportType !== reportType) {
+    if (bufferReportModality !== globalReportModality) {
         alert("Нельзя вставить предложение принадлежащее другому типу протокола (например нельзя вставить предложение из протокола с типом КТ в протокол с типом МРТ).");
         return;
     }

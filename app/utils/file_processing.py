@@ -9,11 +9,8 @@ import os
 from unidecode import unidecode
 from datetime import datetime
 import tempfile
-from docx.shared import Pt, Inches
-from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
-from docx.enum.table import WD_ALIGN_VERTICAL
 from config import get_config, Config
-from app.models.models import db, FileMetadata, Report, HeadSentenceGroup, TailSentenceGroup, BodySentenceGroup, KeyWord, ReportSubtype
+from app.models.models import AppConfig, db, FileMetadata, Report, HeadSentenceGroup, TailSentenceGroup, BodySentenceGroup, KeyWord
 from app.utils.sentence_processing import clean_text_with_keywords, _add_if_unique
 from openai import OpenAI
 from app.utils.logger import logger
@@ -305,22 +302,47 @@ def generate_impression_json(modality, profile_id, user_id, user_email, except_w
     similarity_threshold = 95
     unique_sentences = set()
     cleaned_sentences = []
-    
-    report_type_id = {"CT": "15", "MRI": "14", "XRAY": "18"}.get(modality.upper(), None)
-    
-    if not report_type_id:
+
+    report_global_modality_id = {"CT": "1", "MRI": "2", "XRAY": "7"}.get(modality.upper(), None)
+
+    if not report_global_modality_id:
         logger.error(f"(функция generate_impression_json) ❌ Неизвестная модальность: {modality}. Допустимые значения: CT, MRI, XRAY.")
         raise Exception(f"Unknown modality: {modality}")
-        
-    subtypes = ReportSubtype.find_by_report_type(report_type_id)
-    if not subtypes:
-        logger.error(f"(функция generate_impression_json) ❌ Не найдены подтипы для типа отчёта {report_type_id}.")
-        raise Exception(f"No subtypes found for report type {report_type_id}.")
-    subtype_ids = [subtype.id for subtype in subtypes]
+    # Достаём CATEGORIES_SETUP из AppConfig
+    categories_setup = []
+    try:
+        categories_json = AppConfig.get_setting(profile_id, "CATEGORIES_SETUP")
+        if categories_json:
+            import json as _json
+            categories_setup = _json.loads(categories_json)
+            logger.info("(generate_impression_json) ✅ CATEGORIES_SETUP загружен из AppConfig")
+        else:
+            logger.warning("(generate_impression_json) ⚠️ CATEGORIES_SETUP отсутствует в AppConfig")
+    except Exception as e:
+        logger.error(f"(generate_impression_json) ❌ Ошибка при загрузке/декодировании CATEGORIES_SETUP: {e}")
+        categories_setup = []
+    
+    # Собираем id всех категорий уровня-2 для всех модальностей с нужной глобальной модальностью (уровень-1)
+    area_ids = []
+    for lvl1 in categories_setup or []:
+        try:
+            if int(lvl1.get("global_id")) == int(report_global_modality_id):
+                for ch in (lvl1.get("children") or []):
+                    cid = ch.get("id")
+                    if cid is not None:
+                        area_ids.append(int(cid))
+        except Exception:
+            continue
+    area_ids = list(dict.fromkeys(area_ids))
+    if not area_ids:
+        logger.error(f"(функция generate_impression_json) ❌ Не найдены категории уровня-2 для модальности {modality} (глобальная модальность {report_global_modality_id}).")
+        raise Exception(f"No level-2 categories found for modality {modality} with global ID {report_global_modality_id}.")
+    
+    logger.info(f"(generate_impression_json) area_ids for {modality} -> {area_ids}")
         
     reports = Report.query.filter(
         Report.profile_id == profile_id,
-        Report.report_subtype.in_(subtype_ids)
+        Report.category_2_id.in_(area_ids)
     ).all()
     
     if not reports:
@@ -358,7 +380,7 @@ def generate_impression_json(modality, profile_id, user_id, user_email, except_w
     data = {
         "profile_id": profile_id,
         "modality": modality,
-        "impressions": sorted(list(unique_sentences))
+        "impressions": sorted(unique_sentences)
     }
 
     # Сохраняем файл
