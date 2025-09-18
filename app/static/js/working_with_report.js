@@ -873,17 +873,17 @@ async function sendModifiedSentencesToServer() {
 // Функция для генерации запроса на сервер для получения заключения
 function generateImpressionRequest(text) {
     // Формируем данные для отправки
-    const reportType = reportData.report_type;
-    let modality = reportType
+    const reportModality = parseInt(reportData.global_category_id);
+    let modality = reportModality;
 
-    if (modality === "МРТ") {
+    if (modality === 2) {
         modality = "MRI";
-    } else if (modality === "КТ") {
+    } else if (modality === 1) {
         modality = "CT";
-    } else if (modality === "Рентгенография" || modality === "Рентгеноскопия") {
+    } else if (modality === 7) {
         modality = "XRAY";
     } else {
-        alert("Неизвестный тип исследования: " + reportType);
+        alert("Неизвестный тип исследования: " + reportModality);
         return;
     }
 
@@ -897,7 +897,6 @@ function generateImpressionRequest(text) {
     return sendRequest({   
         url: "/openai_api/generate_impression",
         data: jsonData,
-        csrfToken: csrfToken
     }).then(data => {
         if (data.status === "success") {
             return data.data; // Возвращаем успешный ответ от сервера
@@ -951,7 +950,6 @@ function finishWorkAndSaveSnapShot() {
     
     return sendRequest({
         url: "/working_with_reports/save_report_snapshot",
-        method: "POST",
         data: {
             text: textToSave,
             report_id: reportData.id

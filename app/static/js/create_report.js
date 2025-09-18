@@ -513,7 +513,7 @@ function showAiGeneratorBlock() {
         const rawText = textarea.value.trim();
         const templateName = document.getElementById("reportName").value.trim();
         const templateModality = document.getElementById("reportModality").value;
-        const templateSubtype = document.getElementById("reportArea").value;
+        const templateArea = document.getElementById("reportArea").value;
 
 
         if (!rawText) {
@@ -529,7 +529,7 @@ function showAiGeneratorBlock() {
                 origin_text: rawText,
                 template_name: templateName,
                 template_type: templateModality,
-                template_subtype: templateSubtype
+                template_area: templateArea
             }
         });
         const {status, message, task_id} = startResponse || {};

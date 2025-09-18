@@ -99,8 +99,6 @@ class Config:
     CEO_EMAIL = "korolev.denis@radiologary.com"
 
 
-    REPORT_TYPES_DEFAULT_RU = ["МРТ", "КТ", "Рентгенография", "ПЭТ-КТ", "Сцинтиграфия", "УЗИ"]
-    
     # OpenAI API configuration
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
     OPENAI_MODEL = os.getenv("OPENAI_MODEL")

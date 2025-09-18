@@ -3,6 +3,7 @@
 
 {% block container %}
 <input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
+{% set categories = user_settings.CATEGORIES_SETUP or [] %}
 
 <h2>История снапшотов</h2>
 
@@ -10,11 +11,11 @@
     <label for="date">Дата:</label>
     <input type="date" name="date" id="snapshotDate">
 
-    <label for="report_type">Тип отчета:</label>
-    <select name="report_type" id="snapshotReportType">
+    <label for="snapshotReportModality">Модальность отчета:</label>
+    <select name="report_modality" id="snapshotReportModality">
         <option value="">-- выбери тип --</option>
-        {% for rt in report_types %}
-            <option value="{{ rt.id }}">{{ rt.type_text }}</option>
+        {% for cat in categories %}
+            <option value="{{ cat.id }}">{{ cat.name }}</option>
         {% endfor %}
     </select>
 
@@ -29,5 +30,6 @@
 {% endblock %}
 
 {% block scripts %} 
+    
     <script src="{{ url_for('static', filename='js/snapshots.js') }}"></script>
 {% endblock scripts %}

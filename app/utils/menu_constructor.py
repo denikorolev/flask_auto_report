@@ -18,7 +18,7 @@ def build_menu():
         {"name": "Ключевые слова", "url": url_for("key_words.key_words"), "min_rank": 3, "title": "Настройка ключевых слов"},
         {"name": "Админ", "url": url_for("admin.admin"), "min_rank": 4, "title": "Админка"},
         {"name": "PG", "url": url_for("support.playground"), "min_rank": 4, "title": "Песочница"},
-        {"name": "Архив", "url": url_for("working_with_reports.snapshots"), "min_rank": 3, "title": "Здесь можно посмотреть архивы протоколов сортированные по типу протокала и дате"},
+        {"name": "Архив", "url": url_for("snapshots.snapshots"), "min_rank": 3, "title": "Здесь можно посмотреть архивы протоколов сортированные по типу протокала и дате"},
     ]
 
 

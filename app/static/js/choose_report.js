@@ -8,7 +8,7 @@ document.addEventListener("DOMContentLoaded", function () {
     initializeCategoryLogic();
 
     // Обработчик нажатия на кнопку "Протоколы"
-     document.getElementById("select_report_type_subtype").addEventListener("click", function (event) {
+     document.getElementById("select_report_modality_area").addEventListener("click", function (event) {
         event.preventDefault();
         getReportsForSelectedCategory();
     });

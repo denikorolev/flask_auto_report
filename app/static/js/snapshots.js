@@ -12,21 +12,19 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
 
-
-
 async function findButtonHandler() {
-    const Date = document.getElementById("snapshotDate").value;
-    const reportType = document.getElementById("snapshotReportType").value;
-    if (!Date || !reportType) {
+    const date = document.getElementById("snapshotDate").value;
+    const reportModality = document.getElementById("snapshotReportModality").value;
+    if (!date || !reportModality) {
         toastr.warning("Укажите дату и тип отчета для поиска");
         return;
     }
     try {
         const response = await sendRequest({
-            url: "/working_with_reports/snapshots_json",
+            url: "/snapshots/snapshots_json",
             data: {
-                date: Date,
-                report_type: reportType
+                date: date,
+                report_modality: reportModality
             },
         });
         document.getElementById("snapshotResults").innerHTML = response.data;

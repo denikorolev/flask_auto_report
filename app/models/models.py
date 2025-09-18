@@ -2132,7 +2132,7 @@ class ReportTextSnapshot(BaseModel):
     __tablename__ = "report_text_snapshots"
 
     report_id = db.Column(db.BigInteger, db.ForeignKey("reports.id", ondelete="SET NULL"), nullable=True)
-    report_type = db.Column(db.SmallInteger, nullable=False)
+    report_modality = db.Column(db.BigInteger, nullable=True)
     user_id = db.Column(db.BigInteger, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     text = db.Column(db.Text, nullable=False)  
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
@@ -2160,22 +2160,21 @@ class ReportTextSnapshot(BaseModel):
         try:
             from app.models.models import Report  # избегаем циклического импорта
             logger.info(f"(ReportTextSnapshot.create) 🚀 Начато создание снапшота текста отчета ID={report_id}")
-            report = Report.query.get(report_id)
+            report = Report.get_by_id(report_id)
             if not report:
                 logger.error(f"(ReportTextSnapshot.create) ❌ Report с id={report_id} не найден")
                 raise ValueError(f"Report с id={report_id} не найден")
 
-            report_type = report.report_to_subtype.subtype_to_type.id
 
             snapshot = cls(
                 report_id=report_id,
-                report_type=report_type,
+                report_modality=int(report.global_category_id),
                 user_id=user_id,
                 text=text
             )
             db.session.add(snapshot)
             db.session.commit()
-            logger.info(f"(ReportTextSnapshot.create) ✅ Создан снапшот текста отчета ID={report_id}")
+            logger.info(f"(ReportTextSnapshot.create) ✅ Создан снапшот текста отчета ID={report_id} global_category_id={report.global_category_id} snapshot_id={snapshot.id}")
             return snapshot
         except Exception as e:
             db.session.rollback()
@@ -2183,26 +2182,24 @@ class ReportTextSnapshot(BaseModel):
             raise ValueError(f"Ошибка при создании снапшота: {e}")
 
 
-
     @classmethod
-    def find_by_date_and_type(cls, user_id, date, report_type):
+    def find_by_date_and_modality(cls, user_id, date, report_modality):
         """
         Ищет снапшоты по пользователю, дате и типу протокола.
         Args:
             user_id (int): ID пользователя.
             date (datetime.date): Дата создания снапшота.
-            report_type (int): Тип протокола.
+            report_modality (int): Тип протокола.
         Returns:
             list[ReportTextSnapshot]: Список найденных снапшотов.
         """
-        
 
         return (
             cls.query
             .filter(
                 cls.user_id == user_id,
                 cast(cls.created_at, Date) == date,
-                cls.report_type == report_type
+                cls.report_modality == report_modality
             )
             .order_by(cls.created_at.desc())
             .all()

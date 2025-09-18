@@ -2,7 +2,7 @@
 
 from flask import Blueprint, render_template, request, current_app, jsonify, session
 from flask_security import current_user
-from app.models.models import db, User, Report, Paragraph, HeadSentence, BodySentence, TailSentence, HeadSentenceGroup, TailSentenceGroup, BodySentenceGroup, ReportShare, ReportSubtype
+from app.models.models import db, User, Report, Paragraph, HeadSentence, BodySentence, TailSentence, HeadSentenceGroup, TailSentenceGroup, BodySentenceGroup, ReportShare
 from app.utils.common import get_max_index, normalize_paragraph_indices
 from flask_security.decorators import auth_required
 from app.utils.decorators import require_role_rank

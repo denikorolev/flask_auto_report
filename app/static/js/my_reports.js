@@ -25,14 +25,14 @@ function filterReports() {
     const reports = document.querySelectorAll(".my-report-list__item");
 
     reports.forEach(report => {
-        const reportType = report.getAttribute("data-report-type");
+        const reportModality = report.getAttribute("data-report-modality");
 
-        const subtype = report.querySelector('input[name="report_subtype"]').value.toLowerCase();
+        const area = report.querySelector('input[name="report_area"]').value.toLowerCase();
         const name = report.querySelector('input[name="report_name"]').value.toLowerCase();
         const comment = report.querySelector('input[name="comment"]').value.toLowerCase();
 
-        const matchType = selectedType === "" || reportType === selectedType;
-        const matchText = subtype.includes(searchText) || name.includes(searchText) || comment.includes(searchText);
+        const matchType = selectedType === "" || reportModality === selectedType;
+        const matchText = area.includes(searchText) || name.includes(searchText) || comment.includes(searchText);
 
         report.style.display = (matchType && matchText) ? "flex" : "none";
     });

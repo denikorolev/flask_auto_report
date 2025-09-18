@@ -17,7 +17,7 @@
     <form class="flex" id="reportForm" method="POST">
         <div class="flex_column" id="reports-container">
             <label class="label" for="reportModality"> Модальность:</label>
-            <select class="report__select" id="reportModality" name="report_type" required>
+            <select class="report__select" id="reportModality" name="report_modality" required>
                 {% for modality in categories %}
                     <option value="{{ modality.id }}">{{ modality.name }}</option>
                 {% endfor %}
@@ -26,11 +26,11 @@
     
         <div class="flex_column" id="reports-container">
             <label class="label" for="reportArea">Область исследования:</label>
-            <select class="report__select" id="reportArea" name="report_subtype" required>
+            <select class="report__select" id="reportArea" required>
                     <!-- Подтипы будут динамически обновляться с помощью JS -->
             </select>
         </div>
-        <button class="btn " type="button" id="select_report_type_subtype" name="select_report_type_subtype">Протоколы</button>
+        <button class="btn " type="button" id="select_report_modality_area" name="select_report_modality_area">Протоколы</button>
     </form>
     
     <div id="reportsListContainer">

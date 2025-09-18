@@ -35,26 +35,26 @@
     <!-- Список всех протоколов -->
     <ul id="myReportList" class="my-report-list__list">
         {% for report in profile_reports %}
-            <li data-report-type="{{ report.category_1_id }}" class="my-report-list__item">
-                <ul class="wrapper__card report-card" data-report-type = "{{report.category_1_id}}">
-                    <li class="report-card__item report-card__item--short" data-report-type="{{ report.category_1_id }}">
-                        <label class="label report-card__label" for="report_type">Модальность:</label>
-                        <input class="input report-card__input" value="{{ report.category_1_name }}" name="report_type" readonly>
-                    </li data-report-type="{{ report.category_1_id }}">
-                    <li class="report-card__item" data-report-type="{{ report.category_1_id }}">
-                        <label class="label report-card__label" for="report_subtype">Область исследования:</label>
-                        <input class="input report-card__input" value="{{ report.category_2_name }}" name="report_subtype" readonly>
+            <li data-report-modality="{{ report.category_1_id }}" class="my-report-list__item">
+                <ul class="wrapper__card report-card" data-report-modality = "{{report.category_1_id}}">
+                    <li class="report-card__item report-card__item--short" data-report-modality="{{ report.category_1_id }}">
+                        <label class="label report-card__label" for="report_modality">Модальность:</label>
+                        <input class="input report-card__input" value="{{ report.category_1_name }}"  name="report_modality" readonly>
+                    </li data-report-modality="{{ report.category_1_id }}">
+                    <li class="report-card__item" data-report-modality="{{ report.category_1_id }}">
+                        <label class="label report-card__label" for="report_area">Область исследования:</label>
+                        <input class="input report-card__input" value="{{ report.category_2_name }}" name="report_area" readonly>
                     </li>
-                    <li class="report-card__item" data-report-type="{{ report.category_2_id }}">
+                    <li class="report-card__item" data-report-modality="{{ report.category_2_id }}">
                         <label class="label report-card__label" for="report_name">Название протокола:</label>
                         <input class="input report-card__input" value="{{ report.report_name }}" name="report_name" readonly>
                     </li>
-                    <li class="report-card__item" data-report-type="{{ report.category_1_id }}">
+                    <li class="report-card__item" data-report-modality="{{ report.category_1_id }}">
                         <label class="label report-card__label" for="comment">Комментарий:</label>
                         <input class="input report-card__input" value="{{ report.comment }}" name="comment" readonly>
                     </li>
                     <!-- Чекбоксы для связывания протоколов -->
-                    <li class="flex report-card__item report-card__item--button-group" data-report-type="{{ report.category_1_id }}">
+                    <li class="flex report-card__item report-card__item--button-group" data-report-modality="{{ report.category_1_id }}">
                         <button class="btn  my-report-list__button my-report-list__button--delete" type="button" data-report-id="{{ report.id }}" name="report_delete">Удалить</button>
                         <a class="btn  my-report-list__button my-report-list__button--edit" href="{{ url_for("editing_report.edit_report", report_id=report.id) }}">Изменить</a>
                     </li>

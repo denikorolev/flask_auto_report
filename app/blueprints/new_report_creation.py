@@ -2,7 +2,7 @@
 
 from flask import Blueprint, render_template, request, session, jsonify
 from flask_login import current_user
-from app.models.models import db, Report, ReportCategory, ReportSubtype, Paragraph, HeadSentence, BodySentence, TailSentence, ReportShare, HeadSentenceGroup, BodySentenceGroup, TailSentenceGroup
+from app.models.models import db, Report, ReportCategory, Paragraph, HeadSentence, BodySentence, TailSentence, ReportShare, HeadSentenceGroup, BodySentenceGroup, TailSentenceGroup
 from app.utils.sentence_processing import extract_paragraphs_and_sentences
 from app.utils.file_processing import allowed_file
 from app.utils.db_processing import get_categories_setup_from_appconfig
@@ -659,12 +659,11 @@ def ai_generate_template():
     template_text = data.get('origin_text', '')
     template_name = data.get('template_name', '').strip()
     template_type = data.get('template_type', '')
-    template_subtype = data.get('template_subtype', '')
+    template_area = data.get('template_area', '')
     
     user_id = current_user.id if current_user.is_authenticated else None
-    
 
-    if not all([template_name, template_type, template_subtype]):
+    if not all([template_name, template_type, template_area]):
         return jsonify({"status": "error", "message": "Не все данные для генерации шаблона предоставлены"}), 400
 
     assistant_id = os.getenv("OPENAI_ASSISTANT_TEMPLATE_MAKER")
@@ -672,7 +671,7 @@ def ai_generate_template():
 
     The text of the radiology report: {template_text}
     The imaging modality: {template_type}
-    The anatomical area: {template_subtype}
+    The anatomical area: {template_area}
     The report title: {template_name}
     """
     try:

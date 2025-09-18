@@ -39,6 +39,7 @@ from .blueprints.admin import admin_bp
 from .blueprints.support import support_bp
 from .blueprints.main import main_bp
 from .blueprints.tasks_status import tasks_status_bp
+from .blueprints.snapshorts import snapshots_bp
 
 
 
@@ -89,6 +90,7 @@ def create_app(config_object='config.Config'):
     app.register_blueprint(tasks_status_bp, url_prefix="/tasks_status")
     app.register_blueprint(support_bp, url_prefix="/support")
     app.register_blueprint(main_bp, url_prefix="/")
+    app.register_blueprint(snapshots_bp, url_prefix="/snapshots")
     
     from .security import signals
     
