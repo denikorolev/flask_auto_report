@@ -35,7 +35,7 @@ def get_max_index(model, filter_field, filter_value, column):
     return max_index + 1
 
 
-# Нормализация индексов параграфов
+# Нормализация индексов параграфов (кажется не используется)
 def normalize_paragraph_indices(report_id):
     from app.models.models import db, Report, Paragraph, HeadSentence
 
@@ -60,7 +60,7 @@ def normalize_paragraph_indices(report_id):
         raise ValueError(f"Ошибка при исправлении индексов: {str(e)}")
     
 
-# Нормализация индексов главных предложений
+# Нормализация индексов главных предложений (кажется не используется)
 def normalize_head_sentence_indices(paragraph_id):
     from app.models.models import db, Paragraph, HeadSentenceGroup
 

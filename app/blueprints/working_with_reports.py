@@ -2,12 +2,11 @@
 
 from flask import Blueprint, render_template, request, jsonify, current_app, session
 from flask_security import current_user
-from app.models.models import db, Report, ReportType, KeyWord, TailSentence, BodySentence, ReportTextSnapshot
+from app.models.models import db, Report, KeyWord, TailSentence, BodySentence, ReportTextSnapshot
 from app.utils.sentence_processing import group_keywords, split_sentences_if_needed, clean_and_normalize_text, compare_sentences_by_paragraph, preprocess_sentence, split_report_structure_for_ai, replace_head_sentences_with_fuzzy_check, merge_ai_response_into_skeleton
 from app.utils.common import ensure_list
 from app.utils.logger import logger
 from flask_security.decorators import auth_required
-from datetime import datetime
 from tasks.celery_tasks import async_analyze_dynamics
 
 

@@ -1,23 +1,19 @@
 # app.__init__.py
 
 from flask import Flask
-from flask_login import LoginManager
-from flask_sqlalchemy import SQLAlchemy
-from flask_security import Security, SQLAlchemyUserDatastore
-from flask_migrate import Migrate
-from flask_wtf.csrf import CSRFProtect
 import os
 import logging
+
+from flask_security import SQLAlchemyUserDatastore
+from .extensions import db, migrate, csrf, security as security_ext
 
 # Мои модули
 from .handlers.error import register_error_handlers
 from .models.models import User, Role
 from .utils.mail_helpers import CustomMailUtil, ExtendedRegisterForm
 from .before_request_handlers import load_current_profile, one_time_sync_tasks
-from config import get_config
-from tasks.make_celery import make_celery
+from .security.signals import init_security_signals
 
-from .extensions import db, migrate, csrf, security
 
 from .context_processors import (
         inject_menu,
@@ -27,7 +23,10 @@ from .context_processors import (
         inject_current_profile_data,
     )
 
-# Импортирую блюпринты
+from tasks.make_celery import make_celery
+from config import get_config
+
+
 from .blueprints.working_with_reports import working_with_reports_bp  
 from .blueprints.my_reports import my_reports_bp 
 from .blueprints.new_report_creation import new_report_creation_bp
@@ -43,10 +42,10 @@ from .blueprints.snapshorts import snapshots_bp
 
 
 
-def close_db(error):
+def close_db(exception=None):
     db.session.remove()
 
-def create_app(config_object='config.Config'):
+def create_app():
     app = Flask(__name__)
     app.config.from_object(get_config())  
 
@@ -57,10 +56,12 @@ def create_app(config_object='config.Config'):
     
    
     celery = make_celery(app)
+    app.celery = celery  
     
     # Инициализирую Flask-security-too
     user_datastore = SQLAlchemyUserDatastore(db, User, Role)
-    security.init_app(app, user_datastore, mail_util_cls=CustomMailUtil, register_form=ExtendedRegisterForm)
+    security_ext.init_app(app, user_datastore, mail_util_cls=CustomMailUtil, register_form=ExtendedRegisterForm)
+    init_security_signals(app)
     
     register_error_handlers(app)
     
@@ -75,7 +76,7 @@ def create_app(config_object='config.Config'):
     app.context_processor(inject_user_rank)
     app.context_processor(inject_current_profile_data)
     # Для inject_app_info — нужно передать версию
-    app.context_processor(inject_app_info("0.10.5.0"))
+    app.context_processor(inject_app_info("0.10.7.2"))
     
    
     # Register Blueprints
@@ -92,7 +93,6 @@ def create_app(config_object='config.Config'):
     app.register_blueprint(main_bp, url_prefix="/")
     app.register_blueprint(snapshots_bp, url_prefix="/snapshots")
     
-    from .security import signals
     
     app.teardown_appcontext(close_db)
     

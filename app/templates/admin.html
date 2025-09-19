@@ -214,48 +214,6 @@
         <!-- Сюда JS вставит сообщения о статусе -->
     </ul>
 
-<!-- Запуск скрипта миграции категорий (типов и подтипов) для суперюзера -->
-<div class="flex_column">
-    <h2>Запуск скрипта миграции категорий для суперюзера</h2>
-    <p>Этот скрипт обновит категории (типы и подтипы) в соответствии с новыми правилами и заполтит таблицу ReportCategory глобальными данными (сделал).</p>
-    <input type="text" id="superuser-id" name="superuser_id" placeholder="Введите ID суперюзера" required>
-    <button id="run-superuser-script" class="btn">
-        Запустить скрипт для суперюзера
-    </button>
-    <ul id="superuser-status" class="status-message">
-        <!-- Сюда JS вставит сообщения о статусе -->
-    </ul>
-</div>
-
-<!-- Запуск скрипта миграции категорий (типов и подтипов) для конкретного пользователя -->
-<div class="flex_column">
-    <h2>Запуск скрипта миграции категорий для конкретного пользователя</h2>
-    <p>Этот скрипт обновит категории (типы и подтипы) для указанного пользователя в соответствии с новыми правилами и заполтит таблицу ReportCategory пользовательскими данными (сделал).</p>
-    <input type="text" id="script-user-id" name="user_id" placeholder="Введите ID пользователя" required>
-    <button id="run-user-script" class="btn">
-        Запустить скрипт для пользователя
-    </button>
-    <ul id="user-status" class="status-message">
-        <!-- Сюда JS вставит сообщения о статусе -->
-    </ul>
-</div>
-
-<div> 
-    <h2>Запуск скрипта миграции отчётов для конкретного пользователя</h2>
-    <p>Этот скрипт перенесет все типы и подтипы для каждого отчета каждого профиля пользователя в поля категория1 и категория2 (сделал).</p>
-    <input type="text" id="report-user-id" name="user_id" placeholder="Введите ID пользователя" required>
-    <button id="run-report-script" class="btn">
-        Запустить скрипт для пользователя
-    </button>
-    <button id="sync-global-category" class="btn">
-        Синхронизировать global_category_id для всех отчётов(сделал)
-    </button>
-    <ul id="report-status" class="status-message">
-        <!-- Сюда JS вставит сообщения о статусе -->
-    </ul>
-</div>
-
-
 
 {% endblock container %}
 

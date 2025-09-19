@@ -3,7 +3,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='pic/favicon.ico') }}">
     <link rel="stylesheet" type="text/css" href="{{ url_for("static", filename="css/normalize.css")}}">
     <link rel="stylesheet" type="text/css" href="{{ url_for("static", filename='css/toastr.min.css') }}">
     <link rel="stylesheet" type="text/css" href="{{ url_for("static", filename='css/style.css') }}">
@@ -16,6 +16,8 @@
 
     {% block menu %}
     {% from "macros/all_popups.html" import choose_profile_popup %}
+    {% set has_roles = current_user.roles|length > 0 %}
+    
 
     <header class="header">
         <div class="container container--header">
@@ -51,7 +53,7 @@
 
             <!-- Сообщение о текущем юзере -->
              {% if profiles %}
-            <a href="{{ url_for("profile_settings.profile_settings") }}" title="Роль пользователя: {{ current_user.roles[0].name }}. При нажатии откроются настройки текущего профиля" class="header__user-box">
+            <a href="{{ url_for("profile_settings.profile_settings") }}" title="Роль пользователя: {% if has_roles %}{{ current_user.roles[0].name }}{% else %} роль не задана {% endif %}. При нажатии откроются настройки текущего профиля" class="header__user-box">
                 <p class="header__paragraph" id="userNameHeader" data-user-name="{{ current_user.username }}">Пользователь:</p>
                 <p class="header__paragraph header__paragraph--data">{{ current_user.username }}</p>
             </a>

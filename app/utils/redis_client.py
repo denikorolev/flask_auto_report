@@ -1,6 +1,7 @@
 # redis_client.py
 
-from flask import current_app
+from flask import current_app, session
+from flask_security import current_user
 import os
 import redis
 from app.utils.logger import logger
@@ -64,3 +65,19 @@ def redis_keys(pattern):
     """
     r = get_redis()
     return r.scan_iter(pattern)
+
+
+# Инвалидация кэша настроек пользователя использую этот кэш в context_processors.py
+def invalidate_user_settings_cache(user_id: int):
+    try:
+        cache_key = f"user:{current_user.id}:profile:{session.get('profile_id')}:user_settings:v1"
+        redis_delete(cache_key)
+    except Exception:
+        pass
+
+# Инвалидация кэша профилей пользователя использую этот кэш в context_processors.py
+def invalidate_profiles_cache(user_id: int):
+    try:
+        redis_delete(f"user:{user_id}:profiles:v1")
+    except Exception:
+        pass

@@ -3,12 +3,12 @@
 from flask import Blueprint, render_template, request, redirect, url_for, current_app, session, jsonify
 import json
 from flask_login import current_user
-from app.models.models import User, UserProfile, db, AppConfig, Paragraph, ReportType, ReportShare, ReportCategory
+from app.models.models import User, UserProfile, db, AppConfig, ReportShare, ReportCategory, Report
 from flask_security.decorators import auth_required
 from app.utils.file_processing import sync_profile_files
 from app.utils.db_processing import sync_modalities_from_db
-from app.models.models import Report
 from app.utils.logger import logger
+from app.utils.redis_client import invalidate_user_settings_cache, invalidate_profiles_cache
 
 profile_settings_bp = Blueprint('profile_settings', __name__)
 
@@ -138,7 +138,11 @@ def new_profile_creation():
         logger.info(f"(Маршрут 'new_profile_creation') Используем существующий профиль {existing_user_profile.profile_name} для создания нового профиля")
     user_profile_ids = [p.id for p in UserProfile.get_user_profiles(current_user.id)]
     modalities = []
-
+    if len(user_profile_ids) == 0:
+        logger.info(f"(Маршрут 'new_profile_creation') Это первый профиль пользователя {current_user.id}, он будет по умолчанию")
+        is_default = True  # Первый профиль всегда по умолчанию
+    else:
+        is_default = False
     # Добавляем все глобальные модальности и области исследования (is_global=True)
     modalities += ReportCategory.get_categories_tree(is_global=True)
     # Добавляем все пользовательские  модальности и области исследования (по всем профилям пользователя)
@@ -152,7 +156,8 @@ def new_profile_creation():
     return render_template("new_profile_creation.html",
                            title=title,
                            modalities=modalities,
-                           user_profile=existing_user_profile
+                           user_profile=existing_user_profile,
+                            is_default=is_default
                            )
 
 
@@ -179,6 +184,13 @@ def create_profile():
 
     logger.info(f"(route 'create_profile') Profile name: {profile_name}")
     profile = None
+    other_profiles = UserProfile.get_user_profiles(current_user.id)
+    if any(p.profile_name == profile_name for p in other_profiles):
+        logger.error(f"(route 'create_profile') ❌ Profile name '{profile_name}' already exists for this user.")
+        return jsonify({"status": "error", "message": f"Profile name '{profile_name}' already exists for this user."}), 400
+    if not other_profiles:
+        is_default = True  # Первый профиль всегда по умолчанию
+        logger.info(f"(route 'create_profile') This is the first profile for user {current_user.id}, setting as default.")
     if existing_profile_id:
         try:
             logger.info(f"(route 'create_profile') Попытка получить профиль из базы по id: {existing_profile_id}")
@@ -264,6 +276,7 @@ def create_profile():
             logger.error(f"(route 'create_profile') ❌ Error adding settings for this profile: {str(e)}")
             return jsonify({"status": "error", "message": str(e)}), 400
 
+        invalidate_profiles_cache(current_user.id)  # стираю кэш профилей пользователя из redis
         logger.info(f"(route 'create_profile') ✅ Профиль {profile.profile_name} успешно создан!")
         return jsonify({"status": "success", "message": f"Профиль {profile.profile_name} успешно создан!", "data": profile.id}), 200
 
@@ -302,6 +315,7 @@ def update_profile_settings():
                 notification_message = ["не получилось установить профиль по умолчанию"]
                 return jsonify({"status": "succuss","notifications": notification_message, "message": "Изменения сохранены, но"}), 400
         
+        invalidate_profiles_cache(current_user.id)  # стираю кэш профилей пользователя из redis
         return jsonify({"status": "success", "message": "Данные профиля успешно обновлены!"}), 200
     else:
         return jsonify({"status": "error", "message": "Profile not found or you do not have permission to update it."}), 400
@@ -323,9 +337,89 @@ def delete_profile(profile_id):
             return jsonify({"status": "error", "message": str(e)}), 400
         
         session.pop("profile_id", None)
+        session.pop("profiles", None)
+        invalidate_profiles_cache(current_user.id)  # стираю кэш профилей пользователя из redis
         return jsonify({"status": "success", "message": "Profile deleted successfully!"}), 200
     else:
         return jsonify({"status": "error", "message": "Profile not found or you do not have permission to delete it."}), 400
+
+
+# Маршрут для сохранения настроек профиля
+@profile_settings_bp.route("/update_settings", methods=["POST"])
+@auth_required()
+def save_settings():
+    """
+    Сохраняет настройки профиля пользователя в таблице AppConfig.
+    """
+    settings = request.json  # Получаем данные из запроса
+    profile_id = session.get("profile_id")
+
+    if not profile_id:
+        return jsonify({"status": "error", "message": "Profile not selected"}), 400
+
+    save_settings = set_profile_settings(profile_id, settings)
+    if not save_settings:
+        return jsonify({"status": "error", "message": "Не получилось сохранить настройки"}), 400
+    invalidate_user_settings_cache(current_user.id)  # стираю кэш настроек пользователя из redis
+    return jsonify({"status": "success", "message": "Settings saved successfully!"})
+
+
+# Маршрут для установки профиля по умолчанию
+@profile_settings_bp.route("/set_default_profile/<int:profile_id>", methods=["POST"])
+@auth_required()
+def set_default_profile(profile_id):
+    if not profile_id:
+        return jsonify({"status": "error", "message": "Профиль не выбран"}), 400
+    set_default = set_profile_as_default(profile_id)
+    if not set_default:
+        return jsonify({"status": "error", "message": "Не получилось установить профиль по умолчанию"}), 400
+    invalidate_profiles_cache(current_user.id)  # стираю кэш профилей пользователя из
+    return jsonify({"status": "success", "message": "Профиль установлен как дефолтный"}), 200
+
+
+
+# Маршрут чтобы поделиться с конкретным пользователем всеми протоколами данного профиля
+@profile_settings_bp.route("/share_profile", methods=["POST"])
+@auth_required()
+def share_profile():
+    """
+    Поделиться профилем с другим пользователем.
+    """
+    logger.info(f"(route 'share_profile') --------------------------------------")
+    logger.info(f"(route 'share_profile') 🚀 Sharing all reports of this profile started")
+    data = request.get_json()
+    
+    email = data.get("email")
+    logger.info(f"(route 'share_profile') Recipient email: {email}")
+    
+    recipient = User.find_by_email(email)
+    if not recipient:
+        logger.error(f"(route 'share_profile') ❌ User with this email not found")
+        return jsonify({"status": "error", "message": "Пользователь с данным email не найден"}), 400
+    logger.info(f"(route 'share_profile') Recipient found: {recipient.email}")
+    
+    try:
+        user_id = current_user.id
+        profile_id = session.get("profile_id")
+        all_reports = Report.find_by_profile(profile_id, user_id)
+    except Exception as e:
+        logger.error(f"(route 'share_profile') ❌ Error getting current user or current profile: {e}")
+        return jsonify({"status": "error", "message": "Не получилось загрузить данные текощего пользователя или текущего профиля"}), 400
+    
+    logger.info(f"(route 'share_profile') ✅ Got all necessary data. Starting sharing...")
+    
+    try:
+        for report in all_reports:
+            try:
+                ReportShare.create(report.id, user_id, recipient.id)
+            except Exception as e:
+                logger.error(f"(route 'share_profile') ❌ Error sharing report {report.report_name}: {e}. Skipping...")
+                continue
+        logger.info(f"(route 'share_profile') ✅ All reports shared successfully")
+        return jsonify({"status": "success", "message": "Профиль успешно поделен"}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
+
 
 
 # Маршрут для редактирования категории
@@ -392,6 +486,7 @@ def category_delete():
         return jsonify({"status": "error", "message": str(e)}), 400
 
 
+# Маршрут для создания категории
 @profile_settings_bp.route('/category_create', methods=['POST'])
 @auth_required()
 def category_create():
@@ -435,82 +530,7 @@ def category_create():
         return jsonify(status="error", message=str(e)), 400
 
 
-# Маршрут для сохранения настроек профиля
-@profile_settings_bp.route("/update_settings", methods=["POST"])
-@auth_required()
-def save_settings():
-    """
-    Сохраняет настройки профиля пользователя в таблице AppConfig.
-    """
-    settings = request.json  # Получаем данные из запроса
-    profile_id = session.get("profile_id")
-
-    if not profile_id:
-        return jsonify({"status": "error", "message": "Profile not selected"}), 400
-
-    save_settings = set_profile_settings(profile_id, settings)
-    if not save_settings:
-        return jsonify({"status": "error", "message": "Не получилось сохранить настройки"}), 400
-
-    return jsonify({"status": "success", "message": "Settings saved successfully!"})
-
-
-# Маршрут для установки профиля по умолчанию
-@profile_settings_bp.route("/set_default_profile/<int:profile_id>", methods=["POST"])
-@auth_required()
-def set_default_profile(profile_id):
-    if not profile_id:
-        return jsonify({"status": "error", "message": "Профиль не выбран"}), 400
-    set_default = set_profile_as_default(profile_id)
-    if not set_default:
-        return jsonify({"status": "error", "message": "Не получилось установить профиль по умолчанию"}), 400
-    return jsonify({"status": "success", "message": "Профиль установлен как дефолтный"}), 200
-
-
-
-# Маршрут чтобы поделиться с конкретным пользователем всеми протоколами данного профиля
-@profile_settings_bp.route("/share_profile", methods=["POST"])
-@auth_required()
-def share_profile():
-    """
-    Поделиться профилем с другим пользователем.
-    """
-    logger.info(f"(route 'share_profile') --------------------------------------")
-    logger.info(f"(route 'share_profile') 🚀 Sharing all reports of this profile started")
-    data = request.get_json()
-    
-    email = data.get("email")
-    logger.info(f"(route 'share_profile') Recipient email: {email}")
-    
-    recipient = User.find_by_email(email)
-    if not recipient:
-        logger.error(f"(route 'share_profile') ❌ User with this email not found")
-        return jsonify({"status": "error", "message": "Пользователь с данным email не найден"}), 400
-    logger.info(f"(route 'share_profile') Recipient found: {recipient.email}")
-    
-    try:
-        user_id = current_user.id
-        profile_id = session.get("profile_id")
-        all_reports = Report.find_by_profile(profile_id, user_id)
-    except Exception as e:
-        logger.error(f"(route 'share_profile') ❌ Error getting current user or current profile: {e}")
-        return jsonify({"status": "error", "message": "Не получилось загрузить данные текощего пользователя или текущего профиля"}), 400
-    
-    logger.info(f"(route 'share_profile') ✅ Got all necessary data. Starting sharing...")
-    
-    try:
-        for report in all_reports:
-            try:
-                ReportShare.create(report.id, user_id, recipient.id)
-            except Exception as e:
-                logger.error(f"(route 'share_profile') ❌ Error sharing report {report.report_name}: {e}. Skipping...")
-                continue
-        logger.info(f"(route 'share_profile') ✅ All reports shared successfully")
-        return jsonify({"status": "success", "message": "Профиль успешно поделен"}), 200
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 400
-
-
+# Маршрут для пересборки категорий из БД
 @profile_settings_bp.route("/rebuild_modalities_from_db", methods=["POST"])
 @auth_required()
 def rebuild_modalities_from_db():

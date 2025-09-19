@@ -23,8 +23,6 @@ class Config:
         "User": User,
         "UserProfile": UserProfile,
         "ReportCategory": ReportCategory,
-        "ReportType": ReportType,
-        "ReportSubtype": ReportSubtype,
         "Report": Report,
         "ReportShare": ReportShare,
         "Paragraph": Paragraph,
@@ -68,7 +66,8 @@ class Config:
     SECURITY_SEND_PASSWORD_RESET_EMAIL = True  # Отправлять email при сбросе пароля
     SECURITY_POST_LOGIN_VIEW = "/working_with_reports/choosing_report"  # URL после успешного входа
     SECURITY_POST_LOGOUT_VIEW = "/" # URL после выхода
-    SECURITY_POST_REGISTER_VIEW = "/support/success_registered"
+    SECURITY_REDIRECT_BEHAVIOR = "redirect"
+    SECURITY_POST_REGISTER_VIEW = "main.success_registered"
     REMEMBER_COOKIE_DURATION = 3600 * 24 * 7  # Продолжительность в секундах (7 дней)
     REMEMBER_COOKIE_HTTPONLY = True          # Безопасность cookie
     SECURITY_REMEMBER_ME = True              # Включить "запомнить меня"# URL после выхода

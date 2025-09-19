@@ -542,14 +542,14 @@ function addSentenceDataToBuffer(button) {
 // Функция для вставки предложения из буфера, буду использовать функцию создания нового предложения, но с данными из буфера
 function insertFromBuffer(index) {
     const itemFromBuffer = getFromBuffer(index);
-    const reportType = parseInt(reportInfo.global_category_id);
-    const bufferReportType = parseInt(itemFromBuffer.report_modality);
+    const reportModality = parseInt(reportInfo.global_category_id);
+    const bufferReportModality = parseInt(itemFromBuffer.report_modality);
 
     if (!itemFromBuffer) {
         console.error("Элемент из буфера не найден.");
         return;
     }
-    if (bufferReportType != reportType) {
+    if (bufferReportModality != reportModality) {
         alert("Нельзя вставить предложение принадлежащее другому типу протокола (например нельзя вставить предложение из протокола с типом КТ в протокол с типом МРТ).");
         return;
     }

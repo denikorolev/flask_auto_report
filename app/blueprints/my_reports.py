@@ -2,10 +2,8 @@
 
 from flask import Blueprint, render_template, request, jsonify, session
 from flask_security import current_user
-from collections import defaultdict
-from app.models.models import db, Report, ReportType, Paragraph, AppConfig
+from app.models.models import db, Report
 from app.utils.logger import logger
-from rapidfuzz import fuzz
 from flask_security.decorators import auth_required
 
 

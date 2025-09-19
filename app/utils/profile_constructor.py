@@ -11,13 +11,12 @@ class ProfileSettingsManager:
     Класс для управления настройками профиля.
     """
     @staticmethod
-    def load_profile_settings():
+    def load_profile_settings(profile_id):
         """
-        Загружает настройки для указанного профиля из таблицы AppConfig в current_app.config.
+        Загружает настройки для указанного профиля из таблицы AppConfig.
         """
         logger.info("Loading profile settings...")
         try:
-            profile_id = session.get("profile_id") or None
             if profile_id:
                 settings = AppConfig.query.filter_by(profile_id=profile_id).all()
                 profile_settings = {setting.config_key: ProfileSettingsManager._parse_value(setting) for setting in settings}
@@ -29,7 +28,9 @@ class ProfileSettingsManager:
                     logger.warning(f"No settings found for profile_id={profile_id}. ⚠️ Using default settings.")
                     profile_settings = current_app.config.get("DEFAULT_PROFILE_SETTINGS", {})
                     return profile_settings
-
+            else:
+                logger.warning("No profile_id. Cannot load profile settings.")
+                return {}
         except Exception as e:
             logger.error(f"Error loading settings for profile_id={profile_id}: {str(e)}")
         logger.warning("No profile settings loaded. Using empty dict.")

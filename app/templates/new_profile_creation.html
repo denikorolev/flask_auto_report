@@ -54,12 +54,13 @@
             <p>Вы редактируете существующий профиль. Установка профиля по умолчанию не требуется.</p>
             <div class="creation-profile__block">
                 <label for="isDefault">Профиль по умолчанию?</label>
-                <input type="checkbox" id="isDefault" name="is_default" class="checkbox" {% if user_profile.default_profile %}checked{% endif %} readonly></input>
+                <input type="checkbox" id="isDefault" name="is_default" class="checkbox" 
+                {% if user_profile.default_profile %}checked{% endif %} readonly>
             </div>
         {% else %}
             <div class="creation-profile__block">
                 <label for="isDefault">Сделать этот профиль, профилем по умолчанию?</label>
-                <input type="checkbox" id="isDefault" name="is_default" class="checkbox"></input>
+                <input type="checkbox" id="isDefault" name="is_default" class="checkbox" {% if is_default %}checked{% endif %}></input>
             </div>
         {% endif %}
         <div class="flex">

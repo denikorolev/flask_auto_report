@@ -259,12 +259,13 @@ class User(BaseModel, UserMixin):
         return any(role.name == role_name for role in self.roles)
 
 
-    def add_role(self, role_name):
+    def add_role(self, role_name, commit=True):
         """Добавляет роль пользователю, если её еще нет."""
         role = Role.query.filter_by(name=role_name).first()
         if role and role not in self.roles:
             self.roles.append(role)
-            db.session.commit()
+            if commit:
+                db.session.commit()
 
 
     def find_by_email(email):
@@ -283,7 +284,6 @@ class UserProfile(BaseModel):
     profile_to_reports = db.relationship('Report', lazy=True, backref=db.backref("report_to_profile"), cascade="all, delete-orphan", passive_deletes=True)
     profile_to_files = db.relationship("FileMetadata", lazy=True, backref=db.backref("file_to_profile"), cascade="all, delete-orphan", passive_deletes=True)
     profile_to_key_words = db.relationship("KeyWord", lazy=True, backref=db.backref("key_word_to_profile"), cascade="all, delete-orphan", passive_deletes=True)
-    profile_to_report_types = db.relationship("ReportType", lazy=True, backref=db.backref("report_type_to_profile"), cascade="all, delete-orphan", passive_deletes=True)
     
     def __repr__(self):
         return f"<UserProfile - {self.profile_name}>"
@@ -299,6 +299,7 @@ class UserProfile(BaseModel):
             "email": user.email if user else "No data",
             "login_count": user.login_count if user else "No data"
         }
+
 
     @classmethod
     def create(cls, user_id, profile_name, description=None, default_profile=False):
@@ -331,6 +332,7 @@ class UserProfile(BaseModel):
         new_profile.save()  
         logger.info(f"(create) ✅ Профиль {profile_name} успешно создан для пользователя {user_id}.")
         return new_profile
+        
         
     @classmethod
     def get_default_profile(cls, user_id):
@@ -465,127 +467,10 @@ class ReportCategory(BaseModel):
         return tree
 
 
-class ReportType(BaseModel):
-    __tablename__ = 'report_type'
-    profile_id = db.Column(db.BigInteger, db.ForeignKey('user_profiles.id', ondelete='CASCADE'), nullable=False)
-    type_text = db.Column(db.String(50), nullable=False)
-    type_index = db.Column(db.Integer, nullable=False)
-    
-    type_to_subtypes = db.relationship("ReportSubtype", lazy=True, backref=db.backref("subtype_to_type"), cascade="all, delete-orphan")
-    
-    
-    def __repr__(self):
-        return f"<ReportType - {self.type_text}>"
-        
-     
-    @classmethod
-    def create(cls, type_text, profile_id, type_index=None):
-        existing_type = cls.query.filter_by(type_text=type_text, profile_id=profile_id).first()
-        if existing_type:
-            logger.warning(f"(create) ❌ Тип {type_text} уже существует для профиля {profile_id}.")
-            raise DatabaseDuplicateError(f"Тип {type_text} уже существует для профиля {profile_id}.")
-        # If type_index is not provided, set it to the next available index
-        all_types = cls.query.filter_by(profile_id=profile_id).all()
-        if type_index is None:
-            all_indexes = [t.type_index for t in all_types if t.type_index is not None]
-            max_index = max(all_indexes, default=0)
-            type_index = max_index + 1
-        
-        new_type = cls(
-            type_text=type_text,
-            profile_id=profile_id,
-            type_index=type_index,
-        )
-        db.session.add(new_type)
-        db.session.commit()
-        return new_type
-    
-    @classmethod
-    def find_by_profile(cls, profile_id):
-        """
-        Find all report types created by a specific user.
-        """
-        return cls.query.filter_by(profile_id=profile_id).all()
-    
-    @classmethod
-    def get_types_with_subtypes(cls, profile_id):
-        """
-        Собирает список словарей с типами и их подтипами для указанного пользователя.
-        Args:
-            user_id (int): ID пользователя.
-        Returns:
-            list: Список словарей с типами и подтипами.
-        """
-        types = cls.query.filter_by(profile_id=profile_id).all()
-        result = []
-        
-        for report_type in types:
-            subtypes = [{
-                    "subtype_id": subtype.id,
-                    "subtype_text": subtype.subtype_text,
-                    "subtype_index": subtype.subtype_index
-                } for subtype in report_type.type_to_subtypes]
-            result.append({
-                "type_id": report_type.id,
-                "type_text": report_type.type_text,
-                "subtypes": subtypes,
-                "type_index": report_type.type_index 
-            })
-        return result
-
-
-class ReportSubtype(BaseModel):
-    __tablename__ = "report_subtype"
-    type_id = db.Column(db.SmallInteger, db.ForeignKey("report_type.id", ondelete="CASCADE"), nullable=False)
-    subtype_text = db.Column(db.String(250), nullable=False)
-    subtype_index = db.Column(db.Integer, nullable=False)
-
-    subtype_to_reports = db.relationship('Report', lazy=True, backref=db.backref("report_to_subtype"), cascade="all, delete-orphan", passive_deletes=True)
-
-    @classmethod
-    def create(cls, type_id, subtype_text, subtype_index=None): # subtype_index должен быть None чтобы ниже зайти в if и вычислить его
-        """
-        Creates a new report subtype.
-
-        Args:
-            type (int): The ID of the report type.
-            subtype (str): The subtype text.
-            subtype_index (int, optional): The index of the subtype. If not provided, it will be set automatically.
-
-        Returns:
-            ReportSubtype: The newly created report subtype object.
-        """
-        existing_subtype = cls.query.filter_by(type_id=type_id, subtype_text=subtype_text).first()
-        if existing_subtype:
-            logger.warning(f"(create) ❌ Подтип {subtype_text} уже существует для типа {type_id}.")
-            raise DatabaseDuplicateError(f"Подтип '{subtype_text}' уже существует для типа ID={type_id}.")
-
-        if subtype_index is None:
-            all_subtypes = cls.query.filter_by(type_id=type_id).all()
-            all_indexes = [s.subtype_index for s in all_subtypes if s.subtype_index is not None]
-            max_index = max(all_indexes, default=0)
-            subtype_index = max_index + 1
-
-        new_subtype = cls(
-            type_id=type_id,
-            subtype_text=subtype_text,
-            subtype_index=subtype_index
-        )
-        db.session.add(new_subtype)
-        db.session.commit()
-        return new_subtype
-    
-    @classmethod
-    def find_by_report_type(cls, type_id):
-        """Возвращает все подтипы, заданного типа."""
-        return cls.query.filter_by(type_id=type_id).all()
-
-
 class Report(BaseModel):
     __tablename__ = "reports"
     profile_id = db.Column(db.BigInteger, db.ForeignKey('user_profiles.id', ondelete='CASCADE'), nullable=False)
     user_id = db.Column(db.BigInteger, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
-    report_subtype = db.Column(db.Integer, db.ForeignKey('report_subtype.id', ondelete='CASCADE'), nullable=True)
     category_1_id = db.Column(db.BigInteger, db.ForeignKey('report_categories.id', ondelete='SET NULL'), nullable=True)
     category_2_id = db.Column(db.BigInteger, db.ForeignKey('report_categories.id', ondelete='SET NULL'), nullable=True)
     global_category_id = db.Column(db.BigInteger, db.ForeignKey('report_categories.id', ondelete='SET NULL'), nullable=True)

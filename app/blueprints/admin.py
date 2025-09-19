@@ -4,9 +4,8 @@ from app.models.models import *
 from app.utils.logger import logger
 import re
 from flask_security.decorators import auth_required, roles_required
-from app.utils.sentence_processing import group_keywords, sort_key_words_group
-import os
-from app.utils.db_processing import migrate_superuser_types_to_global_categories, migrate_user_types_to_profile_categories, delete_all_User_except, migrate_reports_for_user, sync_report_global_category_id
+from app.utils.sentence_processing import group_keywords
+from app.utils.db_processing import delete_all_User_except
 
 
 
@@ -58,10 +57,7 @@ def get_model_fields():
 @auth_required()
 @roles_required("superadmin")  # Доступ только для суперадминов
 def admin():
-    
-    
     all_models, association_tables = get_model_fields()
-    
     return render_template("admin.html",
                            title="Admin",
                            all_models=all_models,
@@ -447,43 +443,7 @@ def delete_category(cat_id):
         db.session.rollback()
         return jsonify({"status": "error", "message": str(e)}), 400
     
-# Маршрут для запуска скрипта миграции глобальных категорий
-@admin_bp.route("/run_superuser_script", methods=["POST"])
-@auth_required()
-@roles_required("superadmin")
-def run_superuser_script():
-    data = request.json
-    superuser_id = data.get("superuser_id")
-    if not superuser_id:
-        return jsonify({"status": "error", "message": "Не указан ID суперюзера"}), 400
 
-    try:
-        # Здесь можно добавить логику для запуска скрипта миграции
-        migrate_superuser_types_to_global_categories(superuser_id)
-        return jsonify({"status": "success", "message": "Скрипт успешно выполнен"}), 200
-    except Exception as e:
-        logger.error(f"Ошибка при выполнении скрипта для суперюзера {superuser_id}: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 500
-    
-    
-# Маршрут для запуска скрипта миграции категорий для пользователя
-@admin_bp.route("/run_user_script", methods=["POST"])
-@auth_required()
-@roles_required("superadmin")
-def run_user_script():
-    data = request.json
-    user_id = data.get("user_id")
-    if not user_id:
-        return jsonify({"status": "error", "message": "Не указан ID пользователя"}), 400
-
-    try:
-        # Здесь можно добавить логику для запуска скрипта миграции категорий
-        migrate_user_types_to_profile_categories(user_id)
-        return jsonify({"status": "success", "message": "Скрипт успешно выполнен"}), 200
-    except Exception as e:
-        logger.error(f"Ошибка при выполнении скрипта для пользователя {user_id}: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 500
-    
 
 
 @admin_bp.route("/clear_all_categories", methods=["DELETE"])
@@ -522,32 +482,3 @@ def delete_all_users():
         return jsonify({"status": "error", "message": str(e)}), 500
     
     
-# Маршрут для запуска миграции отчётов пользователя. Используется для обновления категорий отчётов при помощи функции migrate_reports_for_user
-@admin_bp.route("/migrate_reports", methods=["POST"])
-@auth_required()
-@roles_required("superadmin")
-def migrate_reports():
-    data = request.json
-    user_id = data.get("user_id")
-    if not user_id:
-        return jsonify({"status": "error", "message": "Не указан ID пользователя"}), 400
-
-    try:
-        # Здесь можно добавить логику для запуска скрипта миграции отчётов
-        data = migrate_reports_for_user(user_id)
-        return jsonify({"status": "success", "message": "Скрипт успешно выполнен", "data": data}), 200
-    except Exception as e:
-        logger.error(f"Ошибка при выполнении скрипта миграции отчётов для пользователя {user_id}: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 500
-    
-# Маршрут для запуска скрипта чтобы прописать всем отчетам глобальную категорию
-@admin_bp.route("/set_global_category_to_reports", methods=["POST"])
-@auth_required()
-@roles_required("superadmin")
-def set_global_category_to_reports():
-    try:
-        count = sync_report_global_category_id()
-        return jsonify({"status": "success", "message": f"Скрипт успешно выполнен. Обновлено {count} отчетов."}), 200
-    except Exception as e:
-        logger.error(f"Ошибка при выполнении скрипта для установки глобальной категории отчетам: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 500
