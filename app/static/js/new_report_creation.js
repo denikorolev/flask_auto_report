@@ -43,6 +43,7 @@ document.addEventListener("DOMContentLoaded", function() {
     document.getElementById("reportArea").addEventListener("change", function() {
         const modalitySelect = document.getElementById("reportModality");
         const parentCategoryID = modalitySelect.value;
+        if (this.value !== "new_area") return;
         handleNewCategoryCreation("area", parentCategoryID);
     });
 
@@ -218,7 +219,7 @@ function handleNewCategoryCreation(categoryType, parentCategoryID) {
         level: categoryLevel,
         parent_id: categoryLevel === 2 ? parentCategoryID : null
     };
-    
+
         try {
             const response = await sendRequest({
                 url: "/profile_settings/category_create",
