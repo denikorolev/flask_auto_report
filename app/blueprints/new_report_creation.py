@@ -127,8 +127,10 @@ def get_parent_categories(category_2_id: int):
 @new_report_creation_bp.route('/create_report', methods=['GET'])
 @auth_required()
 def create_report():
-    return render_template("create_report.html",
+    global_categories = ReportCategory.get_categories_tree(is_global=True)
+    return render_template("new_report_creation.html",
                            title="Создание нового протокола",
+                           global_categories=global_categories
                            )
     
     

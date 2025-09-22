@@ -7,6 +7,9 @@
 <input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
 
 {% from "macros/elements.html" import progress_bar, text_area_and_drop_zone %}
+{% from "macros/all_popups.html" import category_edit_popup %}
+
+{{ category_edit_popup() }}
 
 <!-- New report master -->
 <div class="container">
@@ -23,6 +26,7 @@
                 {% for cat_1 in user_settings.CATEGORIES_SETUP %}
                 <option value="{{ cat_1.id }}" data-modality-name="{{ cat_1.name }}">{{ cat_1.name }}</option>
                 {% endfor %}
+                <option value="new_modality">Создать новую модальность</option>
             </select>
         </div>
         <div class="report-creation__data-block">
@@ -190,7 +194,10 @@
 {% endblock container %}
 
 {% block scripts %}
-    <script type="module" src="{{ url_for('static', filename='js/create_report.js') }}"></script>
+    <script>
+        const globalCategories = {{ global_categories|tojson | safe }};
+    </script>
+    <script type="module" src="{{ url_for('static', filename='js/new_report_creation.js') }}"></script>
     <script src="{{ url_for('static', filename='js/utils/textFiltrator.js') }}"></script>
 {% endblock scripts %}
 

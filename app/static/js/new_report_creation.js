@@ -8,12 +8,13 @@ import { pollTaskStatus, updateProgressBar } from "/static/js/utils/utils_module
 let selectedReports = [];
 let detachCurrentFilter = null; // Переменная для хранения функции фильтрации отчетов
 let CATEGORIES = []; // Глобальная переменная для хранения категорий
+let GLOBALCATEGORIES = []; // Глобальная переменная для хранения глобальных категорий
 
 document.addEventListener("DOMContentLoaded", function() {
 
     const userSettings = window.userSettings || {};
     CATEGORIES = Array.isArray(userSettings.CATEGORIES_SETUP) ? userSettings.CATEGORIES_SETUP : [];
-    console.log("Categories from userSettings:", CATEGORIES);
+    GLOBALCATEGORIES = Array.isArray(globalCategories) ? globalCategories : [];
     if (!CATEGORIES.length) {
         console.warn("No categories found in user settings.");
         return;
@@ -38,14 +39,35 @@ document.addEventListener("DOMContentLoaded", function() {
     // Вешаем функцию обработчик на кнопку "Создать протокол"
     document.getElementById("createReportButton")?.addEventListener("click", handleCreateReportClick);
     
+    // Вешаем обработчик на реакцию выбора "Создать новую область исследования" или "Создать новую модальность"
+    document.getElementById("reportArea").addEventListener("change", function() {
+        const modalitySelect = document.getElementById("reportModality");
+        const parentCategoryID = modalitySelect.value;
+        handleNewCategoryCreation("area", parentCategoryID);
+    });
 
 });
 
 
 //Фильтрует подтипы в зависимости от выбранного типа.
 function handleReportModalityChange() {
-    const modality = parseInt(document.getElementById("reportModality").value, 10); // приводим к числу   
+    const modality = document.getElementById("reportModality").value; // приводим к числу
     const reportAreas = document.getElementById("reportArea");
+    if (modality === "new_modality") {
+        // Если выбрано создание новой модальности, задаем для попапа 
+        // атрибут data-category-type="modality" и запускаем функцию открытия попапа
+        const categoryCreationPopup = document.getElementById("categoryEditPopup");
+        if (categoryCreationPopup) {
+            const parentCategoryID = null; // Для модальности родитель не нужен
+            handleNewCategoryCreation("modality", parentCategoryID);
+            return;
+        }
+    }
+
+    if (isNaN(modality)) {
+        console.error("Invalid modality selected:", modality);
+        return;
+    }
 
     reportAreas.innerHTML = ''; // Очищаем select
 
@@ -69,6 +91,11 @@ function handleReportModalityChange() {
         selectedReports = [];
         document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
         updateOrderCircles();
+        // Добавляем опцию создания новой области исследования
+        const newAreaOption = document.createElement("option");
+        newAreaOption.value = "new_area";
+        newAreaOption.textContent = "Создать новую область исследования";
+        reportAreas.appendChild(newAreaOption);
         return;
     }
 
@@ -79,6 +106,11 @@ function handleReportModalityChange() {
         option.textContent = area.name;
         reportAreas.appendChild(option);
     });
+
+    const newAreaOption = document.createElement("option");
+    newAreaOption.value = "new_area";
+    newAreaOption.textContent = "Создать новую область исследования";
+    reportAreas.appendChild(newAreaOption);
     
     // Сбрасываем выбор отчетов и чекбоксы (если надо)
     selectedReports = [];
@@ -99,6 +131,116 @@ function handleReportModalityChange() {
         loadPublicReports();
     }
 
+}
+
+
+// Обработчик выбора значения "Создать новую область исследования" или 
+// "Создать новую модальность" при выборе одной из данных опций открывает 
+//  popup с id categoryEditPopup для создания новой категории.
+function handleNewCategoryCreation(categoryType, parentCategoryID) {
+    const categoryCreationPopup = document.getElementById("categoryEditPopup");
+    console.log("parentCategoryID:", parentCategoryID);
+    
+    if (!categoryCreationPopup) {
+        console.error("categoryEditPopup not found");
+        return;
+    }
+    if (categoryType === "area" && !parentCategoryID) {
+        console.error("parentCategoryID is required for area");
+        return;
+    }
+
+    // Настраиваем попап в зависимости от того, что выбрано
+    const categoryLevel = (categoryType === "modality") ? 1 : (categoryType === "area" ? 2 : null);
+    const deleteCategoryButton = categoryCreationPopup.querySelector("#deleteCategoryBtn");
+    const createCategoryButton = categoryCreationPopup.querySelector("#saveCategoryEditBtn");
+    const popupTitle = categoryCreationPopup.querySelector("#categoryEditPopupTitle");
+    const categoryNameInput = categoryCreationPopup.querySelector("#editCategoryName");
+    console.log("categoryNameInput:", categoryNameInput);
+    const globalCategorySelect = categoryCreationPopup.querySelector("#editCategoryGlobal");
+    console.log("globalCategorySelect:", globalCategorySelect);
+    const closeBtn = categoryCreationPopup.querySelector("#closeCategoryEditPopup");
+
+    categoryCreationPopup.style.display = "block";
+    deleteCategoryButton.style.display = "none"; // Скрываем кнопку удаления при создании новой категории
+    createCategoryButton.textContent = "Создать";
+    popupTitle.textContent = (categoryType === "modality") 
+        ? "Создать новую модальность" 
+        : "Создать новую область исследования";
+
+    // Очищаем инпут и селект
+    categoryNameInput.value = "";
+    globalCategorySelect.innerHTML = "";
+    // Добавляем заглушку в селект глобальных категорий
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = "— <выберите глобальную категорию> —";
+    placeholder.disabled = true;
+    placeholder.selected = true;
+    globalCategorySelect.appendChild(placeholder);
+
+    // Заполняем селект глобальных категорий в зависимости от уровня категории
+    if (categoryLevel === 1) {
+        // Список глобальных МОДАЛЬНОСТЕЙ (уровень 1)
+        GLOBALCATEGORIES.forEach(category => {
+            const option = document.createElement("option");
+            option.value = category.id;
+            option.textContent = category.name;
+            globalCategorySelect.appendChild(option);
+        });
+    } else {
+        // Ищем глобальную модальность-РОДИТЕЛЯ и берём её children (области)
+        const parentModality = CATEGORIES.find(cat => String(cat.id) === String(parentCategoryID));
+        const globalCategoryIDForParent = parentModality ? parentModality.global_id : null;
+        console.log("globalCategoryIDForParent:", globalCategoryIDForParent);
+        const parent = GLOBALCATEGORIES.find(cat => String(cat.id) === String(globalCategoryIDForParent));
+        console.log("parent:", parent);
+        const children = Array.isArray(parent?.children) ? parent.children : [];
+        console.log("children:", children);
+        if (!children.length) {
+            console.warn("No global areas found for modality ID:", globalCategoryIDForParent);
+        }
+        children.forEach(child => {
+            const option = document.createElement("option");
+            option.value = child.id;
+            option.textContent = child.name;
+            globalCategorySelect.appendChild(option);
+        });
+    }
+
+    
+
+    // Отправка данных на сервер для создания новой категории, маршрут category_create в profile_settings
+    createCategoryButton.onclick = async () => {
+        const data = {
+        name: categoryNameInput.value,
+        global_id: globalCategorySelect.value,
+        level: categoryLevel,
+        parent_id: categoryLevel === 2 ? parentCategoryID : null
+    };
+    
+        try {
+            const response = await sendRequest({
+                url: "/profile_settings/category_create",
+                data: data,
+            });
+
+            if (response.status === "success") {
+                window.location.reload(); // Перезагружаем страницу чтобы сбросить выбор
+            } else {
+                alert("Ошибка при создании категории");
+                console.error("Error creating category:", response.message);
+            }
+        } catch (error) {
+            console.error("Error creating category:", error);
+        }
+    };
+
+    // Слушатель закрытия попапа
+    closeBtn.onclick = () => {
+        categoryCreationPopup.style.display = "none";
+        window.location.reload(); // Перезагружаем страницу чтобы сбросить выбор
+    };
 }
 
 // Функции обработчики

@@ -9,6 +9,7 @@ from app.utils.file_processing import sync_profile_files
 from app.utils.db_processing import sync_modalities_from_db
 from app.utils.logger import logger
 from app.utils.redis_client import invalidate_user_settings_cache, invalidate_profiles_cache
+from app.utils.profile_constructor import ProfileSettingsManager
 
 profile_settings_bp = Blueprint('profile_settings', __name__)
 
@@ -69,10 +70,9 @@ def profile_settings():
     if not profile_data:
         logger.error(f"(route 'profile_settings') ❌ Profile not found")
         return redirect(url_for('main.index'))
-    
-    categories_json = AppConfig.get_setting(profile_id, "CATEGORIES_SETUP")
+
+    categories = ProfileSettingsManager.load_profile_settings(profile_id).get("CATEGORIES_SETUP", [])
     try:
-        categories = json.loads(categories_json) if categories_json else []
         global_categories = ReportCategory.get_categories_tree(is_global=True)
         if categories and global_categories:
             logger.info(f"(route 'profile_settings') ✅ Categories loaded: {categories}")
@@ -447,6 +447,7 @@ def category_update():
         logger.info(f"Category {category_id} updated successfully with new name: {new_name} and global_id: {global_id}")
         # Синхронизируем категории в AppConfig c ReportCategory
         success = sync_modalities_from_db(profile_id)
+        invalidate_user_settings_cache(current_user.id)  # стираю кэш настроек пользователя из redis
         if not success:
             logger.error(f"Error syncing modalities from DB after updating category {category_id}")
             return jsonify({"status": "error", "message": "Ошибка синхронизации модальностей после обновления категории"}), 500
@@ -477,6 +478,7 @@ def category_delete():
         logger.info(f"Category {category_id} deleted successfully")
         # Синхронизируем категории в AppConfig c ReportCategory
         success = sync_modalities_from_db(profile_id)
+        invalidate_user_settings_cache(current_user.id)  # стираю кэш настроек пользователя из redis
         if not success:
             logger.error(f"Error syncing modalities from DB after updating category {category_id}")
             return jsonify({"status": "error", "message": "Ошибка синхронизации модальностей после обновления категории"}), 500
@@ -499,6 +501,9 @@ def category_create():
     parent_id = data.get('parent_id', None)  # parent_id может быть None для модальности
     profile_id = session.get("profile_id")
 
+    if not name or level not in [1, 2]:
+        logger.error(f"(route 'category_create') ❌ Invalid data: name='{name}', level='{level}'")
+        return jsonify({"status": "error", "message": "Не передано имя категории или неправильно задан уровень новой категории"}), 400
     try:
         # Для модальности parent_id=None, для области обязательно
         cat = ReportCategory.add_category(
@@ -520,6 +525,7 @@ def category_create():
         }
         if cat:
             logger.info(f"(route 'category_create') ✅ Category {cat.id} created successfully with name: {name} and global_id: {global_id}")
+            invalidate_user_settings_cache(current_user.id)  # стираю кэш настроек пользователя из redis
             success = sync_modalities_from_db(profile_id)
             if not success:
                 logger.error(f"(route 'category_create') ❌ Error syncing modalities from DB after creating category {cat.id}")
@@ -545,6 +551,7 @@ def rebuild_modalities_from_db():
         return jsonify({"status": "error", "message": "Профиль не выбран"}), 400
     
     success = sync_modalities_from_db(profile_id)
+    invalidate_user_settings_cache(current_user.id)  # стираю кэш настроек пользователя из redis
     if not success:
         logger.error(f"(route 'rebuild_modalities_from_db') ❌ Ошибка при пересборке модальностей из БД")
         return jsonify({"status": "error", "message": "Ошибка при пересборке модальностей из БД"}), 500
