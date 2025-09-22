@@ -161,6 +161,7 @@
         <!-- Место вывода ответа ИИ -->
         
         <div class="flex_column">
+            {{ progress_bar() }}
             <p contenteditable="true" class="ai-response-block" id="aiImpressionResponseBlock" style="display: none;"></p>
             <p class="ai-response-block" id="aiRedactorResponseBlock" style="display: none;"></p>
             <p class="ai-response-block" id="aiDynamicBlock" style="display: none;"></p>

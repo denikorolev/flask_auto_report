@@ -63,9 +63,6 @@ function initWorkingWithReport() {
         copyButtonLogic(copyButton);
     }
 
-    
-
-
     if (generateButton) {
         generateButton.addEventListener("click", async function() {
             await generateImpressionLogic(boxForAiImpressionResponse, boxForAiRedactorResponse, boxForAiDynamicResponse);
@@ -645,7 +642,10 @@ function copyButtonLogic(copyButton) {
 // Логика для кнопки "Generate Impression". Возможно нужно объединить с логикой generateImpressionRequest
 async function generateImpressionLogic(boxForAiResponse, responseForDelete, boxForAiDynamicResponse) {
     const textToCopy = collectTextFromParagraphs("paragraph__item--core");
-    boxForAiResponse.textContent = "Ожидаю ответа ИИ...";
+    if (!textToCopy || !textToCopy.trim()) {
+        alert("Нет текста для генерации заключения.");
+        return;
+    }
 
     if (boxForAiResponse) {
         boxForAiResponse.innerText = "";
@@ -662,30 +662,69 @@ async function generateImpressionLogic(boxForAiResponse, responseForDelete, boxF
         boxForAiDynamicResponse.style.display = "none";
     }
 
+    // Прогресс-бар справа (scope по .report-controlpanel, чтобы не конфликтовать с попапом динамики)
+    const panel = document.querySelector(".report-controlpanel");
+    const barContainer = panel ? panel.querySelector("#dynamicsProgressBarContainer") : null;
+    const barElem = panel ? panel.querySelector("#dynamicsProgressBar") : null;
+    const labelElem = panel ? panel.querySelector("#dynamicsProgressBarLabel") : null;
+    const textElem = panel ? panel.querySelector("#dynamicsProgressBarText") : null;
+
+    const showBar = () => { if (barContainer) barContainer.style.display = "block"; };
+    const hideBar = () => { if (barContainer) barContainer.style.display = "none"; };
+    const setBar = (pct, msg = null) => updateProgressBar({ bar: barElem, label: labelElem, text: textElem }, pct, msg);
+    showBar();
+    setBar(0, "Генерация заключения...");
+
     try {
-        const aiResponse = await generateImpressionRequest(textToCopy);
-        console.log("Ответ ИИ:", aiResponse);
-        boxForAiResponse.textContent = aiResponse || "Ответ ИИ не получен.";
-        // Делаем видимой кнопку "Add Impression"
-        const addImpressionButton = document.getElementById("addImpressionToReportButton");
-
-        if (aiResponse) {
-            addImpressionButton.style.display = "block";
+        // backend возвращает task.id в поле data
+        const taskId = await generateImpressionRequest(textToCopy);
+        if (!taskId || typeof taskId !== "string") {
+            setBar(100, "Не удалось запустить задачу генерации заключения.");
+            setTimeout(hideBar, 1500);
+            return;
         }
 
+        setBar(10, "Задача поставлена. Жду результат...");
 
-        // --- Вот тут надёжная проверка ---
-        if (!boxForAiResponse._onEnterHandler) {
-            boxForAiResponse._onEnterHandler = function(e, el) {
-                addImpressionButtonLogic(boxForAiResponse);
-            };
-            onEnter(boxForAiResponse, boxForAiResponse._onEnterHandler, true);
-        }
+        // Поллим статус (фоллбек-прогресс)
+        pollTaskStatus(taskId, {
+            maxAttempts: 10,
+            interval: 4000,
+            onProgress: (progress) => setBar(progress, "Ожидание результата..."),
+            onSuccess: (result) => {
+                setBar(100, "Готово!");
+                const text = (typeof result === "string") ? result : (result && result.result) || "";
+                boxForAiResponse.textContent = text || "Ответ ИИ не получен.";
 
+                // Показываем кнопку Add Impression
+                const addImpressionButton = document.getElementById("addImpressionToReportButton");
+                if (text && addImpressionButton) {
+                    addImpressionButton.style.display = "block";
+                }
 
+                // Enter в блоке ответа — вставка заключения
+                if (!boxForAiResponse._onEnterHandler) {
+                    boxForAiResponse._onEnterHandler = function(e, el) {
+                        addImpressionButtonLogic(boxForAiResponse);
+                    };
+                    onEnter(boxForAiResponse, boxForAiResponse._onEnterHandler, true);
+                }
+
+                setTimeout(hideBar, 1000);
+            },
+            onError: (errMsg) => {
+                setBar(100, errMsg || "Ошибка при выполнении задачи генерации заключения.");
+                setTimeout(hideBar, 2000);
+            },
+            onTimeout: () => {
+                setBar(100, "Превышено время ожидания. Попробуйте ещё раз позже.");
+                setTimeout(hideBar, 2000);
+            }
+        });
     } catch (error) {
-        console.error(error);
-        boxForAiResponse.textContent = "Ошибка при получении ответа ИИ.";
+        console.error("Ошибка запуска генерации заключения:", error);
+        setBar(100, error?.message || "Ошибка при запуске задачи.");
+        setTimeout(hideBar, 2000);
     }
 }
 
@@ -989,23 +1028,68 @@ function checkReportAI(boxForAiResponse, responseForDelete, boxForAiDynamicRespo
         alert("Нет текста для проверки. Пожалуйста, заполните протокол.");
         return;
     }
-    return sendRequest({
+    // Прогресс-бар справа (строго в .report-controlpanel, чтобы не конфликтовать с попапом динамики)
+    const panel = document.querySelector(".report-controlpanel");
+    const barContainer = panel ? panel.querySelector("#dynamicsProgressBarContainer") : null;
+    const barElem = panel ? panel.querySelector("#dynamicsProgressBar") : null;
+    const labelElem = panel ? panel.querySelector("#dynamicsProgressBarLabel") : null;
+    const textElem = panel ? panel.querySelector("#dynamicsProgressBarText") : null;
+
+    const showBar = () => { if (barContainer) barContainer.style.display = "block"; };
+    const hideBar = () => { if (barContainer) barContainer.style.display = "none"; };
+    const setBar = (pct, msg = null) => updateProgressBar({ bar: barElem, label: labelElem, text: textElem }, pct, msg);
+
+    showBar();
+    setBar(0, "Идет проверка отчета...");
+
+    sendRequest({
         url: "/openai_api/generate_redactor",
-        method: "POST",
         data: {
             text: textToCheck,
         },
-    }).then(data => {
-        if (data.status === "success") {
-            console.log("Ответ ИИ:", data.data);
-            boxForAiResponse.innerText = data.data || "Ответ ИИ не получен.";
-        } 
-    }).catch(error => {
+    })
+    .then(startResp => {
+        const { status, data, message } = startResp || {};
+        if (status !== "success" || !data) {
+            setBar(100, message || "Не удалось запустить задачу редактирования.");
+            setTimeout(hideBar, 1500);
+            return;
+        }
+
+        const taskId = data; // backend возвращает task.id
+        setBar(10, "Задача поставлена. Жду результат...");
+
+        // Поллим статус (только фоллбек-прогресс)
+        pollTaskStatus(taskId, {
+            maxAttempts: 10,
+            interval: 4000,
+            onProgress: (progress) => setBar(progress, "Ожидание результата..."),
+            onSuccess: (result) => {
+                setBar(100, "Готово!");
+                const text = (typeof result === "string") ? result : (result && result.result) || "";
+                boxForAiResponse.innerText = text || "Ответ ИИ не получен.";
+                setTimeout(hideBar, 1000);
+            },
+            onError: (errMsg) => {
+                setBar(100, errMsg || "Ошибка при выполнении задачи редактирования.");
+                setTimeout(hideBar, 2000);
+            },
+            onTimeout: () => {
+                setBar(100, "Превышено время ожидания. Попробуйте ещё раз позже.");
+                setTimeout(hideBar, 2000);
+            }
+        });
+    })
+    .catch(error => {
         console.error("Ошибка отправки отчета на проверку:", error);
+        setBar(100, error?.message || "Ошибка при запуске задачи.");
+        setTimeout(hideBar, 2000);
     });
+    
 }
 
-// Вся логика для показа динамического отчета
+
+// Вся логика для показа динамического отчета (отчет в динамике)
 async function showDynamicReportPopup(boxForAiImpressionResponse, boxForAiRedactorResponse) {
     const popup = document.getElementById("dynamicsPopup");
     window.previousDynamicsText = null; // Сброс предыдущего текста динамики

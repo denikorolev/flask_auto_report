@@ -2,10 +2,9 @@
 
 from tasks.extensions import celery
 from app.utils.file_processing import prepare_impression_snippets
-from app.utils.ai_processing import clean_raw_text, run_first_look_assistant, structure_report_text, ai_template_generator
+from app.utils.ai_processing import clean_raw_text, run_first_look_assistant, structure_report_text, ai_template_generator, ai_report_check, ai_impression_generation
 from tasks.celery_task_processing import cancel_stale_polled_tasks, cancel_stuck_tasks
 from app.utils.logger import logger
-from tasks.extensions import celery
 
 # Таск для вочдога который проверяет наличие поллинговых задач и отменяет 
 # их если они не были выполнены в течение долгого времени
@@ -52,7 +51,19 @@ def async_analyze_dynamics(origin_text, template_text, user_id, skeleton, report
     }
     
     
+# Таск для запуска ассистента по генерации impression протокола
+@celery.task(name="async_impression_generating", time_limit=160, soft_time_limit=160)
+def async_impression_generating(assistant_id, user_id, report_text, file_id):
+    return ai_impression_generation(assistant_id, user_id, report_text, file_id)
+
     
+# Таск для запуска ассистента по проверке протокола
+@celery.task(name="async_report_checking", time_limit=160, soft_time_limit=160)
+def async_report_checking(assistant_id, user_id, report_text, today_date):
+    return ai_report_check(assistant_id, user_id, report_text, today_date)
+    
+    
+# Таск для генерации шаблона на основе данных пользователя
 @celery.task(name="template_generating", time_limit=160, soft_time_limit=160)
 def template_generating(template_data, assistant_id, user_id):
     return ai_template_generator(template_data, assistant_id, user_id)

@@ -49,9 +49,9 @@ def _process_openai_request(text: str, assistant_id: str, user_id: int, file_id:
         logger.warning(f"(функция _process_openai_request) ⚠️ OpenAI API key not found in Flask config, trying to get it from Celery config.")
         from tasks.extensions import celery
         api_key = celery.conf.get("OPENAI_API_KEY", None)
-    if not api_key:
-        logger.error(f"(функция _process_openai_request) OpenAI API key is not configured.")
-        raise ValueError("OpenAI API key is not configured.")
+        if not api_key:
+            logger.error(f"(функция _process_openai_request) OpenAI API key is not configured.")
+            raise ValueError("OpenAI API key is not configured.")
     client = OpenAI(api_key=api_key)
 
     thread_id = redis_get(thread_key) 
@@ -90,7 +90,6 @@ def _process_openai_request(text: str, assistant_id: str, user_id: int, file_id:
 
     while run.status in ["queued", "in_progress"]:
         run = client.beta.threads.runs.retrieve(thread_id=thread_id, run_id=run.id)
-        print(f"Run status: {run.status}")
         time.sleep(1.5)
         
     messages = client.beta.threads.messages.list(
@@ -294,7 +293,70 @@ def structure_report_text(template_text: list, report_text: str, user_id: int, a
     raise ValueError("Все попытки структурирования отчета не удались.")
 
 
+# Функция для генерации impression с помощью OpenAI.
+def ai_impression_generation(assistant_id: str, user_id: int, report_text: str, file_id: str) -> str:
+    logger.info("(Функция ai_impression_generation) --------------------------------------")
+    logger.info("[ai_impression_generation] 🚀 Начата попытка генерации impression с помощью OpenAI API.")
 
+    prompt = f"""
+                MEDICAL REPORT TEXT:
+                {report_text}
+                """
+    try:
+        result = _process_openai_request(
+            text=prompt,
+            assistant_id=assistant_id,
+            user_id=user_id,
+            file_id=file_id,
+            clean_response=False
+        )
+        if result:
+            logger.info(f"[ai_impression_generation] ✅ Генерация impression успешна.")
+            logger.info("---------------------------------------------------")
+            return result
+        else:
+            logger.error("[ai_impression_generation] ❌ Ответ ассистента пуст.")
+            raise ValueError("Ответ ассистента пуст.")
+    except Exception as e:
+        logger.error(f"[ai_impression_generation] ❌ Ошибка при обращении к ИИ: {e}")
+        raise ValueError(f"Ошибка при обращении к ИИ: {e}")
+    finally:
+        reset_ai_session(assistant_id, user_id=user_id)
+
+
+# Функция для запуска проверки протокола при помощи ассистента OPENAI_ASSISTANT_REDACTOR
+def ai_report_check(assistant_id: str, user_id: int, report_text: str, today_date: str) -> str:
+    logger.info("(Функция ai_report_check) --------------------------------------")
+    logger.info("[ai_report_check] 🚀 Начата попытка проверки отчета с помощью OpenAI API.")
+
+    prompt = f"""Today's date: 
+                {today_date}
+                MEDICAL REPORT TO CHECK:
+                {report_text}
+                """
+    try:
+        result = _process_openai_request(
+            text=prompt,
+            assistant_id=assistant_id,
+            user_id=user_id,
+            file_id=None,
+            clean_response=False
+        )
+        if result:
+            logger.info(f"[ai_report_check] ✅ Проверка отчета успешна. Ответ ассистента: {result}")
+            logger.info("---------------------------------------------------")
+            return result
+        else:
+            logger.error("[ai_report_check] ❌ Ответ ассистента пуст.")
+            raise ValueError("Ответ ассистента пуст.")
+    except Exception as e:
+        logger.error(f"[ai_report_check] ❌ Ошибка при обращении к ИИ: {e}")
+        raise ValueError(f"Ошибка при обращении к ИИ: {e}")
+    finally:
+        reset_ai_session(assistant_id, user_id=user_id)
+
+
+# Функция для генерации шаблона отчета с помощью OpenAI. Использую в create_report_template в working_with_reports.py
 def ai_template_generator(template_data: str, assistant_id: str, user_id: int) -> dict:
     """
     Generates a report template based on the provided template data.
@@ -321,6 +383,6 @@ def ai_template_generator(template_data: str, assistant_id: str, user_id: int) -
         raise ValueError("Ответ ассистента не является корректным JSON. Не удалось распарсить.")
     
     
-    
+
     
     

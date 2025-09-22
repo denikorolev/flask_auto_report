@@ -1,19 +1,19 @@
 # openai_api.py
 
 from flask import request, jsonify, current_app, Blueprint, render_template
-from flask_security.decorators import auth_required, roles_required
-from app.utils.sentence_processing import convert_template_json_to_text
+from flask_security.decorators import auth_required
 from app.utils.logger import logger
 from flask_security import current_user
-from app.utils.redis_client import redis_get, redis_set, redis_delete
-from tasks.celery_tasks import async_clean_raw_text
+from app.utils.redis_client import redis_get
+from tasks.celery_tasks import async_clean_raw_text, async_impression_generating, async_report_checking
 from app.utils.ai_processing import _process_openai_request, reset_ai_session, count_tokens
+from datetime import datetime, timezone
 
 openai_api_bp = Blueprint("openai_api", __name__)
 
 
 # Routs
-
+# Страница для работы вручную с OpenAI API (просто загрузка страницы "ИИ")
 @openai_api_bp.route("/start_openai_api", methods=["POST", "GET"])
 @auth_required()
 def start_openai_api():
@@ -65,28 +65,24 @@ def generate_redactor():
     logger.info("(Маршрут generate_redactor) --------------------------------------")
     logger.info("🚀 Начата попытка генерации текста с помощью OpenAI API.")
     data = request.get_json()
-    text = data.get("text")
+    report_text = data.get("text")
+    today_date = datetime.now(timezone.utc).isoformat()
     logger.debug(f"Получены данные: {data}")
     ai_assistant = current_app.config.get("OPENAI_ASSISTANT_REDACTOR")
-    if not text:
+    if not report_text:
         return jsonify({"status": "error", "message": "Your request is empty"}), 400
     if not ai_assistant:
         return jsonify({"status": "error", "message": "Assistant ID is not configured."}), 500
     try:
-        reset_ai_session(ai_assistant, user_id=current_user.id)
-        message = _process_openai_request(text, ai_assistant, user_id=current_user.id)
-        if not message:
-            logger.error("❌ Ошибка при получении ответа от ассистента.")
-            logger.info("---------------------------------------------------")
-            return jsonify({"status": "error", "message": "Ошибка при получении ответа от ассистента."}), 500
-        logger.info("✅ Ответ ассистента получен успешно")
-        logger.info(f"Ответ: {message}")
+        task = async_report_checking.delay(ai_assistant, current_user.id, report_text, today_date)
+        logger.info("✅ Задача по проверке отчета успешно запущена в Celery")
         logger.info("---------------------------------------------------")
-        return jsonify({"status": "success", "data": message}), 200
+        return jsonify({"status": "success", "message": "Запущена проверка отчета", "data": task.id}), 200
     except Exception as e:
-        logger.error(f"❌ Ошибка при получении ответа от ассистента: {str(e)}")
+        logger.error(f"❌ Ошибка при запуске задачи по проверке отчета: {str(e)}")
         logger.info("---------------------------------------------------")
-        return jsonify({"status": "error", "message": "Ошибка при получении ответа от ассистента."}), 500
+        return jsonify({"status": "error", "message": str(e)}), 500
+        
      
     
 # Функция для генерации текста заключения (обращается к разным ассистентам в зависимости от модальности)
@@ -96,7 +92,7 @@ def generate_impression():
     logger.info("(Маршрут generate_impression) --------------------------------------")
     logger.info("🚀 Начата попытка генерации текста с помощью OpenAI API.")
 
-    user_id = current_user.id if current_user.is_authenticated else None
+    user_id = current_user.id
     
     try:
         data = request.get_json()
@@ -112,7 +108,8 @@ def generate_impression():
         file_key = f"user:{user_id}:impression_file_id:{modality}"
         file_id = redis_get(file_key)
         if not file_id:
-            logger.error({f"No impression file ID found in Redis for modality: {modality}"}), 400
+            logger.error(f"No impression file ID found in Redis for modality: {modality}")
+            return jsonify({"status": "error", "message": "No impression file ID found, ATTENTION REQUIRED"}), 400
 
         # Получение assistant_id по modality
         if modality == "MRI":
@@ -127,18 +124,14 @@ def generate_impression():
         if not assistant_id:
             return jsonify({"status": "error", "message": "Assistant ID is not configured."}), 500
 
-        # Обработка запроса
-        reset_ai_session(assistant_id, user_id=user_id)
-        assistant_reply = _process_openai_request(text, assistant_id, user_id=user_id, file_id=file_id)
-
-        logger.info("✅ Ответ ассистента получен успешно")
-        logger.debug(f"Ответ: {assistant_reply}")
+        data = async_impression_generating.delay(assistant_id, user_id, text, file_id)
+        logger.info("✅ Задача по генерации заключения успешно запущена в Celery")
         logger.info("---------------------------------------------------")
-        return jsonify({"status": "success", "data": assistant_reply}), 200
-
+        return jsonify({"status": "success", "message": "Запущена генерация заключения", "data": data.id}), 200
     except Exception as e:
-        logger.exception(f"❌ Unexpected error: {str(e)}")
-        return jsonify({"status": "error", "message": f"Ошибка при обращении к ИИ: error {e}" }), 500
+        logger.error(f"❌ Ошибка при запуске задачи по генерации заключения: {str(e)}")
+        logger.info("---------------------------------------------------")
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 
 # Маршрут для предварительной очистки текста испльзую в new_report_creation и в analyze_dinamics 
