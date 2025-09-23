@@ -1,11 +1,12 @@
 # openai_api.py
 
+import os
 from flask import request, jsonify, current_app, Blueprint, render_template
 from flask_security.decorators import auth_required
 from app.utils.logger import logger
 from flask_security import current_user
 from app.utils.redis_client import redis_get
-from tasks.celery_tasks import async_clean_raw_text, async_impression_generating, async_report_checking
+from tasks.celery_tasks import async_clean_raw_text, async_impression_generating, async_report_checking, template_generating
 from app.utils.ai_processing import _process_openai_request, reset_ai_session, count_tokens
 from datetime import datetime, timezone
 
@@ -160,6 +161,7 @@ def clean_raw_text_route():
 
 
 
+# Маршрут для извлечения текста из загруженного файла
 @openai_api_bp.route("/ocr_extract_text", methods=["POST"])
 @auth_required()
 def ocr_extract_text():
@@ -185,5 +187,5 @@ def ocr_extract_text():
         logger.error(f"(Извлечение текста из загруженного файла) ❌ Ошибка при обработке файла: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
     
-    
+
 

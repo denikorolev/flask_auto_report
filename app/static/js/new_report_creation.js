@@ -11,9 +11,10 @@ let CATEGORIES = []; // Глобальная переменная для хра�
 let GLOBALCATEGORIES = []; // Глобальная переменная для хранения глобальных категорий
 
 document.addEventListener("DOMContentLoaded", function() {
-
+    
     const userSettings = window.userSettings || {};
     CATEGORIES = Array.isArray(userSettings.CATEGORIES_SETUP) ? userSettings.CATEGORIES_SETUP : [];
+    console.log("CATEGORIES:", CATEGORIES);
     GLOBALCATEGORIES = Array.isArray(globalCategories) ? globalCategories : [];
     if (!CATEGORIES.length) {
         console.warn("No categories found in user settings.");
@@ -570,194 +571,6 @@ async function loadPublicReports() {
 
 
 
-// Обработчик для блока ИИ-генерации шаблона
-function showAiGeneratorBlock() {
-    const container = document.getElementById("aiGeneratorContainer");
-    if (!container) {
-        console.error("aiGeneratorContainer not found");
-        return;
-    }
-
-    // Элементы
-    const textarea = document.getElementById("Textarea");
-    const dropZone = document.getElementById("DropZone");
-    const preview = document.getElementById("DropZonePreview");
-    const pasteButton = document.getElementById("aiGeneratorPasteButton");
-    const uploadBtn = document.getElementById("aiGeneratorUploadButton");
-    const prepareButton = document.getElementById("aiGeneratorPrepareButton");
-    const cancelButton = document.getElementById("aiGeneratorCancelButton");
-    const fileInput = document.getElementById("aiGeneratorFileInput");
-    const generateTemplateButton = document.getElementById("aiGeneratorGenerateButton");
-    const pollingAbortController = new AbortController(); // Контроллер для отмены запросов
-    // Для будущей загрузки файлов с input (пока не реализовано)
-    // const fileInput = document.getElementById("aiGeneratorFileInput");
-
-    // Очистка состояния перед показом
-    textarea.value = "";
-    preview.innerHTML = "";
-
-    // Показываем сам блок (если скрыт)
-    container.style.display = "block";
-
-    // Навешиваем MutationObserver
-    const observer = new MutationObserver(() => {
-        const style = window.getComputedStyle(container);
-        if (style.display === "none") {
-            detachHandlers();
-            observer.disconnect();
-            console.log("aiGeneratorContainer скрыт — сняты обработчики");
-        }
-    });
-
-    // Инициализация dropzone (detach функция для снятия обработчиков)
-    let detachDropZone = setupDynamicsDropZone({
-        dropZoneId: "DropZone",
-        previewId: "DropZonePreview",
-        textareaId: "Textarea"
-    });
-
-    // Внутренняя функция, нужна чтобы не вводить каждый раз параметры 
-    // bar, label, text для универсальной функции updateProgressBar
-    function updateDynamicsProgressBar(percent, statusText = null) {
-        const progressBarContainer = document.getElementById("dynamicsProgressBarContainer");
-        if (progressBarContainer && progressBarContainer.style.display === "none") {
-            progressBarContainer.style.display = "block";
-        }
-        updateProgressBar(
-            {
-                bar: "dynamicsProgressBar",
-                label: "dynamicsProgressBarLabel",
-                text: "dynamicsProgressBarText"
-            },
-            percent,
-            statusText
-        );
-    }
-
-    // Снятие обработчиков
-    function detachHandlers() {
-        pasteButton.removeEventListener("click", pasteHandler);
-        prepareButton.removeEventListener("click", prepareTextHandler);
-        cancelButton.removeEventListener("click", cancelHandler);
-        fileInput.removeEventListener("change", fileSelectHandler);
-        uploadBtn.removeEventListener("click", uploadBtnHandler);
-        generateTemplateButton.removeEventListener("click", generateTemplateHandler);
-        if (detachDropZone) detachDropZone();
-    }
-
-
-    // Обработчик для вставки текста из буфера обмена
-    const pasteHandler = async () => {
-        await handlePasteFromClipboard(textarea, preview);
-    };
-
-    // Обработчик для кнопки генерации шаблона при помощи ИИ
-    const generateTemplateHandler = async () => {
-        const rawText = textarea.value.trim();
-        const templateName = document.getElementById("reportName").value.trim();
-        const templateModality = document.getElementById("reportModality").value;
-        const templateArea = document.getElementById("reportArea").value;
-
-
-        if (!rawText) {
-            alert("Пожалуйста, введите текст для анализа.");
-            return;
-        }
-        // Блокируем кнопку анализа
-        generateTemplateButton.disabled = true;
-
-        const startResponse = await sendRequest({
-            url: "/new_report_creation/ai_generate_template",
-            data: {
-                origin_text: rawText,
-                template_name: templateName,
-                template_type: templateModality,
-                template_area: templateArea
-            }
-        });
-        const {status, message, task_id} = startResponse || {};
-        if (status !== "success" || !task_id) {
-            console.error("Ошибка при отправке текста на анализ динамики:", message);
-            return;
-        }
-        
-        pollTaskStatus(task_id, {
-            maxAttempts: 20,
-            interval: 7000,
-            onProgress: (progress) => updateDynamicsProgressBar(progress, "Ожидание результата..."),
-            onSuccess: (result) => {
-                updateDynamicsProgressBar(100, "Готово!");
-                alert("Шаблон успешно сгенерирован!");
-            },
-            onError: (errMsg) => updateDynamicsProgressBar(100, errMsg),
-            onTimeout: () => updateDynamicsProgressBar(100, "Превышено время ожидания ответа. Попробуйте ещё раз позже."),
-            abortController: pollingAbortController // Передаем контроллер для отмены
-            
-        });
-
-    };
-
-    // Обработчик "Подготовить текст" — просто вызывает уже существующую функцию
-    const prepareTextHandler = async () => {
-
-        const taskID = await prepareTextWithAI(textarea, prepareButton);
-        console.log("Task ID:", taskID);
-        pollTaskStatus(taskID, {
-            maxAttempts: 12,
-            interval: 4000,
-            onProgress: (progress) => updateDynamicsProgressBar(progress, "Ожидание результата..."),
-            onSuccess: (result) => {
-                updateDynamicsProgressBar(100, "Готово!");
-                textarea.value = result || "";
-            },
-            onError: (errMsg) => updateDynamicsProgressBar(100, errMsg),
-            onTimeout: () => updateDynamicsProgressBar(100, "Превышено время ожидания ответа. Попробуйте ещё раз позже."),
-            abortController: pollingAbortController // Передаем контроллер для отмены
-        });
-    };
-
-    // Заглушка для "Отменить" (можно будет заменить на сброс блока/скрытие)
-    const cancelHandler = () => {
-        pollingAbortController.abort(); // 💥 Прерывает опрос
-    };
-
-    // Обработчик выбора файла
-    const fileSelectHandler = (e) => {
-        const file = e.target.files && e.target.files[0];
-        if (file) {
-            handleFileUpload(file, preview, textarea);
-        }
-        // Сброс значения чтобы можно было выбрать тот же файл снова при необходимости
-        fileInput.value = "";
-    };
-
-    // Промежуточный обработчик симулирующий клик на input для 
-    // загрузки файла при клике на кнопку загрузить файл
-    const uploadBtnHandler = () => {
-        fileInput.click();
-    };
-
-    // Вешаем обработчики
-    pasteButton.addEventListener("click", pasteHandler);
-    prepareButton.addEventListener("click", prepareTextHandler);
-    cancelButton.addEventListener("click", cancelHandler);
-    fileInput.addEventListener("change", fileSelectHandler);
-    uploadBtn.addEventListener("click", uploadBtnHandler);
-    generateTemplateButton.addEventListener("click", generateTemplateHandler);
-
-    observer.observe(container, { attributes: true, attributeFilter: ["style"] });
-
-    // Вернуть функцию для снятия обработчиков если нужно внести контроль снаружи
-    // return () => {
-    //     pasteButton.removeEventListener("click", pasteHandler);
-    //     prepareButton.removeEventListener("click", prepareTextHandler);
-    //     cancelButton.removeEventListener("click", cancelHandler);
-    //     if (detachDropZone) detachDropZone();
-    // };
-}
-
-
-
 // Функции для создания отчета после нажатия на кнопку "Создать протокол"
 
 /**
@@ -943,10 +756,277 @@ function createReportFromShared() {
 }
 
 
+// Обработчик для блока ИИ-генерации шаблона
+function showAiGeneratorBlock() {
+    const container = document.getElementById("aiGeneratorContainer");
+    if (!container) {
+        console.error("aiGeneratorContainer not found");
+        return;
+    }
+
+    // Элементы
+    const textarea = document.getElementById("Textarea");
+    const dropZone = document.getElementById("DropZone");
+    const preview = document.getElementById("DropZonePreview");
+    const pasteButton = document.getElementById("aiGeneratorPasteButton");
+    const uploadBtn = document.getElementById("aiGeneratorUploadButton");
+    const prepareButton = document.getElementById("aiGeneratorPrepareButton");
+    const cancelButton = document.getElementById("aiGeneratorCancelButton");
+    const fileInput = document.getElementById("aiGeneratorFileInput");
+    const generateTemplateButton = document.getElementById("aiGeneratorGenerateButton");
+    const pollingAbortController = new AbortController(); // Контроллер для отмены запросов
+    // Для будущей загрузки файлов с input (пока не реализовано)
+    // const fileInput = document.getElementById("aiGeneratorFileInput");
+
+    // Очистка состояния перед показом
+    textarea.value = "";
+    preview.innerHTML = "";
+
+    // Показываем сам блок (если скрыт)
+    container.style.display = "block";
+
+    // Навешиваем MutationObserver
+    const observer = new MutationObserver(() => {
+        const style = window.getComputedStyle(container);
+        if (style.display === "none") {
+            detachHandlers();
+            observer.disconnect();
+            console.log("aiGeneratorContainer скрыт — сняты обработчики");
+        }
+    });
+
+    // Инициализация dropzone (detach функция для снятия обработчиков)
+    let detachDropZone = setupDynamicsDropZone({
+        dropZoneId: "DropZone",
+        previewId: "DropZonePreview",
+        textareaId: "Textarea"
+    });
+
+    // Внутренняя функция, нужна чтобы не вводить каждый раз параметры 
+    // bar, label, text для универсальной функции updateProgressBar
+    function updateDynamicsProgressBar(percent, statusText = null) {
+        const progressBarContainer = document.getElementById("dynamicsProgressBarContainer");
+        if (progressBarContainer && progressBarContainer.style.display === "none") {
+            progressBarContainer.style.display = "block";
+        }
+        updateProgressBar(
+            {
+                bar: "dynamicsProgressBar",
+                label: "dynamicsProgressBarLabel",
+                text: "dynamicsProgressBarText"
+            },
+            percent,
+            statusText
+        );
+    }
+    function hideDynamicsProgressBar(delayMs = 0) {
+        const progressBarContainer = container.querySelector("#dynamicsProgressBarContainer") || document.getElementById("dynamicsProgressBarContainer");
+        if (!progressBarContainer) return;
+        if (delayMs > 0) {
+            setTimeout(() => { progressBarContainer.style.display = "none"; }, delayMs);
+        } else {
+            progressBarContainer.style.display = "none";
+        }
+    }
+
+    function disableGenerateButtons() {
+        generateTemplateButton.disabled = true;
+        prepareButton.disabled = true;
+    }
+
+    function enableGenerateButtons() {
+        generateTemplateButton.disabled = false;
+        prepareButton.disabled = false;
+    }
+
+    // Снятие обработчиков
+    function detachHandlers() {
+        pasteButton.removeEventListener("click", pasteHandler);
+        prepareButton.removeEventListener("click", prepareTextHandler);
+        cancelButton.removeEventListener("click", cancelHandler);
+        fileInput.removeEventListener("change", fileSelectHandler);
+        uploadBtn.removeEventListener("click", uploadBtnHandler);
+        generateTemplateButton.removeEventListener("click", generateTemplateHandler);
+        if (detachDropZone) detachDropZone();
+    }
 
 
+    // Обработчик для вставки текста из буфера обмена
+    const pasteHandler = async () => {
+        await handlePasteFromClipboard(textarea, preview);
+    };
+
+    // Обработчик для кнопки генерации шаблона при помощи ИИ
+    const generateTemplateHandler = async () => {
+        const rawText = textarea.value.trim();
+        const templateName = document.getElementById("reportName").value.trim();
+        const templateModalityID = document.getElementById("reportModality").value;
+        const globalTemplateModalityID = document.getElementById("reportModality").selectedOptions[0].getAttribute("data-global-id");
+        const templateAreaID = document.getElementById("reportArea").value;
+        const data = {
+                origin_text: rawText,
+                template_name: templateName,
+                template_modality_id: templateModalityID,
+                template_modality_name: document.getElementById("reportModality").selectedOptions[0].textContent,
+                template_area_id: templateAreaID,
+                template_area_name: document.getElementById("reportArea").selectedOptions[0].textContent,
+                global_template_modality_id: globalTemplateModalityID,
+                comment: document.getElementById("reportCreationComment").value.trim() || "",
+                report_side: document.querySelector("input[name='report_side']:checked")?.value === "true"
+            }
+        console.log(data);
+
+        if (!rawText) {
+            alert("Пожалуйста, введите текст для анализа.");
+            return;
+        }
+        // Блокируем кнопку анализа
+        disableGenerateButtons();
+
+        const startResponse = await sendRequest({
+            url: "/new_report_creation/ai_generate_template",
+            data: data
+        });
+        const {status, message, task_id} = startResponse || {};
+        if (status !== "success" || !task_id) {
+            updateDynamicsProgressBar(100, message || "Не удалось запустить задачу генерации шаблона.");
+            enableGenerateButtons();
+            hideDynamicsProgressBar(1500);
+            return;
+        }
+        
+        pollTaskStatus(task_id, {
+            maxAttempts: 20,
+            interval: 7000,
+            onProgress: (progress) => updateDynamicsProgressBar(progress, "Ожидание результата..."),
+            onSuccess: (result) => {
+                updateDynamicsProgressBar(100, "Готово!");
+                enableGenerateButtons();
+                hideDynamicsProgressBar(1000);
+                console.log("taskID из результата:", result);
+                handleAiGeneratedTemplate(result); // Так как ниже мы указываем флаг exclude_result: true, то в result будет task_id
+            },
+            onError: (errMsg) => {
+                updateDynamicsProgressBar(100, errMsg || "Ошибка при генерации шаблона.");
+                enableGenerateButtons();
+                hideDynamicsProgressBar(2000);
+            },
+            onTimeout: () => {
+                updateDynamicsProgressBar(100, "Превышено время ожидания. Попробуйте ещё раз позже.");
+                enableGenerateButtons();
+                hideDynamicsProgressBar(2000);
+            },
+            abortController: pollingAbortController, // Передаем контроллер для отмены
+            excludeResult: true // Не забираем json результата подберем его потом по task_id
+        });
+
+    };
+
+    // Обработчик "Подготовить текст" — просто вызывает уже существующую функцию
+    const prepareTextHandler = async () => {
+
+        const taskID = await prepareTextWithAI(textarea, prepareButton);
+        pollTaskStatus(taskID, {
+            maxAttempts: 12,
+            interval: 4000,
+            onProgress: (progress) => updateDynamicsProgressBar(progress, "Ожидание результата..."),
+            onSuccess: (result) => {
+                updateDynamicsProgressBar(100, "Готово!");
+                textarea.value = result || "";
+                enableGenerateButtons();
+                hideDynamicsProgressBar(1000);
+            },
+            onError: (errMsg) => {
+                updateDynamicsProgressBar(100, errMsg);
+                enableGenerateButtons();
+                hideDynamicsProgressBar(2000);
+            },
+            onTimeout: () => {
+                updateDynamicsProgressBar(100, "Превышено время ожидания ответа. Попробуйте ещё раз позже.");
+                enableGenerateButtons();
+                hideDynamicsProgressBar(2000);
+            },
+            abortController: pollingAbortController // Передаем контроллер для отмены
+        });
+    };
+
+    // Заглушка для "Отменить" (можно будет заменить на сброс блока/скрытие)
+    const cancelHandler = () => {
+        pollingAbortController.abort(); // 💥 Прерывает опрос
+        enableGenerateButtons();
+        hideDynamicsProgressBar(500);
+    };
+
+    // Обработчик выбора файла
+    const fileSelectHandler = (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (file) {
+            handleFileUpload(file, preview, textarea);
+        }
+        // Сброс значения чтобы можно было выбрать тот же файл снова при необходимости
+        fileInput.value = "";
+    };
+
+    // Промежуточный обработчик симулирующий клик на input для 
+    // загрузки файла при клике на кнопку загрузить файл
+    const uploadBtnHandler = () => {
+        fileInput.click();
+    };
+
+    // Вешаем обработчики
+    pasteButton.addEventListener("click", pasteHandler);
+    prepareButton.addEventListener("click", prepareTextHandler);
+    cancelButton.addEventListener("click", cancelHandler);
+    fileInput.addEventListener("change", fileSelectHandler);
+    uploadBtn.addEventListener("click", uploadBtnHandler);
+    generateTemplateButton.addEventListener("click", generateTemplateHandler);
+
+    observer.observe(container, { attributes: true, attributeFilter: ["style"] });
+
+    // Вернуть функцию для снятия обработчиков если нужно внести контроль снаружи
+    // return () => {
+    //     pasteButton.removeEventListener("click", pasteHandler);
+    //     prepareButton.removeEventListener("click", prepareTextHandler);
+    //     cancelButton.removeEventListener("click", cancelHandler);
+    //     if (detachDropZone) detachDropZone();
+    // };
+}
 
 
+// Функция для обработки результата ИИ-генерации шаблона (отправляет 
+// полученный шаблон в json формате на сервер, для создания протокола)
+function handleAiGeneratedTemplate(taskID) {
+    const textArea = document.getElementById("Textarea");
+    if (textArea) {
+        textArea.value = ""; // очищаем текстовое поле
+    }
+    if (!taskID || typeof taskID !== "string") {
+        console.error("Invalid AI generated template. taskID:", taskID);
+        textArea.innerText = "Ошибка: Не удалось получить сгенерированный шаблон.";
+        return;
+    }
+
+    // Отправляем запрос на сервер чтобы получить результат по taskID
+    // в случае success с сервера переходим на страницу редактирования нового протокола
+    // в случае error показываем ошибку в textArea
+    sendRequest({
+        url: `/new_report_creation/get_ai_generated_template?task_id=${encodeURIComponent(taskID)}`,
+    }).then(response => {
+        const {status, message, report_id} = response || {};
+        console.log("status:", status, "message:", message, "report_id:", report_id);
+        if (status === "success" && report_id) {
+            console.log("AI generated template successfully received. report_id:", report_id);
+            // Переходим на страницу редактирования нового протокола
+            window.location.href = `/editing_report/edit_report?report_id=${report_id}`;
+        } else {
+            const errorMsg = message || "Не удалось получить сгенерированный шаблон.";
+            console.error("Error getting AI generated template:", errorMsg);
+            if (textArea) {
+                textArea.value = `Ошибка: ${errorMsg}`;
+            }
+        }
+    });
+}
 
 
 

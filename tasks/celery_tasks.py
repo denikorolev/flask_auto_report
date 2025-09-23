@@ -33,7 +33,7 @@ def async_clean_raw_text(raw_text, user_id, assistant_id):
     return cleaned_text
 
 
-# Таск для подготовки переноса старого протокола в шаблон
+# Таск для подготовки переноса старого протокола в шаблон (используется для динамики)
 @celery.task(name='async_analyze_dynamics', time_limit=160, soft_time_limit=160)
 def async_analyze_dynamics(origin_text, template_text, user_id, skeleton, report_id, first_look_assistant_id, structure_assistant_id):
     logger.info(f"Запущен анализ динамики для пользователя: {user_id} в Celery задаче")
@@ -65,5 +65,5 @@ def async_report_checking(assistant_id, user_id, report_text, today_date):
     
 # Таск для генерации шаблона на основе данных пользователя
 @celery.task(name="template_generating", time_limit=160, soft_time_limit=160)
-def template_generating(template_data, assistant_id, user_id):
-    return ai_template_generator(template_data, assistant_id, user_id)
+def template_generating(template_text, assistant_id, user_id):
+    return ai_template_generator(template_text, assistant_id, user_id)

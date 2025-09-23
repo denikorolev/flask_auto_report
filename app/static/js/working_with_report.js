@@ -639,13 +639,20 @@ function copyButtonLogic(copyButton) {
 
 
 
-// Логика для кнопки "Generate Impression". Возможно нужно объединить с логикой generateImpressionRequest
+// Логика для кнопки "Generate Impression". 
 async function generateImpressionLogic(boxForAiResponse, responseForDelete, boxForAiDynamicResponse) {
     const textToCopy = collectTextFromParagraphs("paragraph__item--core");
+    const progrBar = document.getElementById("dynamicsProgressBarContainer");
+    if (progrBar.style.display === "block") {
+        alert("Пожалуйста, дождитесь завершения текущей операции.");
+        return;
+    }
+
     if (!textToCopy || !textToCopy.trim()) {
         alert("Нет текста для генерации заключения.");
         return;
     }
+
 
     if (boxForAiResponse) {
         boxForAiResponse.innerText = "";
@@ -906,9 +913,6 @@ async function sendModifiedSentencesToServer() {
 
 
 
-
-
-
 // Функция для генерации запроса на сервер для получения заключения
 function generateImpressionRequest(text) {
     // Формируем данные для отправки
@@ -1008,6 +1012,11 @@ function finishWorkAndSaveSnapShot() {
 function checkReportAI(boxForAiResponse, responseForDelete, boxForAiDynamicResponse){
     const coreText = collectTextFromParagraphs("paragraph__item--core");
     const impressionText = collectTextFromParagraphs("paragraph__item--impression");
+    const progrBar = document.getElementById("dynamicsProgressBarContainer");
+    if (progrBar.style.display === "block") {
+        alert("Пожалуйста, дождитесь завершения текущей операции.");
+        return;
+    }
 
     if (boxForAiResponse) {
         boxForAiResponse.innerText = "";

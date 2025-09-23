@@ -5,7 +5,6 @@ from flask_login import current_user
 from app.models.models import db, Report, ReportCategory, Paragraph, HeadSentence, BodySentence, TailSentence, ReportShare, HeadSentenceGroup, BodySentenceGroup, TailSentenceGroup
 from app.utils.sentence_processing import extract_paragraphs_and_sentences
 from app.utils.file_processing import allowed_file
-from app.utils.db_processing import get_categories_setup_from_appconfig
 from app.utils.common import ensure_list
 from werkzeug.utils import secure_filename
 from app.utils.logger import logger
@@ -13,6 +12,10 @@ import os
 import shutil 
 from flask_security.decorators import auth_required
 from tasks.celery_tasks import template_generating
+import json
+from app.utils.redis_client import redis_set
+from celery.result import AsyncResult
+from app.utils.redis_client import redis_get
 
 new_report_creation_bp = Blueprint('new_report_creation', __name__)
 
@@ -122,6 +125,7 @@ def get_parent_categories(category_2_id: int):
         return category_1.id, None
     return category_1.id, global_category.id
 # Routes
+
 
 # Загрузка основной страницы создания отчета
 @new_report_creation_bp.route('/create_report', methods=['GET'])
@@ -651,38 +655,163 @@ def create_report_from_shared_route():
     
 
 
+# Маршрут для генерации шаблона отчета при помощи ИИ. 
+# 1 часть сбор данных и отправка их ИИ.
 @new_report_creation_bp.route('/ai_generate_template', methods=['POST'])
 @auth_required()
 def ai_generate_template():
     logger.info("(Маршрут: ai_generate_template) 🚀 Начата генерация шаблона с помощью AI")
     data = request.get_json()
-    if not data:
-        return jsonify({"status": "error", "message": "Не получены данные для генерации шаблона"}), 400
-    template_text = data.get('origin_text', '')
-    template_name = data.get('template_name', '').strip()
-    template_type = data.get('template_type', '')
-    template_area = data.get('template_area', '')
+    template_text = data.get('origin_text').strip()
+    template_name = data.get('template_name').strip()
+    template_modality_id = data.get('template_modality_id')
+    template_modality_name = data.get('template_modality_name')
+    template_area_id = data.get('template_area_id')
+    template_area_name = data.get('template_area_name')
+    global_template_modality_id = data.get('global_template_modality_id')
+    comment = data.get('comment', "")
+    report_side = data.get('report_side', False)
     
-    user_id = current_user.id if current_user.is_authenticated else None
+    user_id = current_user.id
 
-    if not all([template_name, template_type, template_area]):
+    if not all([template_name, 
+                template_modality_id, 
+                template_area_id, 
+                template_text, 
+                template_modality_name, 
+                template_area_name, 
+                user_id]):
         return jsonify({"status": "error", "message": "Не все данные для генерации шаблона предоставлены"}), 400
 
     assistant_id = os.getenv("OPENAI_ASSISTANT_TEMPLATE_MAKER")
-    text = f"""
+    prompt = f"""
 
-    The text of the radiology report: {template_text}
-    The imaging modality: {template_type}
-    The anatomical area: {template_area}
     The report title: {template_name}
+    The imaging modality: {template_modality_name}
+    The anatomical area: {template_area_name}
+    The text of the radiology report: {template_text}
     """
     try:
-        task = template_generating.delay(template_data=text, user_id=user_id, assistant_id=assistant_id)
+        task = template_generating.delay(template_text=prompt, 
+                                         assistant_id=assistant_id,
+                                         user_id=user_id, 
+                                         )
+        # Сохраняем контекст для последующей обработки результата (по task_id)
+        try:
+            data_cache = {
+                "template_name": template_name,
+                "template_modality_id": template_modality_id,
+                "template_modality_name": template_modality_name,
+                "template_area_id": template_area_id,
+                "template_area_name": template_area_name,
+                "global_template_modality_id": global_template_modality_id,
+                "comment": comment,
+                "report_side": report_side,
+            }
+            redis_set(f"task_ctx:ai_template:{task.id}", json.dumps(data_cache), ex=600)
+        except Exception as cache_err:
+            logger.warning(f"(ai_generate_template) ⚠️ Не удалось сохранить контекст задачи в Redis: {cache_err}")
+            return jsonify({"status": "error", "message": "Сбой сохранения промежуточных данных. Невозможно сгенерировать шаблон при помощи ИИ. Попробуйте создать шаблон другим способом или повторите попытку позже."}), 500
+                
         logger.info(f"(Маршрут: ai_generate_template) ✅ Генерация шаблона успешно запущена.")
         return jsonify({"status": "success", "message": "Генерация шаблона запущена.", "task_id": task.id}), 200
     except Exception as e:
         logger.error(f"(Маршрут: ai_generate_template) ❌ Ошибка при запуске генерации шаблона: {e}")
         return jsonify({"status": "error", "message": "Не удалось запустить генерацию шаблона."}), 500
-
-
-
+    
+    
+# 2 часть получение результата от ИИ и создание шаблона
+@new_report_creation_bp.route('/get_ai_generated_template', methods=['GET', 'POST'])
+@auth_required()
+def get_ai_generated_template():
+    logger.info("(Маршрут: get_ai_generated_template) 🚀 Начато получение результата генерации шаблона с помощью AI")
+    task_id = request.args.get('task_id', type=str)
+    print(f"Получен task_id: {task_id}")
+    if not task_id:
+        logger.warning("(Маршрут: get_ai_generated_template) ❌ Не указан ID задачи")
+        return jsonify({"status": "error", "message": "Не указан ID задачи"}), 400
+    logger.info(f"(Маршрут: get_ai_generated_template) ▶️ Запрос результата по task_id={task_id}")
+    task = AsyncResult(task_id)
+    if not task:
+        logger.error(f"(Маршрут: get_ai_generated_template) ❌ Задача с ID {task_id} не найдена")
+        return jsonify({"status": "error", "message": "Данные по данной генерации ИИ не найдены на сервере"}), 404
+    template_data_from_ai = task.result
+    logger.info(f"(Маршрут: get_ai_generated_template) Ответ от ИИ получен: {template_data_from_ai}")
+    if not template_data_from_ai:
+        logger.error(f"(Маршрут: get_ai_generated_template) ❌ Ошибка получения результата задачи из Celery для task_id: {task_id}")
+        return jsonify({"status": "error", "message": "Результат генерации шаблона не валиден."}), 202
+    try:
+        if isinstance(template_data_from_ai, dict):
+            status = template_data_from_ai.get("status", "error")
+            if status != "success":
+                message = template_data_from_ai.get("message", "Ошибка генерации шаблона")
+                logger.error(f"(Маршрут: get_ai_generated_template) ❌ Ошибка генерации шаблона: {message}")
+                return jsonify({"status": "error", "message": message}), 500
+            paragraphs = template_data_from_ai.get("paragraphs", "[]")
+        else:
+            template_data = json.loads(template_data)
+            status = template_data.get("status", "error")
+            if status != "success":
+                message = template_data.get("message", "Ошибка генерации шаблона")
+                logger.error(f"(Маршрут: get_ai_generated_template) ❌ Ошибка генерации шаблона: {message}")
+                return jsonify({"status": "error", "message": message}), 500
+            paragraphs = template_data.get("paragraphs", "[]")
+            
+        template_data = redis_get(f"task_ctx:ai_template:{task_id}")
+        if not template_data:
+            logger.warning(f"(Маршрут: get_ai_generated_template) ❌ Не удалось получить контекст задачи из Redis для task_id: {task_id}")
+            return jsonify({"status": "error", "message": "Сбой получения промежуточных данных. Невозможно создать шаблон при помощи ИИ. Попробуйте создать шаблон другим способом или повторите попытку позже."}), 500
+        template_data = json.loads(template_data)
+    except Exception as e:
+        logger.error(f"(Маршрут: get_ai_generated_template) ❌ Ошибка при обработке результата задачи: {e}")
+        return jsonify({"status": "error", "message": "Не удалось обработать результат задачи."}), 500
+    try:
+        report_name = template_data.get("template_name", "AI Template") 
+        category_2_id = template_data.get("template_area_id")
+        category_1_id = template_data.get("template_modality_id")
+        global_category_id = template_data.get("global_template_modality_id")
+        profile_id = session.get("profile_id")
+        user_id = current_user.id
+        comment = template_data.get("comment", "")
+        report_side = template_data.get("report_side", False)
+        new_report = Report.create(
+            profile_id=profile_id,
+            category_1_id=category_1_id,
+            category_2_id=category_2_id,
+            global_category_id=global_category_id,
+            report_name=report_name,
+            user_id=user_id,
+            comment=comment,
+            public=False,
+            report_side=report_side
+        )
+        if not new_report:
+            logger.error(f"(Маршрут: get_ai_generated_template) ❌ Ошибка при создании нового протокола в БД")
+            return jsonify({"status": "error", "message": "Не удалось создать шаблон протокола."}), 500
+        for idx, paragraph in enumerate(paragraphs, start=1):
+            sentences = paragraph.get('sentences', [])
+            new_paragraph = Paragraph.create(
+                report_id=new_report.id,
+                paragraph_index=idx,
+                paragraph=paragraph['paragraph'],
+            )
+            for sentence_index, sentence_data in enumerate(sentences, start=1):
+                if isinstance(sentence_data, str):
+                    HeadSentence.create(
+                        user_id=user_id,
+                        report_global_modality_id=global_category_id,
+                        sentence=sentence_data.strip(),
+                        related_id=new_paragraph.id,
+                        sentence_index=sentence_index
+                    )
+                else:
+                    logger.warning(f"(Маршрут: get_ai_generated_template) ⚠️ Неожиданный формат предложения: {sentence_data}")
+                    pass
+        logger.info(f"(Маршрут: get_ai_generated_template) ✅ Шаблон протокола успешно создан. ID: {new_report.id}")
+        return jsonify({"status": "success", 
+                        "message": "Шаблон протокола успешно создан", 
+                        "report_id": new_report.id}), 200
+    except Exception as e:
+        logger.error(f"(Маршрут: get_ai_generated_template) ❌ Ошибка при создании шаблона протокола в БД: {e}")
+        return jsonify({"status": "error", "message": "Не удалось создать шаблон протокола."}), 500
+    

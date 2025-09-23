@@ -24,7 +24,7 @@
             <label class="label" for="reportModality">Модальность:</label>
             <select class="select" id="reportModality" name="report_modality" required>
                 {% for cat_1 in user_settings.CATEGORIES_SETUP %}
-                <option value="{{ cat_1.id }}" data-modality-name="{{ cat_1.name }}">{{ cat_1.name }}</option>
+                <option value="{{ cat_1.id }}" data-modality-name="{{ cat_1.name }}" data-global-id="{{ cat_1.global_id }}">{{ cat_1.name }}</option>
                 {% endfor %}
                 <option value="new_modality">Создать новую модальность</option>
             </select>

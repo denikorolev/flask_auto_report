@@ -20,19 +20,21 @@ export function pollTaskStatus(task_id, {
     onSuccess = () => {},
     onError = () => {},
     onTimeout = () => {},
-    abortController = null
+    abortController = null,
+    excludeResult = false
 } = {}, attempt = 0) {
 
     if (abortController?.signal?.aborted) {
         onError("Запрос отменён пользователем.");
         return;
     }
-
     const progress = Math.min((attempt / maxAttempts) * 100, 99);
     onProgress(progress, attempt, maxAttempts);
+    const url = `/tasks_status/task_status/${task_id}?exclude_result=${excludeResult}`;
+    console.log("URL for polling:", url);
 
     sendRequest({
-        url: `/tasks_status/task_status/${task_id}`,
+        url: url,
         method: "GET",
         loader: false
     }).then(data => {
@@ -48,9 +50,17 @@ export function pollTaskStatus(task_id, {
         const status = (data.status || "").toLowerCase();
 
         if (status === "pending" || status === "started") {
+            console.log(`(pollTaskStatus) Попытка ${attempt + 1}/${maxAttempts} - Задача ${task_id} в состоянии ${status}. Опция exclude_result: ${excludeResult}`);
             if (attempt < maxAttempts) {
                 setTimeout(() => pollTaskStatus(task_id, {
-                    maxAttempts, interval, onProgress, onSuccess, onError, onTimeout, abortController
+                    maxAttempts, 
+                    interval, 
+                    onProgress, 
+                    onSuccess, 
+                    onError, 
+                    onTimeout, 
+                    abortController, 
+                    excludeResult
                 }, attempt + 1), interval);
             } else {
                 onTimeout();

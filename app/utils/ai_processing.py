@@ -357,7 +357,7 @@ def ai_report_check(assistant_id: str, user_id: int, report_text: str, today_dat
 
 
 # Функция для генерации шаблона отчета с помощью OpenAI. Использую в create_report_template в working_with_reports.py
-def ai_template_generator(template_data: str, assistant_id: str, user_id: int) -> dict:
+def ai_template_generator(template_text: str, assistant_id: str, user_id: int) -> dict:
     """
     Generates a report template based on the provided template data.
     """
@@ -365,7 +365,7 @@ def ai_template_generator(template_data: str, assistant_id: str, user_id: int) -
     logger.info("[ai_template_generator] 🚀 Начата генерация шаблона отчета.")
     
     generated_template = _process_openai_request(
-        text=template_data,
+        text=template_text,
         assistant_id=assistant_id,
         user_id=user_id,
         file_id=None,
@@ -381,6 +381,8 @@ def ai_template_generator(template_data: str, assistant_id: str, user_id: int) -
     except pyjson.JSONDecodeError as e:
         logger.error(f"[ai_template_generator] ❌ Ошибка при распарсивании ответа ассистента: {e}")
         raise ValueError("Ответ ассистента не является корректным JSON. Не удалось распарсить.")
+    finally:
+        reset_ai_session(assistant_id, user_id=user_id)
     
     
 

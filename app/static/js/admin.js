@@ -209,7 +209,7 @@ function sendSelectedData() {
     });
 }
 
-
+// Функция для инициализации обработчиков категорий
 function initCategoriesHandlers() {
     // Загрузка категорий
     let categoriesCache = [];
@@ -310,8 +310,11 @@ function initCategoriesHandlers() {
             cat.name.toLowerCase() === nameLower
         );
         if (exists) {
-            alert("Глобальная категория с таким именем уже существует на этом уровне.");
-            return;
+            const confirmOverwrite = confirm("Категория с таким именем уже существует на этом уровне. Добавить всё равно?");
+            if (!confirmOverwrite) {
+                alert("Добавление категории отменено.");
+                return;
+            }
         }
         
 
