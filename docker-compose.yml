@@ -1,8 +1,16 @@
 version: "3.8"
+
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
 services:
   web:
     build: .
+    image: radiologary-app:latest
     restart: always
+    logging: *default-logging
     env_file: 
       - .env
     ports:
@@ -21,6 +29,8 @@ services:
 
   nginx:
     image: nginx:alpine
+    restart: always
+    logging: *default-logging
     ports:
       - "80:80"
       - "443:443"
@@ -33,20 +43,23 @@ services:
 
   db:
     image: postgres:13
+    restart: always
+    logging: *default-logging
     env_file: 
       - .env
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASS}
       POSTGRES_DB: ${DB_NAME}
-    ports:
-      - "${DB_PORT}:5432"
+    ports: []
     volumes:
       - pgdata:/var/lib/postgresql/data
       - /home/deniskorolev/backups:/backups
 
   certbot:
     image: certbot/certbot
+    restart: always
+    logging: *default-logging
     volumes:
       - ./certbot/conf:/etc/letsencrypt
       - ./certbot/www:/var/www/certbot
@@ -55,16 +68,19 @@ services:
   redis:
     image: redis:7
     restart: always
+    logging: *default-logging
     volumes:
       - redis_data:/data
 
 
   celery:
-    build: .
+    image: radiologary-app:latest
     restart: always
+    logging: *default-logging
     env_file:
       - .env
-    command: celery -A tasks.celery_worker.celery worker --loglevel=info --concurrency=10
+    working_dir: /app
+    command: ["python", "-m", "celery", "-A", "tasks.celery_worker.celery", "worker", "--loglevel=info", "--concurrency=10"]
     depends_on:
       - web
       - redis
@@ -72,9 +88,13 @@ services:
       - uploads_data:/uploads
     
   celery-beat:
-    build: .
+    image: radiologary-app:latest
     restart: always
-    command: celery -A tasks.celery_worker.celery beat --loglevel=info
+    logging: *default-logging
+    env_file:
+      - .env
+    working_dir: /app
+    command: ["python", "-m", "celery", "-A", "tasks.celery_worker.celery", "beat", "--loglevel=info"]
     depends_on:
       - web
       - redis
