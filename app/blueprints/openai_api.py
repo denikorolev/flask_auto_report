@@ -167,25 +167,7 @@ def clean_raw_text_route():
 def ocr_extract_text():
     logger.info(f"(Извлечение текста из загруженного файла) ------------------------------------")
     logger.info(f"(Извлечение текста из загруженного файла) 🚀 Начинаю обработку запроса на извлечение текста из загруженного файла")
-    try:
-        file = request.files.get("file")
-        if not file:
-            logger.error(f"(Извлечение текста из загруженного файла) ❌ Не получен файл для обработки")
-            return jsonify({"status": "error", "message": "No file uploaded"}), 400
-        from app.utils.file_processing import extract_text_from_uploaded_file
-        text, error = extract_text_from_uploaded_file(file)
-        if error:
-            # Если pdf — отдать код 200, но сообщить что не поддерживается
-            if "PDF files are not supported" in error:
-                logger.info(f"(Извлечение текста из загруженного файла) 📄 PDF файл не поддерживается")
-                return jsonify({"status": "success", "text": "", "message": error}), 200
-            logger.error(f"(Извлечение текста из загруженного файла) ❌ Ошибка при извлечении текста: {error}")
-            return jsonify({"status": "error", "message": error}), 400
-        logger.info(f"(Извлечение текста из загруженного файла) ✅ Текст успешно извлечен")
-        return jsonify({"status": "success", "text": text}), 200
-    except Exception as e:
-        logger.error(f"(Извлечение текста из загруженного файла) ❌ Ошибка при обработке файла: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 500
+    return jsonify({"status": "error", "message": "Not implemented yet"}), 501
     
 
 

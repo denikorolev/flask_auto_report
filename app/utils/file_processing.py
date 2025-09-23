@@ -1,6 +1,5 @@
 # file_processing.py
 
-from flask import session
 from flask_security import current_user
 from werkzeug.datastructures import FileStorage
 from werkzeug.utils import secure_filename
@@ -8,14 +7,12 @@ from docx import Document
 import os
 from unidecode import unidecode
 from datetime import datetime
-import tempfile
 from config import get_config, Config
 from app.models.models import AppConfig, db, FileMetadata, Report, HeadSentenceGroup, TailSentenceGroup, BodySentenceGroup, KeyWord
-from app.utils.sentence_processing import clean_text_with_keywords, _add_if_unique
+from app.utils.sentence_processing import _add_if_unique
 from openai import OpenAI
 from app.utils.logger import logger
-import easyocr
-from app.utils.redis_client import redis_get, redis_set, redis_delete
+from app.utils.redis_client import redis_set, redis_delete
 
 
 # Проверка допустимости расширения загружаемого файла
@@ -410,35 +407,3 @@ def generate_impression_json(modality, profile_id, user_id, user_email, except_w
 
 
 
-# Функция для извлечения текста из загруженного файла с помощью OCR
-def extract_text_from_uploaded_file(file):
-    logger.info(f"(extract_text_from_uploaded_file) Начинаем извлечение текста из файла: {file.filename}")
-    # Проверка типа файла (разрешён только jpeg/png)
-    allowed_ext = {'jpg', 'jpeg', 'png', 'pdf'}
-    filename = secure_filename(file.filename)
-    ext = filename.rsplit('.', 1)[-1].lower()
-    if ext not in allowed_ext:
-        logger.error(f"(extract_text_from_uploaded_file) Ошибка: неподдерживаемый тип файла: {ext}")
-        return None, f"Unsupported file type: {ext}"
-
-    # Для PDF — сразу возвращаем "не поддерживается"
-    if ext == "pdf":
-        return None, "PDF files are not supported for OCR yet. Please upload JPG or PNG images."
-
-    # Сохраняем файл во временный файл
-    with tempfile.NamedTemporaryFile(delete=False, suffix=f".{ext}") as tmp:
-        file.save(tmp.name)
-        tmp_path = tmp.name
-
-    text = ""
-    try:
-        reader = easyocr.Reader(['ru', 'en'])
-        result = reader.readtext(tmp_path, detail=0)
-        text = "\n".join(result)
-    except Exception as e:
-        os.unlink(tmp_path)
-        logger.error(f"(extract_text_from_uploaded_file) Ошибка при извлечении текста из файла: {str(e)}")
-        return None, f"Ошибка извлечения текста из файла: {str(e)}"
-    os.unlink(tmp_path)
-    logger.info(f"(extract_text_from_uploaded_file) ✅ Текст успешно извлечен.")  # Логируем первые 100 символов текста
-    return text, None
