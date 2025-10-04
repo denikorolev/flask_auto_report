@@ -6,7 +6,8 @@
 
 import { setupDynamicsDropZone, handleFileUpload, handlePasteFromClipboard } from "/static/js/utils/dynamicsDropZone.js";
 import { prepareTextWithAI } from "/static/js/utils/ai_handlers.js";
-import { pollTaskStatus, updateProgressBar } from "/static/js/utils/utils_module.js";      
+import { pollTaskStatus } from "/static/js/utils/utils_module.js";   
+import { ProgressBar } from "/static/js/utils/elements.js";   
 
 let activeSentence = null;  // Для отслеживания активного предложения
 document.addEventListener("DOMContentLoaded", initWorkingWithReport);
@@ -102,13 +103,7 @@ function initWorkingWithReport() {
           showDynamicReportPopup(boxForAiImpressionResponse, boxForAiRedactorResponse);
         });
     }
-
-
-
 }
-
-
-
 
 
 /**
@@ -638,12 +633,13 @@ function copyButtonLogic(copyButton) {
 }
 
 
-
 // Логика для кнопки "Generate Impression". 
 async function generateImpressionLogic(boxForAiResponse, responseForDelete, boxForAiDynamicResponse) {
     const textToCopy = collectTextFromParagraphs("paragraph__item--core");
-    const progrBar = document.getElementById("dynamicsProgressBarContainer");
-    if (progrBar.style.display === "block") {
+    const panel = document.getElementById("reportControlPanel");
+    const mountParent = panel?.querySelector(".progress-bar-container");
+    const existingBar = panel?.querySelector(".dynamics-progress-container");
+    if (existingBar && getComputedStyle(existingBar).display !== "none") {
         alert("Пожалуйста, дождитесь завершения текущей операции.");
         return;
     }
@@ -653,14 +649,11 @@ async function generateImpressionLogic(boxForAiResponse, responseForDelete, boxF
         return;
     }
 
-
     if (boxForAiResponse) {
         boxForAiResponse.innerText = "";
         boxForAiResponse.style.display = "block";
     }
-
     if (responseForDelete) {
-        console.log("я стер блок", responseForDelete);
         responseForDelete.innerText = "";
         responseForDelete.style.display = "none";
     }
@@ -669,37 +662,28 @@ async function generateImpressionLogic(boxForAiResponse, responseForDelete, boxF
         boxForAiDynamicResponse.style.display = "none";
     }
 
-    // Прогресс-бар справа (scope по .report-controlpanel, чтобы не конфликтовать с попапом динамики)
-    const panel = document.querySelector(".report-controlpanel");
-    const barContainer = panel ? panel.querySelector("#dynamicsProgressBarContainer") : null;
-    const barElem = panel ? panel.querySelector("#dynamicsProgressBar") : null;
-    const labelElem = panel ? panel.querySelector("#dynamicsProgressBarLabel") : null;
-    const textElem = panel ? panel.querySelector("#dynamicsProgressBarText") : null;
-
-    const showBar = () => { if (barContainer) barContainer.style.display = "block"; };
-    const hideBar = () => { if (barContainer) barContainer.style.display = "none"; };
-    const setBar = (pct, msg = null) => updateProgressBar({ bar: barElem, label: labelElem, text: textElem }, pct, msg);
-    showBar();
-    setBar(0, "Генерация заключения...");
+    // Прогресс-бар справа — динамическая вставка
+    const pb = new ProgressBar().mount(mountParent, "afterbegin");
+    pb.set(0, "Генерация заключения...");
 
     try {
         // backend возвращает task.id в поле data
         const taskId = await generateImpressionRequest(textToCopy);
         if (!taskId || typeof taskId !== "string") {
-            setBar(100, "Не удалось запустить задачу генерации заключения.");
-            setTimeout(hideBar, 1500);
+            pb.set(100, "Не удалось запустить задачу генерации заключения.");
+            setTimeout(() => pb.destroy(), 1500);
             return;
         }
 
-        setBar(10, "Задача поставлена. Жду результат...");
+        pb.set(10, "Задача поставлена. Жду результат...");
 
         // Поллим статус (фоллбек-прогресс)
         pollTaskStatus(taskId, {
             maxAttempts: 10,
             interval: 4000,
-            onProgress: (progress) => setBar(progress, "Ожидание результата..."),
+            onProgress: (progress) => pb.set(progress, "Ожидание результата..."),
             onSuccess: (result) => {
-                setBar(100, "Готово!");
+                pb.set(100, "Готово!");
                 const text = (typeof result === "string") ? result : (result && result.result) || "";
                 boxForAiResponse.textContent = text || "Ответ ИИ не получен.";
 
@@ -717,21 +701,21 @@ async function generateImpressionLogic(boxForAiResponse, responseForDelete, boxF
                     onEnter(boxForAiResponse, boxForAiResponse._onEnterHandler, true);
                 }
 
-                setTimeout(hideBar, 1000);
+                setTimeout(() => pb.destroy(), 1000);
             },
             onError: (errMsg) => {
-                setBar(100, errMsg || "Ошибка при выполнении задачи генерации заключения.");
-                setTimeout(hideBar, 2000);
+                pb.set(100, errMsg || "Ошибка при выполнении задачи генерации заключения.");
+                setTimeout(() => pb.destroy(), 2000);
             },
             onTimeout: () => {
-                setBar(100, "Превышено время ожидания. Попробуйте ещё раз позже.");
-                setTimeout(hideBar, 2000);
+                pb.set(100, "Превышено время ожидания. Попробуйте ещё раз позже.");
+                setTimeout(() => pb.destroy(), 2000);
             }
         });
     } catch (error) {
         console.error("Ошибка запуска генерации заключения:", error);
-        setBar(100, error?.message || "Ошибка при запуске задачи.");
-        setTimeout(hideBar, 2000);
+        pb.set(100, error?.message || "Ошибка при запуске задачи.");
+        setTimeout(() => pb.destroy(), 2000);
     }
 }
 
@@ -1012,8 +996,10 @@ function finishWorkAndSaveSnapShot() {
 function checkReportAI(boxForAiResponse, responseForDelete, boxForAiDynamicResponse){
     const coreText = collectTextFromParagraphs("paragraph__item--core");
     const impressionText = collectTextFromParagraphs("paragraph__item--impression");
-    const progrBar = document.getElementById("dynamicsProgressBarContainer");
-    if (progrBar.style.display === "block") {
+    const panel = document.getElementById("reportControlPanel");
+    const mountParent2 = panel?.querySelector(".progress-bar-container");
+    const existingBar2 = panel?.querySelector(".dynamics-progress-container");
+    if (existingBar2 && getComputedStyle(existingBar2).display !== "none") {
         alert("Пожалуйста, дождитесь завершения текущей операции.");
         return;
     }
@@ -1022,7 +1008,6 @@ function checkReportAI(boxForAiResponse, responseForDelete, boxForAiDynamicRespo
         boxForAiResponse.innerText = "";
         boxForAiResponse.style.display = "block";
     }
-
     if (responseForDelete) {
         responseForDelete.innerText = "";
         responseForDelete.style.display = "none";
@@ -1037,64 +1022,52 @@ function checkReportAI(boxForAiResponse, responseForDelete, boxForAiDynamicRespo
         alert("Нет текста для проверки. Пожалуйста, заполните протокол.");
         return;
     }
-    // Прогресс-бар справа (строго в .report-controlpanel, чтобы не конфликтовать с попапом динамики)
-    const panel = document.querySelector(".report-controlpanel");
-    const barContainer = panel ? panel.querySelector("#dynamicsProgressBarContainer") : null;
-    const barElem = panel ? panel.querySelector("#dynamicsProgressBar") : null;
-    const labelElem = panel ? panel.querySelector("#dynamicsProgressBarLabel") : null;
-    const textElem = panel ? panel.querySelector("#dynamicsProgressBarText") : null;
 
-    const showBar = () => { if (barContainer) barContainer.style.display = "block"; };
-    const hideBar = () => { if (barContainer) barContainer.style.display = "none"; };
-    const setBar = (pct, msg = null) => updateProgressBar({ bar: barElem, label: labelElem, text: textElem }, pct, msg);
-
-    showBar();
-    setBar(0, "Идет проверка отчета...");
+    // Прогресс-бар справа — динамическая вставка
+    const pb2 = new ProgressBar().mount(mountParent2, "afterbegin");
+    pb2.set(0, "Идет проверка отчета...");
 
     sendRequest({
         url: "/openai_api/generate_redactor",
-        data: {
-            text: textToCheck,
-        },
+        data: { text: textToCheck },
     })
     .then(startResp => {
         const { status, data, message } = startResp || {};
         if (status !== "success" || !data) {
-            setBar(100, message || "Не удалось запустить задачу редактирования.");
-            setTimeout(hideBar, 1500);
+            pb2.set(100, message || "Не удалось запустить задачу редактирования.");
+            setTimeout(() => pb2.destroy(), 1000);
             return;
         }
 
         const taskId = data; // backend возвращает task.id
-        setBar(10, "Задача поставлена. Жду результат...");
+        pb2.set(10, "Задача поставлена. Жду результат...");
 
         // Поллим статус (только фоллбек-прогресс)
         pollTaskStatus(taskId, {
             maxAttempts: 10,
             interval: 4000,
-            onProgress: (progress) => setBar(progress, "Ожидание результата..."),
+            onProgress: (progress) => pb2.set(progress, "Ожидание результата..."),
             onSuccess: (result) => {
-                setBar(100, "Готово!");
+                pb2.set(100, "Готово!");
                 const text = (typeof result === "string") ? result : (result && result.result) || "";
                 boxForAiResponse.innerText = text || "Ответ ИИ не получен.";
-                setTimeout(hideBar, 1000);
+                setTimeout(() => pb2.destroy(), 1000);
             },
             onError: (errMsg) => {
-                setBar(100, errMsg || "Ошибка при выполнении задачи редактирования.");
-                setTimeout(hideBar, 2000);
+                pb2.set(100, errMsg || "Ошибка при выполнении задачи редактирования.");
+                setTimeout(() => pb2.destroy(), 2000);
             },
             onTimeout: () => {
-                setBar(100, "Превышено время ожидания. Попробуйте ещё раз позже.");
-                setTimeout(hideBar, 2000);
+                pb2.set(100, "Превышено время ожидания. Попробуйте ещё раз позже.");
+                setTimeout(() => pb2.destroy(), 2000);
             }
         });
     })
     .catch(error => {
         console.error("Ошибка отправки отчета на проверку:", error);
-        setBar(100, error?.message || "Ошибка при запуске задачи.");
-        setTimeout(hideBar, 2000);
+        pb2.set(100, error?.message || "Ошибка при запуске задачи.");
+        setTimeout(() => pb2.destroy(), 2000);
     });
-    
 }
 
 
@@ -1130,6 +1103,12 @@ async function showDynamicReportPopup(boxForAiImpressionResponse, boxForAiRedact
 
     showElement(popup, false); // второй параметр это bool для useHideOnClickOutside
 
+        // Динамический прогресс-бар в попапе
+    const popupBarMount = popup.querySelector("#dynamicsPopupProgressBarContainer");
+    if (popupBarMount) popupBarMount.innerHTML = ""; // очистим контейнер
+    const pbDyn = new ProgressBar().mount(popupBarMount);
+    const updateDynamicsProgressBar = (percent, statusText = null) => pbDyn.set(percent, statusText);
+
     let detachDropZone = setupDynamicsDropZone(
         {
             dropZoneId: "DropZone",
@@ -1138,23 +1117,7 @@ async function showDynamicReportPopup(boxForAiImpressionResponse, boxForAiRedact
         }
     );
 
-    // Внутренняя функция, нужна чтобы не вводить каждый раз параметры 
-    // bar, label, text для универсальной функции updateProgressBar
-    function updateDynamicsProgressBar(percent, statusText = null) {
-        const progressBarContainer = document.getElementById("dynamicsProgressBarContainer");
-        if (progressBarContainer && progressBarContainer.style.display === "none") {
-            progressBarContainer.style.display = "block";
-        }
-        updateProgressBar(
-            {
-                bar: "dynamicsProgressBar",
-                label: "dynamicsProgressBarLabel",
-                text: "dynamicsProgressBarText"
-            },
-            percent,
-            statusText
-        );
-    }
+    
 
     // Обработчики (нужно сохранять ссылки, чтобы можно было удалить потом)
     const closeHandler = () => {
@@ -1168,6 +1131,7 @@ async function showDynamicReportPopup(boxForAiImpressionResponse, boxForAiRedact
         dynamicFileUploadButton.removeEventListener("click", uploadBtnHandler);
         dynamicFileUploadInput.removeEventListener("change", fileSelectHandler);
         prepareTextDynamicsButton.removeEventListener("click", prepareTextHandler);
+        if (pbDyn) pbDyn.destroy();
         if (detachDropZone) detachDropZone();
     };
 

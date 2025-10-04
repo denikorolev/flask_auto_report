@@ -509,7 +509,7 @@ def find_similar_exist_sentence(sentence_text, sentence_type, report_global_moda
     else:
         raise ValueError(f"Invalid sentence type: {sentence_type}")
 
-    print(f"-----тип {sentence_type}------найдено предложений для данного пользователя {len(similar_type_sentences)} --------------------")
+    logger.info(f"-----тип {sentence_type}------найдено предложений для данного пользователя {len(similar_type_sentences)} --------------------")
     # Сравниваем входное предложение с каждым из существующих
     for exist_sentence in similar_type_sentences:
         if exist_sentence.sentence == sentence_text:

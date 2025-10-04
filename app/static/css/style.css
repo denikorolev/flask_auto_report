@@ -1819,7 +1819,7 @@ body {
     max-width: 300px;
 }
 
-.dynamics-progress-bar {
+.dynamics-popup__progress-bar {
     --progress-width: 0%;
     height: 18px;
     background: var(--main-background-color);
@@ -1831,7 +1831,7 @@ body {
     margin-top: 4px;
 }
 
-.dynamics-progress-bar::before {
+.dynamics-popup__progress-bar::before {
     content: "";
     display: block;
     height: 100%;
@@ -1845,7 +1845,7 @@ body {
 }
 
 /* Показываем процент поверх бара */
-.dynamics-progress-bar__label {
+.dynamics-popup__progress-bar-label {
     position: absolute;
     left: 50%;
     top: 0;
@@ -1863,7 +1863,7 @@ body {
     pointer-events: none;
 }
 
-.dynamics-popup__progress-text {
+.dynamics-popup__progress-bar-text {
     font-size: 13px;
     color: var(--main-btn-color);
     margin: 0 0 0 2px;

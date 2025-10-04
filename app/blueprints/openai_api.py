@@ -149,7 +149,7 @@ def clean_raw_text_route():
         return jsonify({"status": "error", "message": "Не передан текст"}), 400
     try:
         assistant_id=current_app.config.get("OPENAI_ASSISTANT_TEXT_CLEANER")
-        print(f"Assistant ID: {assistant_id}")
+        logger.info(f"Assistant ID: {assistant_id}")
         task = async_clean_raw_text.delay(raw_text, user_id, assistant_id)
         logger.info(f"(Маршрут clean_raw_text_route) ✅ Очистка текста успешно запущена в Celery задачу")
         logger.info(f"(Маршрут clean_raw_text_route) ------------------------------------------")

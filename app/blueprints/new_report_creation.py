@@ -726,7 +726,7 @@ def ai_generate_template():
 def get_ai_generated_template():
     logger.info("(Маршрут: get_ai_generated_template) 🚀 Начато получение результата генерации шаблона с помощью AI")
     task_id = request.args.get('task_id', type=str)
-    print(f"Получен task_id: {task_id}")
+    logger.info(f"Получен task_id: {task_id}")
     if not task_id:
         logger.warning("(Маршрут: get_ai_generated_template) ❌ Не указан ID задачи")
         return jsonify({"status": "error", "message": "Не указан ID задачи"}), 400

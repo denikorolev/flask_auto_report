@@ -68,6 +68,8 @@ def admin():
 @admin_bp.route("/fetch_data", methods=["POST"])
 @auth_required()
 def fetch_data():
+    logger.info(f"(Маршрут fetch_data) --------------------------------------")
+    logger.info("🚀 Начата обработка запроса на получение данных из таблиц.")
     data = request.json
     selected_tables = data.get("tables", [])
     selected_columns = data.get("columns", {})
@@ -88,12 +90,12 @@ def fetch_data():
                 records = query.all()
                 result[table_name] = [dict(zip(fields, record)) for record in records]
             except Exception as e:
-                print(f"Ошибка при запросе к модели {table_name}: {e}")
+                logger.error(f"(Маршрут fetch_data) ❌ Ошибка при запросе к модели {table_name}: {e}")
                 result[table_name] = {"error": f"Ошибка: {e}"}
         elif table_name in associative_tables:
             table = db.metadata.tables.get(table_name)
             if table is None:
-                print(f"Таблица {table_name} не найдена в metadata")
+                logger.error(f"(Маршрут fetch_data) ❌ Таблица {table_name} не найдена в metadata")
                 result[table_name] = {"error": "Таблица не найдена"}
                 continue
             try:
@@ -102,7 +104,7 @@ def fetch_data():
                 columns = [column.name for column in table.columns]
                 result[table_name] = [dict(zip(columns, record)) for record in records]
             except Exception as e:
-                print(f"Ошибка при запросе к таблице {table_name}: {e}")
+                logger.error(f"(Маршрут fetch_data) ❌ Ошибка при запросе к таблице {table_name}: {e}")
                 result[table_name] = {"error": f"Ошибка: {e}"}
 
     return jsonify({"status": "success",
@@ -114,8 +116,8 @@ def fetch_data():
 def delete_record(table_name, record_id):
     # Получаем класс таблицы из словаря
     table_class = current_app.config["TABLE_MODELS"].get(table_name)
-    print(table_class)
     if not table_class:
+        logger.error(f"Таблица {table_name} ❌ не найдена в настройках config.py")
         return jsonify({"error": "Таблица не найдена в настройках config.py"}), 404
 
     # Выполняем запрос для удаления записи
@@ -130,7 +132,7 @@ def delete_record(table_name, record_id):
 
     except Exception as e:
         db.session.rollback()
-        print(f"Ошибка при удалении записи: {e}")
+        logger.error(f"(Маршрут delete_record) ❌ Ошибка при удалении записи: {e}")
         return jsonify({"error": "Ошибка при удалении записи"}), 500
     
  
@@ -189,7 +191,6 @@ def update_record(table_name, record_id):
         notification_message = [
             "Эти поля не были обновлены: " + ", ".join(fields_was_ignored) if fields_was_ignored else "Все поля обновлены"
         ]
-        print(notification_message)
         return jsonify({
             "status": "success",
             "notifications": notification_message,
@@ -198,7 +199,7 @@ def update_record(table_name, record_id):
 
     except Exception as e:
         db.session.rollback()
-        print(f"Ошибка при обновлении записи: {e}")
+        logger.error(f"(Маршрут update_record) ❌ Ошибка при обновлении записи: {e}")
         return jsonify({"status": "error", "message": "Ошибка при обновлении записи"}), 500
 
 

@@ -46,7 +46,6 @@ def edit_report():
         if category.get("id") == modality_id:
             areas = category.get("children", [])
             break
-    print(f"areas: {areas} for modality_id: {modality_id}")
 
     return render_template('edit_report.html', 
                            title=f"Редактирование протокола {report.report_name}", 

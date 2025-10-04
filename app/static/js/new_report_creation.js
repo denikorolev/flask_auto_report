@@ -2,7 +2,8 @@
 
 import { setupDynamicsDropZone, handleFileUpload, handlePasteFromClipboard } from "/static/js/utils/dynamicsDropZone.js";
 import { prepareTextWithAI } from "/static/js/utils/ai_handlers.js";
-import { pollTaskStatus, updateProgressBar } from "/static/js/utils/utils_module.js";      
+import { pollTaskStatus } from "/static/js/utils/utils_module.js";    
+import { ProgressBar } from "/static/js/utils/elements.js";  
 
 // Массив для хранения последовательности выбора отчетов
 let selectedReports = [];
@@ -14,7 +15,6 @@ document.addEventListener("DOMContentLoaded", function() {
     
     const userSettings = window.userSettings || {};
     CATEGORIES = Array.isArray(userSettings.CATEGORIES_SETUP) ? userSettings.CATEGORIES_SETUP : [];
-    console.log("CATEGORIES:", CATEGORIES);
     GLOBALCATEGORIES = Array.isArray(globalCategories) ? globalCategories : [];
     if (!CATEGORIES.length) {
         console.warn("No categories found in user settings.");
@@ -141,7 +141,6 @@ function handleReportModalityChange() {
 //  popup с id categoryEditPopup для создания новой категории.
 function handleNewCategoryCreation(categoryType, parentCategoryID) {
     const categoryCreationPopup = document.getElementById("categoryEditPopup");
-    console.log("parentCategoryID:", parentCategoryID);
     
     if (!categoryCreationPopup) {
         console.error("categoryEditPopup not found");
@@ -158,9 +157,7 @@ function handleNewCategoryCreation(categoryType, parentCategoryID) {
     const createCategoryButton = categoryCreationPopup.querySelector("#saveCategoryEditBtn");
     const popupTitle = categoryCreationPopup.querySelector("#categoryEditPopupTitle");
     const categoryNameInput = categoryCreationPopup.querySelector("#editCategoryName");
-    console.log("categoryNameInput:", categoryNameInput);
     const globalCategorySelect = categoryCreationPopup.querySelector("#editCategoryGlobal");
-    console.log("globalCategorySelect:", globalCategorySelect);
     const closeBtn = categoryCreationPopup.querySelector("#closeCategoryEditPopup");
 
     categoryCreationPopup.style.display = "block";
@@ -194,11 +191,8 @@ function handleNewCategoryCreation(categoryType, parentCategoryID) {
         // Ищем глобальную модальность-РОДИТЕЛЯ и берём её children (области)
         const parentModality = CATEGORIES.find(cat => String(cat.id) === String(parentCategoryID));
         const globalCategoryIDForParent = parentModality ? parentModality.global_id : null;
-        console.log("globalCategoryIDForParent:", globalCategoryIDForParent);
         const parent = GLOBALCATEGORIES.find(cat => String(cat.id) === String(globalCategoryIDForParent));
-        console.log("parent:", parent);
         const children = Array.isArray(parent?.children) ? parent.children : [];
-        console.log("children:", children);
         if (!children.length) {
             console.warn("No global areas found for modality ID:", globalCategoryIDForParent);
         }
@@ -777,6 +771,14 @@ function showAiGeneratorBlock() {
     const pollingAbortController = new AbortController(); // Контроллер для отмены запросов
     // Для будущей загрузки файлов с input (пока не реализовано)
     // const fileInput = document.getElementById("aiGeneratorFileInput");
+    // Progress bar mount point inside AI generator block (dynamic)
+    const progressMount = document.getElementById("aiGeneratorProgressBarContainer");
+    if (progressMount) progressMount.innerHTML = "";
+    const pb = new ProgressBar().mount(progressMount);
+    const destroyPB = (delayMs = 0) => {
+        if (delayMs > 0) setTimeout(() => pb.destroy(), delayMs);
+        else pb.destroy();
+    };
 
     // Очистка состояния перед показом
     textarea.value = "";
@@ -791,7 +793,6 @@ function showAiGeneratorBlock() {
         if (style.display === "none") {
             detachHandlers();
             observer.disconnect();
-            console.log("aiGeneratorContainer скрыт — сняты обработчики");
         }
     });
 
@@ -802,32 +803,7 @@ function showAiGeneratorBlock() {
         textareaId: "Textarea"
     });
 
-    // Внутренняя функция, нужна чтобы не вводить каждый раз параметры 
-    // bar, label, text для универсальной функции updateProgressBar
-    function updateDynamicsProgressBar(percent, statusText = null) {
-        const progressBarContainer = document.getElementById("dynamicsProgressBarContainer");
-        if (progressBarContainer && progressBarContainer.style.display === "none") {
-            progressBarContainer.style.display = "block";
-        }
-        updateProgressBar(
-            {
-                bar: "dynamicsProgressBar",
-                label: "dynamicsProgressBarLabel",
-                text: "dynamicsProgressBarText"
-            },
-            percent,
-            statusText
-        );
-    }
-    function hideDynamicsProgressBar(delayMs = 0) {
-        const progressBarContainer = container.querySelector("#dynamicsProgressBarContainer") || document.getElementById("dynamicsProgressBarContainer");
-        if (!progressBarContainer) return;
-        if (delayMs > 0) {
-            setTimeout(() => { progressBarContainer.style.display = "none"; }, delayMs);
-        } else {
-            progressBarContainer.style.display = "none";
-        }
-    }
+    
 
     function disableGenerateButtons() {
         generateTemplateButton.disabled = true;
@@ -874,7 +850,6 @@ function showAiGeneratorBlock() {
                 comment: document.getElementById("reportCreationComment").value.trim() || "",
                 report_side: document.querySelector("input[name='report_side']:checked")?.value === "true"
             }
-        console.log(data);
 
         if (!rawText) {
             alert("Пожалуйста, введите текст для анализа.");
@@ -889,32 +864,32 @@ function showAiGeneratorBlock() {
         });
         const {status, message, task_id} = startResponse || {};
         if (status !== "success" || !task_id) {
-            updateDynamicsProgressBar(100, message || "Не удалось запустить задачу генерации шаблона.");
+            pb.set(100, message || "Не удалось запустить задачу генерации шаблона.");
             enableGenerateButtons();
-            hideDynamicsProgressBar(1500);
+            destroyPB(1500);
             return;
         }
         
+        console.log("перед пол таск статус для генерации");
         pollTaskStatus(task_id, {
             maxAttempts: 20,
             interval: 7000,
-            onProgress: (progress) => updateDynamicsProgressBar(progress, "Ожидание результата..."),
+            onProgress: (progress) => pb.set(progress, "Ожидание результата..."),
             onSuccess: (result) => {
-                updateDynamicsProgressBar(100, "Готово!");
+                pb.set(100, "Готово!");
                 enableGenerateButtons();
-                hideDynamicsProgressBar(1000);
-                console.log("taskID из результата:", result);
+                destroyPB(1000);
                 handleAiGeneratedTemplate(result); // Так как ниже мы указываем флаг exclude_result: true, то в result будет task_id
             },
             onError: (errMsg) => {
-                updateDynamicsProgressBar(100, errMsg || "Ошибка при генерации шаблона.");
+                pb.set(100, errMsg || "Ошибка при генерации шаблона.");
                 enableGenerateButtons();
-                hideDynamicsProgressBar(2000);
+                destroyPB(2000);
             },
             onTimeout: () => {
-                updateDynamicsProgressBar(100, "Превышено время ожидания. Попробуйте ещё раз позже.");
+                pb.set(100, "Превышено время ожидания. Попробуйте ещё раз позже.");
                 enableGenerateButtons();
-                hideDynamicsProgressBar(2000);
+                destroyPB(2000);
             },
             abortController: pollingAbortController, // Передаем контроллер для отмены
             excludeResult: true // Не забираем json результата подберем его потом по task_id
@@ -926,25 +901,28 @@ function showAiGeneratorBlock() {
     const prepareTextHandler = async () => {
 
         const taskID = await prepareTextWithAI(textarea, prepareButton);
+        if (taskID) {
+            pb.set(0, "Запущена задача очистки текста...");
+        }
         pollTaskStatus(taskID, {
             maxAttempts: 12,
             interval: 4000,
-            onProgress: (progress) => updateDynamicsProgressBar(progress, "Ожидание результата..."),
+            onProgress: (progress) => pb.set(progress, "Ожидание результата..."),
             onSuccess: (result) => {
-                updateDynamicsProgressBar(100, "Готово!");
+                pb.set(100, "Готово!");
                 textarea.value = result || "";
                 enableGenerateButtons();
-                hideDynamicsProgressBar(1000);
+                destroyPB(1000);
             },
             onError: (errMsg) => {
-                updateDynamicsProgressBar(100, errMsg);
+                pb.set(100, errMsg);
                 enableGenerateButtons();
-                hideDynamicsProgressBar(2000);
+                destroyPB(2000);
             },
             onTimeout: () => {
                 updateDynamicsProgressBar(100, "Превышено время ожидания ответа. Попробуйте ещё раз позже.");
                 enableGenerateButtons();
-                hideDynamicsProgressBar(2000);
+                destroyPB(2000);
             },
             abortController: pollingAbortController // Передаем контроллер для отмены
         });
@@ -954,7 +932,7 @@ function showAiGeneratorBlock() {
     const cancelHandler = () => {
         pollingAbortController.abort(); // 💥 Прерывает опрос
         enableGenerateButtons();
-        hideDynamicsProgressBar(500);
+        destroyPB(500);
     };
 
     // Обработчик выбора файла
@@ -1013,9 +991,7 @@ function handleAiGeneratedTemplate(taskID) {
         url: `/new_report_creation/get_ai_generated_template?task_id=${encodeURIComponent(taskID)}`,
     }).then(response => {
         const {status, message, report_id} = response || {};
-        console.log("status:", status, "message:", message, "report_id:", report_id);
         if (status === "success" && report_id) {
-            console.log("AI generated template successfully received. report_id:", report_id);
             // Переходим на страницу редактирования нового протокола
             window.location.href = `/editing_report/edit_report?report_id=${report_id}`;
         } else {

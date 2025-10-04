@@ -104,7 +104,6 @@ def choosing_profile():
     if profile_id:
         logger.info(f"(Маршрут 'choosing_profile') Начинаем логику выбора профиля по id из url")
         profile = UserProfile.find_by_id_and_user(profile_id, current_user.id)
-        print(f"Profile = {profile}")
         if profile:
             session["profile_id"] = profile.id
             session["profile_name"] = profile.profile_name
@@ -152,7 +151,6 @@ def new_profile_creation():
             if user_modality.get("name") not in [m.get("name") for m in modalities]:
                 logger.info(f"(Маршрут 'new_profile_creation') Добавляем пользовательскую модальность {user_modality.get('name')} из профиля {pid}")
                 modalities.append(user_modality)
-    print(f"modalities = {modalities}")
     return render_template("new_profile_creation.html",
                            title=title,
                            modalities=modalities,
@@ -326,13 +324,13 @@ def update_profile_settings():
 @profile_settings_bp.route('/delete_profile/<int:profile_id>', methods=["DELETE"])
 @auth_required()
 def delete_profile(profile_id):
-    print("deleting profile started--------")
-    print(f"you are deleting profile and profile_id = {profile_id}")
+    logger.info(f"(route 'delete_profile') --------------------------------------")
+    logger.info(f"(route 'delete_profile') 🚀 Начато удаление профиля с id: {profile_id}")
     profile = UserProfile.find_by_id_and_user(profile_id, current_user.id)
     if profile:
         try:
             profile.delete()
-            print(f"profile {profile_id} deleted")
+            logger.info(f"(route 'delete_profile') ✅ Профиль {profile_id} успешно удален")
         except Exception as e:
             return jsonify({"status": "error", "message": str(e)}), 400
         

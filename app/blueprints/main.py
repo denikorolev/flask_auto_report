@@ -6,6 +6,7 @@ import os
 from app.utils.logger import logger
 # Мои модули
 from app.utils.mail_helpers import send_email_via_zeptomail
+from app.utils.logger import logger
 
 main_bp = Blueprint("main", __name__)
 
@@ -40,11 +41,11 @@ def feedback_form():
     
 @main_bp.route("/custom_logout", methods=["POST", "GET"])
 def custom_logout():
-    print("inside logout route")
+    logger.info("inside logout route")
     session.clear()
-    print("session cleared")
+    logger.info("session cleared")
     logout_user()
-    print("user logged out")
+    logger.info("user logged out")
     return redirect(url_for("main.index"))
 
 

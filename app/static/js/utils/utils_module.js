@@ -31,7 +31,6 @@ export function pollTaskStatus(task_id, {
     const progress = Math.min((attempt / maxAttempts) * 100, 99);
     onProgress(progress, attempt, maxAttempts);
     const url = `/tasks_status/task_status/${task_id}?exclude_result=${excludeResult}`;
-    console.log("URL for polling:", url);
 
     sendRequest({
         url: url,
@@ -50,7 +49,6 @@ export function pollTaskStatus(task_id, {
         const status = (data.status || "").toLowerCase();
 
         if (status === "pending" || status === "started") {
-            console.log(`(pollTaskStatus) Попытка ${attempt + 1}/${maxAttempts} - Задача ${task_id} в состоянии ${status}. Опция exclude_result: ${excludeResult}`);
             if (attempt < maxAttempts) {
                 setTimeout(() => pollTaskStatus(task_id, {
                     maxAttempts, 
@@ -86,27 +84,3 @@ export function pollTaskStatus(task_id, {
 }
 
 
-
-/**
- * Универсальная функция для обновления прогресс-бара.
- * @param {Object} opts
- * @param {string|HTMLElement} opts.bar - id или DOM-элемент самого прогресс-бара (div.dynamics-progress-bar)
- * @param {string|HTMLElement} [opts.label] - id или DOM-элемент label (span)
- * @param {string|HTMLElement} [opts.text] - id или DOM-элемент подписи (p)
- * @param {number} percent - значение от 0 до 100
- * @param {string} [statusText] - надпись для подписи (по желанию)
- */
-export function updateProgressBar({ bar, label, text }, percent, statusText = null) {
-    const barElem = typeof bar === "string" ? document.getElementById(bar) : bar;
-    const labelElem = label ? (typeof label === "string" ? document.getElementById(label) : label) : null;
-    const textElem = text ? (typeof text === "string" ? document.getElementById(text) : text) : null;
-
-    if (!barElem) return;
-    const clamped = Math.min(Math.max(percent, 0), 100);
-
-    // ⬅️ Меняем переменную CSS
-    barElem.style.setProperty('--progress-width', `${clamped}%`);
-
-    if (labelElem) labelElem.textContent = `${Math.round(clamped)}%`;
-    if (textElem && statusText !== null) textElem.textContent = statusText;
-}

@@ -39,12 +39,12 @@ def load_current_profile():
     # Если профиль уже в сессии то ничего не делаем
     if profile_id:
         if not session.get("profile_name"):
-            print(f"Profile id from session: {profile_id} has no profile name in session")
+            logger.warning(f"Profile id from session: {profile_id} has no profile name in session")
             profile = UserProfile.find_by_id_and_user(profile_id, current_user.id)
             if profile:
                 session["profile_name"] = profile.profile_name
         if not session.get("lang") or session.get("lang") == "default_language":
-            print("Profile id from session has no language in session")
+            logger.warning("Profile id from session has no language in session")
             language = AppConfig.get_setting(profile_id, "APP_LANGUAGE", "default_language")
             session["lang"] = language
         logger.info(f"😎 Профиль из сессии: {profile_id} с именем {session['profile_name']} и с языком {session.get('lang')} присутствует в сессии")
@@ -123,15 +123,14 @@ def one_time_sync_tasks():
         if categories_json:
             try:
                 categories_data = json.loads(categories_json)
-                print(f"Категории из AppConfig: {categories_data}")
                 # Если не пустой и не [] — используем
-                if isinstance(categories_data, list) and categories_data:
+                if categories_data and isinstance(categories_data, list):
                     session["categories_setup"] = True
-                    print("удалось загрузить категории из AppConfig")
+                    logger.info("удалось загрузить категории из AppConfig")
                     return
             except Exception as e:
                 logger.error(f"Ошибка разбора JSON категорий из AppConfig: {e}")
-        print(f"Категории из AppConfig пустые или невалидные: {categories_json} будем искать в базе")
+        logger.warning(f"Категории из AppConfig пустые или невалидные: {categories_json} будем искать в базе")
         # 3. Если нет — пробуем собрать из базы (это может быть первый вход или reset)
         
         try:

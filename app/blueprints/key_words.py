@@ -5,7 +5,6 @@ from flask_login import current_user
 from app.models.models import db, KeyWord, Report
 from itertools import chain
 from app.utils.sentence_processing import group_keywords, sort_key_words_group, process_keywords, check_existing_keywords
-from app.utils.errors_processing import print_object_structure
 from app.utils.common import ensure_list
 from app.utils.db_processing import add_keywords_to_db
 from flask_security.decorators import auth_required

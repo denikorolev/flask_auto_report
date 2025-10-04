@@ -6,7 +6,7 @@
 
 <input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}">
 
-{% from "macros/elements.html" import progress_bar, text_area_and_drop_zone %}
+{% from "macros/elements.html" import text_area_and_drop_zone %}
 {% from "macros/all_popups.html" import category_edit_popup %}
 
 {{ category_edit_popup() }}
@@ -160,8 +160,8 @@
                 <div class="flex">
                     {{ text_area_and_drop_zone() }}
                 </div>
-                <div>
-                    {{ progress_bar() }}
+                <div id="aiGeneratorProgressBarContainer" class="dynamics-popup__progress-bar-container">
+                    <!-- Прогресс бар будет вставляться динамически через JS -->
                 </div>
 
                 <div class="dynamics-popup__footer"> <!-- Согласовать со стилями попап в working_with_report.html -->

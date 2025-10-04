@@ -128,7 +128,7 @@ def delete_all_User_except(keep_ids=None):
     for user in users_to_delete:
         db.session.delete(user)
     db.session.commit()
-    print(f"Удалено пользователей: {count}")
+    logger.info(f"Удалено пользователей: {count}")
     return count
 
 

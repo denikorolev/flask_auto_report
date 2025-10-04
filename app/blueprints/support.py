@@ -24,7 +24,8 @@ def playground():
     
 @support_bp.route("/error", methods=["POST", "GET"])
 def error():
-    print("inside error route")
+    logger.info(f"(route 'error') --------------------------------------")
+    logger.info(f"(route 'error') 🚀 Начата обработка ошибки")
     message = request.args.get("message") or "no message"
     return render_template("errors/error.html",
                            message=message)
