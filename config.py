@@ -96,7 +96,11 @@ class Config:
     NOREPLY_EMAIL = "noreply@radiologary.com"
     SUPPORT_EMAIL = "support@radiologary.com"
     CEO_EMAIL = "korolev.denis@radiologary.com"
-
+    
+    # OCR configuration
+    OCR_PROVIDER = os.getenv("OCR_PROVIDER", "azure")  # Текущий поддерживаемый провайдер: "azure"
+    AZURE_VISION_ENDPOINT = os.getenv("AZURE_VISION_ENDPOINT")
+    AZURE_VISION_KEY = os.getenv("AZURE_VISION_KEY")
 
     # OpenAI API configuration
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")

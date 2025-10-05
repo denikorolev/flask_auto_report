@@ -5,6 +5,9 @@ from app.utils.file_processing import prepare_impression_snippets
 from app.utils.ai_processing import clean_raw_text, run_first_look_assistant, structure_report_text, ai_template_generator, ai_report_check, ai_impression_generation
 from tasks.celery_task_processing import cancel_stale_polled_tasks, cancel_stuck_tasks
 from app.utils.logger import logger
+from app.utils.ocr_processing import get_ocr_provider
+from app.utils.pdf_processing import has_text_layer, extract_text_from_pdf_textlayer
+from celery import shared_task
 
 # Таск для вочдога который проверяет наличие поллинговых задач и отменяет 
 # их если они не были выполнены в течение долгого времени
@@ -67,3 +70,31 @@ def async_report_checking(assistant_id, user_id, report_text, today_date):
 @celery.task(name="template_generating", time_limit=160, soft_time_limit=160)
 def template_generating(template_text, assistant_id, user_id):
     return ai_template_generator(template_text, assistant_id, user_id)
+
+
+@shared_task(bind=True, name="async_ocr_extract_text", max_retries=0)
+def async_ocr_extract_text(self, file_bytes: bytes, filename: str) -> dict:
+    """
+    Универсальный OCR: если PDF с текстовым слоем — извлекаем сразу.
+    Иначе — отдаём на облачный OCR провайдер.
+    """
+    logger.info(f"[async_ocr_extract_text] 🚀 {filename}, size={len(file_bytes)}")
+    try:
+        is_pdf = filename.lower().endswith(".pdf")
+        if is_pdf and has_text_layer(file_bytes):
+            text = extract_text_from_pdf_textlayer(file_bytes)
+            method = "pdf_textlayer"
+            logger.info(f"[async_ocr_extract_text] ✅ textlayer OK, len={len(text)}")
+            return {"text": text, "method": method}
+
+        provider = get_ocr_provider()
+        text, method = provider.extract_text(content=file_bytes, filename=filename)
+        logger.info(f"[async_ocr_extract_text] ✅ provider={method}, len={len(text)}")
+        return {"text": text, "method": method}
+    except Exception as e:
+        logger.exception(f"[async_ocr_extract_text] ❌ {e}")
+        raise
+    
+    
+    
+    

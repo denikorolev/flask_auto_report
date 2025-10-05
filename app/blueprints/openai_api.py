@@ -1,12 +1,13 @@
 # openai_api.py
 
 import os
+from werkzeug.utils import secure_filename
 from flask import request, jsonify, current_app, Blueprint, render_template
 from flask_security.decorators import auth_required
 from app.utils.logger import logger
 from flask_security import current_user
 from app.utils.redis_client import redis_get
-from tasks.celery_tasks import async_clean_raw_text, async_impression_generating, async_report_checking, template_generating
+from tasks.celery_tasks import async_clean_raw_text, async_impression_generating, async_report_checking, template_generating, async_ocr_extract_text
 from app.utils.ai_processing import _process_openai_request, reset_ai_session, count_tokens
 from datetime import datetime, timezone
 
@@ -165,9 +166,42 @@ def clean_raw_text_route():
 @openai_api_bp.route("/ocr_extract_text", methods=["POST"])
 @auth_required()
 def ocr_extract_text():
-    logger.info(f"(Извлечение текста из загруженного файла) ------------------------------------")
-    logger.info(f"(Извлечение текста из загруженного файла) 🚀 Начинаю обработку запроса на извлечение текста из загруженного файла")
-    return jsonify({"status": "error", "message": "Not implemented yet"}), 501
-    
+    logger.info("(OCR) 🚀 start")
 
+    if "file" not in request.files:
+        return jsonify({"status": "error", "message": "Файл не передан ('file')."}), 400
 
+    f = request.files["file"]
+    if not f.filename:
+        return jsonify({"status": "error", "message": "Пустое имя файла."}), 400
+
+    filename = secure_filename(f.filename)
+
+    try:
+        file_bytes = f.read()
+        if not file_bytes:
+            logger.warning(f"(OCR) ⚠️ Файл '{filename}' пустой или не удалось прочитать содержимое")
+            return jsonify({"status": "error", "message": "Файл пустой или повреждён."}), 400
+    except Exception as e:
+        logger.exception(f"(OCR) ❌ Ошибка при чтении файла '{filename}': {e}")
+        return jsonify({
+            "status": "error",
+            "message": f"Не удалось прочитать файл: {str(e)}"
+        }), 500
+
+    try:
+        task = async_ocr_extract_text.delay(file_bytes, filename)
+        logger.info(f"(OCR) ✅ queued task={task.id}")
+        return jsonify({
+            "status": "success",
+            "message": "OCR задача запущена",
+            "data": task.id
+        }), 200
+    except Exception as e:
+        logger.exception(f"(OCR) ❌ Ошибка при запуске Celery-задачи OCR: {e}")
+        return jsonify({
+            "status": "error",
+            "message": f"Ошибка при запуске OCR-задачи: {str(e)}"
+        }), 500
+        
+        
