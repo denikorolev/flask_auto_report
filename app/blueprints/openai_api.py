@@ -7,8 +7,17 @@ from flask_security.decorators import auth_required
 from app.utils.logger import logger
 from flask_security import current_user
 from app.utils.redis_client import redis_get
-from tasks.celery_tasks import async_clean_raw_text, async_impression_generating, async_report_checking, template_generating, async_ocr_extract_text
-from app.utils.ai_processing import _process_openai_request, reset_ai_session, count_tokens
+from tasks.celery_tasks import (async_clean_raw_text, 
+                                async_impression_generating, 
+                                async_report_checking, 
+                                template_generating, 
+                                async_ocr_extract_text
+                                )
+from app.utils.ai_processing import (_process_openai_request, 
+                                     reset_ai_session, 
+                                     count_tokens
+                                     )
+from app.utils.pdf_processing import has_text_layer, extract_text_from_pdf_textlayer
 from datetime import datetime, timezone
 import base64
 
@@ -186,6 +195,24 @@ def ocr_extract_text():
             logger.warning(f"(OCR) ⚠️ Файл '{filename}' пустой или не удалось прочитать содержимое")
             return jsonify({"status": "error", "message": "Файл пустой или повреждён."}), 400
         logger.info(f"(OCR) 📄 Файл '{filename}' получен, size={len(file_bytes)} bytes")
+        is_pdf = filename.lower().endswith(".pdf") or file_bytes[:4] == b"%PDF"
+        print("is_pdf=", is_pdf)
+        if is_pdf:
+            logger.info(f"(OCR) 📄 Файл '{filename}' определён как PDF")
+            try:
+                if has_text_layer(file_bytes):
+                    text = extract_text_from_pdf_textlayer(file_bytes)
+                    logger.info(f"(OCR) ✅ PDF с текстовым слоем — извлечено {len(text)} символов, OCR не требуется")
+                    return jsonify({
+                        "status": "success",
+                        "message": "Текст извлечён из PDF без OCR.",
+                        "method": "pdf_textlayer",
+                        "text": text
+                    }), 200
+                else:
+                    logger.info("(OCR) ℹ️ PDF без текстового слоя — отправляем в OCR")
+            except Exception as e:
+                logger.exception(f"(OCR) ❌ Ошибка при попытке извлечь текст из PDF: {e}")
         file_bytes_to_b64 = base64.b64encode(file_bytes).decode("ascii")
         logger.info(f"(OCR) 🔄 Файл '{filename}' закодирован в base64, size={len(file_bytes_to_b64)} chars")
     except Exception as e:

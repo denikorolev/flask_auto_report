@@ -79,17 +79,11 @@ def async_ocr_extract_text(self, file_bytes_to_b64: str, filename: str) -> dict:
     Универсальный OCR: если PDF с текстовым слоем — извлекаем сразу.
     Иначе — отдаём на облачный OCR провайдер.
     """
-    logger.info(f"[async_ocr_extract_text] 🚀 {filename}, size={len(file_bytes)}")
+    logger.info(f"[async_ocr_extract_text] 🚀 {filename}, size={len(file_bytes_to_b64)}")
     try:
         file_bytes = base64.b64decode(file_bytes_to_b64.encode("ascii"))
         logger.info(f"[async_ocr_extract_text] ✅ Декодировка {filename} прошла успешно, декодированный файл размером={len(file_bytes)} bytes")
         is_pdf = filename.lower().endswith(".pdf")
-        if is_pdf and has_text_layer(file_bytes):
-            text = extract_text_from_pdf_textlayer(file_bytes)
-            method = "pdf_textlayer"
-            logger.info(f"[async_ocr_extract_text] ✅ В PDF есть текстовый слой, len={len(text)}")
-            return {"text": text, "method": method}
-        logger.info(f"[async_ocr_extract_text] 📡 Текстовый слой pdf не найден.Отправка на OCR провайдер")
         provider = get_ocr_provider()
         text, method = provider.extract_text(content=file_bytes, filename=filename)
         logger.info(f"[async_ocr_extract_text] ✅ provider={method}, len={len(text)}")

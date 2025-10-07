@@ -1,30 +1,41 @@
 # app/utils/pdf_utils.py
 
-import io
-from typing import Tuple
+from io import BytesIO
+from typing import Tuple, Optional
 from pypdf import PdfReader
 from app.utils.logger import logger
 
+
 def has_text_layer(pdf_bytes: bytes) -> bool:
-    try:
-        reader = PdfReader(io.BytesIO(pdf_bytes))
-    except Exception:
-        return False
-    for page in reader.pages:
-        try:
-            txt = page.extract_text() or ""
-            if txt.strip():
-                return True
-        except Exception:
-            pass
+    """
+    Проверяет, есть ли в PDF текстовый слой (а не просто изображения).
+    Использует pypdf, потому что он стабильнее и быстрее, чем старый PyPDF2.
+    """
+    with BytesIO(pdf_bytes) as bio:
+        reader = PdfReader(bio)
+        for page in reader.pages:
+            try:
+                text = page.extract_text() or ""
+                if text.strip():
+                    return True
+            except Exception:
+                # иногда отдельные страницы могут падать — игнорируем
+                continue
     return False
 
+
 def extract_text_from_pdf_textlayer(pdf_bytes: bytes) -> str:
-    reader = PdfReader(io.BytesIO(pdf_bytes))
-    parts = []
-    for page in reader.pages:
-        try:
-            parts.append(page.extract_text() or "")
-        except Exception:
-            parts.append("")
-    return "\n".join(parts)
+    """
+    Извлекает текст из PDF, если у него есть текстовый слой.
+    Не выполняет OCR — работает только с PDF, где текст уже в кодировке.
+    """
+    texts = []
+    with BytesIO(pdf_bytes) as bio:
+        reader = PdfReader(bio)
+        for page in reader.pages:
+            try:
+                text = page.extract_text() or ""
+            except Exception:
+                text = ""
+            texts.append(text)
+    return "\n".join(texts).strip()

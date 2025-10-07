@@ -1,5 +1,7 @@
 // static/js/utils/dynamicsDropZone.js
 
+import { pollTaskStatus } from "/static/js/utils/utils_module.js";
+
 /**
  * Универсальная dropzone для drag&drop и paste файлов (jpeg/png/pdf),
  * с предпросмотром и отправкой на OCR endpoint.
@@ -13,7 +15,7 @@ export function setupDynamicsDropZone({
         dropZoneId,
         previewId,
         textareaId,
-        ocrUrl = "/working_with_reports/ocr_extract_text"
+        ocrUrl = "/openai_api/ocr_extract_text"
     }) {
         console.log("dynamicsDropZone started")
     const dropZone = document.getElementById(dropZoneId);
@@ -77,7 +79,7 @@ export function setupDynamicsDropZone({
  * @param {HTMLTextAreaElement} textarea 
  * @param {string} ocrUrl
  */
-export function handleFileUpload(file, preview, textarea) {
+export function handleFileUpload(file, preview, textarea, ocrUrl) {
     if (!file) return;
     preview.innerHTML = "";
 
@@ -105,21 +107,72 @@ export function handleFileUpload(file, preview, textarea) {
     formData.append("file", file);
 
     sendRequest({
-        url: "/openai_api/ocr_extract_text",
-        method: "POST",
+        url: ocrUrl,
         data: formData,
         responseType: "json",
         loader: true
     }).then(data => {
-        if (data && data.status === "success" && data.text) {
-            if (data.message && data.message.includes("PDF files are not supported")) {
-                preview.textContent = data.message; 
-            } else if (data.text) {
-                textarea.value = data.text;
-            }
-        } else {
-            preview.textContent = "Ошибка распознавания: " + (data?.message || "Unknown error");
+        if (!data) {
+            preview.textContent = "Ошибка распознавания: пустой ответ сервера.";
+            return;
         }
+        if (data.status === "success" && data.text) {
+            // PDF с текстовым слоем: получили текст сразу
+            textarea.value = data.text;
+            preview.textContent = "Текст извлечён из PDF без OCR.";
+            return;
+        }
+        if (data.status === "success" && (data.data || data.task_id)) {
+            preview.textContent = "Файл отправлен на OCR. Ожидайте…";
+
+            const abortController = new AbortController();
+            const cancelBtn = document.getElementById("aiGeneratorCancelButton");
+
+            if (cancelBtn) {
+                // добавляем обработчик отмены (можно навешивать и другие слушатели без проблем)
+                cancelBtn.addEventListener("click", () => {
+                    abortController.abort();
+                    preview.textContent = "Распознавание отменено пользователем.";
+                });
+            }
+
+
+            pollTaskStatus(data.task_id, {
+                maxAttempts: 25,
+                interval: 6000,
+                onProgress: (progress) => {
+                    // обновляем текстово: 0–99%
+                    const p = Math.min(Math.max(Math.floor(progress), 0), 99);
+                    preview.textContent = `Распознаём… ${p}%`;
+                },
+                onSuccess: (result) => {
+                    // result может быть строкой, либо объектом {text: "..."}
+                    let finalText = "";
+                    if (typeof result === "string") {
+                        finalText = result;
+                    } else if (result && typeof result === "object") {
+                        finalText = result.text || result.data || "";
+                    }
+                    if (!finalText) {
+                        preview.textContent = "Готово, но пустой результат OCR.";
+                        return;
+                    }
+                    textarea.value = finalText;
+                    preview.textContent = "OCR завершён.";
+                },
+                onError: (errMsg) => {
+                    preview.textContent = (errMsg || "Ошибка при распознавании файла.");
+                },
+                onTimeout: () => {
+                    preview.textContent = "Превышено время ожидания OCR. Попробуйте позже.";
+                },
+                abortController, // держим для совместимости/возможной отмены
+                excludeResult: false // хотим получить результат сразу
+            });
+            return;
+        }
+        // Иначе — ошибка
+        preview.textContent = "Ошибка распознавания: " + (data.message || "Unknown error");
     });
 }
 
@@ -132,7 +185,7 @@ export function handleFileUpload(file, preview, textarea) {
  * @param {HTMLElement} preview
  */
 export async function handlePasteFromClipboard(textarea, preview) {
-    const ocrUrl = "/working_with_reports/ocr_extract_text";
+    const ocrUrl = "/openai_api/ocr_extract_text";
     textarea.value = "";
     if (preview) preview.innerHTML = "";
     try {
