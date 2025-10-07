@@ -10,6 +10,7 @@ from app.utils.redis_client import redis_get
 from tasks.celery_tasks import async_clean_raw_text, async_impression_generating, async_report_checking, template_generating, async_ocr_extract_text
 from app.utils.ai_processing import _process_openai_request, reset_ai_session, count_tokens
 from datetime import datetime, timezone
+import base64
 
 openai_api_bp = Blueprint("openai_api", __name__)
 
@@ -185,6 +186,8 @@ def ocr_extract_text():
             logger.warning(f"(OCR) ⚠️ Файл '{filename}' пустой или не удалось прочитать содержимое")
             return jsonify({"status": "error", "message": "Файл пустой или повреждён."}), 400
         logger.info(f"(OCR) 📄 Файл '{filename}' получен, size={len(file_bytes)} bytes")
+        file_bytes_to_b64 = base64.b64encode(file_bytes).decode("ascii")
+        logger.info(f"(OCR) 🔄 Файл '{filename}' закодирован в base64, size={len(file_bytes_to_b64)} chars")
     except Exception as e:
         logger.exception(f"(OCR) ❌ Ошибка при чтении файла '{filename}': {e}")
         return jsonify({
@@ -193,7 +196,7 @@ def ocr_extract_text():
         }), 500
 
     try:
-        task = async_ocr_extract_text.delay(file_bytes, filename)
+        task = async_ocr_extract_text.delay(file_bytes_to_b64, filename)
         logger.info(f"(OCR) ✅ queued task={task.id}")
         return jsonify({
             "status": "success",
