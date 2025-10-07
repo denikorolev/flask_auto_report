@@ -84,9 +84,9 @@ def async_ocr_extract_text(self, file_bytes: bytes, filename: str) -> dict:
         if is_pdf and has_text_layer(file_bytes):
             text = extract_text_from_pdf_textlayer(file_bytes)
             method = "pdf_textlayer"
-            logger.info(f"[async_ocr_extract_text] ✅ textlayer OK, len={len(text)}")
+            logger.info(f"[async_ocr_extract_text] ✅ В PDF есть текстовый слой, len={len(text)}")
             return {"text": text, "method": method}
-
+        logger.info(f"[async_ocr_extract_text] 📡 Текстовый слой pdf не найден.Отправка на OCR провайдер")
         provider = get_ocr_provider()
         text, method = provider.extract_text(content=file_bytes, filename=filename)
         logger.info(f"[async_ocr_extract_text] ✅ provider={method}, len={len(text)}")

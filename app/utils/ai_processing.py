@@ -193,6 +193,57 @@ def clean_raw_text(raw_text: str, user_id: int, assistant_id: str, max_attempts:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # Функция для запуска ассистента первого взгляда. Использую в analyze_dinamics в working_with_reports.py
 def run_first_look_assistant(cleaned_text: str, template_text: list, user_id: int, assistant_id: str, max_attempts: int = 2) -> str:
     logger.info("(Функция run_first_look_assistant) --------------------------------------")

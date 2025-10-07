@@ -366,28 +366,42 @@ function handleActionChange(selectedAction) {
     publicReportContainer.style.display = "none";
     manualReportContainer.style.display = "none";
     aiGeneratorContainer.style.display = "none";
+    
+
+    function toggleCreateReportButton(show) {
+        const createReportButton = document.getElementById("createReportButton");
+        if (createReportButton) {
+            createReportButton.style.display = show ? "block" : "none";
+        }
+    }
 
     // Показываем выбранный
     if (selectedAction === "file") {
         fileUploadContainer.style.display = "flex";
+        toggleCreateReportButton(true);
         activateUniversalSearch(); 
     } else if (selectedAction === "manual") {
         manualReportContainer.style.display = "flex";
+        toggleCreateReportButton(true);
         activateUniversalSearch(); 
     } else if (selectedAction === "existing_few") {
         existingReportContainer.style.display = "block";
+        toggleCreateReportButton(true);
         loadExistingReports();  
     } else if (selectedAction === "shared") {
         sharedReportContainer.style.display = "block";
+        toggleCreateReportButton(true);
         loadSharedReports();  
     } else if (selectedAction === "public") {
         publicReportContainer.style.display = "block";
+        toggleCreateReportButton(true);
         loadPublicReports();  
     } else if (selectedAction === "ai_generator") {
         aiGeneratorContainer.style.display = "block";
         document.getElementById("Textarea").value = "";
         document.getElementById("DropZonePreview").innerHTML = "";
         activateUniversalSearch();
+        toggleCreateReportButton(false); // Скрываем кнопку создания отчета, т.к. в этом режиме она не нужна
         showAiGeneratorBlock(); // Показываем блок ИИ-генерации
     }
 
@@ -773,7 +787,12 @@ function showAiGeneratorBlock() {
     // const fileInput = document.getElementById("aiGeneratorFileInput");
     // Progress bar mount point inside AI generator block (dynamic)
     const progressMount = document.getElementById("aiGeneratorProgressBarContainer");
-    if (progressMount) progressMount.innerHTML = "";
+    if (progressMount) {
+        progressMount.innerHTML = "";
+        console.log("Progress bar mount point found and cleared.");
+        console.log("Нужно будет доделать прогресс бар в этом блоке");
+        console.log(progressMount)
+    }
     const pb = new ProgressBar().mount(progressMount);
     const destroyPB = (delayMs = 0) => {
         if (delayMs > 0) setTimeout(() => pb.destroy(), delayMs);

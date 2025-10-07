@@ -166,13 +166,15 @@ def clean_raw_text_route():
 @openai_api_bp.route("/ocr_extract_text", methods=["POST"])
 @auth_required()
 def ocr_extract_text():
-    logger.info("(OCR) 🚀 start")
+    logger.info("(OCR) 🚀 Start")
 
     if "file" not in request.files:
+        logger.warning("(OCR) ⚠️ Файл не передан в запросе")
         return jsonify({"status": "error", "message": "Файл не передан ('file')."}), 400
 
     f = request.files["file"]
     if not f.filename:
+        logger.warning("(OCR) ⚠️ Пустое имя файла")
         return jsonify({"status": "error", "message": "Пустое имя файла."}), 400
 
     filename = secure_filename(f.filename)
@@ -182,6 +184,7 @@ def ocr_extract_text():
         if not file_bytes:
             logger.warning(f"(OCR) ⚠️ Файл '{filename}' пустой или не удалось прочитать содержимое")
             return jsonify({"status": "error", "message": "Файл пустой или повреждён."}), 400
+        logger.info(f"(OCR) 📄 Файл '{filename}' получен, size={len(file_bytes)} bytes")
     except Exception as e:
         logger.exception(f"(OCR) ❌ Ошибка при чтении файла '{filename}': {e}")
         return jsonify({

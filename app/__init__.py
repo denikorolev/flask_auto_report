@@ -41,7 +41,6 @@ from .blueprints.tasks_status import tasks_status_bp
 from .blueprints.snapshorts import snapshots_bp
 
 
-
 def close_db(exception=None):
     db.session.remove()
 
@@ -76,7 +75,7 @@ def create_app():
     app.context_processor(inject_user_rank)
     app.context_processor(inject_current_profile_data)
     # Для inject_app_info — нужно передать версию
-    app.context_processor(inject_app_info("0.10.7.9"))
+    app.context_processor(inject_app_info("0.10.8.1"))
     
    
     # Register Blueprints
@@ -92,7 +91,6 @@ def create_app():
     app.register_blueprint(support_bp, url_prefix="/support")
     app.register_blueprint(main_bp, url_prefix="/")
     app.register_blueprint(snapshots_bp, url_prefix="/snapshots")
-    
     
     app.teardown_appcontext(close_db)
     

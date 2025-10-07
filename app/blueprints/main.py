@@ -1,6 +1,6 @@
 # app/blueprints/main.py
 
-from flask import Blueprint, render_template, session, redirect, url_for, request
+from flask import Blueprint, render_template, session, redirect, url_for, request, jsonify
 from flask_security import logout_user
 import os
 from app.utils.logger import logger
@@ -53,6 +53,12 @@ def custom_logout():
 @main_bp.route("/success_registered", methods=["GET"])
 def success_registered():
     return render_template("info/success_registered.html")
+
+
+@main_bp.route("/health", methods=["GET"])
+def health():
+    # простая проверка: процесс жив, Flask отвечает
+    return jsonify({"status": "ok"}), 200
 
 
 

@@ -3,6 +3,7 @@
 import io
 from typing import Tuple
 from pypdf import PdfReader
+from app.utils.logger import logger
 
 def has_text_layer(pdf_bytes: bytes) -> bool:
     try:

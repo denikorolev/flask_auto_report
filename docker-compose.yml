@@ -6,6 +6,7 @@ x-logging: &default-logging
     max-size: "10m"
     max-file: "3"
 services:
+
   web:
     build: .
     image: radiologary-app:latest
@@ -24,8 +25,15 @@ services:
     volumes:
       - uploads_data:/uploads
     command: gunicorn --log-level=info --bind 0.0.0.0:5000 --timeout 100 -w 4 wsgi:app
+    healthcheck:
+      test: ["CMD-SHELL", "python - <<'PY'\nimport sys,urllib.request\nu=urllib.request.urlopen('http://localhost:5000/health',timeout=3)\nsys.exit(0 if u.status==200 else 1)\nPY"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+        
 
   nginx:
     image: nginx:alpine
@@ -37,7 +45,12 @@ services:
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf
       - ./certbot/conf:/etc/letsencrypt  
-      - ./certbot/www:/var/www/certbot    
+      - ./certbot/www:/var/www/certbot   
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
     depends_on:
       - web
 
@@ -55,6 +68,11 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
       - /home/deniskorolev/backups:/backups
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME} -h localhost"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
 
   certbot:
     image: certbot/certbot
@@ -71,30 +89,63 @@ services:
     logging: *default-logging
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
 
 
   celery:
     image: radiologary-app:latest
     restart: always
-    logging: *default-logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     env_file:
       - .env
     working_dir: /app
-    command: ["python", "-m", "celery", "-A", "tasks.celery_worker.celery", "worker", "--loglevel=info", "--concurrency=10"]
+    command: [
+        "python", "-m", "celery",
+        "-A", "tasks.celery_worker.celery",
+        "worker",
+        "--loglevel=info",
+        "--concurrency=10",
+        "--pool=prefork",
+        "--max-tasks-per-child=200",
+        "--max-memory-per-child=512000"
+      ]
     depends_on:
       - web
       - redis
     volumes:
       - uploads_data:/uploads
+    healthcheck:
+      test: ["CMD-SHELL", "python - <<'PY'\nimport sys, subprocess, socket\nhost = socket.gethostname()\ncmd = ['celery','-A','tasks.celery_worker.celery','inspect','ping','-d',f'celery@{host}']\nres = subprocess.run(cmd, capture_output=True, text=True)\nout = (res.stdout or '') + (res.stderr or '')\nsys.exit(0 if 'pong' in out.lower() else 1)\nPY"]
+      interval: 30s
+      interval: 30s
+      timeout: 10s
+      retries: 3
     
   celery-beat:
     image: radiologary-app:latest
     restart: always
-    logging: *default-logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     env_file:
       - .env
     working_dir: /app
     command: ["python", "-m", "celery", "-A", "tasks.celery_worker.celery", "beat", "--loglevel=info"]
+    healthcheck:
+      test: ["CMD-SHELL", "python - <<'PY'\nimport sys, subprocess\ncmd = ['celery','-A','tasks.celery_worker.celery','status']\nres = subprocess.run(cmd, capture_output=True, text=True)\nout = (res.stdout or '') + (res.stderr or '')\nsys.exit(0 if 'OK' in out else 1)\nPY"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     depends_on:
       - web
       - redis
