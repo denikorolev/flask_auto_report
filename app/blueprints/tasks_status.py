@@ -35,7 +35,7 @@ def task_status(task_id):
         payload = {"status": "success", "result": task.result}
         if exclude_result:
             logger.info(f"Task {task_id} completed successfully. Returning result.")
-            payload["result"] = task.id
+            payload["result"] = task.id # нужно будет переделать и добавлять task_id отдельным ключом
             logger.info(f"payload: {payload}")
         return jsonify(payload), 200
     elif task.state == "FAILURE":

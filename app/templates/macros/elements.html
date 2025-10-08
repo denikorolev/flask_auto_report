@@ -5,9 +5,9 @@
 <div id="DropZone" class="ai-generator__dropzone">
     <p>Перетащите файл (JPG/PNG/PDF) сюда<br>или вставьте скриншот из буфера (Ctrl+V)</p>
     <div id="DropZonePreview"></div>
-    <div id="DropZoneAITextMarkerContainer" class="" title="рекомендуется использовать только если изображение плохого качества">
-        <label for="DropZoneAITextMarker" class="label">Использовать ИИ распознавание текста</label>
-        <input type="checkbox" id="DropZoneAITextMarker" class="checkbox">
+    <div id="DropZoneButtonContainer">
+        <button id="DropZoneButtonAdd" class="btn">Добавить файл</button>
+        <button id="DropZoneButtonRecognize" class="btn">Распознать</button>
     </div>
 </div>
 {% endmacro %}

@@ -2,6 +2,22 @@
 
 import { pollTaskStatus } from "/static/js/utils/utils_module.js";
 
+// форматтер размеров
+const formatMB = (bytes) => (bytes / (1024 * 1024)).toFixed(2);
+
+
+/**
+ * Рендер превью для "отложенного" файла (без отправки на сервер).
+ * Показываем имя и размер. Минимально — без нумерации и списка (добавим на след. шагах).
+ */
+function renderStagedPreview(preview, file) {
+    preview.innerHTML = "";
+    const p = document.createElement("p");
+    p.textContent = `${file.name} (${formatMB(file.size)} MB)`;
+    preview.appendChild(p);
+}
+
+
 /**
  * Универсальная dropzone для drag&drop и paste файлов (jpeg/png/pdf),
  * с предпросмотром и отправкой на OCR endpoint.
@@ -82,21 +98,22 @@ export function setupDynamicsDropZone({
 export function handleFileUpload(file, preview, textarea, ocrUrl) {
     if (!file) return;
     preview.innerHTML = "";
+    // определяем имя и размер файла
+    const fileName = file.name || "uploaded_file";
+    const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
 
     // Image preview
-    if (file.type.startsWith("image/")) {
-        const img = document.createElement("img");
-        img.style.maxWidth = "200px";
-        img.style.maxHeight = "200px";
-        preview.appendChild(img);
+    if (file.type.startsWith("image/") || file.type === "application/pdf") {
+        const fTitle = document.createElement("h5");
+        const f = document.createElement("p");
+        f.textContent = ` ${fileName} (${fileSizeMB} MB)`;
+        preview.appendChild(f);
 
         const reader = new FileReader();
         reader.onload = function (e) {
             img.src = e.target.result;
         };
         reader.readAsDataURL(file);
-    } else if (file.type === "application/pdf") {
-        preview.textContent = "PDF файл загружен: " + file.name;
     } else {
         preview.textContent = "Неподдерживаемый тип файла: " + file.type;
         return;
@@ -151,7 +168,7 @@ export function handleFileUpload(file, preview, textarea, ocrUrl) {
                     if (typeof result === "string") {
                         finalText = result;
                     } else if (result && typeof result === "object") {
-                        finalText = result.text || result.data || "";
+                        finalText = result.result || result.data || result.text || ""; // нужно будет определиться точно какой будет ключ
                     }
                     if (!finalText) {
                         preview.textContent = "Готово, но пустой результат OCR.";
