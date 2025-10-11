@@ -74,7 +74,7 @@ def template_generating(template_text, assistant_id, user_id):
 
 
 @shared_task(bind=True, name="async_ocr_extract_text", max_retries=0)
-def async_ocr_extract_text(self, file_bytes_to_b64: str, filename: str) -> dict:
+def async_ocr_extract_text(self, file_bytes_to_b64: str, filename: str, auto_prepare: bool, prepare_assistant_id: str, user_id: int) -> dict:
     """
     Универсальный OCR: если PDF с текстовым слоем — извлекаем сразу.
     Иначе — отдаём на облачный OCR провайдер.
@@ -83,10 +83,16 @@ def async_ocr_extract_text(self, file_bytes_to_b64: str, filename: str) -> dict:
     try:
         file_bytes = base64.b64decode(file_bytes_to_b64.encode("ascii"))
         logger.info(f"[async_ocr_extract_text] ✅ Декодировка {filename} прошла успешно, декодированный файл размером={len(file_bytes)} bytes")
-        is_pdf = filename.lower().endswith(".pdf")
         provider = get_ocr_provider()
         text, method = provider.extract_text(content=file_bytes, filename=filename)
         logger.info(f"[async_ocr_extract_text] ✅ provider={method}, len={len(text)}")
+        if auto_prepare:
+            try:
+                logger.info(f"[async_ocr_extract_text] 🤖 Автоподготовка включена, запускаю очистку текста с помощью OpenAI")
+                text = clean_raw_text(text, user_id=user_id, assistant_id=prepare_assistant_id)
+                logger.info(f"[async_ocr_extract_text] ✅ Очистка текста прошла успешно, новая длина текста={len(text)}")
+            except Exception as e:
+                logger.exception(f"[async_ocr_extract_text] ❌ Ошибка при очистке текста: {e}. Возвращаю неочищенный текст.")
         return {"text": text, "method": method}
     except Exception as e:
         logger.exception(f"[async_ocr_extract_text] ❌ {e}")

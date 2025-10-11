@@ -29,6 +29,9 @@ python-dateutil==2.9.0.post0
 python-docx==1.1.0
 python-dotenv==1.0.1
 pytz==2024.1
+pypdf>=4.2.0
+pillow>=10.0.0
+pillow-heif>=0.16.0
 rapidfuzz==3.14.1
 redis==6.4.0
 spacy==3.5.4
@@ -39,4 +42,3 @@ typing_extensions==4.12.2
 tzdata==2024.1
 unidecode==1.4.0
 Werkzeug==3.0.2
-pypdf>=4.2.0

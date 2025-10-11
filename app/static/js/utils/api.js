@@ -18,8 +18,10 @@ function sendRequest({ url, method = "POST", data = {}, responseType = "json", l
         return Promise.reject(new Error("CSRF token is missing")); // Прерываем выполнение запроса
     }
 
-    if (loader) {
-        showLoader(); // Показываем индикатор загрузки
+    if (loader && typeof showLoader === "function") {
+        try { showLoader(); } catch (e) {
+            console.warn("[api] showLoader failed:", e);
+        }
     }
 
     const fetchOptions = {
@@ -106,8 +108,11 @@ function sendRequest({ url, method = "POST", data = {}, responseType = "json", l
             }; // не пробрасываю ошибку чтобы отработал finally блок
         })
         .finally(() => {
-            hideLoader(); // Скрываем индикатор загрузки после завершения запроса
-            
+            if (loader && typeof hideLoader === "function") {
+                try { hideLoader(); } catch (e) {
+                    console.warn("[api] hideLoader failed:", e);
+                }
+            }
         });
 }
 

@@ -162,7 +162,7 @@ def gramma_correction_ai(text: str, language: str, assistant_id: str) -> str:
         raise ValueError(f"Ошибка при обращении к ИИ: error {e}")
   
   
-# Функция для очистки текста с помощью OpenAI. Использую в analyze_dinamics в working_with_reports.py
+# Функция для очистки текста с помощью OpenAI. Использую в analyze_dinamics в working_with_reports.py и в new_report_creation
 def clean_raw_text(raw_text: str, user_id: int, assistant_id: str, max_attempts: int = 2) -> str:
     logger.info("(Функция clean_raw_text) --------------------------------------")
     logger.info("[clean_raw_text] 🚀 Начата очистка текста с помощью OpenAI API.")
@@ -190,58 +190,6 @@ def clean_raw_text(raw_text: str, user_id: int, assistant_id: str, max_attempts:
     logger.warning("[clean_raw_text] ⚠️ Все попытки не удались, возвращаю исходный текст")
     logger.info("---------------------------------------------------")
     return raw_text
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 # Функция для запуска ассистента первого взгляда. Использую в analyze_dinamics в working_with_reports.py

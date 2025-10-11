@@ -1,13 +1,21 @@
 
 
 {% macro text_area_and_drop_zone() %}
-<textarea id="Textarea" class="dynamics-popup__textarea" placeholder="Вставьте текст предыдущего протокола сюда"></textarea>
+<textarea id="DropZoneTextarea" class="dynamics-popup__textarea" placeholder="Вставьте текст протокола сюда (Ctrl+V)"></textarea>
 <div id="DropZone" class="ai-generator__dropzone">
-    <p>Перетащите файл (JPG/PNG/PDF) сюда<br>или вставьте скриншот из буфера (Ctrl+V)</p>
+    <p id="DropZoneInstructions">Перетащите файл (JPEG/PNG/PDF) сюда<br>или вставьте скриншот из буфера (Ctrl+V) или нажмите на кнопку "Добавить файл"</p>
     <div id="DropZonePreview"></div>
-    <div id="DropZoneButtonContainer">
-        <button id="DropZoneButtonAdd" class="btn">Добавить файл</button>
-        <button id="DropZoneButtonRecognize" class="btn">Распознать</button>
+    <div id="DropZoneButtonContainer" class="flex_column">
+        <div id="DropZoneCheckboxWrapper" class="flex">
+            <input type="checkbox" id="DropZonePreparationCheckbox">
+            <label for="DropZonePreparationCheckbox">Автоматически проводить очистку распознанного текста при помощи ИИ</label>
+        </div>
+        <div id="DropZoneButtonWrapper" class="flex">
+            <button id="DropZoneButtonAdd" class="btn">Добавить файл</button>
+            <input type="file" id="aiGeneratorFileInput" accept=".jpg,.jpeg,.png,.pdf,.tiff,.heic,.heif,.webp,image/*,image/heic,image/heif,application/pdf" style="display: none;">
+            <button id="DropZoneButtonRecognize" class="btn">Распознать</button>
+            <button id="DropZoneButtonClear" class="btn btn-secondary">Очистить</button>
+        </div>
     </div>
 </div>
 {% endmacro %}

@@ -1,74 +1,458 @@
-// static/js/utils/dynamicsDropZone.js
-
+// app/static/js/utils/dynamicsDropZone.js
 import { pollTaskStatus } from "/static/js/utils/utils_module.js";
 
-// форматтер размеров
+// ==== ВСПОМОГАТЕЛЬНЫЕ ====
 const formatMB = (bytes) => (bytes / (1024 * 1024)).toFixed(2);
 
+function ensureHeader(preview) {
+    let h = preview.querySelector("#dropzone-files-header");
+    if (!h) {
+        h = document.createElement("h4");
+        h.id = "dropzone-files-header";
+        h.textContent = "Файлы для распознавания:";
+        preview.appendChild(h);
+    }
+    return h;
+}
 
-/**
- * Рендер превью для "отложенного" файла (без отправки на сервер).
- * Показываем имя и размер. Минимально — без нумерации и списка (добавим на след. шагах).
- */
-function renderStagedPreview(preview, file) {
-    preview.innerHTML = "";
-    const p = document.createElement("p");
-    p.textContent = `${file.name} (${formatMB(file.size)} MB)`;
-    preview.appendChild(p);
+function ensureList(preview) {
+    let list = preview.querySelector("#dropzone-files-list");
+    if (!list) {
+        list = document.createElement("ol");
+        list.id = "dropzone-files-list";
+        list.style.marginTop = "8px";
+        preview.appendChild(list);
+    }
+    return list;
 }
 
 
-/**
- * Универсальная dropzone для drag&drop и paste файлов (jpeg/png/pdf),
- * с предпросмотром и отправкой на OCR endpoint.
- * @param {string} dropZoneId - id drop-зоны (div)
- * @param {string} previewId - id блока для предпросмотра
- * @param {string} textareaId - id textarea куда кидать текст после OCR
- * @param {string} [ocrUrl="/working_with_reports/ocr_extract_text"] - endpoint для OCR
- * @returns {Function} detach - функция для снятия обработчиков
- */
-export function setupDynamicsDropZone({
-        dropZoneId,
-        previewId,
-        textareaId,
-        ocrUrl = "/openai_api/ocr_extract_text"
-    }) {
-        console.log("dynamicsDropZone started")
-    const dropZone = document.getElementById(dropZoneId);
-    const preview = document.getElementById(previewId);
-    const textarea = document.getElementById(textareaId);
+function createRemoveButton() {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "dz-remove";
+    btn.title = "Убрать из списка";
+    btn.textContent = "✖"; // можно заменить на '×'
+    btn.style.marginLeft = "8px";
+    btn.style.cursor = "pointer";
+    btn.style.border = "none";
+    btn.style.background = "transparent";
+    btn.style.fontSize = "14px";
+    return btn;
+}
 
-    if (!dropZone || !preview || !textarea) {
-        console.warn("setupDynamicsDropZone: один из элементов не найден");
-        return () => {};
+// ==== КОНТРОЛЛЕР ОЧЕРЕДИ (общая логика для dnd / input / paste) ====
+class OcrStagingController {
+    /**
+     * @param {HTMLElement} preview
+     * @param {HTMLTextAreaElement} textarea
+     * @param {string} ocrUrl
+     * @param {HTMLInputElement|null} preparationCheckbox 
+     */
+    constructor(preview, textarea, ocrUrl = "/openai_api/ocr_extract_text", preparationCheckbox = null) {
+        this.preview = preview;
+        this.textarea = textarea;
+        this.ocrUrl = ocrUrl;
+        this.preparationCheckbox = preparationCheckbox; // чекбокс автоподготовки при помощи ИИ
+
+        /** @type {File[]} */
+        this.queue = [];
+        this._abort = new AbortController(); // для общей отмены (кнопкой отмены)
+        this.processingIndex = null;
+        this.hint = document.getElementById("DropZoneInstructions"); // текст инструкции в дропзоне
     }
 
-    const dragOverHandler = e => {
+    isAutoPrepareEnabled() {
+        try {
+            return !!this.preparationCheckbox?.checked;
+        } catch {
+            return false;
+        }
+    }
+
+    render() {
+        const list = ensureList(this.preview);
+
+        if (!this.queue.length) {
+            this.preview.innerHTML = "";
+            return;
+        }
+        ensureHeader(this.preview);
+        list.innerHTML = "";
+
+        this.queue.forEach((f, i) => {
+            const li = document.createElement("li");
+            li.dataset.idx = String(i);
+            li.className = "dz-item";
+            li.style.display = "flex";
+            li.style.alignItems = "center";
+
+            const info = document.createElement("span");
+            info.className = "dz-info";
+            info.textContent = `${i + 1}. ${f.name} (${formatMB(f.size)} MB)`;
+
+            const status = document.createElement("span");
+            status.className = "dz-status";
+            status.style.marginLeft = "6px";
+            // начально пусто
+
+            const removeBtn = createRemoveButton();
+            removeBtn.style.marginLeft = "8px";
+
+            // если файл в обработке — визуально подсветим и отключим удаление
+            if (this.processingIndex === i) {
+                li.style.opacity = "0.85";
+                removeBtn.disabled = true;
+                removeBtn.style.opacity = "0.4";
+                removeBtn.title = "Файл сейчас обрабатывается";
+            }
+
+            li.appendChild(info);
+            li.appendChild(status);
+            li.appendChild(removeBtn);
+            list.appendChild(li);
+        });
+    }
+
+    setItemStatus(idx, statusText) {
+        const list = ensureList(this.preview);
+        const li = list.querySelector(`li[data-idx="${idx}"]`);
+        if (!li) return;
+
+        const status = li.querySelector(".dz-status");
+        if (status) {
+            status.textContent = ` — ${statusText}`;
+        } else {
+            // на редкий случай, если узел не найден
+            const fallback = document.createElement("span");
+            fallback.className = "dz-status";
+            fallback.style.marginLeft = "6px";
+            fallback.textContent = ` — ${statusText}`;
+            li.appendChild(fallback);
+        }
+    }
+
+    // методы для скрыть/показать инструкцию в дропзоне
+    _hideHint() {
+        if (this.hint) this.hint.classList.add("hide");
+    }
+    _showHint() {
+        if (this.hint) this.hint.classList.remove("hide");
+        // также сбросим чекбокс автоподготовки
+        if (this.preparationCheckbox) this.preparationCheckbox.checked = false;
+    }
+
+
+    /**
+     * Добавить файлы в очередь (универсально для dnd / input / paste)
+     * @param {FileList|File[]} files
+     */
+    addFiles(files) {
+        if (!files) return;
+
+        // Превращаем в массив и фильтруем только поддерживаемые типы
+        const incoming = Array.from(files).filter(f =>
+            f.type?.startsWith("image/") || f.type === "application/pdf"
+        );
+        if (!incoming.length) return;
+
+        // убрать дубликаты по имени+размеру и отсечь >10 МБ
+        const existingKey = new Set(this.queue.map(f => `${f.name}|${f.size}`));
+        const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
+
+        for (const f of incoming) {
+            if (f.size > MAX_SIZE) {
+                if (window.toastr?.warning) {
+                    window.toastr.warning("Файл слишком большой (макс. 10 МБ): " + f.name);
+                } else {
+                    alert("Файл слишком большой (макс. 10 МБ): " + f.name);
+                }
+                continue; // пропускаем файл
+            }
+            const key = `${f.name}|${f.size}`;
+            if (!existingKey.has(key)) this.queue.push(f);
+        }
+
+        if (this.queue.length) this._hideHint(); // прячем подсказку
+        this.render();
+    }
+
+    /**
+     * Добавить изображение из буфера обмена (blob)
+     */
+    addClipboardImage(blob) {
+        if (!blob || !blob.size) return;
+        const file = new File([blob], `clipboard_${Date.now()}.png`, { type: blob.type || "image/png" });
+        this.addFiles([file]);
+    }
+
+    /**
+     * Удалить файл из очереди по индексу
+     */
+    removeAt(index) {
+        if (index < 0 || index >= this.queue.length) return;
+
+        if (this.processingIndex === index) {
+            if (window.toastr?.warning) {
+                window.toastr.warning("Нельзя удалить файл во время распознавания. Нажмите «Отменить» или дождитесь окончания.");
+            } else {
+                alert("Нельзя удалить файл во время распознавания. Нажмите «Отменить» или дождитесь окончания.");
+            }
+            return;
+        }
+
+        this.queue.splice(index, 1);
+        // если удалили элемент до текущего processingIndex, сместим индекс
+        if (this.processingIndex !== null && index < this.processingIndex) {
+            this.processingIndex -= 1;
+        }
+        this.render();
+    }
+
+    clearAll({ resetTextarea = true } = {}) {
+        // Отменяем любые текущие опросы
+        try { this._abort.abort(); } catch (_) {}
+        this._abort = new AbortController();
+
+        // Сбрасываем состояние очереди и индексы,чистим превью
+        this.queue = [];
+        this.processingIndex = null;
+        this.preview.innerHTML = "";
+
+        // Чистим textarea при необходимости
+        if (resetTextarea && this.textarea) {
+            this.textarea.value = "";
+        }
+        this._showHint();
+    }
+
+    cancelAll() {
+        // Отменят поллинг текущего задания (висит на кнопку снаружи)
+        try { this._abort.abort(); } catch (_) {}
+        this._abort = new AbortController(); // новый токен
+        this.processingIndex = null;
+
+        const list = ensureList(this.preview);
+        list.querySelectorAll("li").forEach((li) => {
+            const text = li.querySelector(".dz-info")?.textContent || "";
+            const status = li.querySelector(".dz-status");
+            if (status && !/OCR завершён\.|Текстовый слой — готово\.|Ошибка|Превышено время ожидания OCR\.|Готово, но пустой результат OCR\./.test(status.textContent)) {
+                status.textContent = " — Отменено";
+            }
+            const removeBtn = li.querySelector(".dz-remove");
+            if (removeBtn) {
+                removeBtn.disabled = false;
+                removeBtn.style.opacity = "1";
+                removeBtn.title = "Убрать из списка";
+            }
+        });
+    }
+
+
+    async _processSingle(file, idx) {
+        // 1) Пытаемся сразу обработать PDF с текстовым слоем (это делает backend)
+        console.log("Started _processSingle");
+        const formData = new FormData();
+        const autoPrepare = this.isAutoPrepareEnabled(); // чекбокс автоподготовки отправляем на сервер
+        formData.append("file", file);
+        formData.append("auto_prepare", autoPrepare); 
+
+        let OCRRequestData;
+        try {
+            OCRRequestData = await sendRequest({
+                url: this.ocrUrl,
+                data: formData,
+                loader: false
+            });
+        } catch (e) {
+            console.error("[dropzone] sendRequest threw before JSON was returned:", e);
+            this.setItemStatus(idx, "Ошибка сети/клиента при отправке.");
+            throw e;
+        }
+
+        const data = OCRRequestData; 
+
+        if (!data) throw new Error("Пустой ответ сервера");
+
+        // Случай: PDF с текстовым слоем — сервер сразу вернёт text
+        if (data.status === "success" && data.text) {
+            console.log("PDF с текстовым слоем");
+            const text = data.text || data.result.text || data.result || "не удалось идентифицировать ответ сервера";
+            if (text) {
+                const sep = this.textarea.value.trim() ? "\n\n" : "";
+                this.textarea.value = `${this.textarea.value}${sep}${text}`;
+            }
+            this.setItemStatus(idx, "Текстовый слой — готово.");
+            return;
+        }
+
+        // Случай OCR: задача в очереди
+        const taskId = data.task_id;
+        if (data.status === "success" && taskId) {
+            console.log("OCR задача поставлена в очередь, ждём результат...");
+            const abortController = new AbortController();
+            const externalSignal = this._abort.signal;
+
+            // Если уже отменили — бросаем
+            if (externalSignal.aborted) {
+                throw new Error("cancelled");
+            }
+            const onAbort = () => {
+                try { abortController.abort(); } catch (_) {}
+            };
+            externalSignal.addEventListener("abort", onAbort, { once: true });
+
+            let maxAttemptsVar = 12;
+            let intervalVar = 2000;
+
+            // Если включена автоподготовка, стоит увеличить таймауты
+            if (autoPrepare) {
+                maxAttemptsVar = 18; 
+                intervalVar = 4000; 
+            }
+
+            return await new Promise((resolve, reject) => {
+                pollTaskStatus(taskId, {
+                    maxAttempts: maxAttemptsVar,
+                    interval: intervalVar,
+                    onProgress: (progress) => {
+                        const p = Math.min(Math.max(Math.floor(progress), 0), 99);
+                        this.setItemStatus(idx, `Распознаём… ${p}%`);
+                    },
+                    onSuccess: (result) => {
+                        let finalText = "";
+                        if (typeof result === "string") finalText = result;
+                        else if (result && typeof result === "object") finalText = result.text || result.data || "не удалось подобрать ключ к ответу сервера";
+                        if (!finalText) {
+                            this.setItemStatus(idx, "Готово, но пустой результат OCR.");
+                            resolve();
+                            return;
+                        }
+                        const sep = this.textarea.value.trim() ? "\n\n" : "";
+                        this.textarea.value = `${this.textarea.value}${sep}${finalText}`;
+                        this.setItemStatus(idx, "OCR завершён.");
+                        resolve();
+                    },
+                    onError: (errMsg) => {
+                        this.setItemStatus(idx, `Ошибка: ${errMsg || "Неизвестная ошибка"}`);
+                        reject(new Error(errMsg || "Ошибка OCR"));
+                    },
+                    onTimeout: () => {
+                        this.setItemStatus(idx, "Превышено время ожидания OCR.");
+                        reject(new Error("timeout"));
+                    },
+                    abortController,
+                    excludeResult: false
+                });
+            });
+        }
+
+        // Иначе — это ошибка
+        throw new Error(data.message || "Неизвестная ошибка");
+    }
+
+    /**
+     * Отправить ВСЁ по кнопке «Распознать»
+     * — последовательно, чтобы не душить квоты/бэкенд
+     */
+    async sendAll() {
+        if (!this.queue.length) {
+            toastr.info?.("Нет файлов для распознавания.") || alert("Нет файлов для распознавания.");
+            return;
+        }
+        for (let i = 0; i < this.queue.length; i++) {
+            if (this._abort.signal.aborted) break;
+
+            // помечаем текущий обрабатываемый индекс (для запрета удаления)
+            this.processingIndex = i;
+            this.render(); // обновим кнопки удаления у элементов
+
+            this.setItemStatus(i, "Отправка…");
+            try {
+                await this._processSingle(this.queue[i], i);
+            } catch (err) {
+                console.error("OCR _processSingle failed:", err);
+                if (String(err?.message || "").toLowerCase().includes("cancelled")) {
+                    this.setItemStatus(i, "Отменено.");
+                    break;
+                }
+            } finally {
+                // снимаем «занятость» после обработки элемента
+                this.processingIndex = null;
+                this.render(); // вернём доступность крестиков
+            }
+        }
+    }м
+}
+
+// ==== DnD-ОБЁРТКА (ТОЛЬКО РАБОТА С СОБЫТИЯМИ DND/PASTE) ====
+// Ничего не отправляет — только добавляет в OcrStagingController.
+export function setupDynamicsDropZone() {
+    console.log("dynamicsDropZone started");
+
+    const ocrUrl = "/openai_api/ocr_extract_text";
+    const dropZone = document.getElementById("DropZone");
+    const preview = document.getElementById("DropZonePreview");
+    const textarea = document.getElementById("DropZoneTextarea");
+
+    // элементы из макроса:
+    const addBtn = document.getElementById("DropZoneButtonAdd");
+    const hiddenInput = document.getElementById("aiGeneratorFileInput");
+    const recognizeBtn = document.getElementById("DropZoneButtonRecognize");
+    const clearBtn = document.getElementById("DropZoneButtonClear");  
+    const cancelBtn = document.getElementById("aiGeneratorCancelButton");
+    const preparationCheckbox = document.getElementById("DropZonePreparationCheckbox");
+
+    if (!dropZone || !preview || !textarea || !recognizeBtn || !addBtn || !hiddenInput || !cancelBtn || !clearBtn || !preparationCheckbox) {
+        console.error("setupDynamicsDropZone: один из элементов не найден");
+        return { detach: () => {}, controller: null };
+    }
+
+    // общий контроллер
+    const controller = new OcrStagingController(preview, textarea, ocrUrl, preparationCheckbox);
+
+    // --- Удаление по клику на ❌ (делегирование на контейнер preview)
+    const onPreviewClick = (e) => {
+        const btn = e.target.closest(".dz-remove");
+        if (!btn) return;
+        const li = btn.closest("li[data-idx]");
+        if (!li) return;
+
+        const idx = Number(li.dataset.idx);
+        if (Number.isNaN(idx)) return;
+
+        controller.removeAt(idx);
+    };
+    preview.addEventListener("click", onPreviewClick);
+
+    // --- DnD ---
+    const dragOverHandler = (e) => {
         e.preventDefault();
         dropZone.classList.add("dragover");
     };
-
-    const dragLeaveHandler = e => {
+    const dragLeaveHandler = (e) => {
         e.preventDefault();
         dropZone.classList.remove("dragover");
     };
-
-    const dropHandler = e => {
-        e.preventDefault();
+    const dropHandler = (e) => {
+        e.preventDefault(); 
         dropZone.classList.remove("dragover");
-        const files = e.dataTransfer.files;
-        if (files.length > 0) {
-            handleFileUpload(files[0], preview, textarea, ocrUrl);
+        const files = e.dataTransfer?.files;
+        if (files && files.length) {
+            controller.addFiles(files);
         }
     };
-
-    const pasteFileHandler = e => {
-        const items = e.clipboardData.items;
-        for (let item of items) {
-            if (item.type.indexOf("image") !== -1) {
-                const file = item.getAsFile();
-                handleFileUpload(file, preview, textarea, ocrUrl);
-                e.preventDefault();
+    // --- Paste (только images) ---
+    const pasteHandler = (e) => {
+        const items = e.clipboardData?.items || [];
+        for (const item of items) {
+            if (item.type.includes("image/")) {
+                const blob = item.getAsFile();
+                if (blob && blob.size) {
+                    controller.addClipboardImage(blob);
+                    e.preventDefault();
+                    break;
+                }
             }
         }
     };
@@ -76,173 +460,59 @@ export function setupDynamicsDropZone({
     dropZone.addEventListener("dragover", dragOverHandler);
     dropZone.addEventListener("dragleave", dragLeaveHandler);
     dropZone.addEventListener("drop", dropHandler);
-    dropZone.addEventListener("paste", pasteFileHandler);
+    dropZone.addEventListener("paste", pasteHandler);
 
-    // Вернуть функцию для снятия обработчиков
-    return () => {
+    // --- Скрытый input + «Добавить файл» ---
+    const onAddClick = (e) => {
+        e.preventDefault();
+        hiddenInput.click();
+    };
+    const onInputChange = (e) => {
+        const files = e.target.files;
+        if (files?.length) controller.addFiles(files);
+        hiddenInput.value = ""; // чтобы можно было выбрать тот же файл повторно
+    };
+    addBtn.addEventListener("click", onAddClick);
+    hiddenInput.addEventListener("change", onInputChange);
+
+    // --- Кнопки ---
+    const onRecognizeClick = (e) => {
+        e.preventDefault();
+        controller.sendAll();
+    };
+    recognizeBtn.addEventListener("click", onRecognizeClick);
+
+    const onCancelClick = (e) => {
+        e.preventDefault();
+        controller.cancelAll();
+    };
+    cancelBtn.addEventListener("click", onCancelClick);
+
+    // --- Очистить (дропзона + textarea) ---
+    const onClearClick = (e) => {
+        e.preventDefault();
+        controller.clearAll({ resetTextarea: true });
+        // Можно ещё убрать класс dragover на всякий
+        dropZone.classList.remove("dragover");
+        // Сбросить <input type="file">, чтобы позволить повторно выбрать тот же файл
+        if (hiddenInput) hiddenInput.value = "";
+        // Немного UX
+        if (window.toastr?.info) window.toastr.info("Очищено.");
+    };
+    clearBtn.addEventListener("click", onClearClick);
+
+    const detach = () => {
+        preview.removeEventListener("click", onPreviewClick);
         dropZone.removeEventListener("dragover", dragOverHandler);
         dropZone.removeEventListener("dragleave", dragLeaveHandler);
         dropZone.removeEventListener("drop", dropHandler);
-        dropZone.removeEventListener("paste", pasteFileHandler);
+        dropZone.removeEventListener("paste", pasteHandler);
+        addBtn.removeEventListener("click", onAddClick);
+        hiddenInput.removeEventListener("change", onInputChange);
+        recognizeBtn.removeEventListener("click", onRecognizeClick);
+        clearBtn.removeEventListener("click", onClearClick);
+        cancelBtn.removeEventListener("click", onCancelClick);
     };
-}
 
-
-/**
- * Предпросмотр + отправка файла на OCR
- * @param {File} file 
- * @param {HTMLElement} preview 
- * @param {HTMLTextAreaElement} textarea 
- * @param {string} ocrUrl
- */
-export function handleFileUpload(file, preview, textarea, ocrUrl) {
-    if (!file) return;
-    preview.innerHTML = "";
-    // определяем имя и размер файла
-    const fileName = file.name || "uploaded_file";
-    const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
-
-    // Image preview
-    if (file.type.startsWith("image/") || file.type === "application/pdf") {
-        const fTitle = document.createElement("h5");
-        const f = document.createElement("p");
-        f.textContent = ` ${fileName} (${fileSizeMB} MB)`;
-        preview.appendChild(f);
-
-        const reader = new FileReader();
-        reader.onload = function (e) {
-            img.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
-    } else {
-        preview.textContent = "Неподдерживаемый тип файла: " + file.type;
-        return;
-    }
-
-    // upload to OCR
-    const formData = new FormData();
-    formData.append("file", file);
-
-    sendRequest({
-        url: ocrUrl,
-        data: formData,
-        responseType: "json",
-        loader: true
-    }).then(data => {
-        if (!data) {
-            preview.textContent = "Ошибка распознавания: пустой ответ сервера.";
-            return;
-        }
-        if (data.status === "success" && data.text) {
-            // PDF с текстовым слоем: получили текст сразу
-            textarea.value = data.text;
-            preview.textContent = "Текст извлечён из PDF без OCR.";
-            return;
-        }
-        if (data.status === "success" && (data.data || data.task_id)) {
-            preview.textContent = "Файл отправлен на OCR. Ожидайте…";
-
-            const abortController = new AbortController();
-            const cancelBtn = document.getElementById("aiGeneratorCancelButton");
-
-            if (cancelBtn) {
-                // добавляем обработчик отмены (можно навешивать и другие слушатели без проблем)
-                cancelBtn.addEventListener("click", () => {
-                    abortController.abort();
-                    preview.textContent = "Распознавание отменено пользователем.";
-                });
-            }
-
-
-            pollTaskStatus(data.task_id, {
-                maxAttempts: 25,
-                interval: 6000,
-                onProgress: (progress) => {
-                    // обновляем текстово: 0–99%
-                    const p = Math.min(Math.max(Math.floor(progress), 0), 99);
-                    preview.textContent = `Распознаём… ${p}%`;
-                },
-                onSuccess: (result) => {
-                    // result может быть строкой, либо объектом {text: "..."}
-                    let finalText = "";
-                    if (typeof result === "string") {
-                        finalText = result;
-                    } else if (result && typeof result === "object") {
-                        finalText = result.result || result.data || result.text || ""; // нужно будет определиться точно какой будет ключ
-                    }
-                    if (!finalText) {
-                        preview.textContent = "Готово, но пустой результат OCR.";
-                        return;
-                    }
-                    textarea.value = finalText;
-                    preview.textContent = "OCR завершён.";
-                },
-                onError: (errMsg) => {
-                    preview.textContent = (errMsg || "Ошибка при распознавании файла.");
-                },
-                onTimeout: () => {
-                    preview.textContent = "Превышено время ожидания OCR. Попробуйте позже.";
-                },
-                abortController, // держим для совместимости/возможной отмены
-                excludeResult: false // хотим получить результат сразу
-            });
-            return;
-        }
-        // Иначе — ошибка
-        preview.textContent = "Ошибка распознавания: " + (data.message || "Unknown error");
-    });
-}
-
-
-
-/**
- * Вставка из буфера обмена: сначала ищет текст, если нет — image/png/jpeg.
- * Если ничего не найдено — сообщает пользователю.
- * @param {HTMLTextAreaElement} textarea
- * @param {HTMLElement} preview
- */
-export async function handlePasteFromClipboard(textarea, preview) {
-    const ocrUrl = "/openai_api/ocr_extract_text";
-    textarea.value = "";
-    if (preview) preview.innerHTML = "";
-    try {
-        const items = await navigator.clipboard.read();
-        if (!items || !items.length) {
-            alert("Буфер обмена пуст или не содержит поддерживаемых данных.");
-            return;
-        }
-        let found = false;
-        // Сначала ищем текст
-        for (const item of items) {
-            if (item.types.includes('text/plain')) {
-                const textBlob = await item.getType('text/plain');
-                const text = await textBlob.text();
-                if (text && text.trim()) {
-                    textarea.value = text;
-                    found = true;
-                    break;
-                }
-            }
-        }
-        // Если текст не найден — ищем картинку
-        if (!found) {
-            for (const item of items) {
-                if (item.types.includes('image/png') || item.types.includes('image/jpeg')) {
-                    const blob = await item.getType(item.types[0]);
-                    if (blob && blob.size > 0) {
-                        const file = new File([blob], "clipboard_image.png", { type: blob.type });
-                        handleFileUpload(file, preview, textarea, ocrUrl);
-                        found = true;
-                        break;
-                    }
-                }
-            }
-        }
-        if (!found) {
-            alert("Буфер обмена пуст или не содержит поддерживаемых данных (текст или изображение).");
-        }
-    } catch (e) {
-        alert("Не удалось получить доступ к буферу обмена: " + e.message);
-        console.error(e);
-    }
+    return { detach, controller };
 }

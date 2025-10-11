@@ -1922,7 +1922,8 @@ body {
     padding: 18px 10px 12px 10px;
     text-align: center;
     color: var(--dark-text-color);
-    min-width: 220px;
+    min-width: 320px;
+    max-width: 420px;
     min-height: 85px;
     margin-right: 18px;
     display: flex;
@@ -2081,4 +2082,10 @@ body {
 
 .btn-attention:hover {
     background: var(--accent-attention-light);
+}
+
+
+#dropzone-files-list .dz-item .dz-remove:hover {
+  color: #c00;
+  transform: scale(1.05);
 }

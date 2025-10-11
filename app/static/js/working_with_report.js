@@ -4,12 +4,13 @@
     // const currentReportParagraphsData = {{ paragraphs_data | tojson | safe }};
     // MAX_ATTEMPTS_FOR_DYNAMICS
 
-import { setupDynamicsDropZone, handleFileUpload, handlePasteFromClipboard } from "/static/js/utils/dynamicsDropZone.js";
+import { setupDynamicsDropZone } from "/static/js/utils/dynamicsDropZone.js";
 import { prepareTextWithAI } from "/static/js/utils/ai_handlers.js";
 import { pollTaskStatus } from "/static/js/utils/utils_module.js";   
 import { ProgressBar } from "/static/js/utils/elements.js";   
 
 let activeSentence = null;  // Для отслеживания активного предложения
+let __impressionTaskActive = false; // Локальное состояние pb для генерации, чтобы не запускалось повторно
 document.addEventListener("DOMContentLoaded", initWorkingWithReport);
 
 
@@ -632,22 +633,41 @@ function copyButtonLogic(copyButton) {
     });
 }
 
+// вспомогательная функция для удаления прогресс-бара
+function destroyPB(delayMs = 0, pb = null, progressMount = null) {
+        const doDestroy = () => {
+            try { pb.destroy(); } catch(_) {}
+            if (progressMount) progressMount.style.display = "none";
+            __impressionTaskActive = false;
+        };
+        if (delayMs > 0) setTimeout(doDestroy, delayMs);
+        else doDestroy();
+    };
+
 
 // Логика для кнопки "Generate Impression". 
 async function generateImpressionLogic(boxForAiResponse, responseForDelete, boxForAiDynamicResponse) {
     const textToCopy = collectTextFromParagraphs("paragraph__item--core");
-    const panel = document.getElementById("reportControlPanel");
-    const mountParent = panel?.querySelector(".progress-bar-container");
-    const existingBar = panel?.querySelector(".dynamics-progress-container");
-    if (existingBar && getComputedStyle(existingBar).display !== "none") {
-        alert("Пожалуйста, дождитесь завершения текущей операции.");
-        return;
-    }
-
     if (!textToCopy || !textToCopy.trim()) {
         alert("Нет текста для генерации заключения.");
         return;
     }
+
+    const panel = document.getElementById("reportControlPanel");
+    const mountParent = panel?.querySelector(".progress-bar-container");
+    if(!mountParent || !panel) {
+        alert("Не найден контейнер для прогресс-бара.");
+        return;
+    }
+
+    // Защита от параллельных запусков
+    if (__impressionTaskActive) {
+        alert("Пожалуйста, дождитесь завершения текущей операции.");
+        return;
+    }
+
+    mountParent.innerHTML = ""; // Очищаем родителя перед монтированием нового прогресс-бара
+    mountParent.style.display = "block";
 
     if (boxForAiResponse) {
         boxForAiResponse.innerText = "";
@@ -663,15 +683,16 @@ async function generateImpressionLogic(boxForAiResponse, responseForDelete, boxF
     }
 
     // Прогресс-бар справа — динамическая вставка
-    const pb = new ProgressBar().mount(mountParent, "afterbegin");
-    pb.set(0, "Генерация заключения...");
+    const pb = new ProgressBar().mount(mountParent);
+    
 
     try {
+        __impressionTaskActive = true;
         // backend возвращает task.id в поле data
         const taskId = await generateImpressionRequest(textToCopy);
         if (!taskId || typeof taskId !== "string") {
             pb.set(100, "Не удалось запустить задачу генерации заключения.");
-            setTimeout(() => pb.destroy(), 1500);
+            setTimeout(() => destroyPB(2000, pb, mountParent), 2000);
             return;
         }
 
@@ -679,8 +700,8 @@ async function generateImpressionLogic(boxForAiResponse, responseForDelete, boxF
 
         // Поллим статус (фоллбек-прогресс)
         pollTaskStatus(taskId, {
-            maxAttempts: 10,
-            interval: 4000,
+            maxAttempts: 14,
+            interval: 2000,
             onProgress: (progress) => pb.set(progress, "Ожидание результата..."),
             onSuccess: (result) => {
                 pb.set(100, "Готово!");
@@ -701,21 +722,21 @@ async function generateImpressionLogic(boxForAiResponse, responseForDelete, boxF
                     onEnter(boxForAiResponse, boxForAiResponse._onEnterHandler, true);
                 }
 
-                setTimeout(() => pb.destroy(), 1000);
+                destroyPB(2000, pb, mountParent);
             },
             onError: (errMsg) => {
                 pb.set(100, errMsg || "Ошибка при выполнении задачи генерации заключения.");
-                setTimeout(() => pb.destroy(), 2000);
+                destroyPB(2000, pb, mountParent);
             },
             onTimeout: () => {
                 pb.set(100, "Превышено время ожидания. Попробуйте ещё раз позже.");
-                setTimeout(() => pb.destroy(), 2000);
+                destroyPB(2000, pb, mountParent);
             }
         });
     } catch (error) {
         console.error("Ошибка запуска генерации заключения:", error);
         pb.set(100, error?.message || "Ошибка при запуске задачи.");
-        setTimeout(() => pb.destroy(), 2000);
+        destroyPB(2000, pb, mountParent);
     }
 }
 
@@ -998,6 +1019,9 @@ function checkReportAI(boxForAiResponse, responseForDelete, boxForAiDynamicRespo
     const impressionText = collectTextFromParagraphs("paragraph__item--impression");
     const panel = document.getElementById("reportControlPanel");
     const mountParent2 = panel?.querySelector(".progress-bar-container");
+    if (mountParent2) {
+        mountParent2.innerHTML = ""; // Очищаем родителя перед монтированием нового прогресс-бара
+    }
     const existingBar2 = panel?.querySelector(".dynamics-progress-container");
     if (existingBar2 && getComputedStyle(existingBar2).display !== "none") {
         alert("Пожалуйста, дождитесь завершения текущей операции.");
@@ -1025,7 +1049,6 @@ function checkReportAI(boxForAiResponse, responseForDelete, boxForAiDynamicRespo
 
     // Прогресс-бар справа — динамическая вставка
     const pb2 = new ProgressBar().mount(mountParent2, "afterbegin");
-    pb2.set(0, "Идет проверка отчета...");
 
     sendRequest({
         url: "/openai_api/generate_redactor",
@@ -1035,7 +1058,7 @@ function checkReportAI(boxForAiResponse, responseForDelete, boxForAiDynamicRespo
         const { status, data, message } = startResp || {};
         if (status !== "success" || !data) {
             pb2.set(100, message || "Не удалось запустить задачу редактирования.");
-            setTimeout(() => pb2.destroy(), 1000);
+            setTimeout(() => destroyPB(2000, pb2, mountParent2), 2000);
             return;
         }
 
@@ -1044,14 +1067,14 @@ function checkReportAI(boxForAiResponse, responseForDelete, boxForAiDynamicRespo
 
         // Поллим статус (только фоллбек-прогресс)
         pollTaskStatus(taskId, {
-            maxAttempts: 10,
-            interval: 4000,
+            maxAttempts: 16,
+            interval: 3000,
             onProgress: (progress) => pb2.set(progress, "Ожидание результата..."),
             onSuccess: (result) => {
                 pb2.set(100, "Готово!");
                 const text = (typeof result === "string") ? result : (result && result.result) || "";
                 boxForAiResponse.innerText = text || "Ответ ИИ не получен.";
-                setTimeout(() => pb2.destroy(), 1000);
+                setTimeout(() => destroyPB(2000, pb2, mountParent2), 2000);
             },
             onError: (errMsg) => {
                 pb2.set(100, errMsg || "Ошибка при выполнении задачи редактирования.");
@@ -1069,7 +1092,6 @@ function checkReportAI(boxForAiResponse, responseForDelete, boxForAiDynamicRespo
         setTimeout(() => pb2.destroy(), 2000);
     });
 }
-
 
 // Вся логика для показа динамического отчета (отчет в динамике)
 async function showDynamicReportPopup(boxForAiImpressionResponse, boxForAiRedactorResponse) {
@@ -1091,31 +1113,23 @@ async function showDynamicReportPopup(boxForAiImpressionResponse, boxForAiRedact
 
     const closeDynamicsPopup = document.getElementById("closeDynamicsPopup");
     const analyzeDynamicsButton = document.getElementById("analyzeDynamicsButton");
-    const dynamicsTextarea = document.getElementById("Textarea");
+    const dynamicsTextarea = document.getElementById("DropZoneTextarea");
     const dynamicsPreview = document.getElementById("DropZonePreview");
-    const pasteDynamicsButton = document.getElementById("pasteDynamicsButton");
     const prepareTextDynamicsButton = document.getElementById("prepareTextDynamicsButton");
-    const dynamicFileUploadButton = document.getElementById("uploadFileDynamicsButton");
-    const dynamicFileUploadInput = document.getElementById("dynamicFileUploadInput");
+
+    // функции для блокировки и разблокировки кнопок анализа и подготовки текста
+    function activityGenerateButtons(isDisabled) {
+        analyzeDynamicsButton.disabled = isDisabled;
+        prepareTextDynamicsButton.disabled = isDisabled;
+    }
 
     // Очистка перед показом
     dynamicsTextarea.value = "";
+    // dropzone берёт на себя: dnd, скрытый input, paste (images) и кнопку «Распознать»
+    const { detach } = setupDynamicsDropZone();
+
 
     showElement(popup, false); // второй параметр это bool для useHideOnClickOutside
-
-        // Динамический прогресс-бар в попапе
-    const popupBarMount = popup.querySelector("#dynamicsPopupProgressBarContainer");
-    if (popupBarMount) popupBarMount.innerHTML = ""; // очистим контейнер
-    const pbDyn = new ProgressBar().mount(popupBarMount);
-    const updateDynamicsProgressBar = (percent, statusText = null) => pbDyn.set(percent, statusText);
-
-    let detachDropZone = setupDynamicsDropZone(
-        {
-            dropZoneId: "DropZone",
-            previewId: "DropZonePreview",
-            textareaId: "Textarea"
-        }
-    );
 
     
 
@@ -1127,12 +1141,10 @@ async function showDynamicReportPopup(boxForAiImpressionResponse, boxForAiRedact
         // Снятие обработчиков
         closeDynamicsPopup.removeEventListener("click", closeHandler);
         analyzeDynamicsButton.removeEventListener("click", analyzeHandler);
-        pasteDynamicsButton.removeEventListener("click", pasteHandler);
-        dynamicFileUploadButton.removeEventListener("click", uploadBtnHandler);
-        dynamicFileUploadInput.removeEventListener("change", fileSelectHandler);
         prepareTextDynamicsButton.removeEventListener("click", prepareTextHandler);
-        if (pbDyn) pbDyn.destroy();
-        if (detachDropZone) detachDropZone();
+        if (pbDyn) destroyPB(0, pbDyn, popupBarMount);
+        if (typeof detach === "function") detach(); // отключаем dropzone
+
     };
 
     // Обработчик для кнопки анализа динамики
@@ -1147,8 +1159,13 @@ async function showDynamicReportPopup(boxForAiImpressionResponse, boxForAiRedact
             return;
         }
         // Блокируем кнопку анализа
-        analyzeDynamicsButton.disabled = true;
+        activityGenerateButtons(true);
         closeDynamicsPopup.innerText = "Отмена";
+
+        // Динамический прогресс-бар в попапе
+        const popupBarMount = popup.querySelector("#dynamicsPopupProgressBarContainer");
+        if (popupBarMount) popupBarMount.innerHTML = ""; // очистим контейнер
+        const pbDyn = new ProgressBar().mount(popupBarMount);
 
         const startResponse = await sendRequest({
             url: "/working_with_reports/analyze_dynamics",
@@ -1160,21 +1177,33 @@ async function showDynamicReportPopup(boxForAiImpressionResponse, boxForAiRedact
         const {status, message, task_id} = startResponse || {};
         if (status !== "success" || !task_id) {
             console.error("Ошибка при отправке текста на анализ динамики:", message);
-            analyzeDynamicsButton.disabled = false;
+            activityGenerateButtons(false);
+            pbDyn.set(1000, message || "Не удалось запустить задачу анализа динамики.");
+            destroyPB(2000, pbDyn, popupBarMount);
             closeDynamicsPopup.innerText = "Закрыть";
             return;
         }
         
         pollTaskStatus(task_id, {
-            maxAttempts: 20,
-            interval: 7000,
-            onProgress: (progress) => updateDynamicsProgressBar(progress, "Ожидание результата..."),
+            maxAttempts: 46,
+            interval: 4000,
+            onProgress: (progress) => pbDyn.set(progress, "Ожидание результата..."),
             onSuccess: (result) => {
-                updateDynamicsProgressBar(100, "Готово!");
+                pbDyn.set(100, "Готово!");
                 finalizeAnalyzeDynamics(result);
             },
-            onError: (errMsg) => updateDynamicsProgressBar(100, errMsg),
-            onTimeout: () => updateDynamicsProgressBar(100, "Превышено время ожидания ответа. Попробуйте ещё раз позже.")
+            onError: (errMsg) => {
+                pbDyn.set(100, errMsg);
+                activityGenerateButtons(false);
+                closeDynamicsPopup.innerText = "Закрыть";
+                destroyPB(1500, pbDyn, popupBarMount);
+            },
+            onTimeout: () => {
+                pbDyn.set(100, "Превышено время ожидания ответа. Попробуйте ещё раз позже.");
+                activityGenerateButtons(false);
+                closeDynamicsPopup.innerText = "Закрыть";
+                destroyPB(1500, pbDyn, popupBarMount);
+            }   
         });
 
     };
@@ -1186,49 +1215,41 @@ async function showDynamicReportPopup(boxForAiImpressionResponse, boxForAiRedact
             return;
         }
         window.previousDynamicsText = rawText; // Сохраняем текст для последующего использования в overlay
+
+        // Динамический прогресс-бар в попапе
+        const popupBarMount = popup.querySelector("#dynamicsPopupProgressBarContainer");
+        if (popupBarMount) popupBarMount.innerHTML = ""; // очистим контейнер
+        const pbDyn = new ProgressBar().mount(popupBarMount);
+
         const taskID = await prepareTextWithAI(dynamicsTextarea, prepareTextDynamicsButton);
 
         pollTaskStatus(taskID, {
             maxAttempts: 12,
-            interval: 4000,
-            onProgress: (progress) => updateDynamicsProgressBar(progress, "Ожидание результата..."),
+            interval: 3000,
+            onProgress: (progress) => pbDyn.set(progress, "Ожидание результата..."),
             onSuccess: (result) => {
-                updateDynamicsProgressBar(100, "Готово!");
+                pbDyn.set(100, "Готово!");
+                activityGenerateButtons(false);
+                destroyPB(1500, pbDyn, popupBarMount);
                 dynamicsTextarea.value = result || "";
             },
-            onError: (errMsg) => updateDynamicsProgressBar(100, errMsg),
-            onTimeout: () => updateDynamicsProgressBar(100, "Превышено время ожидания ответа. Попробуйте ещё раз позже.")
+            onError: (errMsg) => {
+                pbDyn.set(100, errMsg);
+                activityGenerateButtons(false);
+                destroyPB(1500, pbDyn, popupBarMount);
+            },
+            onTimeout: () => {
+                pbDyn.set(100, "Превышено время ожидания ответа. Попробуйте ещё раз позже.");
+                activityGenerateButtons(false);
+                destroyPB(1500, pbDyn, popupBarMount);
+            }
         });
-    };
-
-    // Обработчик для вставки из буфера обмена
-    const pasteHandler = async () => {
-        await handlePasteFromClipboard(dynamicsTextarea, dynamicsPreview);
-    };
-
-    // Обработчик выбора файла
-    const fileSelectHandler = (e) => {
-        const file = e.target.files && e.target.files[0];
-        if (file) {
-            handleFileUpload(file, dynamicsPreview, dynamicsTextarea);
-        }
-        // Сброс значения чтобы можно было выбрать тот же файл снова при необходимости
-        dynamicFileUploadInput.value = "";
-    };
-
-    // Промежуточный обработчик симулирующий клик на input для 
-    // загрузки файла при клике на кнопку загрузить файл
-    const uploadBtnHandler = () => {
-        dynamicFileUploadInput.click();
     };
 
 
     // Назначаем обработчики
     closeDynamicsPopup.addEventListener("click", closeHandler);
     analyzeDynamicsButton.addEventListener("click", analyzeHandler);
-    pasteDynamicsButton.addEventListener("click", pasteHandler);
-    dynamicFileUploadButton.addEventListener("click", uploadBtnHandler);
-    dynamicFileUploadInput.addEventListener("change", fileSelectHandler);
     prepareTextDynamicsButton.addEventListener("click", prepareTextHandler);
 
 }

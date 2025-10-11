@@ -188,15 +188,14 @@
     <div class="dynamics-popup__footer">
         
         <div class="dynamics-popup__actions">
-            <button class="btn " id="pasteDynamicsButton">Вставить из буфера</button>
-            <button class="btn" id="uploadFileDynamicsButton">Загрузить файл</button>
             <button class="btn " id="prepareTextDynamicsButton">Подготовить текст</button>
             <button class="btn" id="analyzeDynamicsButton">Анализировать</button>
         </div>
         <div id="dynamicsPopupProgressBarContainer" class="dynamics-popup__progress-bar-container">
             <!-- Прогресс бар вставляется сюда динамически -->
         </div>
-        <div>
+        <div class="dynamics-popup__actions">
+            <button class="btn" id="aiGeneratorCancelButton" title="Отменить генерацию протокола динамики, распознавание текста или подготовку текста при помощи ИИ">Отменить</button>
             <button class="btn" id="closeDynamicsPopup">Закрыть</button>
         </div>
     </div>

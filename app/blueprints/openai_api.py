@@ -18,6 +18,7 @@ from app.utils.ai_processing import (_process_openai_request,
                                      count_tokens
                                      )
 from app.utils.pdf_processing import has_text_layer, extract_text_from_pdf_textlayer
+from app.utils.ocr_processing import compress_image, is_multipage_tiff
 from datetime import datetime, timezone
 import base64
 
@@ -177,7 +178,18 @@ def clean_raw_text_route():
 @auth_required()
 def ocr_extract_text():
     logger.info("(OCR) 🚀 Start")
-
+    max_upload_bytes = current_app.config.get("MAX_UPLOAD_SIZE_MB", 10) * 1024 * 1024  # в байтах
+    # --- Предварительная проверка размера по заголовку ---
+    cl = request.content_length
+    if cl is not None:
+        logger.info(f"(OCR) 📊 Content-Length: {cl} bytes ({cl / (1024 * 1024):.2f} MB)")
+    if cl is not None and cl > max_upload_bytes:
+        logger.warning(f"(OCR) ❌ Слишком большой файл по Content-Length: {cl / (1024 * 1024)} MB (> {max_upload_bytes // (1024 * 1024)} MB)")
+        return jsonify({
+            "status": "error",
+            "message": f"Размер файла превышает {max_upload_bytes // (1024 * 1024)} МБ."
+        }), 413
+        
     if "file" not in request.files:
         logger.warning("(OCR) ⚠️ Файл не передан в запросе")
         return jsonify({"status": "error", "message": "Файл не передан ('file')."}), 400
@@ -188,6 +200,16 @@ def ocr_extract_text():
         return jsonify({"status": "error", "message": "Пустое имя файла."}), 400
 
     filename = secure_filename(f.filename)
+    auto_prepare = request.form.get("auto_prepare") == "true"
+    prepare_assistant_id = None
+    user_id = None
+    if auto_prepare:
+        prepare_assistant_id = current_app.config.get("OPENAI_ASSISTANT_TEXT_CLEANER")
+        user_id = current_user.id
+        if not prepare_assistant_id:
+            logger.error("(OCR) ❌ Не настроен OPENAI_ASSISTANT_TEXT_CLEANER")
+            return jsonify({"status": "error", "message": "Не настроен OPENAI_ASSISTANT_TEXT_CLEANER."}), 500
+        logger.info(f"(OCR) 🤖 Автоподготовка включена, ассистент настроен для текущего юзера")
 
     try:
         file_bytes = f.read()
@@ -196,13 +218,33 @@ def ocr_extract_text():
             return jsonify({"status": "error", "message": "Файл пустой или повреждён."}), 400
         logger.info(f"(OCR) 📄 Файл '{filename}' получен, size={len(file_bytes)} bytes")
         is_pdf = filename.lower().endswith(".pdf") or file_bytes[:4] == b"%PDF"
-        print("is_pdf=", is_pdf)
+        
+        if len(file_bytes) > max_upload_bytes:
+            logger.warning(f"(OCR) ❌ Файл '{filename}' превышает лимит: {len(file_bytes)} bytes (> {max_upload_bytes})")
+            return jsonify({
+                "status": "error",
+                "message": f"Размер файла превышает {max_upload_bytes // (1024 * 1024)} МБ."
+            }), 413
+        logger.info(f"(OCR) 📊 Файл '{filename}' размер: {len(file_bytes) / (1024 * 1024):.2f} MB"  )
         if is_pdf:
             logger.info(f"(OCR) 📄 Файл '{filename}' определён как PDF")
             try:
                 if has_text_layer(file_bytes):
                     text = extract_text_from_pdf_textlayer(file_bytes)
                     logger.info(f"(OCR) ✅ PDF с текстовым слоем — извлечено {len(text)} символов, OCR не требуется")
+                    if auto_prepare:
+                        try:
+                            logger.info(f"(OCR) 🤖 Автоподготовка включена, запускаю очистку текста с помощью OpenAI")
+                            task_id = async_clean_raw_text.delay(text, user_id=user_id, assistant_id=prepare_assistant_id)
+                            return jsonify({
+                                "status": "success",
+                                "message": "Текст извлечён из PDF без OCR. Запущена очистка текста.",
+                                "method": "pdf_textlayer",
+                                "task_id": task_id.id
+                            }), 200
+                        except Exception as e:
+                            logger.error(f"(OCR) ❌ Ошибка при запуске задачи по очистке текста: {e}")
+                            logger.exception(f"(OCR) ❌ Ошибка при очистке текста: {e}. Возвращаю неочищенный текст.")
                     return jsonify({
                         "status": "success",
                         "message": "Текст извлечён из PDF без OCR.",
@@ -213,6 +255,35 @@ def ocr_extract_text():
                     logger.info("(OCR) ℹ️ PDF без текстового слоя — отправляем в OCR")
             except Exception as e:
                 logger.exception(f"(OCR) ❌ Ошибка при попытке извлечь текст из PDF: {e}")
+                
+        is_image = (f.mimetype or "").startswith("image/") or filename.lower().endswith((".jpg", ".jpeg", ".png", ".tiff", ".heic", ".heif", ".webp"))
+        if is_image and not is_pdf:
+            logger.info(f"(OCR) 🖼️ Файл '{filename}' определён как изображение, начинаю сжатие при необходимости")
+            if filename.lower().endswith((".tif", ".tiff")):
+                if is_multipage_tiff(file_bytes):
+                    # если страниц больше одной то пока не поддерживаю (позже можно будет сделать счетчик, чтобы понять насколько часто это вообще нужно)
+                    return jsonify({
+                        "status": "error",
+                        "message": "Многостраничные TIFF пока не поддерживаются. Экспортируйте в PDF или загрузите страницы по отдельности."
+                    }), 400
+                # одностраничный TIFF пойдёт через compress_image как обычно
+            try:
+                # Сжимаем под лимит Vision F0 — 4 МБ, берём запас 3.9 МБ
+                file_bytes = compress_image(file_bytes, filename, target_kb=3900)
+                logger.info(f"(OCR) Компрессия прошла успешно")
+            except Exception as e:
+                logger.error(f"(OCR) ❌ Ошибка при сжатии изображения '{filename}': {e}.")
+                return jsonify({
+                    "status": "error",
+                    "message": "Не удалось автоматически ужать изображение до лимита Azure (4 МБ). "
+                            "Уменьшите размер или разрешение и попробуйте снова."
+                }), 413
+        else:
+            logger.error(f"(OCR) ⚠️ Файл '{filename}' не распознан как PDF или изображение")
+            return jsonify({
+                "status": "error",
+                "message": "Неподдерживаемый формат файла. Пожалуйста, загрузьте PDF или изображение."
+            }), 400
         file_bytes_to_b64 = base64.b64encode(file_bytes).decode("ascii")
         logger.info(f"(OCR) 🔄 Файл '{filename}' закодирован в base64, size={len(file_bytes_to_b64)} chars")
     except Exception as e:
@@ -223,12 +294,12 @@ def ocr_extract_text():
         }), 500
 
     try:
-        task = async_ocr_extract_text.delay(file_bytes_to_b64, filename)
+        task = async_ocr_extract_text.delay(file_bytes_to_b64, filename, auto_prepare, prepare_assistant_id, user_id)
         logger.info(f"(OCR) ✅ queued task={task.id}")
         return jsonify({
             "status": "success",
             "message": "OCR задача запущена",
-            "data": task.id
+            "task_id": task.id
         }), 200
     except Exception as e:
         logger.exception(f"(OCR) ❌ Ошибка при запуске Celery-задачи OCR: {e}")

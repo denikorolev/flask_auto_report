@@ -1,6 +1,6 @@
 // create_report.js
 
-import { setupDynamicsDropZone, handleFileUpload, handlePasteFromClipboard } from "/static/js/utils/dynamicsDropZone.js";
+import { setupDynamicsDropZone } from "/static/js/utils/dynamicsDropZone.js";
 import { prepareTextWithAI } from "/static/js/utils/ai_handlers.js";
 import { pollTaskStatus } from "/static/js/utils/utils_module.js";    
 import { ProgressBar } from "/static/js/utils/elements.js";  
@@ -10,6 +10,7 @@ let selectedReports = [];
 let detachCurrentFilter = null; // Переменная для хранения функции фильтрации отчетов
 let CATEGORIES = []; // Глобальная переменная для хранения категорий
 let GLOBALCATEGORIES = []; // Глобальная переменная для хранения глобальных категорий
+let aiPollingAbort = null; // отдельный для AI-поллинга (не OCR)
 
 document.addEventListener("DOMContentLoaded", function() {
     
@@ -341,6 +342,7 @@ function handleCreateReportClick() {
             break;
         case "shared":
             createReportFromShared();
+            break;
         case "public":
             createReportFromPublic();
             break;
@@ -398,7 +400,7 @@ function handleActionChange(selectedAction) {
         loadPublicReports();  
     } else if (selectedAction === "ai_generator") {
         aiGeneratorContainer.style.display = "block";
-        document.getElementById("Textarea").value = "";
+        document.getElementById("DropZoneTextarea").value = "";
         document.getElementById("DropZonePreview").innerHTML = "";
         activateUniversalSearch();
         toggleCreateReportButton(false); // Скрываем кнопку создания отчета, т.к. в этом режиме она не нужна
@@ -699,7 +701,7 @@ function createReportFromPublic() {
     const reportArea = document.getElementById("reportArea")?.value;
     const comment = document.getElementById("reportCreationComment")?.value?.trim() || "";
     const reportSide = document.querySelector("input[name='report_side']:checked")?.value === "true";
-    const selectedReportId = document.querySelector("input[name='public_report_radio']:checked").value;
+    const selectedReportId = document.querySelector("input[name='public_report_radio']:checked")?.value;
     
 
     if (!selectedReportId) {
@@ -728,7 +730,7 @@ function createReportFromPublic() {
     });
 }
 
-// Создание протокола на протоколов, которые были поделены с пользователем
+// Создание протокола из протоколов, которые были поделены с пользователем
 function createReportFromShared() {
     const reportName = document.getElementById("reportName")?.value?.trim();
     const reportArea = document.getElementById("reportArea")?.value;
@@ -773,37 +775,31 @@ function showAiGeneratorBlock() {
     }
 
     // Элементы
-    const textarea = document.getElementById("Textarea");
-    const dropZone = document.getElementById("DropZone");
+    const textarea = document.getElementById("DropZoneTextarea");
     const preview = document.getElementById("DropZonePreview");
-    const pasteButton = document.getElementById("aiGeneratorPasteButton");
-    const uploadBtn = document.getElementById("aiGeneratorUploadButton");
     const prepareButton = document.getElementById("aiGeneratorPrepareButton");
     const cancelButton = document.getElementById("aiGeneratorCancelButton");
-    const fileInput = document.getElementById("aiGeneratorFileInput");
     const generateTemplateButton = document.getElementById("aiGeneratorGenerateButton");
-    const pollingAbortController = new AbortController(); // Контроллер для отмены запросов
-    // Для будущей загрузки файлов с input (пока не реализовано)
-    // const fileInput = document.getElementById("aiGeneratorFileInput");
+    
     // Progress bar mount point inside AI generator block (dynamic)
     const progressMount = document.getElementById("aiGeneratorProgressBarContainer");
     if (progressMount) {
         progressMount.innerHTML = "";
-        console.log("Progress bar mount point found and cleared.");
-        console.log("Нужно будет доделать прогресс бар в этом блоке");
-        console.log(progressMount)
     }
+    // Инициализация прогресс-бара
     const pb = new ProgressBar().mount(progressMount);
     const destroyPB = (delayMs = 0) => {
-        if (delayMs > 0) setTimeout(() => pb.destroy(), delayMs);
-        else pb.destroy();
+        const doDestroy = () => {
+            try { pb.destroy(); } catch(_) {}
+            if (progressMount) progressMount.style.display = "none";
+        };
+        if (delayMs > 0) setTimeout(doDestroy, delayMs);
+        else doDestroy();
     };
 
     // Очистка состояния перед показом
     textarea.value = "";
     preview.innerHTML = "";
-
-    // Показываем сам блок (если скрыт)
     container.style.display = "block";
 
     // Навешиваем MutationObserver
@@ -815,14 +811,8 @@ function showAiGeneratorBlock() {
         }
     });
 
-    // Инициализация dropzone (detach функция для снятия обработчиков)
-    let detachDropZone = setupDynamicsDropZone({
-        dropZoneId: "DropZone",
-        previewId: "DropZonePreview",
-        textareaId: "Textarea"
-    });
-
-    
+    // dropzone берёт на себя: dnd, скрытый input, paste (images) и кнопку «Распознать»
+    const { detach } = setupDynamicsDropZone();
 
     function disableGenerateButtons() {
         generateTemplateButton.disabled = true;
@@ -836,20 +826,12 @@ function showAiGeneratorBlock() {
 
     // Снятие обработчиков
     function detachHandlers() {
-        pasteButton.removeEventListener("click", pasteHandler);
         prepareButton.removeEventListener("click", prepareTextHandler);
         cancelButton.removeEventListener("click", cancelHandler);
-        fileInput.removeEventListener("change", fileSelectHandler);
-        uploadBtn.removeEventListener("click", uploadBtnHandler);
         generateTemplateButton.removeEventListener("click", generateTemplateHandler);
-        if (detachDropZone) detachDropZone();
+        if (typeof detach === "function") detach();
     }
 
-
-    // Обработчик для вставки текста из буфера обмена
-    const pasteHandler = async () => {
-        await handlePasteFromClipboard(textarea, preview);
-    };
 
     // Обработчик для кнопки генерации шаблона при помощи ИИ
     const generateTemplateHandler = async () => {
@@ -858,6 +840,14 @@ function showAiGeneratorBlock() {
         const templateModalityID = document.getElementById("reportModality").value;
         const globalTemplateModalityID = document.getElementById("reportModality").selectedOptions[0].getAttribute("data-global-id");
         const templateAreaID = document.getElementById("reportArea").value;
+        
+        if (!rawText) {
+            alert("Пожалуйста, введите текст для анализа.");
+            return;
+        }
+        // Блокируем кнопку анализа
+        disableGenerateButtons();
+
         const data = {
                 origin_text: rawText,
                 template_name: templateName,
@@ -870,12 +860,6 @@ function showAiGeneratorBlock() {
                 report_side: document.querySelector("input[name='report_side']:checked")?.value === "true"
             }
 
-        if (!rawText) {
-            alert("Пожалуйста, введите текст для анализа.");
-            return;
-        }
-        // Блокируем кнопку анализа
-        disableGenerateButtons();
 
         const startResponse = await sendRequest({
             url: "/new_report_creation/ai_generate_template",
@@ -889,7 +873,12 @@ function showAiGeneratorBlock() {
             return;
         }
         
-        console.log("перед пол таск статус для генерации");
+        if (aiPollingAbort) { try { aiPollingAbort.abort(); } catch(_) {} }
+            aiPollingAbort = new AbortController();
+
+        if (progressMount) progressMount.style.display = "block";
+        pb.set(0, "Задача генерации шаблона запущена...");
+
         pollTaskStatus(task_id, {
             maxAttempts: 20,
             interval: 7000,
@@ -898,19 +887,22 @@ function showAiGeneratorBlock() {
                 pb.set(100, "Готово!");
                 enableGenerateButtons();
                 destroyPB(1000);
+                aiPollingAbort = null;
                 handleAiGeneratedTemplate(result); // Так как ниже мы указываем флаг exclude_result: true, то в result будет task_id
             },
             onError: (errMsg) => {
                 pb.set(100, errMsg || "Ошибка при генерации шаблона.");
                 enableGenerateButtons();
                 destroyPB(2000);
+                aiPollingAbort = null;
             },
             onTimeout: () => {
                 pb.set(100, "Превышено время ожидания. Попробуйте ещё раз позже.");
                 enableGenerateButtons();
                 destroyPB(2000);
+                aiPollingAbort = null;
             },
-            abortController: pollingAbortController, // Передаем контроллер для отмены
+            abortController: aiPollingAbort, // Передаем контроллер для отмены
             excludeResult: true // Не забираем json результата подберем его потом по task_id
         });
 
@@ -918,11 +910,16 @@ function showAiGeneratorBlock() {
 
     // Обработчик "Подготовить текст" — просто вызывает уже существующую функцию
     const prepareTextHandler = async () => {
-
         const taskID = await prepareTextWithAI(textarea, prepareButton);
-        if (taskID) {
-            pb.set(0, "Запущена задача очистки текста...");
-        }
+        if (!taskID) return;
+
+        // отменяем прошлый опрос если висит
+        if (aiPollingAbort) { try { aiPollingAbort.abort(); } catch(_) {} }
+        aiPollingAbort = new AbortController();
+
+        if (progressMount) progressMount.style.display = "block";
+        pb.set(0, "Запущена задача очистки текста...");
+
         pollTaskStatus(taskID, {
             maxAttempts: 12,
             interval: 4000,
@@ -932,68 +929,47 @@ function showAiGeneratorBlock() {
                 textarea.value = result || "";
                 enableGenerateButtons();
                 destroyPB(1000);
+                aiPollingAbort = null;
             },
             onError: (errMsg) => {
                 pb.set(100, errMsg);
                 enableGenerateButtons();
                 destroyPB(2000);
+                aiPollingAbort = null;
             },
             onTimeout: () => {
-                updateDynamicsProgressBar(100, "Превышено время ожидания ответа. Попробуйте ещё раз позже.");
+                pb.set(100, "Превышено время ожидания ответа. Попробуйте ещё раз позже.");
                 enableGenerateButtons();
                 destroyPB(2000);
+                aiPollingAbort = null;
             },
-            abortController: pollingAbortController // Передаем контроллер для отмены
+            abortController: aiPollingAbort // Передаем контроллер для отмены
         });
     };
 
     // Заглушка для "Отменить" (можно будет заменить на сброс блока/скрытие)
     const cancelHandler = () => {
-        pollingAbortController.abort(); // 💥 Прерывает опрос
+        try { aiPollingAbort?.abort(); } catch(_) {}
+        aiPollingAbort = null;
         enableGenerateButtons();
         destroyPB(500);
     };
 
-    // Обработчик выбора файла
-    const fileSelectHandler = (e) => {
-        const file = e.target.files && e.target.files[0];
-        if (file) {
-            handleFileUpload(file, preview, textarea);
-        }
-        // Сброс значения чтобы можно было выбрать тот же файл снова при необходимости
-        fileInput.value = "";
-    };
-
-    // Промежуточный обработчик симулирующий клик на input для 
-    // загрузки файла при клике на кнопку загрузить файл
-    const uploadBtnHandler = () => {
-        fileInput.click();
-    };
 
     // Вешаем обработчики
-    pasteButton.addEventListener("click", pasteHandler);
     prepareButton.addEventListener("click", prepareTextHandler);
     cancelButton.addEventListener("click", cancelHandler);
-    fileInput.addEventListener("change", fileSelectHandler);
-    uploadBtn.addEventListener("click", uploadBtnHandler);
     generateTemplateButton.addEventListener("click", generateTemplateHandler);
 
     observer.observe(container, { attributes: true, attributeFilter: ["style"] });
 
-    // Вернуть функцию для снятия обработчиков если нужно внести контроль снаружи
-    // return () => {
-    //     pasteButton.removeEventListener("click", pasteHandler);
-    //     prepareButton.removeEventListener("click", prepareTextHandler);
-    //     cancelButton.removeEventListener("click", cancelHandler);
-    //     if (detachDropZone) detachDropZone();
-    // };
 }
 
 
 // Функция для обработки результата ИИ-генерации шаблона (отправляет 
 // полученный шаблон в json формате на сервер, для создания протокола)
 function handleAiGeneratedTemplate(taskID) {
-    const textArea = document.getElementById("Textarea");
+    const textArea = document.getElementById("DropZoneTextarea");
     if (textArea) {
         textArea.value = ""; // очищаем текстовое поле
     }

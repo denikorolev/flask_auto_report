@@ -96,6 +96,7 @@ class Config:
     NOREPLY_EMAIL = "noreply@radiologary.com"
     SUPPORT_EMAIL = "support@radiologary.com"
     CEO_EMAIL = "korolev.denis@radiologary.com"
+    MAX_UPLOAD_SIZE_MB = 10  # Максимальный размер загружаемого файла в мегабайтах
     
     # OCR configuration
     OCR_PROVIDER = os.getenv("OCR_PROVIDER", "azure")  # Текущий поддерживаемый провайдер: "azure"

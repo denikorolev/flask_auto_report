@@ -7,7 +7,7 @@ from app.utils.redis_client import redis_set, redis_get, redis_delete, get_redis
 
 
 # watchdog-функция для отмены зависших задач
-def cancel_stuck_tasks(max_pending_sec=120):
+def cancel_stuck_tasks(max_pending_sec=180):
     r = get_redis()
     now = datetime.now(timezone.utc)
     stuck_tasks = []
