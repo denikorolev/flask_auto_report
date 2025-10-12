@@ -60,6 +60,23 @@ class OcrStagingController {
         this._abort = new AbortController(); // для общей отмены (кнопкой отмены)
         this.processingIndex = null;
         this.hint = document.getElementById("DropZoneInstructions"); // текст инструкции в дропзоне
+        this._updatePrepBoxVisibility();
+        this.statusByKey = new Map(); // key -> status text
+    }
+
+    _getKey(file) {
+        // lastModified нужен, чтобы отличать файлы с одинаковым именем и размером
+        return `${file?.name}|${file?.size}|${file?.lastModified || 0}`;
+    }
+
+    _getKeyByIndex(idx) {
+        const f = this.queue[idx];
+        return f ? this._getKey(f) : null;
+    }
+
+    getItemStatus(idx) {
+        const key = this._getKeyByIndex(idx);
+        return key ? (this.statusByKey.get(key) || "") : "";
     }
 
     isAutoPrepareEnabled() {
@@ -70,17 +87,43 @@ class OcrStagingController {
         }
     }
 
+    /**
+     * Показ/скрытие чекбокса автоподготовки по числу файлов в очереди.
+     * Прячем, если файлов > 1. Показываем, если 0 или 1.
+     */
+    _updatePrepBoxVisibility() {
+        const prepBox = this.preparationCheckbox;
+        // wrapper с id=DropZoneCheckboxWrapper у тебя есть в макросе
+        const wrapper = document.getElementById("DropZoneCheckboxWrapper") 
+                    || prepBox.closest("#DropZoneCheckboxWrapper")
+                    || prepBox.parentElement;
+        if (!prepBox || !wrapper) return;
+
+        if (this.queue.length > 1) {
+            // при множественных файлах автоочистка недоступна
+            wrapper.style.display = "none";
+            prepBox.checked = false; // на всякий
+        } else {
+            // один или ноль — доступно
+            wrapper.style.display = "flex"; // у тебя там flex
+        }
+    }
+
     render() {
+        // полностью очищаем контейнер
+        this.preview.innerHTML = "";
+
+        if (!this.queue.length) return;
+
+        // сначала вставляем заголовок
+        ensureHeader(this.preview);
+        // затем список
         const list = ensureList(this.preview);
 
-        if (!this.queue.length) {
-            this.preview.innerHTML = "";
-            return;
-        }
-        ensureHeader(this.preview);
         list.innerHTML = "";
 
-        this.queue.forEach((f, i) => {
+        for (let i = 0; i < this.queue.length; i++) {
+            const f = this.queue[i];
             const li = document.createElement("li");
             li.dataset.idx = String(i);
             li.className = "dz-item";
@@ -94,12 +137,12 @@ class OcrStagingController {
             const status = document.createElement("span");
             status.className = "dz-status";
             status.style.marginLeft = "6px";
-            // начально пусто
+            const saved = this.getItemStatus(i);
+            if (saved) status.textContent = ` — ${saved}`;
 
             const removeBtn = createRemoveButton();
             removeBtn.style.marginLeft = "8px";
 
-            // если файл в обработке — визуально подсветим и отключим удаление
             if (this.processingIndex === i) {
                 li.style.opacity = "0.85";
                 removeBtn.disabled = true;
@@ -111,10 +154,15 @@ class OcrStagingController {
             li.appendChild(status);
             li.appendChild(removeBtn);
             list.appendChild(li);
-        });
+        }
     }
 
     setItemStatus(idx, statusText) {
+        const key = this._getKeyByIndex(idx);
+        if (key) {
+            this.statusByKey.set(key, statusText);
+        }
+
         const list = ensureList(this.preview);
         const li = list.querySelector(`li[data-idx="${idx}"]`);
         if (!li) return;
@@ -174,6 +222,7 @@ class OcrStagingController {
         }
 
         if (this.queue.length) this._hideHint(); // прячем подсказку
+        this._updatePrepBoxVisibility(); // обновляем видимость чекбокса автоподготовки
         this.render();
     }
 
@@ -200,12 +249,15 @@ class OcrStagingController {
             }
             return;
         }
+        const key = this._getKeyByIndex(index);
+        if (key) this.statusByKey.delete(key);
 
         this.queue.splice(index, 1);
         // если удалили элемент до текущего processingIndex, сместим индекс
         if (this.processingIndex !== null && index < this.processingIndex) {
             this.processingIndex -= 1;
         }
+        this._updatePrepBoxVisibility(); // обновляем видимость чекбокса автоподготовки
         this.render();
     }
 
@@ -218,6 +270,8 @@ class OcrStagingController {
         this.queue = [];
         this.processingIndex = null;
         this.preview.innerHTML = "";
+        this.statusByKey.clear();
+        this._updatePrepBoxVisibility(); // обновляем видимость чекбокса автоподготовки
 
         // Чистим textarea при необходимости
         if (resetTextarea && this.textarea) {
@@ -227,25 +281,38 @@ class OcrStagingController {
     }
 
     cancelAll() {
-        // Отменят поллинг текущего задания (висит на кнопку снаружи)
+        // Гасим текущие запросы
         try { this._abort.abort(); } catch (_) {}
-        this._abort = new AbortController(); // новый токен
+        this._abort = new AbortController();
         this.processingIndex = null;
 
         const list = ensureList(this.preview);
-        list.querySelectorAll("li").forEach((li) => {
-            const text = li.querySelector(".dz-info")?.textContent || "";
-            const status = li.querySelector(".dz-status");
-            if (status && !/OCR завершён\.|Текстовый слой — готово\.|Ошибка|Превышено время ожидания OCR\.|Готово, но пустой результат OCR\./.test(status.textContent)) {
-                status.textContent = " — Отменено";
+
+        for (let i = 0; i < this.queue.length; i++) {
+            const currentStatus = this.getItemStatus(i) || "";
+
+            // финальные статусы, которые не трогаем
+            const isFinal = /(✅|❌|⚠️)/u
+                .test(currentStatus);
+
+            if (!isFinal) {
+                this.setItemStatus(i, "Отменено");
             }
-            const removeBtn = li.querySelector(".dz-remove");
-            if (removeBtn) {
-                removeBtn.disabled = false;
-                removeBtn.style.opacity = "1";
-                removeBtn.title = "Убрать из списка";
+
+            // параллельно разблокируем кнопку удаления у соответствующего li
+            const li = list.querySelector(`li[data-idx="${i}"]`);
+            if (li) {
+                const removeBtn = li.querySelector(".dz-remove");
+                if (removeBtn) {
+                    removeBtn.disabled = false;
+                    removeBtn.style.opacity = "1";
+                    removeBtn.title = "Убрать из списка";
+                }
             }
-        });
+        }
+
+        // перерисуем, чтобы всё стало консистентно
+        this.render();
     }
 
 
@@ -282,7 +349,7 @@ class OcrStagingController {
                 const sep = this.textarea.value.trim() ? "\n\n" : "";
                 this.textarea.value = `${this.textarea.value}${sep}${text}`;
             }
-            this.setItemStatus(idx, "Текстовый слой — готово.");
+            this.setItemStatus(idx, "✅");
             return;
         }
 
@@ -324,21 +391,21 @@ class OcrStagingController {
                         if (typeof result === "string") finalText = result;
                         else if (result && typeof result === "object") finalText = result.text || result.data || "не удалось подобрать ключ к ответу сервера";
                         if (!finalText) {
-                            this.setItemStatus(idx, "Готово, но пустой результат OCR.");
+                            this.setItemStatus(idx, "⚠️");
                             resolve();
                             return;
                         }
                         const sep = this.textarea.value.trim() ? "\n\n" : "";
                         this.textarea.value = `${this.textarea.value}${sep}${finalText}`;
-                        this.setItemStatus(idx, "OCR завершён.");
+                        this.setItemStatus(idx, "✅");
                         resolve();
                     },
                     onError: (errMsg) => {
                         this.setItemStatus(idx, `Ошибка: ${errMsg || "Неизвестная ошибка"}`);
-                        reject(new Error(errMsg || "Ошибка OCR"));
+                        reject(new Error(errMsg || "❌"));
                     },
                     onTimeout: () => {
-                        this.setItemStatus(idx, "Превышено время ожидания OCR.");
+                        this.setItemStatus(idx, "❌");
                         reject(new Error("timeout"));
                     },
                     abortController,
