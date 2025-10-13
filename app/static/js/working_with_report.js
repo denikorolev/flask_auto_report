@@ -8,6 +8,7 @@ import { setupDynamicsDropZone } from "/static/js/utils/dynamicsDropZone.js";
 import { prepareTextWithAI } from "/static/js/utils/ai_handlers.js";
 import { pollTaskStatus } from "/static/js/utils/utils_module.js";   
 import { ProgressBar } from "/static/js/utils/elements.js";   
+import { Popup, popupConfirm, popupAlert } from "/static/js/ui/popup.js";
 
 let activeSentence = null;  // Для отслеживания активного предложения
 let __impressionTaskActive = false; // Локальное состояние pb для генерации, чтобы не запускалось повторно
@@ -1095,7 +1096,7 @@ function checkReportAI(boxForAiResponse, responseForDelete, boxForAiDynamicRespo
 
 // Вся логика для показа динамического отчета (отчет в динамике)
 async function showDynamicReportPopup(boxForAiImpressionResponse, boxForAiRedactorResponse) {
-    const popup = document.getElementById("dynamicsPopup");
+    const popup = document.getElementById("dynamics-popup");
     window.previousDynamicsText = null; // Сброс предыдущего текста динамики
     if (!popup) {
         console.error("Popup element not found");
@@ -1111,14 +1112,14 @@ async function showDynamicReportPopup(boxForAiImpressionResponse, boxForAiRedact
         boxForAiRedactorResponse.style.display = "none";
     }
 
-    const closeDynamicsPopup = document.getElementById("closeDynamicsPopup");
-    const analyzeDynamicsButton = document.getElementById("analyzeDynamicsButton");
+    const closeDynamicsPopup = document.getElementById("close-dynamics-popup");
+    const analyzeDynamicsButton = document.getElementById("analyze-dynamics-button");
     const dynamicsTextarea = document.getElementById("DropZoneTextarea");
     const dynamicsPreview = document.getElementById("DropZonePreview");
-    const prepareTextDynamicsButton = document.getElementById("prepareTextDynamicsButton");
+    const prepareTextDynamicsButton = document.getElementById("prepare-text-dynamics-button");
 
     // функции для блокировки и разблокировки кнопок анализа и подготовки текста
-    function activityGenerateButtons(isDisabled) {
+    function generateButtonsIsDisabled(isDisabled) {
         analyzeDynamicsButton.disabled = isDisabled;
         prepareTextDynamicsButton.disabled = isDisabled;
     }
@@ -1150,20 +1151,39 @@ async function showDynamicReportPopup(boxForAiImpressionResponse, boxForAiRedact
     // Обработчик для кнопки анализа динамики
     const analyzeHandler = async () => {
         const rawText = dynamicsTextarea.value.trim();
-        if (!window.previousDynamicsText) {
-            window.previousDynamicsText = rawText
-        } // Сохраняем текст для последующего использования в overlay
-
         if (!rawText) {
             alert("Пожалуйста, введите текст для анализа.");
             return;
         }
+        // Сохраняем текст для последующего использования в overlay
+        if (!window.previousDynamicsText) {
+            window.previousDynamicsText = rawText;
+        }
+
+        const { form, waitChoice } = createDynamicsModeForm();
+
+        const p = new Popup("dynamics-merge-mode", {
+            title: "Выбор режима совмещения",
+            content: form,
+            modal: true,
+            escClose: true,
+            backdropClose: false,
+            size: "md",
+            theme: "auto"
+        });
+
+        p.open();
+        const choice = await waitChoice(p); // варианты hard, soft, prev
+        if (!choice) return;
+
+        console.log("User choice for dynamics mode:", choice);
+
         // Блокируем кнопку анализа
-        activityGenerateButtons(true);
+        generateButtonsIsDisabled(true);
         closeDynamicsPopup.innerText = "Отмена";
 
         // Динамический прогресс-бар в попапе
-        const popupBarMount = popup.querySelector("#dynamicsPopupProgressBarContainer");
+        const popupBarMount = popup.querySelector("#dynamics-popup-progress-bar-container");
         if (popupBarMount) popupBarMount.innerHTML = ""; // очистим контейнер
         const pbDyn = new ProgressBar().mount(popupBarMount);
 
@@ -1171,14 +1191,15 @@ async function showDynamicReportPopup(boxForAiImpressionResponse, boxForAiRedact
             url: "/working_with_reports/analyze_dynamics",
             data: {
                 origin_text: rawText,
-                report_id: reportData.id
+                report_id: reportData.id,
+                mode: choice
             }
         });
         const {status, message, task_id} = startResponse || {};
         if (status !== "success" || !task_id) {
             console.error("Ошибка при отправке текста на анализ динамики:", message);
-            activityGenerateButtons(false);
-            pbDyn.set(1000, message || "Не удалось запустить задачу анализа динамики.");
+            generateButtonsIsDisabled(false);
+            pbDyn.set(100, message || "Не удалось запустить задачу анализа динамики.");
             destroyPB(2000, pbDyn, popupBarMount);
             closeDynamicsPopup.innerText = "Закрыть";
             return;
@@ -1189,20 +1210,20 @@ async function showDynamicReportPopup(boxForAiImpressionResponse, boxForAiRedact
             interval: 4000,
             onProgress: (progress) => pbDyn.set(progress, "Ожидание результата..."),
             onSuccess: (result) => {
-                pbDyn.set(100, "Готово!");
-                finalizeAnalyzeDynamics(result);
+                pbDyn.set(1000, "Готово!");
+                finalizeAnalyzeDynamics(result, choice);
             },
             onError: (errMsg) => {
                 pbDyn.set(100, errMsg);
-                activityGenerateButtons(false);
+                generateButtonsIsDisabled(false);
                 closeDynamicsPopup.innerText = "Закрыть";
-                destroyPB(1500, pbDyn, popupBarMount);
+                destroyPB(2000, pbDyn, popupBarMount);
             },
             onTimeout: () => {
                 pbDyn.set(100, "Превышено время ожидания ответа. Попробуйте ещё раз позже.");
-                activityGenerateButtons(false);
+                generateButtonsIsDisabled(false);
                 closeDynamicsPopup.innerText = "Закрыть";
-                destroyPB(1500, pbDyn, popupBarMount);
+                destroyPB(2000, pbDyn, popupBarMount);
             }   
         });
 
@@ -1217,7 +1238,7 @@ async function showDynamicReportPopup(boxForAiImpressionResponse, boxForAiRedact
         window.previousDynamicsText = rawText; // Сохраняем текст для последующего использования в overlay
 
         // Динамический прогресс-бар в попапе
-        const popupBarMount = popup.querySelector("#dynamicsPopupProgressBarContainer");
+        const popupBarMount = popup.querySelector("#dynamics-popup-progress-bar-container");
         if (popupBarMount) popupBarMount.innerHTML = ""; // очистим контейнер
         const pbDyn = new ProgressBar().mount(popupBarMount);
 
@@ -1229,19 +1250,19 @@ async function showDynamicReportPopup(boxForAiImpressionResponse, boxForAiRedact
             onProgress: (progress) => pbDyn.set(progress, "Ожидание результата..."),
             onSuccess: (result) => {
                 pbDyn.set(100, "Готово!");
-                activityGenerateButtons(false);
-                destroyPB(1500, pbDyn, popupBarMount);
+                generateButtonsIsDisabled(false);
+                destroyPB(2000, pbDyn, popupBarMount);
                 dynamicsTextarea.value = result || "";
             },
             onError: (errMsg) => {
                 pbDyn.set(100, errMsg);
-                activityGenerateButtons(false);
-                destroyPB(1500, pbDyn, popupBarMount);
+                generateButtonsIsDisabled(false);
+                destroyPB(2000, pbDyn, popupBarMount);
             },
             onTimeout: () => {
                 pbDyn.set(100, "Превышено время ожидания ответа. Попробуйте ещё раз позже.");
-                activityGenerateButtons(false);
-                destroyPB(1500, pbDyn, popupBarMount);
+                generateButtonsIsDisabled(false);
+                destroyPB(2000, pbDyn, popupBarMount);
             }
         });
     };
@@ -1256,7 +1277,7 @@ async function showDynamicReportPopup(boxForAiImpressionResponse, boxForAiRedact
 
     
 // Функция для финального этапа анализа динамики
-async function finalizeAnalyzeDynamics(resultObj) {
+async function finalizeAnalyzeDynamics(resultObj, mode) {
     // resultObj должен содержать: result, report_id, skeleton
     if (!resultObj || !resultObj.result || !resultObj.report_id || !resultObj.skeleton) {
         alert("Ошибка: не хватает данных для финального этапа анализа динамики.");
@@ -1270,6 +1291,7 @@ async function finalizeAnalyzeDynamics(resultObj) {
                 result: resultObj.result,
                 report_id: resultObj.report_id,
                 skeleton: resultObj.skeleton,
+                mode: mode
             }
         });
 
@@ -1447,4 +1469,87 @@ function handleListMiscellaneousItemClick(event) {
     listItem.remove();
 }
 
+
+
+
+
+// Конструкторы
+
+// Строит форму выбора режима и отдаёт:
+//   form       — готовый DOM-узел формы
+//   waitChoice  — Promise, который резолвится в 'hard' | 'soft' | 'prev' или null (если Отмена)
+// Используется с твоим Popup: сначала p.open(), затем await waitChoice(p)
+function createDynamicsModeForm() {
+    const form = document.createElement("form");
+    form.className = "dyn-merge-form";
+
+    const optionsWrap = document.createElement("div");
+    optionsWrap.className = "dyn-merge-options";
+    optionsWrap.style.display = "flex";
+    optionsWrap.style.flexDirection = "column";
+
+    const mk = (id, value, labelTxt, checked = false) => {
+        const wrap = document.createElement("label");
+        wrap.style.display = "flex";
+        wrap.style.alignItems = "center";
+        wrap.style.gap = "8px";
+        wrap.style.margin = "6px 0";
+
+        const input = document.createElement("input");
+        input.type = "radio";
+        input.name = "merge_mode";
+        input.id = id;
+        input.value = value;
+        input.checked = checked;
+
+        const span = document.createElement("span");
+        span.textContent = labelTxt;
+
+        wrap.append(input, span);
+        return wrap;
+    };
+
+    optionsWrap.append(
+        mk("merge_full", "hard", '1) попытка полного совмещения с текущим шаблоном', true),
+        mk("merge_soft", "soft", '2) попытка "мягкого" совмещения'),
+        mk("merge_prev", "prev", "3) просто использовать предыдущий протокол без попытки совмещения(пока не работает)")
+    );
+
+    const actions = document.createElement("div");
+    actions.style.display = "flex";
+    actions.style.gap = "10px";
+    actions.style.marginTop = "12px";
+
+    const okBtn = document.createElement("button");
+    okBtn.type = "button";
+    okBtn.textContent = "OK";
+    okBtn.className = "btn";
+
+    const cancelBtn = document.createElement("button");
+    cancelBtn.type = "button";
+    cancelBtn.textContent = "Отмена";
+    cancelBtn.className = "btn";
+
+    actions.append(okBtn, cancelBtn);
+    form.append(optionsWrap, actions);
+
+    const getSelected = () => form.querySelector('input[name="merge_mode"]:checked')?.value || null;
+
+    // Ждём клика по OK/Отмена. popupInstance нужен, чтобы закрыть попап изнутри.
+    const waitChoice = (popupInstance) =>
+        new Promise((resolve) => {
+            okBtn.addEventListener("click", () => {
+                const v = getSelected();
+                if (!v) return;
+                if (popupInstance) popupInstance.close("ok");
+                resolve(v);
+            });
+            cancelBtn.addEventListener("click", () => {
+                if (popupInstance) popupInstance.close("cancel");
+                resolve(null);
+            });
+        });
+
+    return { form, waitChoice };
+}
 

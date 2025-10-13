@@ -672,11 +672,11 @@ def replace_head_sentences_with_fuzzy_check(main_data, ai_data, threshold=95):
     """
     logger.info("(replace_head_sentences_with_fuzzy_check) 🚀  Начат процесс замены главных предложений синтезированными")
     logger.info(f"(replace_head_sentences_with_fuzzy_check) main_data: {len(main_data)} параграфов, ai_data: {len(ai_data)} параграфов")
+    FLAG = True  # для отладки (если True - удаляю предложение, если не нашел в AI, если False - оставляю оригинал)
 
     if not isinstance(main_data, list) or not isinstance(ai_data, list):
         logger.error("(replace_head_sentences_with_fuzzy_check) ❌ Входные данные не являются списками.")
         raise ValueError("основные данные и обработанные данные должны быть списками параграфов.")
-
     # 1. Быстрая сверка количества параграфов
     if len(main_data) != len(ai_data):
         logger.error(f"(replace_head_sentences_with_fuzzy_check) ❌ Количество параграфов не совпадает: main={len(main_data)} / ai={len(ai_data)}")
@@ -703,15 +703,19 @@ def replace_head_sentences_with_fuzzy_check(main_data, ai_data, threshold=95):
                 f"Ожидалось: '{main_title}'\n"
                 f"Найдено:    '{ai_title}'\n"
             )
-
         # Индексируем head_sentences по id для замены
         ai_head_by_id = {str(hs["id"]): hs.get("sentence", "") for hs in ai_par.get("head_sentences", [])}
         for main_hs in main_par.get("head_sentences", []):
             hs_id = str(main_hs["id"])
             if hs_id in ai_head_by_id:
                 main_hs["sentence"] = ai_head_by_id[hs_id]
-            # если нет — не меняем (оставляем оригинал)
-
+            else:
+                if FLAG:
+                    logger.warning(f"(replace_head_sentences_with_fuzzy_check) ⚠️ В AI-ответе не найдено предложение id={hs_id} в параграфе id={para_id}, удаляю оригинал")
+                    main_hs["sentence"] = ""
+                else:
+                    logger.warning(f"(replace_head_sentences_with_fuzzy_check) ⚠️ В AI-ответе не найдено предложение id={hs_id} в параграфе id={para_id}, оставляю оригинал")
+                    continue
     return main_data
 
 

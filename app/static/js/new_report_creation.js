@@ -778,7 +778,7 @@ function showAiGeneratorBlock() {
     const textarea = document.getElementById("DropZoneTextarea");
     const preview = document.getElementById("DropZonePreview");
     const prepareButton = document.getElementById("aiGeneratorPrepareButton");
-    const cancelButton = document.getElementById("aiGeneratorCancelButton");
+    const cancelButton = document.getElementById("ai-generator-cancel-button");
     const generateTemplateButton = document.getElementById("aiGeneratorGenerateButton");
     
     // Progress bar mount point inside AI generator block (dynamic)

@@ -467,7 +467,7 @@ export function setupDynamicsDropZone() {
     const hiddenInput = document.getElementById("aiGeneratorFileInput");
     const recognizeBtn = document.getElementById("DropZoneButtonRecognize");
     const clearBtn = document.getElementById("DropZoneButtonClear");  
-    const cancelBtn = document.getElementById("aiGeneratorCancelButton");
+    const cancelBtn = document.getElementById("ai-generator-cancel-button");
     const preparationCheckbox = document.getElementById("DropZonePreparationCheckbox");
 
     if (!dropZone || !preview || !textarea || !recognizeBtn || !addBtn || !hiddenInput || !cancelBtn || !clearBtn || !preparationCheckbox) {

@@ -336,6 +336,7 @@ def analyze_dynamics():
     origin_text = data.get("origin_text", "").strip()
     report_id = data.get("report_id")
     user_id = current_user.id
+    mode_flag = data.get("mode", "soft")  # "hard", "soft", "prev"
 
     if not origin_text or not report_id:
         logger.error("Не передан текст или report_id")
@@ -385,6 +386,7 @@ def analyze_dynamics_finalize():
         report_id = data.get("report_id")
         skeleton = data.get("skeleton")
         profile_id = session.get("profile_id")
+        mode_flag = data.get("mode", "soft")  # "hard", "soft", "prev"
 
         if not result or not report_id:
             return jsonify({"status": "error", "message": "Missing required data"}), 400

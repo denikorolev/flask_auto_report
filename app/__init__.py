@@ -75,7 +75,7 @@ def create_app():
     app.context_processor(inject_user_rank)
     app.context_processor(inject_current_profile_data)
     # Для inject_app_info — нужно передать версию
-    app.context_processor(inject_app_info("0.10.8.3"))
+    app.context_processor(inject_app_info("0.10.8.4"))
     
    
     # Register Blueprints

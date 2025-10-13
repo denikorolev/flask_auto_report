@@ -92,14 +92,13 @@ function sendRequest({ url, method = "POST", data = {}, responseType = "json", l
                 } else if (data.status === "warning") {
                     toastr.warning(alertMessage);
                 } else {
-                    alert(alertMessage || "Request failed");
+                    toastr.error(alertMessage || "An error occurred.");
                     throw new Error(data.message || "Request failed");
                 }
             }
             return data;
         })
         .catch(error => {
-            alert(error.message);
             console.error("Error message from api:", error);
             return {
                 status: "error",

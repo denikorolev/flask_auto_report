@@ -180,7 +180,7 @@
 </div>
 
 <!-- Попап для работы с динамикой -->
-<div id="dynamicsPopup" class="dynamics-popup" style="display: none;">
+<div id="dynamics-popup" class="dynamics-popup" style="display: none;">
     <h3 class="dynamics-popup__title">Анализ динамики</h3>
     <div class="flex">
         {{ text_area_and_drop_zone() }}
@@ -188,18 +188,17 @@
     <div class="dynamics-popup__footer">
         
         <div class="dynamics-popup__actions">
-            <button class="btn " id="prepareTextDynamicsButton">Подготовить текст</button>
-            <button class="btn" id="analyzeDynamicsButton">Анализировать</button>
+            <button class="btn " id="prepare-text-dynamics-button">Подготовить текст</button>
+            <button class="btn" id="analyze-dynamics-button">Анализировать</button>
         </div>
-        <div id="dynamicsPopupProgressBarContainer" class="dynamics-popup__progress-bar-container">
+        <div id="dynamics-popup-progress-bar-container" class="dynamics-popup__progress-bar-container">
             <!-- Прогресс бар вставляется сюда динамически -->
         </div>
         <div class="dynamics-popup__actions">
-            <button class="btn" id="aiGeneratorCancelButton" title="Отменить генерацию протокола динамики, распознавание текста или подготовку текста при помощи ИИ">Отменить</button>
-            <button class="btn" id="closeDynamicsPopup">Закрыть</button>
+            <button class="btn" id="ai-generator-cancel-button" title="Отменить генерацию протокола динамики, распознавание текста или подготовку текста при помощи ИИ">Отменить</button>
+            <button class="btn" id="close-dynamics-popup">Закрыть</button>
         </div>
     </div>
-    <input type="file" id="dynamicFileUploadInput" accept=".jpg,.jpeg,.png,.pdf,image/*,application/pdf" style="display: none;">
 </div>
 
 
