@@ -3,7 +3,7 @@
 import base64
 from tasks.extensions import celery
 from app.utils.file_processing import prepare_impression_snippets
-from app.utils.ai_processing import clean_raw_text, run_first_look_assistant, structure_report_text, ai_template_generator, ai_report_check, ai_impression_generation
+from app.utils.ai_processing import clean_raw_text, run_first_look_assistant, structure_report_text, ai_template_generator, ai_report_check, ai_impression_generation, reversed_structure_report_text
 from tasks.celery_task_processing import cancel_stale_polled_tasks, cancel_stuck_tasks
 from app.utils.logger import logger
 from app.utils.ocr_processing import get_ocr_provider
@@ -39,7 +39,7 @@ def async_clean_raw_text(raw_text, user_id, assistant_id):
 
 # Таск для формирования нового протокола из вставленного текста (динамика из working_with_reports)
 @celery.task(name='async_analyze_dynamics', time_limit=160, soft_time_limit=160)
-def async_analyze_dynamics(origin_text, template_text, user_id, skeleton, report_id, first_look_assistant_id, structure_assistant_id):
+def async_analyze_dynamics(origin_text, template_text, user_id, report_id, first_look_assistant_id, structure_assistant_id):
     logger.info(f"Запущен анализ динамики для пользователя: {user_id} в Celery задаче")
     
     # 1. Первый взгляд
@@ -49,12 +49,37 @@ def async_analyze_dynamics(origin_text, template_text, user_id, skeleton, report
     final_structured_result = structure_report_text(template_text, rough_result, user_id, assistant_id=structure_assistant_id)
 
     return {
+        "status": "success",
+        "mode": "hard",
+        "message": "Структурирование отчета прошло успешно.",
         "result": final_structured_result,
-        "skeleton": skeleton,
         "report_id": report_id
     }
-    
-    
+# Таск для формирования нового протокола из вставленного текста реверсивный (использует вставленный текст как основу)
+@celery.task(name='async_reversed_analyze_dynamics', time_limit=160, soft_time_limit=160)
+def async_reversed_analyze_dynamics(origin_text, template_text, user_id, report_id, reversed_structure_assistant_id):
+    logger.info(f"Запущен реверсивный анализ динамики для пользователя: {user_id} в Celery задаче")
+
+    # 1. Реверсивная структура
+    try:
+        reversed_structured_assistant_response = reversed_structure_report_text(template_text, origin_text, user_id, assistant_id=reversed_structure_assistant_id)
+        logger.debug(f"Реверсивно структурированный ответ ассистента: {reversed_structured_assistant_response}")
+        
+        return {
+            "status": "success",
+            "mode": "soft",
+            "message": "Реверсивное структурирование отчета прошло успешно.",
+            "result": reversed_structured_assistant_response,
+            "report_id": report_id
+        }
+    except Exception as e:
+        logger.error(f"Ошибка при реверсивном анализе динамики: {e}")
+        return {
+            "status": "error",
+            "message": str(e),
+            "report_id": report_id
+        }
+
 # Таск для запуска ассистента по генерации impression протокола
 @celery.task(name="async_impression_generating", time_limit=160, soft_time_limit=160)
 def async_impression_generating(assistant_id, user_id, report_text, file_id):

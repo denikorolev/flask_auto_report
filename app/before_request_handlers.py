@@ -17,7 +17,8 @@ def load_current_profile():
         "security.login", "security.logout", "security.register", "custom_logout",
         "security.forgot_password", "security.reset_password", 
         "security.change_password","profile_settings.new_profile_creation", 
-        "error", "main.index", "profile_settings.create_profile", "profile_settings.set_default_profile", "feedback_form"
+        "error", "main.index", "profile_settings.create_profile", "profile_settings.set_default_profile", 
+        "feedback_form", "celery_tasks.task_status"
     ]:
         return None
     # Если пользователь не авторизован, удаляем профиль из сессии

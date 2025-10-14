@@ -1209,9 +1209,9 @@ async function showDynamicReportPopup(boxForAiImpressionResponse, boxForAiRedact
             maxAttempts: 46,
             interval: 4000,
             onProgress: (progress) => pbDyn.set(progress, "Ожидание результата..."),
-            onSuccess: (result) => {
+            onSuccess: (task_id) => {
                 pbDyn.set(1000, "Готово!");
-                finalizeAnalyzeDynamics(result, choice);
+                finalizeAnalyzeDynamics(task_id); // тут будет task_id а не result так как стоит флаг excludeResult
             },
             onError: (errMsg) => {
                 pbDyn.set(100, errMsg);
@@ -1224,7 +1224,8 @@ async function showDynamicReportPopup(boxForAiImpressionResponse, boxForAiRedact
                 generateButtonsIsDisabled(false);
                 closeDynamicsPopup.innerText = "Закрыть";
                 destroyPB(2000, pbDyn, popupBarMount);
-            }   
+            },
+            excludeResult: true // чтобы не тащить весь текст на фронт
         });
 
     };
@@ -1277,21 +1278,16 @@ async function showDynamicReportPopup(boxForAiImpressionResponse, boxForAiRedact
 
     
 // Функция для финального этапа анализа динамики
-async function finalizeAnalyzeDynamics(resultObj, mode) {
-    // resultObj должен содержать: result, report_id, skeleton
-    if (!resultObj || !resultObj.result || !resultObj.report_id || !resultObj.skeleton) {
+async function finalizeAnalyzeDynamics(taskID) {
+    if (!taskID) {
         alert("Ошибка: не хватает данных для финального этапа анализа динамики.");
         return;
     }
-
     try {
         const response = await sendRequest({
             url: "/working_with_reports/analyze_dynamics_finalize",
             data: {
-                result: resultObj.result,
-                report_id: resultObj.report_id,
-                skeleton: resultObj.skeleton,
-                mode: mode
+                task_id: taskID
             }
         });
 

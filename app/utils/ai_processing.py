@@ -90,6 +90,9 @@ def _process_openai_request(text: str, assistant_id: str, user_id: int, file_id:
 
     while run.status in ["queued", "in_progress"]:
         run = client.beta.threads.runs.retrieve(thread_id=thread_id, run_id=run.id)
+        if run.status == "requires_action":
+            logger.info(f"(функция _process_openai_request) Run status: {run.status}. Waiting for completion...")
+            raise RuntimeError(f"Run failed with status: {run.status}")
         time.sleep(1.5)
         
     messages = client.beta.threads.messages.list(
@@ -238,7 +241,8 @@ def structure_report_text(template_text: list, report_text: str, user_id: int, a
     logger.info("(Функция structure_report_text) --------------------------------------")
     logger.info("[structure_report_text] 🚀 Начата попытка структурирования отчета с помощью OpenAI API.")
     logger.info("---------------------------------------------------")
-
+    
+    template_text = pyjson.dumps(template_text, ensure_ascii=False, separators=(",", ":"))
     prompt = f"""REPORT TEMPLATE:
                 {template_text}
                 ORIGINAL MEDICAL REPORT TEXT:
@@ -279,7 +283,7 @@ def structure_report_text(template_text: list, report_text: str, user_id: int, a
             
             if para_list:
                 logger.info(f"[structure_report_text] ✅ Структурирование отчета успешно на попытке {attempt + 1}.")
-                logger.info(f"[structure_report_text] Отчет ассистента по структурированию: {para_list}")
+                logger.debug(f"[structure_report_text] Отчет ассистента по структурированию: {para_list[:30]}...")
                 logger.info("---------------------------------------------------")
                 return para_list
         except Exception as e:
@@ -291,6 +295,65 @@ def structure_report_text(template_text: list, report_text: str, user_id: int, a
     logger.info("---------------------------------------------------")
     raise ValueError("Все попытки структурирования отчета не удались.")
 
+
+# Реверсивное структурирование протокола с помощью OpenAI API
+def reversed_structure_report_text(template_text: list, origin_text: str, user_id: int, assistant_id: str, max_attempts: int = 2) -> list:
+    logger.info("(Функция reversed_structure_report_text) --------------------------------------")
+    logger.info("[reversed_structure_report_text] 🚀 Начата попытка реверсивного структурирования отчета с помощью OpenAI API.")
+    logger.info("---------------------------------------------------")
+    
+    template_text = pyjson.dumps(template_text, ensure_ascii=False, separators=(",", ":"))
+    prompt = f"""SENTENCES_WITH_IDS:
+                {template_text}
+                ORIGINAL REPORT TEXT (RUSSIAN):
+                {origin_text}
+                """
+    print(f"Prompt for reversed_structure_report_text: {prompt}")
+    for attempt in range(max_attempts):
+        try:
+            result_text = _process_openai_request(
+                text=prompt,
+                assistant_id=assistant_id,
+                user_id=user_id,
+                file_id=None,
+                clean_response=False,
+            )
+            if not result_text:
+                logger.warning(f"[reversed_structure_report_text] ❌ Попытка {attempt + 1} не удалась: пустой ответ от ассистента.")
+                continue
+            logger.info(f"[reversed_structure_report_text] Получен ответ от ассистента на попытке {attempt + 1}.")
+            
+            try:
+                # Попытка загрузить ответ как JSON
+                parsed = pyjson.loads(result_text)
+            except pyjson.JSONDecodeError:
+                logger.warning(f"[reversed_structure_report_text] ❌ Ответ ассистента не является корректным JSON.")
+                raise ValueError("Ответ ассистента не является корректным JSON. Не удалось распарсить.")
+            
+            if isinstance(parsed, list):
+                logger.info(f"[reversed_structure_report_text] ✅ Ответ ассистента является списком с {len(parsed)} элементами.")
+                para_list = parsed
+            elif isinstance(parsed, dict):
+                logger.info("[reversed_structure_report_text] ✅ Ответ ассистента является словарем. Достаю items.")
+                para_list = parsed.get("items", [])
+                logger.info(f"[reversed_structure_report_text] ✅ Удалось достать items. Теперь para_list это список содержащий: {len(para_list)} элементов.")
+            else:
+                logger.error("[reversed_structure_report_text] ❌ Ответ ассистента не является списком или словарем.")
+                raise ValueError("Ответ ассистента не является списком или словарем.")
+            
+            if para_list:
+                logger.info(f"[reversed_structure_report_text] ✅ Реверсивное структурирование отчета успешно на попытке {attempt + 1}.")
+                logger.info(f"[reversed_structure_report_text] Отчет ассистента по реверсивному структурированию: {para_list}")
+                logger.info("---------------------------------------------------")
+                return para_list
+        except Exception as e:
+            logger.warning(f"[reversed_structure_report_text] ❌ Попытка {attempt + 1} не удалась: {e}")
+            
+        finally:
+            reset_ai_session(assistant_id, user_id=user_id)
+    logger.error("[reversed_structure_report_text] ❌ Все попытки реверсивного структурирования отчета не удались")
+    logger.info("---------------------------------------------------")
+    raise ValueError("Все попытки реверсивного структурирования отчета не удались")
 
 # Функция для генерации impression с помощью OpenAI.
 def ai_impression_generation(assistant_id: str, user_id: int, report_text: str, file_id: str) -> str:
@@ -321,6 +384,9 @@ def ai_impression_generation(assistant_id: str, user_id: int, report_text: str, 
         raise ValueError(f"Ошибка при обращении к ИИ: {e}")
     finally:
         reset_ai_session(assistant_id, user_id=user_id)
+
+
+
 
 
 # Функция для запуска проверки протокола при помощи ассистента OPENAI_ASSISTANT_REDACTOR

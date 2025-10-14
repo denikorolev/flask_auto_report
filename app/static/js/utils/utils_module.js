@@ -65,7 +65,8 @@ export function pollTaskStatus(task_id, {
             }
         } else if (status === "success") {
             onProgress(100, attempt, maxAttempts);
-            onSuccess(data.result);
+            const payload = excludeResult ? (data.task_id) : (data.result);
+            onSuccess(payload);
         } else if (status === "error") {
             let details = data.details || "";
             if (details.toLowerCase().includes("revoked") || details.toLowerCase().includes("terminated")) {

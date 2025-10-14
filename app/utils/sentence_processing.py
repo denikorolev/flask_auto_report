@@ -5,8 +5,9 @@ from rapidfuzz import fuzz
 import re
 import json
 from docx import Document
+from sqlalchemy import select
 from app.utils.spacy_manager import SpacyModel
-from app.models.models import db, Paragraph, KeyWord, HeadSentence, BodySentence, TailSentence, HeadSentenceGroup, BodySentenceGroup, TailSentenceGroup, AppConfig
+from app.models.models import db, Paragraph, KeyWord, HeadSentence, BodySentence, TailSentence, HeadSentenceGroup, BodySentenceGroup, TailSentenceGroup, AppConfig, head_sentence_group_link
 from app.utils.logger import logger
 from collections import defaultdict
 
@@ -662,7 +663,49 @@ def split_report_structure_for_ai(report_data: list) -> tuple:
     return skeleton, ai_input
 
 
+def get_sentences_from_report_for_ai(
+    report_data: list[dict[str, any]],
+    *,
+    include_inactive: bool = False,
+    include_additional: bool = False
+) -> list[dict[str, str | int]]:
+    """
+    Превращает исходную структуру report_data (список параграфов)
+    в плоский список предложений-шаблонов для ассистента, вида:
+        [{"id": <int|str>, "sentence": <str>}, ...]
 
+    - Берёт только активные параграфы (is_active=True)
+    - Исключает дополнительные (is_additional=True)
+    - Пропускает пустые параграфы
+    - Не добавляет 'Miscellaneous'
+    """
+    logger.info("(get_sentences_from_report_for_ai) 🚀 Начат процесс подготовки списка предложений для AI")
+    out: list[dict[str, str | int]] = []
+
+    for para in report_data or []:
+        is_active = para.get("is_active", True)
+        is_additional = para.get("is_additional", False)
+        if (not include_inactive and not is_active) or (not include_additional and is_additional):
+            continue
+
+        for hs in para.get("head_sentences", []):
+            if not isinstance(hs, dict):
+                logger.debug(f"(get_sentences_from_report_for_ai) ⚠️ Пропускаю некорректные данные: {hs}")
+                continue
+            if "id" not in hs or "sentence" not in hs:
+                logger.debug(f"(get_sentences_from_report_for_ai) ⚠️ Пропускаю некорректные данные: {hs}")
+                continue
+            _id, _sent = hs["id"], hs["sentence"]
+            if isinstance(_id, (str, int)) and isinstance(_sent, str):
+                out.append({"id": _id, "sentence": _sent})
+    print("--------------------------------------------------")
+    print(f"Выход списка для отправки в AI: {out[:100]}")
+    print("--------------------------------------------------")
+    logger.info(f"(get_sentences_from_report_for_ai) ✅ Подготовлено {len(out)} предложений для AI")
+    return out
+
+
+# Использую в логике динамике в режиме hard
 def replace_head_sentences_with_fuzzy_check(main_data, ai_data, threshold=95):
     """
     Обновляет тексты head_sentences в main_data на основе ai_data.
@@ -672,7 +715,6 @@ def replace_head_sentences_with_fuzzy_check(main_data, ai_data, threshold=95):
     """
     logger.info("(replace_head_sentences_with_fuzzy_check) 🚀  Начат процесс замены главных предложений синтезированными")
     logger.info(f"(replace_head_sentences_with_fuzzy_check) main_data: {len(main_data)} параграфов, ai_data: {len(ai_data)} параграфов")
-    FLAG = True  # для отладки (если True - удаляю предложение, если не нашел в AI, если False - оставляю оригинал)
 
     if not isinstance(main_data, list) or not isinstance(ai_data, list):
         logger.error("(replace_head_sentences_with_fuzzy_check) ❌ Входные данные не являются списками.")
@@ -710,13 +752,277 @@ def replace_head_sentences_with_fuzzy_check(main_data, ai_data, threshold=95):
             if hs_id in ai_head_by_id:
                 main_hs["sentence"] = ai_head_by_id[hs_id]
             else:
-                if FLAG:
-                    logger.warning(f"(replace_head_sentences_with_fuzzy_check) ⚠️ В AI-ответе не найдено предложение id={hs_id} в параграфе id={para_id}, удаляю оригинал")
-                    main_hs["sentence"] = ""
-                else:
-                    logger.warning(f"(replace_head_sentences_with_fuzzy_check) ⚠️ В AI-ответе не найдено предложение id={hs_id} в параграфе id={para_id}, оставляю оригинал")
-                    continue
+                logger.warning(f"(replace_head_sentences_with_fuzzy_check) ⚠️ В AI-ответе не найдено предложение id={hs_id} в параграфе id={para_id}, удаляю оригинал")
+                main_hs["sentence"] = ""
     return main_data
+
+
+# Использую в логике динамики в режиме soft
+def build_soft_paragraphs(
+    *,
+    flat_items: list[dict],
+    sorted_parag: list[dict],
+    report_id: int,
+) -> list[dict]:
+    """
+    Собирает soft-представление отчёта:
+      1) В начало — «родные» параграфы текущего отчёта, у которых
+         is_active=True, is_additional=True, is_impression=False и есть head/tail.
+      2) Основной синтетический параграф с head-предложениями из flat_items
+         в исходном порядке; для известных head подтягиваются body из БД.
+      3) Параграф «Заключение»: берём существующий параграф отчёта с is_impression=True
+         и подменяем у него head_sentences на единый блок из flat_items с is_impression=True.
+    """
+    logger.info("[soft] 🚀 Сборка soft-представления начата")
+
+    if not isinstance(flat_items, list) or not isinstance(sorted_parag, list):
+        raise ValueError("[soft] Некорректные входные данные: flat_items/sorted_parag")
+
+    paragraphs_by_id: dict[int, dict] = {}
+    paragraph_head_groups: dict[int, int] = {}
+    existing_additional_blocks: list[dict] = []
+    impression_source_paragraph: dict | None = None
+    max_index = 0
+
+    for p in sorted_parag:
+        pid = p.get("id")
+        if pid is None:
+            continue
+        paragraphs_by_id[pid] = p
+        try:
+            max_index = max(max_index, int(p.get("paragraph_index", 0)))
+        except Exception:
+            pass
+
+        hgid = p.get("head_sentence_group_id")
+        if hgid:
+            paragraph_head_groups[pid] = hgid
+
+        if p.get("is_impression", False):
+            impression_source_paragraph = p
+
+        if (
+            p.get("is_active", True)
+            and p.get("is_additional", False)
+            and not p.get("is_impression", False)
+            and (p.get("head_sentences") or p.get("tail_sentences"))
+        ):
+            existing_additional_blocks.append(p)
+
+    report_head_group_ids = set(g for g in paragraph_head_groups.values() if g)
+
+    numeric_ids: list[int] = []
+    for it in flat_items:
+        raw = it.get("id")
+        if isinstance(raw, int):
+            numeric_ids.append(raw)
+        elif isinstance(raw, str) and raw.isdigit():
+            numeric_ids.append(int(raw))
+
+    heads_by_id: dict[int, HeadSentence] = {}
+    if numeric_ids:
+        for h in HeadSentence.query.filter(HeadSentence.id.in_(numeric_ids)).all():
+            heads_by_id[int(h.id)] = h
+
+    head_groups_map: dict[int, list[int]] = {}
+    if numeric_ids:
+        rows = db.session.execute(
+            select(
+                head_sentence_group_link.c.head_sentence_id,
+                head_sentence_group_link.c.group_id
+            ).where(head_sentence_group_link.c.head_sentence_id.in_(numeric_ids))
+        ).all()
+        
+        for head_id, group_id in rows:
+            head_groups_map.setdefault(int(head_id), []).append(int(group_id))
+
+    def pick_native_head_group_id(head_id: int) -> int | None:
+        groups = head_groups_map.get(head_id, [])
+        if not groups:
+            return None
+        intersect = report_head_group_ids.intersection(groups)
+        if not intersect:
+            return None
+        candidates: list[tuple[int, int]] = []
+        for pid, hg in paragraph_head_groups.items():
+            if hg in intersect:
+                try:
+                    p_index = int(paragraphs_by_id[pid].get("paragraph_index", 10**9))
+                except Exception:
+                    p_index = 10**9
+                candidates.append((p_index, hg))
+        if not candidates:
+            return None
+        candidates.sort(key=lambda x: x[0])
+        return candidates[0][1]
+
+    def load_body_sentences(body_group_id: int | None) -> list[dict]:
+        if not body_group_id:
+            return []
+        try:
+            items = BodySentenceGroup.get_group_sentences(body_group_id) or []
+        except Exception as e:
+            logger.warning(f"[soft] Не удалось получить body-группу {body_group_id}: {e}")
+            items = []
+        out: list[dict] = []
+        for b in items:
+            s = b.get("sentence")
+            if not s:
+                continue
+            out.append({"id": b.get("id"), "sentence": s})
+        return out
+
+    main_paragraph: dict = {
+        "id": 0,
+        "report_id": report_id,
+        "paragraph_index": max_index + 1,
+        "paragraph": "",
+        "paragraph_visible": False,
+        "title_paragraph": False,
+        "bold_paragraph": False,
+        "is_impression": False,
+        "is_active": True,
+        "str_before": False,
+        "str_after": False,
+        "is_additional": True,
+        "comment": None,
+        "paragraph_weight": 1,
+        "tags": None,
+        "has_linked_head": False,
+        "has_linked_tail": False,
+        "head_sentence_group_id": None,
+        "tail_sentence_group_id": None,
+        "head_sentences": [],
+        "tail_sentences": [],
+    }
+
+    sentence_index = 1
+    for it in flat_items:
+        if bool(it.get("is_impression", False)):
+            continue
+
+        raw_id = it.get("id")
+        text = it.get("sentence", "")
+
+        head_payload: dict = {
+            "id": 0,
+            "sentence": text,
+            "tags": None,
+            "comment": "synthesized",
+            "is_linked": False,
+            "group_id": None,
+            "body_sentences": [],
+            "body_sentence_group_id": None,
+            "has_linked_body": False,
+            "sentence_index": sentence_index,
+        }
+
+        head_id: int | None = None
+        if isinstance(raw_id, int):
+            head_id = raw_id
+        elif isinstance(raw_id, str) and raw_id.isdigit():
+            head_id = int(raw_id)
+
+        if head_id is not None:
+            h = heads_by_id.get(head_id)
+            body_group_id = getattr(h, "body_sentence_group_id", None) if h else None
+            native_head_group_id = pick_native_head_group_id(head_id)
+
+            built_from_db = False
+            try:
+                if h and hasattr(HeadSentence, "get_sentence_data"):
+                    data = HeadSentence.get_sentence_data(head_id)  # type: ignore[attr-defined]
+                    if isinstance(data, dict):
+                        data = dict(data)
+                        data["sentence"] = text
+                        data.setdefault("tags", None)
+                        data.setdefault("comment", "synthesized")
+                        data["is_linked"] = False
+                        data["group_id"] = native_head_group_id
+                        data["body_sentences"] = load_body_sentences(body_group_id)
+                        data["body_sentence_group_id"] = body_group_id
+                        data["has_linked_body"] = bool(data["body_sentences"])
+                        data["sentence_index"] = sentence_index
+                        head_payload = data
+                        built_from_db = True
+            except Exception as e:
+                logger.warning(f"[soft] get_sentence_data({head_id}) не удался: {e}")
+
+            if not built_from_db:
+                head_payload.update({
+                    "id": head_id,
+                    "group_id": native_head_group_id,
+                    "body_sentences": load_body_sentences(body_group_id),
+                    "body_sentence_group_id": body_group_id,
+                    "has_linked_body": False,
+                })
+                head_payload["has_linked_body"] = bool(head_payload["body_sentences"])
+
+        main_paragraph["head_sentences"].append(head_payload)
+        sentence_index += 1
+
+    impression_texts: list[str] = [
+        it.get("sentence", "") for it in flat_items if bool(it.get("is_impression", False))
+    ]
+    impression_sentence = ""
+    if impression_texts:
+        impression_sentence = impression_texts[0] if len(impression_texts) == 1 else "\n".join(impression_texts)
+
+    if impression_source_paragraph:
+        impression_paragraph = dict(impression_source_paragraph)
+        impression_paragraph["head_sentences"] = []
+        impression_paragraph["head_sentence_group_id"] = None
+        impression_paragraph["has_linked_head"] = False
+        impression_paragraph["is_impression"] = True
+    else:
+        impression_paragraph = {
+            "id": 0,
+            "report_id": report_id,
+            "paragraph_index": max_index + 2,
+            "paragraph": "Заключение",
+            "paragraph_visible": True,
+            "title_paragraph": True,
+            "bold_paragraph": True,
+            "is_impression": True,
+            "is_active": True,
+            "str_before": True,
+            "str_after": True,
+            "is_additional": False,
+            "comment": None,
+            "paragraph_weight": 1,
+            "tags": None,
+            "has_linked_head": False,
+            "has_linked_tail": False,
+            "head_sentence_group_id": None,
+            "tail_sentence_group_id": None,
+            "head_sentences": [],
+            "tail_sentences": [],
+        }
+
+    impression_head = {
+        "id": 0,
+        "sentence": impression_sentence,
+        "tags": None,
+        "comment": "synthesized",
+        "is_linked": False,
+        "group_id": None,
+        "body_sentences": [],
+        "body_sentence_group_id": None,
+        "has_linked_body": False,
+        "sentence_index": 1,
+    }
+    impression_paragraph["head_sentences"].append(impression_head)
+
+    paragraphs_out: list[dict] = []
+    if existing_additional_blocks:
+        paragraphs_out.extend(existing_additional_blocks)
+    paragraphs_out.append(main_paragraph)
+    paragraphs_out.append(impression_paragraph)
+
+    logger.info(f"[soft] ✅ Готово. Параграфов: {len(paragraphs_out)}")
+
+    return paragraphs_out
+
 
 
 def merge_ai_response_into_skeleton(skeleton, ai_response):

@@ -2,12 +2,23 @@
 
 from flask import Blueprint, render_template, request, jsonify, current_app, session
 from flask_security import current_user
-from app.models.models import db, Report, KeyWord, TailSentence, BodySentence, ReportTextSnapshot
-from app.utils.sentence_processing import group_keywords, split_sentences_if_needed, clean_and_normalize_text, compare_sentences_by_paragraph, preprocess_sentence, split_report_structure_for_ai, replace_head_sentences_with_fuzzy_check, merge_ai_response_into_skeleton
+from celery.result import AsyncResult
+from app.models.models import Report, KeyWord, TailSentence, BodySentence, ReportTextSnapshot
+from app.utils.sentence_processing import (group_keywords, 
+                                           split_sentences_if_needed, 
+                                           clean_and_normalize_text, 
+                                           compare_sentences_by_paragraph, 
+                                           preprocess_sentence, 
+                                           split_report_structure_for_ai, 
+                                           replace_head_sentences_with_fuzzy_check, 
+                                           merge_ai_response_into_skeleton, 
+                                           get_sentences_from_report_for_ai,
+                                           build_soft_paragraphs,
+                                           )
 from app.utils.common import ensure_list
 from app.utils.logger import logger
 from flask_security.decorators import auth_required
-from tasks.celery_tasks import async_analyze_dynamics
+from tasks.celery_tasks import async_analyze_dynamics, async_reversed_analyze_dynamics
 
 
 
@@ -334,64 +345,99 @@ def analyze_dynamics():
     
     data = request.get_json()
     origin_text = data.get("origin_text", "").strip()
-    report_id = data.get("report_id")
+    report_id = int(data.get("report_id"))
     user_id = current_user.id
-    mode_flag = data.get("mode", "soft")  # "hard", "soft", "prev"
+    mode_flag = data.get("mode", "hard")  # "hard", "soft", "prev"
+    logger.debug(f"Полученные данные: report_id={report_id}, mode={mode_flag}, origin_text preview: {origin_text[:100]}...")
 
     if not origin_text or not report_id:
         logger.error("Не передан текст или report_id")
         return jsonify({"status": "error", "message": "Не передан текст или report_id"}), 400
-
-    report_data, sorted_parag = Report.get_report_data(report_id)
-    if not report_data:
+    _, sorted_parag = Report.get_report_data(report_id)
+    if not sorted_parag:
         logger.error("Шаблон отчета не найден")
         return jsonify({"status": "error", "message": "Шаблон отчета не найден"}), 404
-
-    skeleton, template_text = split_report_structure_for_ai(sorted_parag)
-    if not template_text or not skeleton:
-        logger.error("Не удалось собрать шаблон отчета")
-        return jsonify({"status": "error", "message": "Не удалось собрать шаблон отчета"}), 500
-
-    logger.info(f"✅ Шаблон отчета успешно собран. Получены json структуры skeleton и template_text")
     
-    try:
-        first_look_assistant_id = current_app.config.get("OPENAI_ASSISTANT_FIRST_LOOK_RADIOLOGIST")
-        structure_assistant_id = current_app.config.get("OPENAI_ASSISTANT_DYNAMIC_STRUCTURER")
-        task = async_analyze_dynamics.delay(origin_text, template_text, user_id, skeleton, report_id, first_look_assistant_id, structure_assistant_id)
-    except Exception as e:
-        logger.error(f"❌ Не удалось запустить celery задачу async_analyze_dynamics: {e}")
-        return jsonify({
-            "status": "error",
-            "message": f"Ошибка запуска анализа динамики: {str(e)}"
-        }), 500
+    task = None
+    template_text = None
+    
+    if mode_flag == "hard":
+        logger.info("Режим: Жесткий (hard) - полный анализ и жесткая структуризация протокола по заданному шаблону")
+        logger.info(f"✅ Шаблон отчета успешно собран. Получена json структура template_text")
+        
+        try:
+            _, template_text = split_report_structure_for_ai(sorted_parag)
+            if not template_text:
+                logger.error("Не удалось собрать шаблон отчета")
+                return jsonify({"status": "error", "message": "Не удалось собрать шаблон отчета"}), 500
+    
+            first_look_assistant_id = current_app.config.get("OPENAI_ASSISTANT_FIRST_LOOK_RADIOLOGIST")
+            structure_assistant_id = current_app.config.get("OPENAI_ASSISTANT_DYNAMIC_STRUCTURER")
+            task = async_analyze_dynamics.delay(origin_text, template_text, user_id, report_id, first_look_assistant_id, structure_assistant_id)
+        except Exception as e:
+            logger.error(f"❌ Не удалось запустить celery задачу async_analyze_dynamics: {e}")
+            return jsonify({
+                "status": "error",
+                "message": f"Ошибка запуска анализа динамики: {str(e)}"
+            }), 500
+    elif mode_flag == "soft":
+        logger.info("Режим: Мягкий (soft) - мягкая структуризация с сохранением максимального количества оригинального текста")
+        try:
+            template_text = get_sentences_from_report_for_ai(sorted_parag)
+            logger.debug(f"template_text preview: {str(template_text)[:100]}...")
+            reversed_structure_assistant_id = current_app.config.get("OPENAI_ASSISTANT_REVERSED_DYNAMIC_STRUCTURER")
+            task = async_reversed_analyze_dynamics.delay(origin_text, template_text, user_id, report_id, reversed_structure_assistant_id=reversed_structure_assistant_id)
+        except Exception as e:
+            logger.error(f"❌ Не удалось запустить celery задачу async_reversed_analyze_dynamics: {e}")
+            return jsonify({"status": "error", "message": f"Ошибка запуска анализа динамики: {str(e)}"}), 500
+    elif mode_flag == "prev":
+        pass # заглушка, пока не реализовано
+    else:
+        logger.error(f"❌ Неверный режим анализа динамики: {mode_flag}")
+        return jsonify({"status": "error", "message": f"Неверный режим анализа динамики: {mode_flag}"}), 400
 
-    return jsonify({
-        "status": "success",
-        "message": "Анализ динамики запущен",
-        "task_id": task.id,
-    }), 200
+    return jsonify({"status": "success", "message": "Анализ динамики успешно запущен", "task_id": task.id}), 200
 
-       
+    
         
 
 # Маршрут для финального этапа трансформации шаблона в соответствии с предыдущим протоколом
 @working_with_reports_bp.route("/analyze_dynamics_finalize", methods=["POST"])
+@auth_required()
 def analyze_dynamics_finalize():
     logger.info(f"(Финальный этап анализа динамики) ------------------------------------")
     logger.info(f"(Финальный этап анализа динамики) 🚀 Начинаю финальный этап анализа динамики")
     
     try:
         data = request.get_json()
-        result = data.get("result")  # результат работы celery задачи
-        report_id = data.get("report_id")
-        skeleton = data.get("skeleton")
+        task_id = data.get("task_id", None)
+        if not task_id:
+            logger.error(f"(Финальный этап анализа динамики) ❌ Не хватает данных для финального этапа анализа динамики")
+            return jsonify({"status": "error", "message": "Не хватает данных для финального этапа анализа динамики"}), 400
+        print(f"task_id is: {task_id}")
+        task = AsyncResult(task_id)
+        if not task or task.state != 'SUCCESS':
+            logger.error(f"(Финальный этап анализа динамики) ❌ Не удалось найти задачу с ID: {task_id}")
+            return jsonify({"status": "error", "message": f"Не удалось найти запущенную задачу"}), 404
+        celery_data = task.result
+        celery_data_status = celery_data.get("status", "error")
+        if celery_data_status != "success":
+            error_message = celery_data.get("message", "Неизвестная ошибка в задаче")
+            logger.error(f"(Финальный этап анализа динамики) ❌ Задача завершилась с ошибкой: {error_message}")
+            return jsonify({"status": "error", "message": f"Задача завершилась с ошибкой: {error_message}"}), 500
+        mode_flag = celery_data.get("mode", "error") 
+        result = celery_data.get("result", None)
+        print(f"result is: {result[:100]}...")
+        report_id = celery_data.get("report_id", None)
         profile_id = session.get("profile_id")
-        mode_flag = data.get("mode", "soft")  # "hard", "soft", "prev"
-
-        if not result or not report_id:
-            return jsonify({"status": "error", "message": "Missing required data"}), 400
-
+        if not result or not report_id or not profile_id:
+            logger.error(f"(Финальный этап анализа динамики) ❌ В результате задачи отсутствует ключ 'result или report_id'")
+            return jsonify({"status": "error", "message": "В результате задачи отсутствуют необходимые данные"}), 500
+        
         report_data, sorted_parag = Report.get_report_data(report_id)
+        if report_data.get("profile_id") != profile_id:
+            logger.error(f"(Финальный этап анализа динамики) ❌ Найденный в базе протокол не принадлежит текущему пользователю")
+            return jsonify({"status": "error", "message": "Найденный в базе протокол не принадлежит текущему пользователю"}), 403
         
         try:
             key_words_obj = KeyWord.get_keywords_for_report(profile_id, report_id)
@@ -399,21 +445,34 @@ def analyze_dynamics_finalize():
         except Exception as e:
             logger.warning(f"⚠️ Ошибка загрузки ключевых слов: {e}")
             key_words_groups = []
-        
-
-        merged_parag, misc_sentences = merge_ai_response_into_skeleton(skeleton, result)
-        initial_report = replace_head_sentences_with_fuzzy_check(sorted_parag, merged_parag)
+        initial_report = sorted_parag
+        misc_sentences = []
+            
+        if mode_flag == "hard":
+            logger.info(f"(Финальный этап анализа динамики) Режим: Жесткий (hard) - полный анализ и жесткая структуризация протокола по заданному шаблону")
+            skeleton, _ = split_report_structure_for_ai(sorted_parag)
+            merged_parag, misc_sentences = merge_ai_response_into_skeleton(skeleton, result)
+            initial_report = replace_head_sentences_with_fuzzy_check(sorted_parag, merged_parag)
+        elif mode_flag == "soft":
+            logger.info(f"(Финальный этап анализа динамики) Режим: Мягкий (soft) - мягкая структуризация с сохранением максимального количества оригинального текста")
+            initial_report = build_soft_paragraphs(result, sorted_parag, report_id)
+        elif mode_flag == "prev":
+            logger.info(f"(Финальный этап анализа динамики) Режим: Предыдущий (prev) - использование предыдущего протокола без изменений")
+        else:
+            logger.error(f"(Финальный этап анализа динамики) ❌ Неверный режим анализа динамики: {mode_flag}")
+            return jsonify({"status": "error", "message": f"Неверный режим анализа динамики: {mode_flag}"}), 400
 
         new_html = render_template(
             "working_with_report.html",
             title=report_data["report_name"],
             report_data=report_data,
             paragraphs_data=initial_report,
-            key_words_groups=key_words_groups,
-        )
+                key_words_groups=key_words_groups,
+            )
         return jsonify({
             "status": "success",
             "message": "Структура отчета успешно обновлена",
+            "mode": mode_flag,
             "report_data": report_data,
             "paragraphs_data": initial_report,
             "key_words_groups": key_words_groups,

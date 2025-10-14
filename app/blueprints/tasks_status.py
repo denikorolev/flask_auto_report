@@ -32,11 +32,11 @@ def task_status(task_id):
     elif task.state == "STARTED":
         return jsonify({"status": "started"}), 202
     elif task.state == "SUCCESS":
-        payload = {"status": "success", "result": task.result}
+        payload = {"status": "success"}
         if exclude_result:
-            logger.info(f"Task {task_id} completed successfully. Returning result.")
-            payload["result"] = task.id # нужно будет переделать и добавлять task_id отдельным ключом
-            logger.info(f"payload: {payload}")
+            payload["task_id"] = task.id
+        else:
+            payload["result"] = task.result
         return jsonify(payload), 200
     elif task.state == "FAILURE":
         return jsonify({"status": "error", "details": str(task.info)}), 500

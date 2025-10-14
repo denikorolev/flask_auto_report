@@ -883,12 +883,12 @@ function showAiGeneratorBlock() {
             maxAttempts: 20,
             interval: 7000,
             onProgress: (progress) => pb.set(progress, "Ожидание результата..."),
-            onSuccess: (result) => {
+            onSuccess: (task_id) => {
                 pb.set(100, "Готово!");
                 enableGenerateButtons();
                 destroyPB(1000);
                 aiPollingAbort = null;
-                handleAiGeneratedTemplate(result); // Так как ниже мы указываем флаг exclude_result: true, то в result будет task_id
+                handleAiGeneratedTemplate(task_id); // Так как ниже мы указываем флаг exclude_result: true, то в ответе будет task_id
             },
             onError: (errMsg) => {
                 pb.set(100, errMsg || "Ошибка при генерации шаблона.");
