@@ -399,7 +399,56 @@ def analyze_dynamics():
     return jsonify({"status": "success", "message": "Анализ динамики успешно запущен", "task_id": task.id}), 200
 
     
-        
+# Маршрут для финального этапа трансформации шаблона в соответствии с предыдущим протоколом вариант prev
+@working_with_reports_bp.route("/analyze_dynamics_prev_finalize", methods=["POST"])
+@auth_required()
+def analyze_dynamics_prev_finalize():
+    logger.info(f"(Финальный этап анализа динамики prev) ------------------------------------")
+    logger.info(f"(Финальный этап анализа динамики prev) 🚀 Начинаю финальный этап анализа динамики в режиме prev")
+    
+    data = request.get_json()
+    flat_items = data.get("flat_items", None)
+    report_id = data.get("report_id", None)
+    profile_id = session.get("profile_id")
+    if not flat_items or not report_id or not profile_id:
+        logger.error(f"(Финальный этап анализа динамики prev) ❌ Не хватает данных для финального этапа анализа динамики в режиме prev")
+        return jsonify({"status": "error", "message": "Не хватает данных для финального этапа анализа динамики в режиме prev"}), 400
+    try:
+        report_data, sorted_parag = Report.get_report_data(report_id)
+        if report_data.get("profile_id") != profile_id:
+            logger.error(f"(Финальный этап анализа динамики prev) ❌ Найденный в базе протокол не принадлежит текущему пользователю")
+            return jsonify({"status": "error", "message": "Найденный в базе протокол не принадлежит текущему пользователю"}), 403
+        try:
+            key_words_obj = KeyWord.get_keywords_for_report(profile_id, report_id)
+            key_words_groups = group_keywords(key_words_obj)
+        except Exception as e:
+            logger.warning(f"⚠️ Ошибка загрузки ключевых слов: {e}")
+            key_words_groups = []
+        initial_report = build_soft_paragraphs(flat_items=flat_items, sorted_parag=sorted_parag, report_id=report_id)
+        new_html = render_template(
+            "working_with_report.html",
+            title=report_data["report_name"],
+            report_data=report_data,
+            paragraphs_data=initial_report,
+            key_words_groups=key_words_groups,
+            )
+        logger.info(f"(Финальный этап анализа динамики prev) ------------------------------------")
+        logger.info(f"(Финальный этап анализа динамики prev) ✅ Финальный этап анализа динамики успешно завершен")
+        return jsonify({
+            "status": "success",
+            "message": "Структура отчета успешно обновлена",
+            "mode": "prev",
+            "report_data": report_data,
+            "paragraphs_data": initial_report,
+            "key_words_groups": key_words_groups,
+            "html": new_html,
+            "misc_sentences": [],
+        }), 200
+    except Exception as e:
+        logger.error(f"(Финальный этап анализа динамики prev) ❌ Не получилось сгруппировать данные протокола или данные его параграфов: {e}")
+        return jsonify({"status": "error", "message": f"Не получилось сгруппировать данные протокола или данные его параграфов: {e}"}), 500
+
+
 
 # Маршрут для финального этапа трансформации шаблона в соответствии с предыдущим протоколом
 @working_with_reports_bp.route("/analyze_dynamics_finalize", methods=["POST"])
@@ -414,7 +463,6 @@ def analyze_dynamics_finalize():
         if not task_id:
             logger.error(f"(Финальный этап анализа динамики) ❌ Не хватает данных для финального этапа анализа динамики")
             return jsonify({"status": "error", "message": "Не хватает данных для финального этапа анализа динамики"}), 400
-        print(f"task_id is: {task_id}")
         task = AsyncResult(task_id)
         if not task or task.state != 'SUCCESS':
             logger.error(f"(Финальный этап анализа динамики) ❌ Не удалось найти задачу с ID: {task_id}")
@@ -427,7 +475,6 @@ def analyze_dynamics_finalize():
             return jsonify({"status": "error", "message": f"Задача завершилась с ошибкой: {error_message}"}), 500
         mode_flag = celery_data.get("mode", "error") 
         result = celery_data.get("result", None)
-        print(f"result is: {result[:100]}...")
         report_id = celery_data.get("report_id", None)
         profile_id = session.get("profile_id")
         if not result or not report_id or not profile_id:
@@ -455,9 +502,7 @@ def analyze_dynamics_finalize():
             initial_report = replace_head_sentences_with_fuzzy_check(sorted_parag, merged_parag)
         elif mode_flag == "soft":
             logger.info(f"(Финальный этап анализа динамики) Режим: Мягкий (soft) - мягкая структуризация с сохранением максимального количества оригинального текста")
-            initial_report = build_soft_paragraphs(result, sorted_parag, report_id)
-        elif mode_flag == "prev":
-            logger.info(f"(Финальный этап анализа динамики) Режим: Предыдущий (prev) - использование предыдущего протокола без изменений")
+            initial_report = build_soft_paragraphs(flat_items=result, sorted_parag=sorted_parag, report_id=report_id)
         else:
             logger.error(f"(Финальный этап анализа динамики) ❌ Неверный режим анализа динамики: {mode_flag}")
             return jsonify({"status": "error", "message": f"Неверный режим анализа динамики: {mode_flag}"}), 400
@@ -469,6 +514,8 @@ def analyze_dynamics_finalize():
             paragraphs_data=initial_report,
                 key_words_groups=key_words_groups,
             )
+        logger.info(f"(Финальный этап анализа динамики) ------------------------------------")
+        logger.info(f"(Финальный этап анализа динамики) ✅ Финальный этап анализа динамики успешно завершен")
         return jsonify({
             "status": "success",
             "message": "Структура отчета успешно обновлена",

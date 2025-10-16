@@ -765,117 +765,69 @@ def build_soft_paragraphs(
     report_id: int,
 ) -> list[dict]:
     """
-    Собирает soft-представление отчёта:
+    Собирает soft-представление отчёта без походов в БД:
       1) В начало — «родные» параграфы текущего отчёта, у которых
          is_active=True, is_additional=True, is_impression=False и есть head/tail.
       2) Основной синтетический параграф с head-предложениями из flat_items
-         в исходном порядке; для известных head подтягиваются body из БД.
-      3) Параграф «Заключение»: берём существующий параграф отчёта с is_impression=True
-         и подменяем у него head_sentences на единый блок из flat_items с is_impression=True.
+         в исходном порядке; для известных head подставляются «родные» body
+         из sorted_parag как есть (без трансформаций).
+         Все tail всех НЕ-импрессионных параграфов складываем в tail синтетического.
+      3) Параграф «Заключение»: берём существующий is_impression=True (если есть),
+         head заменяем единым блоком из flat_items с is_impression=True,
+         tail из исходного импрессионного параграфа переносим в результирующий.
+    Вся сборка — в памяти, исходные dict'ы из sorted_parag не мутируем.
     """
-    logger.info("[soft] 🚀 Сборка soft-представления начата")
 
     if not isinstance(flat_items, list) or not isinstance(sorted_parag, list):
         raise ValueError("[soft] Некорректные входные данные: flat_items/sorted_parag")
 
-    paragraphs_by_id: dict[int, dict] = {}
-    paragraph_head_groups: dict[int, int] = {}
+    # 1) Быстрые индексы по исходным данным
+    #    head_proto_by_id: id head -> «родной» head-словарь (с body и пр.)
+    #    existing_additional_blocks: «родные» дополнительные параграфы в начало выдачи
+    #    impression_source_paragraph: «родной» параграф заключения (если есть)
+    #    main_tails_pool: все tail из НЕ-импрессионных параграфов (уйдут в новый основной)
+    #    impression_tails_pool: tail из импрессионного параграфа (уйдут в новый заключительный)
+    head_proto_by_id: dict[int, dict] = {}
     existing_additional_blocks: list[dict] = []
     impression_source_paragraph: dict | None = None
-    max_index = 0
-
+    main_tails_pool: list[dict] = []
+    impression_tails_pool: list[dict] = []
+    base_index = len(sorted_parag) + 100 # чтобы наверняка не пересекаться с существующими
+    next_fake_id = -1  # для синтетических id
+    
     for p in sorted_parag:
-        pid = p.get("id")
-        if pid is None:
-            continue
-        paragraphs_by_id[pid] = p
-        try:
-            max_index = max(max_index, int(p.get("paragraph_index", 0)))
-        except Exception:
-            pass
+        # Индексируем head
+        for hs in p.get("head_sentences", []):
+            hid = hs.get("id")
+            if isinstance(hid, int):
+                # Сохраняем «родной» head-словарь целиком (не копируем)
+                head_proto_by_id[hid] = hs
 
-        hgid = p.get("head_sentence_group_id")
-        if hgid:
-            paragraph_head_groups[pid] = hgid
+        # Собираем хвосты
+        tails = p.get("tail_sentences", []) or []
 
         if p.get("is_impression", False):
             impression_source_paragraph = p
+            if tails:
+                impression_tails_pool.extend(tails)
+        else:
+            # «родные» дополнительные параграфы, которые надо отдать перед синтетическим
+            if (
+                p.get("is_active", True)
+                and p.get("is_additional", False)
+                and (p.get("head_sentences") or p.get("tail_sentences"))
+            ):
+                existing_additional_blocks.append(p)
+            # хвосты обычных параграфов — в основной синтетический
+            if tails:
+                main_tails_pool.extend(tails)
 
-        if (
-            p.get("is_active", True)
-            and p.get("is_additional", False)
-            and not p.get("is_impression", False)
-            and (p.get("head_sentences") or p.get("tail_sentences"))
-        ):
-            existing_additional_blocks.append(p)
-
-    report_head_group_ids = set(g for g in paragraph_head_groups.values() if g)
-
-    numeric_ids: list[int] = []
-    for it in flat_items:
-        raw = it.get("id")
-        if isinstance(raw, int):
-            numeric_ids.append(raw)
-        elif isinstance(raw, str) and raw.isdigit():
-            numeric_ids.append(int(raw))
-
-    heads_by_id: dict[int, HeadSentence] = {}
-    if numeric_ids:
-        for h in HeadSentence.query.filter(HeadSentence.id.in_(numeric_ids)).all():
-            heads_by_id[int(h.id)] = h
-
-    head_groups_map: dict[int, list[int]] = {}
-    if numeric_ids:
-        rows = db.session.execute(
-            select(
-                head_sentence_group_link.c.head_sentence_id,
-                head_sentence_group_link.c.group_id
-            ).where(head_sentence_group_link.c.head_sentence_id.in_(numeric_ids))
-        ).all()
-        
-        for head_id, group_id in rows:
-            head_groups_map.setdefault(int(head_id), []).append(int(group_id))
-
-    def pick_native_head_group_id(head_id: int) -> int | None:
-        groups = head_groups_map.get(head_id, [])
-        if not groups:
-            return None
-        intersect = report_head_group_ids.intersection(groups)
-        if not intersect:
-            return None
-        candidates: list[tuple[int, int]] = []
-        for pid, hg in paragraph_head_groups.items():
-            if hg in intersect:
-                try:
-                    p_index = int(paragraphs_by_id[pid].get("paragraph_index", 10**9))
-                except Exception:
-                    p_index = 10**9
-                candidates.append((p_index, hg))
-        if not candidates:
-            return None
-        candidates.sort(key=lambda x: x[0])
-        return candidates[0][1]
-
-    def load_body_sentences(body_group_id: int | None) -> list[dict]:
-        if not body_group_id:
-            return []
-        try:
-            items = BodySentenceGroup.get_group_sentences(body_group_id) or []
-        except Exception as e:
-            logger.warning(f"[soft] Не удалось получить body-группу {body_group_id}: {e}")
-            items = []
-        out: list[dict] = []
-        for b in items:
-            s = b.get("sentence")
-            if not s:
-                continue
-            out.append({"id": b.get("id"), "sentence": s})
-        return out
-
+    # 2) Синтетический основной параграф
+    #    Индексы предложений — через enumerate, синтетические id — отрицательные.
     main_paragraph: dict = {
-        "id": 0,
+        "id": next_fake_id,  
         "report_id": report_id,
-        "paragraph_index": max_index + 1,
+        "paragraph_index": base_index + 1,          
         "paragraph": "",
         "paragraph_visible": False,
         "title_paragraph": False,
@@ -885,100 +837,98 @@ def build_soft_paragraphs(
         "str_before": False,
         "str_after": False,
         "is_additional": True,
-        "comment": None,
+        "comment": "synthesized",
         "paragraph_weight": 1,
         "tags": None,
-        "has_linked_head": False,
-        "has_linked_tail": False,
         "head_sentence_group_id": None,
         "tail_sentence_group_id": None,
         "head_sentences": [],
         "tail_sentences": [],
     }
 
-    sentence_index = 1
-    for it in flat_items:
-        if bool(it.get("is_impression", False)):
-            continue
+    next_fake_id -= 1  # для синтетических id
+    # Пробегаем всё, что НЕ помечено как impression
+    seq = [it for it in flat_items if not bool(it.get("is_impression", False))]
 
+    for idx, it in enumerate(seq, start=1):
         raw_id = it.get("id")
         text = it.get("sentence", "")
 
+        # Вычисляем head_id: число → как есть; строка-число → int; иначе — отрицательный синтетический
+        if isinstance(raw_id, int):
+            head_id = raw_id
+        elif isinstance(raw_id, str) and raw_id.isdigit():
+            head_id = int(raw_id)
+        else:
+            head_id = next_fake_id
+            next_fake_id -= 1
+
+        # Базовая заготовка head-предложения
         head_payload: dict = {
-            "id": 0,
-            "sentence": text,
+            "id": head_id,
+            "sentence": text,         
             "tags": None,
             "comment": "synthesized",
             "is_linked": False,
             "group_id": None,
             "body_sentences": [],
             "body_sentence_group_id": None,
-            "has_linked_body": False,
-            "sentence_index": sentence_index,
+            "sentence_index": idx,
         }
 
-        head_id: int | None = None
-        if isinstance(raw_id, int):
-            head_id = raw_id
-        elif isinstance(raw_id, str) and raw_id.isdigit():
-            head_id = int(raw_id)
-
-        if head_id is not None:
-            h = heads_by_id.get(head_id)
-            body_group_id = getattr(h, "body_sentence_group_id", None) if h else None
-            native_head_group_id = pick_native_head_group_id(head_id)
-
-            built_from_db = False
-            try:
-                if h and hasattr(HeadSentence, "get_sentence_data"):
-                    data = HeadSentence.get_sentence_data(head_id)  # type: ignore[attr-defined]
-                    if isinstance(data, dict):
-                        data = dict(data)
-                        data["sentence"] = text
-                        data.setdefault("tags", None)
-                        data.setdefault("comment", "synthesized")
-                        data["is_linked"] = False
-                        data["group_id"] = native_head_group_id
-                        data["body_sentences"] = load_body_sentences(body_group_id)
-                        data["body_sentence_group_id"] = body_group_id
-                        data["has_linked_body"] = bool(data["body_sentences"])
-                        data["sentence_index"] = sentence_index
-                        head_payload = data
-                        built_from_db = True
-            except Exception as e:
-                logger.warning(f"[soft] get_sentence_data({head_id}) не удался: {e}")
-
-            if not built_from_db:
-                head_payload.update({
-                    "id": head_id,
-                    "group_id": native_head_group_id,
-                    "body_sentences": load_body_sentences(body_group_id),
-                    "body_sentence_group_id": body_group_id,
-                    "has_linked_body": False,
-                })
-                head_payload["has_linked_body"] = bool(head_payload["body_sentences"])
+        # Если head известен по id, подтягиваем «родные» поля из исходного head-прото
+        if isinstance(head_id, int) and head_id in head_proto_by_id:
+            proto = head_proto_by_id[head_id]
+            # переносим group_id и связь body-группы
+            head_payload["group_id"] = proto.get("group_id")
+            head_payload["body_sentence_group_id"] = proto.get("body_sentence_group_id")
+            # и вставляем «нативные» body как есть (без копий и переборок)
+            head_payload["body_sentences"] = proto.get("body_sentences", []) or []
 
         main_paragraph["head_sentences"].append(head_payload)
-        sentence_index += 1
 
-    impression_texts: list[str] = [
-        it.get("sentence", "") for it in flat_items if bool(it.get("is_impression", False))
-    ]
+    # Добавляем в основной параграф «собранные» хвосты из всех неимпрессионных параграфов
+    main_paragraph["tail_sentences"] = main_tails_pool
+
+    # 3) Параграф «Заключение»
+    #    Собираем текст из flat_items с is_impression=True; если несколько — соединяем через \n
+    impression_texts = [it.get("sentence", "") for it in flat_items if bool(it.get("is_impression", False))]
     impression_sentence = ""
     if impression_texts:
         impression_sentence = impression_texts[0] if len(impression_texts) == 1 else "\n".join(impression_texts)
+    else:
+        impression_sentence = "Заключение не было сгенерировано автоматически."
 
     if impression_source_paragraph:
-        impression_paragraph = dict(impression_source_paragraph)
-        impression_paragraph["head_sentences"] = []
-        impression_paragraph["head_sentence_group_id"] = None
-        impression_paragraph["has_linked_head"] = False
-        impression_paragraph["is_impression"] = True
-    else:
+        # Делаем новый объект параграфа заключения (исходный не трогаем)
         impression_paragraph = {
-            "id": 0,
+            "id": impression_source_paragraph.get("id", next_fake_id),
             "report_id": report_id,
-            "paragraph_index": max_index + 2,
+            "paragraph_index": base_index + 2,
+            "paragraph": impression_source_paragraph.get("paragraph", "Заключение"),
+            "paragraph_visible": impression_source_paragraph.get("paragraph_visible", True),
+            "title_paragraph": impression_source_paragraph.get("title_paragraph", True),
+            "bold_paragraph": impression_source_paragraph.get("bold_paragraph", True),
+            "is_impression": True,
+            "is_active": impression_source_paragraph.get("is_active", True),
+            "str_before": impression_source_paragraph.get("str_before", True),
+            "str_after": impression_source_paragraph.get("str_after", True),
+            "is_additional": impression_source_paragraph.get("is_additional", False),
+            "comment": impression_source_paragraph.get("comment"),
+            "paragraph_weight": impression_source_paragraph.get("paragraph_weight", 1),
+            "tags": impression_source_paragraph.get("tags"),
+            "head_sentence_group_id": None,
+            "tail_sentence_group_id": impression_source_paragraph.get("tail_sentence_group_id"),
+            "head_sentences": [],
+            "tail_sentences": impression_tails_pool,  # «родные» хвосты заключения
+        }
+        next_fake_id -= 1
+    else:
+        # Если исходного параграфа заключения нет — синтезируем заглушку
+        impression_paragraph = {
+            "id": next_fake_id,  
+            "report_id": report_id,
+            "paragraph_index": base_index + 2,
             "paragraph": "Заключение",
             "paragraph_visible": True,
             "title_paragraph": True,
@@ -988,19 +938,19 @@ def build_soft_paragraphs(
             "str_before": True,
             "str_after": True,
             "is_additional": False,
-            "comment": None,
+            "comment": "synthesized",
             "paragraph_weight": 1,
             "tags": None,
-            "has_linked_head": False,
-            "has_linked_tail": False,
             "head_sentence_group_id": None,
             "tail_sentence_group_id": None,
             "head_sentences": [],
-            "tail_sentences": [],
+            "tail_sentences": impression_tails_pool,
         }
+        next_fake_id -= 1
 
+    # Вставляем единый head с impression-текстом
     impression_head = {
-        "id": 0,
+        "id": next_fake_id,         
         "sentence": impression_sentence,
         "tags": None,
         "comment": "synthesized",
@@ -1008,21 +958,20 @@ def build_soft_paragraphs(
         "group_id": None,
         "body_sentences": [],
         "body_sentence_group_id": None,
-        "has_linked_body": False,
         "sentence_index": 1,
     }
+    next_fake_id -= 1
     impression_paragraph["head_sentences"].append(impression_head)
 
+    # 4) Формируем итоговый список параграфов:
+    #    сначала «родные» дополнительные, затем наш основной синтетический, затем заключение
     paragraphs_out: list[dict] = []
     if existing_additional_blocks:
         paragraphs_out.extend(existing_additional_blocks)
     paragraphs_out.append(main_paragraph)
     paragraphs_out.append(impression_paragraph)
 
-    logger.info(f"[soft] ✅ Готово. Параграфов: {len(paragraphs_out)}")
-
     return paragraphs_out
-
 
 
 def merge_ai_response_into_skeleton(skeleton, ai_response):

@@ -218,7 +218,9 @@
     // Передаем ключевые слова как глобальную переменную JavaScript
     const keyWordsGroups = {{ key_words_groups | tojson | safe }};
     const reportData = {{ report_data | tojson | safe }};
+    window.reportData = reportData; // Делаем доступным глобально
     const currentReportParagraphsData = {{ paragraphs_data | tojson | safe }};
+    window.currentReportParagraphsData = currentReportParagraphsData; // Делаем доступным глобально
 </script>
 
 <script type="module" src="{{ url_for('static', filename='js/working_with_report.js') }}"></script>

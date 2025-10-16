@@ -19,9 +19,10 @@ document.addEventListener("DOMContentLoaded", initWorkingWithReport);
 // Объявляем глобальные переменные и запускаем стартовые функции, постепенно нужно перенести сюда и логику связанную с ключевыми словами и развешивание части слушателей
 function initWorkingWithReport() {
 
-    console.log(userSettings);
+    console.log("Настройки пользователя:", userSettings);
+    console.log("Данные параграфов:", window.currentReportParagraphsData);
+    console.log("Данные отчета:", reportData);
 
-    const popupList = document.getElementById("popupList");  // Для обращения к PopUp
     const copyButton = document.getElementById("copyButton"); // Для обращения к кнопке "Копировать текст"
     const generateButton = document.getElementById("generateImpression"); // Для обращения к кнопке Generate Impression
     const boxForAiImpressionResponse = document.getElementById("aiImpressionResponseBlock"); // Для обращения к блоку с ответом ИИ по заключению
@@ -148,7 +149,6 @@ function handleSentenceFocus() {
     if (!this.hasAttribute("data-original-text")) {
         this.setAttribute("data-original-text", this.textContent.trim());
     }
-    console.log(this)
     // --- Вот тут надёжная проверка ---
     if (!this._onEnterHandler) {
         this._onEnterHandler = function(e, el) {
@@ -452,7 +452,7 @@ function linkSentences() {
         const paragraphId = parseInt(sentenceElement.getAttribute("data-paragraph-id"));
         const sentenceId = parseInt(sentenceElement.getAttribute("data-id"));
 
-        const paragraphData = currentReportParagraphsData.find(paragraph => paragraph.id === paragraphId) || null;
+        const paragraphData = window.currentReportParagraphsData.find(paragraph => paragraph.id === paragraphId) || null;
         const currentHeadSentence = paragraphData.head_sentences.find(sentence => sentence.id === sentenceId) || null;
         const bodySentences = currentHeadSentence.body_sentences;
 
@@ -474,7 +474,6 @@ function sentenceDoubleClickHandle (){
         // Добавляю слушатель двойного клика на предложение
         sentenceElement.addEventListener("dblclick", function(event){
             activeSentence = sentenceElement;
-            console.log("activeSentence", activeSentence);
             if (sentenceElement.linkedSentences && sentenceElement.linkedSentences.length > 0) {
                 // Передаем функцию, которая заменяет текст предложения
                 showPopupSentences(event.pageX, event.pageY, sentenceElement.linkedSentences, (selectedSentence) => {
@@ -518,8 +517,6 @@ function increaseSentenceWeight({ sentence_id, group_id, sentence_type }) {
     .then(data => {
         if (data.status !== "success") {
             console.warn("⚠️ Ошибка при увеличении веса:", data.message);
-        } else {
-            console.log("✅ Вес предложения успешно увеличен:");
         }
     })
     .catch(err => {
@@ -552,7 +549,7 @@ function addSentenceButtonLogic() {
             button.parentNode.insertBefore(newSentenceElement, button);
             newSentenceElement.focus(); // Устанавливаем фокус на новый элемент
             // Получаем данные параграфа по его ID из данных с сервера
-            const paragraph = currentReportParagraphsData.find(paragraph => paragraph.id === paragraphId) || null;
+            const paragraph = window.currentReportParagraphsData.find(paragraph => paragraph.id === paragraphId) || null;
             const tailSentences = paragraph.tail_sentences;
            
             if (tailSentences && tailSentences.length > 0) {
@@ -747,7 +744,6 @@ async function generateImpressionLogic(boxForAiResponse, responseForDelete, boxF
 function addImpressionButtonLogic(aiImpressionBox) {
         // Получаем текст ответа ИИ
         const aiResponseText = aiImpressionBox?.innerText.trim();
-        console.log("aiResponseText", aiResponseText);
 
         if (!aiResponseText) {
             alert("Ответ ИИ пуст. Пожалуйста, сначала сгенерируйте заключение.");
@@ -824,7 +820,6 @@ async function sendModifiedSentencesToServer() {
         const paragraphId = sentenceElement.getAttribute("data-paragraph-id");
         const isAdditionalParagraph = sentenceElement.getAttribute("data-paragraph-additional") === "True";
         if (isAdditionalParagraph) {
-            console.log("Дополнительный параграф найден, пропускаем");
             return;
         }
         const sentenceType = sentenceElement.getAttribute("data-sentence-type") === "head" ? "body" : "tail";
@@ -896,7 +891,6 @@ async function sendModifiedSentencesToServer() {
                                  },
                             });
                             if (response.status === "success") {
-                                console.log("Предложение удалено:", response.message);
                                 button.closest(".train-sentence__item").remove();
                             } else {
                                 console.error("Ошибка удаления предложения:", response.message);
@@ -1176,7 +1170,58 @@ async function showDynamicReportPopup(boxForAiImpressionResponse, boxForAiRedact
         const choice = await waitChoice(p); // варианты hard, soft, prev
         if (!choice) return;
 
-        console.log("User choice for dynamics mode:", choice);
+        if (choice === "prev") {
+            console.log("Пользователь выбрал предыдущий текст");
+            const { form: prevForm, waitSubmit } = createPreviousTextForm(rawText);
+            const p2 = new Popup("dynamics-previous-text", {
+                title: "Выделите часть текста для заключения",
+                content: prevForm,
+                modal: true,
+                escClose: true,
+                backdropClose: false,
+                size: "lg",
+                theme: "auto"
+            });
+            p2.open();
+            const { text, impression } = await waitSubmit(p2);
+            if (text === undefined || impression === undefined) return; // пользователь закрыл попап
+
+            const flat_items = [];
+            if (text && text.trim()) {
+                flat_items.push({ id: "new", sentence: text.trim(), is_impression: false });
+            }
+            if (impression && impression.trim()) {
+                flat_items.push({ id: "new", sentence: impression.trim(), is_impression: true });
+            }
+            if (flat_items.length === 0) {
+                alert("Пожалуйста, выделите хотя бы один фрагмент текста.");
+                return;
+            }
+
+            p2.close();
+            
+            // Отправляем на сервер для финализации
+            try {
+                const response = await sendRequest({    
+                    url: "/working_with_reports/analyze_dynamics_prev_finalize",
+                    data: {
+                        flat_items: flat_items,
+                        report_id: reportData.id
+                    }
+                });
+
+                if (response && response.status === "success") {
+                    handleAnalyzeDynamicsResponse(response);
+                    
+                } else {
+                    console.error("Ошибка при финализации анализа динамики:", response.message || "Неизвестная ошибка");
+                }
+            } catch (e) {
+                console.error(e);
+                
+            }
+            return;
+        };
 
         // Блокируем кнопку анализа
         generateButtonsIsDisabled(true);
@@ -1209,9 +1254,31 @@ async function showDynamicReportPopup(boxForAiImpressionResponse, boxForAiRedact
             maxAttempts: 46,
             interval: 4000,
             onProgress: (progress) => pbDyn.set(progress, "Ожидание результата..."),
-            onSuccess: (task_id) => {
+            onSuccess: async (task_id) => {
                 pbDyn.set(1000, "Готово!");
-                finalizeAnalyzeDynamics(task_id); // тут будет task_id а не result так как стоит флаг excludeResult
+                if (!task_id) {
+                    pbDyn.set(100, "Ошибка: не хватает данных для финального этапа анализа динамики.");
+                    generateButtonsIsDisabled(false);
+                    closeDynamicsPopup.innerText = "Закрыть";
+                    destroyPB(2000, pbDyn, popupBarMount);
+                    return;
+                }
+                try {
+                    const response = await sendRequest({
+                        url: "/working_with_reports/analyze_dynamics_finalize",
+                        data: {
+                            task_id: task_id
+                        }
+                    });
+
+                    if (response && response.status === "success") {
+                        handleAnalyzeDynamicsResponse(response);
+                    } else {
+                        console.error("Ошибка при финальном этапе анализа динамики:", response.message || "Неизвестная ошибка");
+                    }
+                } catch (e) {
+                    console.error(e);
+                }
             },
             onError: (errMsg) => {
                 pbDyn.set(100, errMsg);
@@ -1274,31 +1341,6 @@ async function showDynamicReportPopup(boxForAiImpressionResponse, boxForAiRedact
     analyzeDynamicsButton.addEventListener("click", analyzeHandler);
     prepareTextDynamicsButton.addEventListener("click", prepareTextHandler);
 
-}
-
-    
-// Функция для финального этапа анализа динамики
-async function finalizeAnalyzeDynamics(taskID) {
-    if (!taskID) {
-        alert("Ошибка: не хватает данных для финального этапа анализа динамики.");
-        return;
-    }
-    try {
-        const response = await sendRequest({
-            url: "/working_with_reports/analyze_dynamics_finalize",
-            data: {
-                task_id: taskID
-            }
-        });
-
-        if (response && response.status === "success") {
-            handleAnalyzeDynamicsResponse(response);
-        } else {
-            console.error("Ошибка при финальном этапе анализа динамики:", response.message || "Неизвестная ошибка");
-        }
-    } catch (e) {
-        console.error(e);
-    }
 }
 
 
@@ -1443,7 +1485,6 @@ function attachPrevReportOverlayLogic() {
 // неклассфицированных предложений в логике трансформации протоколов в динамике
 function copyToClipboard(text) {
     navigator.clipboard.writeText(text).then(() => {
-        console.log("Текст скопирован в буфер обмена:", text);
     }).catch((err) => {
         console.error("Ошибка при копировании текста:", err);
     });
@@ -1549,3 +1590,73 @@ function createDynamicsModeForm() {
     return { form, waitChoice };
 }
 
+
+// Конструктор формы для выделения частей текста для заключения и основного текста
+// отдаёт:
+//   form       — готовый DOM-узел формы
+//   waitSubmit  — Promise, который резолвится в {text, impression} или null (если Отмена)
+// Убрать в ccs стили
+function createPreviousTextForm(fullText) {
+    const form = document.createElement("form");
+    form.className = "dyn-previous-text-form";
+
+    const instructions = document.createElement("p");
+    instructions.textContent = "Пожалуйста, выделите часть текста, которая должна быть включена в заключение. Всё остальное будет считаться основным текстом протокола.";
+    instructions.style.fontWeight = "bold";
+    instructions.style.marginBottom = "10px";
+
+    const textArea = document.createElement("textarea");
+    textArea.value = fullText || "";
+    textArea.style.width = "100%";
+    textArea.style.height = "200px";
+    textArea.style.resize = "vertical";
+    textArea.style.padding = "8px";
+    textArea.style.fontSize = "14px";
+    textArea.style.lineHeight = "1.4";
+    textArea.style.border = "1px solid #ccc";
+    textArea.style.borderRadius = "4px";
+    textArea.style.boxSizing = "border-box";
+
+    const actions = document.createElement("div");
+    actions.style.display = "flex";
+    actions.style.gap = "10px";
+    actions.style.marginTop = "12px";
+
+    const submitBtn = document.createElement("button");
+    submitBtn.type = "button";
+    submitBtn.textContent = "Готово";
+    submitBtn.className = "btn";
+
+    const cancelBtn = document.createElement("button");
+    cancelBtn.type = "button";
+    cancelBtn.textContent = "Отмена";
+    cancelBtn.className = "btn";
+
+    actions.append(submitBtn, cancelBtn);
+    form.append(instructions, textArea, actions);
+
+    // Ждём клика по Готово/Отмена. popupInstance нужен, чтобы закрыть попап изнутри.
+    const waitSubmit = (popupInstance) =>
+        new Promise((resolve) => {
+            submitBtn.addEventListener("click", () => {
+                const selection = window.getSelection();
+                let impression = "";
+                let text = textArea.value;
+                if (selection && selection.rangeCount > 0) {
+                    const selectedText = selection.toString().trim();
+                    if (selectedText && text.includes(selectedText)) {
+                        impression = selectedText;
+                        text = text.replace(impression, "").trim();
+                    }
+                }
+                if (popupInstance) popupInstance.close("submit");
+                resolve({ text, impression });
+            });
+            cancelBtn.addEventListener("click", () => {
+                if (popupInstance) popupInstance.close("cancel");
+                resolve(null);
+            });
+        });
+
+    return { form, waitSubmit };
+}

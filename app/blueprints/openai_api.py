@@ -257,7 +257,7 @@ def ocr_extract_text():
                 logger.exception(f"(OCR) ❌ Ошибка при попытке извлечь текст из PDF: {e}")
                 
         is_image = (f.mimetype or "").startswith("image/") or filename.lower().endswith((".jpg", ".jpeg", ".png", ".tiff", ".heic", ".heif", ".webp"))
-        if is_image and not is_pdf:
+        if is_image:
             logger.info(f"(OCR) 🖼️ Файл '{filename}' определён как изображение, начинаю сжатие при необходимости")
             if filename.lower().endswith((".tif", ".tiff")):
                 if is_multipage_tiff(file_bytes):
@@ -278,7 +278,7 @@ def ocr_extract_text():
                     "message": "Не удалось автоматически ужать изображение до лимита Azure (4 МБ). "
                             "Уменьшите размер или разрешение и попробуйте снова."
                 }), 413
-        else:
+        if not (is_pdf or is_image):
             logger.error(f"(OCR) ⚠️ Файл '{filename}' не распознан как PDF или изображение")
             return jsonify({
                 "status": "error",
