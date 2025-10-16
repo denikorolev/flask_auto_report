@@ -1733,7 +1733,7 @@ body {
     color: var(--main-text-color);
 }
 
-/* Блок не классифицированных предложений (misc_sentences) */
+/* Блок неклассифицированных предложений (misc_sentences) */
 .ai-response-block {
     background: var(--main-background-color);
     border-left: 4px solid var(--accent-attention);

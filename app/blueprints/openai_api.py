@@ -178,7 +178,7 @@ def clean_raw_text_route():
 @auth_required()
 def ocr_extract_text():
     logger.info("(OCR) 🚀 Start")
-    max_upload_bytes = current_app.config.get("MAX_UPLOAD_SIZE_MB", 10) * 1024 * 1024  # в байтах
+    max_upload_bytes = current_app.config.get("MAX_UPLOAD_SIZE_MB", 5) * 1024 * 1024  # в байтах
     # --- Предварительная проверка размера по заголовку ---
     cl = request.content_length
     if cl is not None:

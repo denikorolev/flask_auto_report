@@ -698,8 +698,8 @@ async function generateImpressionLogic(boxForAiResponse, responseForDelete, boxF
 
         // Поллим статус (фоллбек-прогресс)
         pollTaskStatus(taskId, {
-            maxAttempts: 14,
-            interval: 2000,
+            maxAttempts: 30,
+            interval: 1000,
             onProgress: (progress) => pb.set(progress, "Ожидание результата..."),
             onSuccess: (result) => {
                 pb.set(100, "Готово!");
@@ -1251,8 +1251,8 @@ async function showDynamicReportPopup(boxForAiImpressionResponse, boxForAiRedact
         }
         
         pollTaskStatus(task_id, {
-            maxAttempts: 46,
-            interval: 4000,
+            maxAttempts: 80,
+            interval: 2000,
             onProgress: (progress) => pbDyn.set(progress, "Ожидание результата..."),
             onSuccess: async (task_id) => {
                 pbDyn.set(1000, "Готово!");
@@ -1313,8 +1313,8 @@ async function showDynamicReportPopup(boxForAiImpressionResponse, boxForAiRedact
         const taskID = await prepareTextWithAI(dynamicsTextarea, prepareTextDynamicsButton);
 
         pollTaskStatus(taskID, {
-            maxAttempts: 12,
-            interval: 3000,
+            maxAttempts: 40,
+            interval: 1500,
             onProgress: (progress) => pbDyn.set(progress, "Ожидание результата..."),
             onSuccess: (result) => {
                 pbDyn.set(100, "Готово!");
@@ -1423,7 +1423,7 @@ function additionalFindings(response) {
 
         const header = document.createElement("h5");
         header.className = "ai-response-header";
-        header.textContent = "📌 Не классифицированные предложения (оригинальный протокол можно посмотреть удерживая клавиши shift+пробел):";
+        header.textContent = "📌 Неклассифицированные предложения (оригинальный протокол можно посмотреть удерживая клавиши shift+пробел):";
 
         const ul = document.createElement("ul");
         ul.className = "ai-response-list";
@@ -1647,6 +1647,8 @@ function createPreviousTextForm(fullText) {
                     if (selectedText && text.includes(selectedText)) {
                         impression = selectedText;
                         text = text.replace(impression, "").trim();
+                        // Убираем ведущие слова "Заключение", "Impression" и т.п.
+                        impression = impression.replace(/^\s*заключение[\s.:,-–—]*/i, "").trim();
                     }
                 }
                 if (popupInstance) popupInstance.close("submit");

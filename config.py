@@ -96,7 +96,7 @@ class Config:
     NOREPLY_EMAIL = "noreply@radiologary.com"
     SUPPORT_EMAIL = "support@radiologary.com"
     CEO_EMAIL = "korolev.denis@radiologary.com"
-    MAX_UPLOAD_SIZE_MB = 10  # Максимальный размер загружаемого файла в мегабайтах
+    MAX_UPLOAD_SIZE_MB = 5  # Максимальный размер загружаемого файла в мегабайтах
     
     # OCR configuration
     OCR_PROVIDER = os.getenv("OCR_PROVIDER", "azure")  # Текущий поддерживаемый провайдер: "azure"
@@ -105,7 +105,6 @@ class Config:
 
     # OpenAI API configuration
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-    OPENAI_MODEL = os.getenv("OPENAI_MODEL")
     OPENAI_ORGANIZATION = os.getenv("OPENAI_ORGANIZATION")
     OPENAI_PROJECT = os.getenv("OPENAI_PROJECT")
     OPENAI_ASSISTANT_MRI = os.getenv("OPENAI_ASSISTANT_MRI")
