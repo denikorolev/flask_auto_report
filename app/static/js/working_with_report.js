@@ -1647,8 +1647,16 @@ function createPreviousTextForm(fullText) {
                     if (selectedText && text.includes(selectedText)) {
                         impression = selectedText;
                         text = text.replace(impression, "").trim();
-                        // Убираем ведущие слова "Заключение", "Impression" и т.п.
-                        impression = impression.replace(/^\s*заключение[\s.:,-–—]*/i, "").trim();
+                        console.log("Выделенный текст для заключения:", impression);
+                        // 1) Сносим невидимый мусор в начале (BOM, zero-width)
+                        impression = impression.replace(/^[\uFEFF\u200B-\u200D]+/u, "");
+
+                        // 2) Убираем "Заключение" (любой регистр) + хвост из пробелов/разделителей.
+                        //    Флаги: i — без учёта регистра, u — юникод (нормальная кириллица).
+                        //    Пробелы: обычные \s + NBSP и тонкие пробелы.
+                        //    Тире: обычный дефис -, en-dash \u2013, em-dash \u2014.
+                        impression = impression.replace(/^[\s\u00A0\u2000-\u200A]*заключение[\s\u00A0\u2000-\u200A.:,–—-]*/iu, "");
+                        console.log("После удаления ведущих слов:", impression);
                     }
                 }
                 if (popupInstance) popupInstance.close("submit");
