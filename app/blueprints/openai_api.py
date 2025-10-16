@@ -17,7 +17,7 @@ from app.utils.ai_processing import (_process_openai_request,
                                      reset_ai_session, 
                                      count_tokens
                                      )
-from app.utils.pdf_processing import has_text_layer, extract_text_from_pdf_textlayer
+from app.utils.pdf_processing import has_text_layer, extract_text_from_pdf_textlayer, extract_text_from_docx_bytes, extract_text_from_odt_bytes
 from app.utils.ocr_processing import compress_image, is_multipage_tiff
 from datetime import datetime, timezone
 import base64
@@ -178,7 +178,7 @@ def clean_raw_text_route():
 @auth_required()
 def ocr_extract_text():
     logger.info("(OCR) 🚀 Start")
-    max_upload_bytes = current_app.config.get("MAX_UPLOAD_SIZE_MB", 5) * 1024 * 1024  # в байтах
+    max_upload_bytes = current_app.config.get("MAX_UPLOAD_SIZE_MB", 10) * 1024 * 1024  # в байтах
     # --- Предварительная проверка размера по заголовку ---
     cl = request.content_length
     if cl is not None:
@@ -256,6 +256,48 @@ def ocr_extract_text():
             except Exception as e:
                 logger.exception(f"(OCR) ❌ Ошибка при попытке извлечь текст из PDF: {e}")
                 
+        # Проверяем на текстовый документ (docx, odt, doc)
+        is_docx = filename.lower().endswith(".docx")
+        is_odt = filename.lower().endswith(".odt")
+        is_doc = filename.lower().endswith(".doc")
+
+        if is_docx or is_odt or is_doc:
+            logger.info(f"(DOC) 📄 Файл '{filename}' определён как текстовый документ")
+            try:
+                if is_docx:
+                    text = extract_text_from_docx_bytes(file_bytes)
+                    method = "docx"
+                elif is_odt:
+                    text = extract_text_from_odt_bytes(file_bytes)
+                    method = "odt"
+                else:
+                    return jsonify({
+                        "status": "error",
+                        "message": "Формат .doc не поддерживается. Сохраните как .docx или .odt."
+                    }), 400
+
+                logger.info(f"(DOC) ✅ Извлечено {len(text)} символов из документа {method.upper()}")
+
+                if auto_prepare:
+                    task_id = async_clean_raw_text.delay(text, user_id=user_id, assistant_id=prepare_assistant_id)
+                    return jsonify({
+                        "status": "success",
+                        "message": "Текст извлечён и отправлен на автоподготовку.",
+                        "method": method,
+                        "task_id": task_id.id
+                    }), 200
+
+                return jsonify({
+                    "status": "success",
+                    "message": "Текст извлечён из документа.",
+                    "method": method,
+                    "text": text
+                }), 200
+            except Exception as e:
+                logger.exception(f"(DOC) ❌ Ошибка при извлечении текста: {e}")
+                return jsonify({"status": "error", "message": "Не удалось извлечь текст из документа."}), 400
+            
+        # Если не PDF с текстовым слоем и не текстовый документ, то проверяем на изображение
         is_image = (f.mimetype or "").startswith("image/") or filename.lower().endswith((".jpg", ".jpeg", ".png", ".tiff", ".heic", ".heif", ".webp"))
         if is_image:
             logger.info(f"(OCR) 🖼️ Файл '{filename}' определён как изображение, начинаю сжатие при необходимости")

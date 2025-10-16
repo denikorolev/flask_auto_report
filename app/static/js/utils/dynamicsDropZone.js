@@ -199,9 +199,16 @@ class OcrStagingController {
         if (!files) return;
 
         // Превращаем в массив и фильтруем только поддерживаемые типы
-        const incoming = Array.from(files).filter(f =>
-            f.type?.startsWith("image/") || f.type === "application/pdf"
-        );
+        const incoming = Array.from(files).filter(f => {
+            const name = (f.name || "").toLowerCase();
+            const type = (f.type || "").toLowerCase();
+            const isImage = type.startsWith("image/");
+            const isPdf = type === "application/pdf" || name.endsWith(".pdf");
+            const isDocx = type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" || name.endsWith(".docx");
+            const isOdt = type === "application/vnd.oasis.opendocument.text" || name.endsWith(".odt");
+            const isDoc = type === "application/msword" || name.endsWith(".doc");
+            return isImage || isPdf || isDocx || isOdt || isDoc;
+        });
         if (!incoming.length) return;
 
         // убрать дубликаты по имени+размеру и отсечь >10 МБ
